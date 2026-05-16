@@ -1,0 +1,53 @@
+{
+  "name": "kuro-reader",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.3.4",
+    "@capacitor/app": "^8.1.0",
+    "@capacitor/cli": "^8.3.4",
+    "@capacitor/core": "^8.3.4",
+    "@capacitor/file-transfer": "^2.0.4",
+    "@capacitor/filesystem": "^8.1.2",
+    "@capacitor/keyboard": "^8.0.3",
+    "@capacitor/splash-screen": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.2",
+    "axios": "^1.16.1",
+    "basic-ftp": "^6.0.1",
+    "clsx": "^2.1.1",
+    "idb": "^8.0.3",
+    "jszip": "^3.10.1",
+    "libarchive.js": "^2.0.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "6.20",
+    "tailwind-merge": "^3.6.0",
+    "zustand": "4.4"
+  },
+  "devDependencies": {
+    "@types/react": "18.2",
+    "@types/react-dom": "18.2",
+    "@typescript-eslint/eslint-plugin": "^6.10.0",
+    "@typescript-eslint/parser": "^6.10.0",
+    "@vitejs/plugin-react": "^4.2.0",
+    "autoprefixer": "^10.5.0",
+    "eslint": "^8.53.0",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.4",
+    "postcss": "^8.5.14",
+    "prettier": "^3.8.3",
+    "sharp": "^0.34.5",
+    "tailwindcss": "3.4",
+    "typescript": "5.3",
+    "vite": "5.0"
+  }
+}
