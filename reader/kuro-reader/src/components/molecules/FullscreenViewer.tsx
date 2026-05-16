@@ -223,7 +223,7 @@ export const FullscreenViewer: React.FC<FullscreenViewerProps> = ({
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-[100] bg-black/95 flex flex-col"
+      className="fixed inset-0 z-[100] bg-black/95 flex flex-col animate-fullscreen-enter"
       onClick={handleBackgroundClick}
     >
       <div className="flex items-center justify-between px-4 py-3 z-10 pt-safe">

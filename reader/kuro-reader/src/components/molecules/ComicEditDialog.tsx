@@ -47,7 +47,7 @@ export const ComicEditDialog: React.FC<ComicEditDialogProps> = ({
       onClick={onCancel}
     >
       <div
-        className="bg-surface-bright border border-outline-variant rounded-lg p-6 mx-margin-mobile max-w-md w-full max-h-[80vh] overflow-y-auto"
+        className="bg-surface-bright border border-outline-variant rounded-lg p-6 mx-margin-mobile max-w-md w-full max-h-[80vh] overflow-y-auto animate-scale-in"
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="font-display text-headline-md text-primary mb-4">编辑漫画信息</h3>

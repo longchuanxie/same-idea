@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 import { useAppStore } from '@/stores/useAppStore';
 import { GestureLock } from '@/components/organisms/GestureLock';
+import { Collapsible } from '@/components/atoms/Collapsible';
 import { getStorageUsage } from '@/services/storageService';
 import { getAllPaperTypes } from '@/utils/paperTexture';
 import type { PaperType } from '@/types';
@@ -128,7 +129,7 @@ export const SettingsPage: React.FC = () => {
                 </div>
               </div>
               <button
-                className={`relative inline-block w-11 h-6 rounded-full transition-colors duration-200 ${
+                className={`relative inline-block w-11 h-6 rounded-full toggle-spring ${
                   auth.isEnabled ? 'bg-primary' : 'bg-surface-variant'
                 }`}
                 onClick={() => {
@@ -140,7 +141,7 @@ export const SettingsPage: React.FC = () => {
                 }}
               >
                 <span
-                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-200 border ${
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full toggle-thumb-spring border ${
                     auth.isEnabled ? 'translate-x-5 border-primary' : 'border-outline-variant'
                   }`}
                 />
@@ -187,7 +188,7 @@ export const SettingsPage: React.FC = () => {
                   </span>
                 </button>
 
-                {showLockTimeoutOptions && (
+                <Collapsible isOpen={showLockTimeoutOptions}>
                   <div className="bg-surface-container-low px-6 py-3 space-y-2">
                     {LOCK_TIMEOUT_OPTIONS.map((option) => (
                       <button
@@ -207,7 +208,7 @@ export const SettingsPage: React.FC = () => {
                       </button>
                     ))}
                   </div>
-                )}
+                </Collapsible>
 
                 <button
                   className="w-full p-6 flex justify-between items-center bg-surface-container-lowest cursor-pointer hover:bg-surface-container-low transition-colors group text-left"
@@ -229,7 +230,7 @@ export const SettingsPage: React.FC = () => {
                   </span>
                 </button>
 
-                {showMaxAttemptsOptions && (
+                <Collapsible isOpen={showMaxAttemptsOptions}>
                   <div className="bg-surface-container-low px-6 py-3 space-y-2">
                     {MAX_ATTEMPTS_OPTIONS.map((option) => (
                       <button
@@ -249,7 +250,7 @@ export const SettingsPage: React.FC = () => {
                       </button>
                     ))}
                   </div>
-                )}
+                </Collapsible>
               </>
             )}
 
@@ -300,20 +301,20 @@ export const SettingsPage: React.FC = () => {
                 </div>
               </div>
               <button
-                className={`relative inline-block w-11 h-6 rounded-full transition-colors duration-200 ${
+                className={`relative inline-block w-11 h-6 rounded-full toggle-spring ${
                   settings.paperMode ? 'bg-primary' : 'bg-surface-variant'
                 }`}
                 onClick={togglePaperMode}
               >
                 <span
-                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-200 border ${
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full toggle-thumb-spring border ${
                     settings.paperMode ? 'translate-x-5 border-primary' : 'border-outline-variant'
                   }`}
                 />
               </button>
             </div>
 
-            {settings.paperMode && (
+            <Collapsible isOpen={settings.paperMode}>
               <div className="p-6 border-b border-outline-variant bg-surface-container-lowest">
                 <div className="flex items-center gap-4 mb-4">
                   <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant">
@@ -341,7 +342,7 @@ export const SettingsPage: React.FC = () => {
                   ))}
                 </div>
               </div>
-            )}
+            </Collapsible>
 
             <div className="p-6 bg-surface-container-lowest">
               <div className="flex justify-between items-center mb-4">
@@ -396,7 +397,7 @@ export const SettingsPage: React.FC = () => {
               </span>
             </button>
 
-            {showDirectionOptions && (
+            <Collapsible isOpen={showDirectionOptions}>
               <div className="bg-surface-container-low px-6 py-3 space-y-2">
                 <button
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
@@ -427,7 +428,7 @@ export const SettingsPage: React.FC = () => {
                   <span className="font-label text-label-md">从左至右</span>
                 </button>
               </div>
-            )}
+            </Collapsible>
 
             <button
               className="w-full p-6 flex justify-between items-center bg-surface-container-lowest cursor-pointer hover:bg-surface-container-low transition-colors group text-left"
@@ -447,7 +448,7 @@ export const SettingsPage: React.FC = () => {
               </span>
             </button>
 
-            {showFontOptions && (
+            <Collapsible isOpen={showFontOptions}>
               <div className="bg-surface-container-low px-6 py-3 space-y-2">
                 <button
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
@@ -497,7 +498,7 @@ export const SettingsPage: React.FC = () => {
                   </div>
                 </div>
               </div>
-            )}
+            </Collapsible>
           </div>
         </section>
 

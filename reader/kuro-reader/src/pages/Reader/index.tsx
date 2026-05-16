@@ -530,10 +530,11 @@ export const ReaderPage: React.FC = () => {
           <div className="w-full h-full flex items-center justify-center">
             {pageUrls[currentPage - 1] ? (
               <img
+                key={currentPage}
                 src={pageUrls[currentPage - 1]!}
                 alt={`Page ${currentPage}`}
                 className={cn(
-                  'max-w-full max-h-full object-contain cursor-pointer'
+                  'max-w-full max-h-full object-contain cursor-pointer animate-page-fade'
                 )}
                 style={paperModeEnabled && paperConfig ? { filter: paperConfig.imageFilter } : undefined}
                 draggable={false}
@@ -560,11 +561,15 @@ export const ReaderPage: React.FC = () => {
 
       {(uiAnimating || uiVisible) && (
         <div
-          className={`fixed inset-0 pointer-events-none z-50 flex flex-col justify-between transition-opacity duration-300 ${
+          className={`fixed inset-0 pointer-events-none z-50 flex flex-col justify-between ${
             uiVisible ? 'opacity-100' : 'opacity-0'
-          }`}
+          } transition-opacity duration-300`}
         >
-          <header className="bg-surface/80 backdrop-blur-md w-full px-margin-mobile py-2 border-b border-outline-variant/50 pointer-events-auto transition-opacity duration-300 pt-safe">
+          <header
+            className={`bg-surface/80 backdrop-blur-md w-full px-margin-mobile py-2 border-b border-outline-variant/50 pointer-events-auto pt-safe transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+              uiVisible ? 'translate-y-0' : '-translate-y-full'
+            }`}
+          >
             <div className="max-w-max-width-content mx-auto flex justify-between items-center">
               <button
                 className="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-variant/50"
@@ -600,7 +605,11 @@ export const ReaderPage: React.FC = () => {
             </div>
           </header>
 
-          <div className="w-full pointer-events-auto bg-surface/60 backdrop-blur-md pb-safe pt-4 px-margin-mobile transition-opacity duration-300">
+          <div
+            className={`w-full pointer-events-auto bg-surface/60 backdrop-blur-md pb-safe pt-4 px-margin-mobile transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+              uiVisible ? 'translate-y-0' : 'translate-y-full'
+            }`}
+          >
             <div className="max-w-max-width-content mx-auto flex flex-col gap-3">
               <div className="flex items-center justify-center gap-3">
                 <span className="font-label text-label-sm text-on-surface-variant tabular-nums w-8 text-right">{currentPage}</span>

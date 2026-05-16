@@ -109,7 +109,7 @@ export const ComicDetailPage: React.FC = () => {
       <div className="fixed inset-0 noise-overlay z-0" />
       <TopAppBar variant="detail" />
       <main className="relative z-10 pt-4 max-w-max-width-content mx-auto px-margin-mobile pb-32">
-        <section className="flex flex-col md:flex-row gap-8 py-8 md:py-12 border-b border-outline-variant">
+        <section className="flex flex-col md:flex-row gap-8 py-8 md:py-12 border-b border-outline-variant animate-slide-down">
           <div className="w-48 md:w-64 flex-shrink-0 mx-auto md:mx-0 border border-outline-variant rounded bg-surface">
             {coverUrls[comic.id] ? (
               <img
@@ -351,7 +351,7 @@ export const ComicDetailPage: React.FC = () => {
         </section>
 
         {comic.chapters.length > 0 && (
-          <section className="py-8">
+          <section className="py-8 animate-fade-in stagger-2">
             <div className="flex justify-between items-center mb-6">
               <h2 className="font-display text-headline-md text-primary">目录</h2>
               <span className="font-label text-label-sm text-on-surface-variant">

@@ -82,7 +82,7 @@ export const ReaderBottomBar: React.FC<ReaderBottomBarProps> = ({
             </div>
             <button
               className={cn(
-                'relative inline-block w-11 h-6 rounded-full transition-colors duration-200',
+                'relative inline-block w-11 h-6 rounded-full toggle-spring',
                 paperModeEnabled ? 'bg-primary' : 'bg-surface-variant'
               )}
               onClick={onPaperModeToggle}
@@ -90,7 +90,7 @@ export const ReaderBottomBar: React.FC<ReaderBottomBarProps> = ({
             >
               <span
                 className={cn(
-                  'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-200 border',
+                  'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full toggle-thumb-spring border',
                   paperModeEnabled
                     ? 'translate-x-5 border-primary'
                     : 'border-outline-variant'
