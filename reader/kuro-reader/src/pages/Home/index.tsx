@@ -5,7 +5,7 @@ import { ROUTES, comicDetailPath, readerPath } from '@/constants/routes';
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
-  const { comics, coverUrls, readingProgress, loadComics, getContinueReading, removeContinueReading, getFavorites } = useLibraryStore();
+  const { coverUrls, readingProgress, loadComics, getContinueReading, removeContinueReading, getFavorites } = useLibraryStore();
 
   useEffect(() => {
     loadComics();
@@ -123,42 +123,16 @@ export const HomePage: React.FC = () => {
               </article>
             ))}
           </div>
-        ) : comics.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
-            {comics.slice(0, 6).map((comic) => (
-              <article
-                key={comic.id}
-                className="group cursor-pointer flex flex-col"
-                onClick={() => navigate(comicDetailPath(comic.id))}
-              >
-                <div className="border border-outline-variant bg-surface-container aspect-[2/3] overflow-hidden mb-3">
-                  {coverUrls[comic.id] ? (
-                    <img
-                      src={coverUrls[comic.id]}
-                      alt={comic.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-surface-variant flex items-center justify-center">
-                      <span className="material-symbols-outlined text-on-surface-variant text-5xl">auto_stories</span>
-                    </div>
-                  )}
-                </div>
-                <h4 className="font-body text-body-lg text-primary leading-tight truncate">{comic.title}</h4>
-                <p className="font-label text-label-md text-on-surface-variant mt-1">
-                  {comic.status === 'completed' ? '已完结' : `${comic.totalChapters} 话`}
-                </p>
-              </article>
-            ))}
-          </div>
         ) : (
           <div className="text-center py-12">
+            <span className="material-symbols-outlined text-on-surface-variant text-5xl mb-4 block">bookmark_border</span>
             <p className="font-body text-body-md text-on-surface-variant mb-6">还没有收藏的漫画</p>
+            <p className="font-label text-label-sm text-on-surface-variant mb-6">在书库中长按漫画即可收藏</p>
             <button
               className="font-label text-label-md text-primary border border-outline-variant px-6 py-2 hover:bg-surface-variant transition-colors"
-              onClick={() => navigate(ROUTES.IMPORT)}
+              onClick={() => navigate(ROUTES.LIBRARY)}
             >
-              去导入
+              去书库看看
             </button>
           </div>
         )}

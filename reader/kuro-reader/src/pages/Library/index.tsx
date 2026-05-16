@@ -68,6 +68,17 @@ export const LibraryPage: React.FC = () => {
     }
   }, [location.state, location.pathname, navigate]);
 
+  const subLibraryComicIds = new Set(subLibraries.flatMap((sl) => sl.comicIds));
+
+  const displayedComics = (() => {
+    let result = activeTagId ? getComicsByTag(activeTagId) : comics;
+    result = result.filter((c) => !subLibraryComicIds.has(c.id));
+    if (showFavoritesOnly) {
+      result = result.filter((c) => c.isFavorite);
+    }
+    return result;
+  })();
+
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -78,10 +89,10 @@ export const LibraryPage: React.FC = () => {
   };
 
   const selectAll = () => {
-    if (selectedIds.size === comics.length) {
+    if (selectedIds.size === displayedComics.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(comics.map((c) => c.id)));
+      setSelectedIds(new Set(displayedComics.map((c) => c.id)));
     }
   };
 
@@ -228,14 +239,6 @@ export const LibraryPage: React.FC = () => {
     }
   }, [isSelectMode, navigate]);
 
-  const displayedComics = (() => {
-    let result = activeTagId ? getComicsByTag(activeTagId) : comics;
-    if (showFavoritesOnly) {
-      result = result.filter((c) => c.isFavorite);
-    }
-    return result;
-  })();
-
   if (isLoading) {
     return (
       <div className="flex-grow flex items-center justify-center min-h-[60vh]">
@@ -307,7 +310,7 @@ export const LibraryPage: React.FC = () => {
           </div>
         ) : (
           <div className="flex items-center gap-3">
-            <span className="font-label text-label-sm text-on-surface-variant">{comics.length} 本</span>
+            <span className="font-label text-label-sm text-on-surface-variant">{displayedComics.length} 本</span>
             <button
               className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1"
               onClick={() => setIsSelectMode(true)}
@@ -447,8 +450,9 @@ export const LibraryPage: React.FC = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
-        {displayedComics.map((comic) => {
+      {displayedComics.length > 0 ? (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+          {displayedComics.map((comic) => {
           const isSelected = selectedIds.has(comic.id);
           return (
             <article
@@ -544,7 +548,19 @@ export const LibraryPage: React.FC = () => {
             </article>
           );
         })}
-      </div>
+        </div>
+      ) : (
+        <div className="text-center py-16">
+          <span className="material-symbols-outlined text-on-surface-variant text-5xl mb-4 block">auto_stories</span>
+          <p className="font-body text-body-md text-on-surface-variant mb-6">主书架暂无漫画</p>
+          <button
+            className="font-label text-label-md text-primary border border-outline-variant px-6 py-2 hover:bg-surface-variant transition-colors"
+            onClick={() => navigate(ROUTES.IMPORT)}
+          >
+            去导入
+          </button>
+        </div>
+      )}
 
       {isSelectMode && (
         <div className="fixed bottom-gutter md:bottom-gutter left-1/2 -translate-x-1/2 w-[calc(100%-48px)] max-w-md bg-surface-container-highest border border-outline-variant rounded-full z-50 flex justify-around items-center p-2 gap-2 md:mb-0 mb-20">
