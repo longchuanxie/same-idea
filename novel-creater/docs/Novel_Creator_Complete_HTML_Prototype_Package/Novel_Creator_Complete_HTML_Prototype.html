@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Novel Creator 完整 HTML 原型</title>
+<style>
+:root{
+  --bg:#f5f1ea; --canvas:#fbfaf7; --panel:#f0ebe2; --panel2:#e8e1d7;
+  --line:#ded6ca; --line2:#cfc6b9; --ink:#222620; --text:#3d413b;
+  --muted:#77766e; --muted2:#9b998f; --green:#637b61; --green2:#7f9479;
+  --green3:#dfe8db; --sage:#a8b5a2; --sand:#d8c5a6; --clay:#c7a99a;
+  --rose:#d9b7ae; --blue:#7c8f95; --orange:#ba8d50; --red:#b56a60;
+  --shadow:0 18px 48px rgba(71,63,54,.13); --soft:0 8px 24px rgba(71,63,54,.08);
+  --r:18px; --r2:12px;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --serif:"Songti SC","Noto Serif CJK SC","Source Han Serif SC","SimSun",serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(135deg,#f8f5ef,#eee8dd);color:var(--text);font-family:var(--font)}
+button,input,textarea,select{font:inherit}
+.hi{width:20px;height:20px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+.app{display:grid;grid-template-columns:292px 1fr;min-height:100vh}
+.nav{position:sticky;top:0;height:100vh;overflow:auto;background:rgba(242,238,231,.94);border-right:1px solid var(--line);padding:18px}
+.logo-row{display:flex;align-items:center;gap:10px;margin:4px 0 14px;color:var(--ink);font-weight:780}
+.logo{width:36px;height:36px;border-radius:12px;background:linear-gradient(135deg,var(--green),#81987b);color:white;display:grid;place-items:center;box-shadow:var(--soft)}
+.nav-desc{font-size:12px;color:var(--muted);line-height:1.55;margin:0 4px 14px}
+.nav-title{font-size:12px;color:#77786f;letter-spacing:.08em;margin:18px 8px 8px}
+.nav button{width:100%;border:0;background:transparent;cursor:pointer;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;color:#464a43;text-align:left;margin:2px 0}
+.nav button:hover{background:rgba(99,123,97,.08)}
+.nav button.active{background:var(--green3);color:#344f34;font-weight:700}
+.main{padding:22px;overflow:auto}
+.header{max-width:1520px;margin:0 auto 18px;display:flex;align-items:flex-start;justify-content:space-between;gap:18px}
+.header h1{margin:0;color:var(--ink);font-size:25px}
+.header p{margin:6px 0 0;color:var(--muted);line-height:1.5}
+.badges{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.badge,.chip{border:1px solid var(--line);background:rgba(255,255,255,.48);border-radius:999px;padding:6px 10px;font-size:12px;color:#596257;display:inline-flex;align-items:center;gap:6px}
+.chip.green{background:var(--green3);color:#3e633e;border-color:#cad8c8}.chip.warn{background:#f2e4cd;color:#7a5e31;border-color:#e2cfad}.chip.red{background:#f1dcda;color:#884f49;border-color:#e4c6c2}.chip.blue{background:#dfe7e8;color:#526970;border-color:#cad7da}
+.screen{display:none;max-width:1520px;margin:0 auto 28px;animation:fade .18s ease-out}
+.screen.active{display:block}@keyframes fade{from{opacity:.45;transform:translateY(4px)}to{opacity:1;transform:none}}
+.screen-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-end;margin:0 0 12px}
+.screen-head h2{margin:0;color:var(--ink);font-size:22px}.screen-head p{margin:5px 0 0;color:var(--muted);line-height:1.55}
+.canvas{background:rgba(255,255,255,.42);border:1px solid rgba(214,206,195,.86);border-radius:28px;padding:14px;box-shadow:var(--shadow);overflow:hidden}
+.desktop{min-height:780px;background:var(--bg);border:1px solid rgba(207,198,185,.78);border-radius:22px;overflow:hidden;position:relative}
+.topbar{height:58px;background:rgba(251,250,247,.88);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 18px;gap:14px}
+.tabs{display:flex;height:100%;align-items:flex-end;gap:4px}.tab{height:44px;display:flex;align-items:center;gap:8px;padding:0 16px;border:1px solid var(--line);border-bottom:0;border-radius:13px 13px 0 0;background:var(--panel);color:#4c504a}.tab.active{background:var(--canvas);color:var(--ink);font-weight:700}
+.actions{display:flex;align-items:center;gap:12px;color:#646760}.iconbtn{width:34px;height:34px;border-radius:11px;border:1px solid var(--line);background:rgba(255,255,255,.35);display:grid;place-items:center;color:#4c544b}
+.workspace{display:grid;grid-template-columns:286px 1fr 360px;min-height:722px}.workspace.two{grid-template-columns:310px 1fr}.workspace.wide-right{grid-template-columns:286px 1fr 420px}
+.sidebar{background:rgba(240,235,226,.72);border-right:1px solid var(--line);padding:16px;overflow:hidden}.center{background:rgba(251,250,247,.82);padding:18px;overflow:auto}.right{background:rgba(247,244,239,.82);border-left:1px solid var(--line);padding:16px;overflow:auto}
+.panel{background:rgba(255,255,255,.54);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px;box-shadow:0 4px 12px rgba(81,72,62,.04)}
+.panel h3{margin:0 0 10px;color:var(--ink);font-size:15px;display:flex;align-items:center;gap:8px}.panel p{margin:6px 0;color:#555a52;line-height:1.6}
+.card-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.card-grid.two{grid-template-columns:repeat(2,1fr)}.card-grid.four{grid-template-columns:repeat(4,1fr)}
+.card{background:rgba(255,255,255,.58);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:0 4px 14px rgba(70,61,53,.04)}
+.card-title{display:flex;align-items:center;gap:8px;margin-bottom:8px;color:var(--ink)}.card p,.card small{color:var(--muted);line-height:1.55}
+.btn{border:1px solid var(--line);background:rgba(255,255,255,.55);padding:9px 14px;border-radius:12px;color:#4a4f48;display:inline-flex;align-items:center;gap:8px;justify-content:center;cursor:pointer}.btn.primary{background:var(--green);border-color:var(--green);color:white;box-shadow:0 8px 18px rgba(78,101,76,.2)}.btn.danger{background:#f5e4e1;border-color:#e2c5c0;color:#804b45}.btn.small{padding:6px 10px;font-size:12px;border-radius:9px}
+.toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}.select{height:38px;border:1px solid var(--line);border-radius:11px;background:rgba(255,255,255,.55);padding:0 12px;color:#444943}
+.project-card{display:grid;grid-template-columns:72px 1fr;gap:12px;background:rgba(251,250,247,.7);border:1px solid var(--line);border-radius:15px;padding:10px;margin-bottom:12px}.cover{border-radius:10px;background:linear-gradient(145deg,#536669,#2d3135 55%,#937b5f);height:88px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.15)}.cover.purple{background:linear-gradient(145deg,#b5a4bc,#7f7088,#5e6972)}.cover.mist{background:linear-gradient(145deg,#9fb1b1,#738784,#384343)}
+.progress{height:6px;background:#ddd8cf;border-radius:99px;overflow:hidden;margin:8px 0}.progress span{display:block;height:100%;background:var(--green);border-radius:99px}
+.searchbox{height:38px;border:1px solid var(--line);background:rgba(255,255,255,.48);border-radius:12px;display:flex;align-items:center;gap:8px;padding:0 10px;color:var(--muted);margin:10px 0}
+.side-menu .item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:11px;margin:2px 0;color:#4d514a}.side-menu .item.active{background:var(--green3);color:#345235;font-weight:700}
+.tree{font-size:13px;color:#555951;line-height:1.75;padding-left:6px}.tree .row{display:flex;justify-content:space-between;align-items:center;padding:5px 8px;border-radius:9px}.tree .row.active{background:#dce6d9;color:#324f34;font-weight:700}
+.editor{max-width:850px;margin:0 auto;padding:12px 8px 80px}.editor h1{font-family:var(--serif);font-size:33px;color:#151713;margin:30px 0 22px}.editor p{font-family:var(--serif);font-size:20px;line-height:2.05;color:#161a16;margin:22px 0}.del{text-decoration:line-through;text-decoration-color:var(--red);background:#f4dedb}.ins{background:var(--green3);border-bottom:2px solid #9bb795}
+.tip{background:rgba(255,255,255,.72);border:1px solid var(--line);border-radius:15px;padding:12px 14px;color:#555a52;box-shadow:var(--soft);max-width:430px}.agent-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.agent-tabs .chip.active{background:var(--green);color:white;border-color:var(--green)}
+.msg{border-radius:15px;background:rgba(255,255,255,.65);border:1px solid var(--line);padding:12px;margin:10px 0;color:#4b504a;line-height:1.6}.msg.user{background:var(--panel2);margin-left:36px}
+.status-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.status-cell{text-align:center;border:1px solid var(--line);border-radius:12px;padding:9px;background:rgba(255,255,255,.48);font-size:12px}.status-dot{width:8px;height:8px;border-radius:999px;background:var(--green);display:inline-block;margin-right:5px}.status-dot.warn{background:var(--orange)}.status-dot.red{background:var(--red)}.status-dot.blue{background:var(--blue)}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.metric{background:rgba(255,255,255,.48);border:1px solid var(--line);border-radius:15px;padding:14px}.metric b{display:block;font-size:24px;color:var(--ink);margin-bottom:4px}.metric span{display:block;color:#656a62}.metric small{color:var(--muted2)}
+.chart{height:155px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(to top,rgba(223,232,219,.65),rgba(255,255,255,.3));position:relative;overflow:hidden}.chart svg{position:absolute;inset:12px;width:calc(100% - 24px);height:calc(100% - 24px);overflow:visible}
+.list-row{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);padding:10px 0}.list-row:last-child{border-bottom:0}
+.outline-layout{display:grid;grid-template-columns:250px 1fr 330px;gap:12px}.beat{display:grid;grid-template-columns:32px 1fr 86px 70px;gap:8px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:9px;background:rgba(255,255,255,.55);margin:7px 0}.drag{color:var(--muted2);text-align:center}
+.revision-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line);border-radius:14px;overflow:hidden}.revision-col{background:rgba(255,255,255,.52)}.revision-col h4{margin:0;padding:12px;border-bottom:1px solid var(--line);background:var(--panel)}.diff-row{display:grid;grid-template-columns:36px 1fr;border-bottom:1px solid var(--line)}.diff-row div{padding:10px;line-height:1.7}
+.research-layout{display:grid;grid-template-columns:1fr 380px;gap:12px}.result{border:1px solid var(--line);border-radius:15px;background:rgba(255,255,255,.55);padding:14px;margin-bottom:10px}.result h4{margin:0 0 6px;color:var(--ink)}.url{color:var(--green);font-size:12px}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 0 18px}.step{display:flex;align-items:center;gap:9px;color:#60655d}.num{width:28px;height:28px;border-radius:999px;background:var(--panel2);display:grid;place-items:center;font-weight:700}.step.active .num{background:var(--green);color:white}
+.export-layout{display:grid;grid-template-columns:1fr 320px 300px;gap:12px}.format-card{border:1px solid var(--line);border-radius:15px;background:rgba(255,255,255,.55);padding:16px;min-height:120px;position:relative}.format-card.active{border-color:var(--green);box-shadow:0 0 0 2px rgba(99,123,97,.12)}
+.settings-layout{display:grid;grid-template-columns:220px 1fr 360px;gap:0;min-height:722px}.settings-menu{border-right:1px solid var(--line);background:rgba(240,235,226,.65);padding:16px}.table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:rgba(255,255,255,.48)}.table th,.table td{padding:10px;border-bottom:1px solid var(--line);text-align:left;font-size:13px}.table th{background:var(--panel);color:#555a52}.table tr:last-child td{border-bottom:0}
+.project-home{display:grid;grid-template-columns:210px 1fr;min-height:722px}.home-sidebar{background:rgba(230,224,214,.7);border-right:1px solid var(--line);padding:18px}.project-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}.project-tile{background:rgba(255,255,255,.6);border:1px solid var(--line);border-radius:18px;padding:14px;min-height:210px}.big-plus{display:grid;place-items:center;color:var(--muted);font-size:46px;border:1px dashed var(--line2)}
+.wizard{max-width:760px;margin:0 auto;background:rgba(255,255,255,.55);border:1px solid var(--line);border-radius:20px;padding:22px}.form-row{display:grid;grid-template-columns:150px 1fr;gap:12px;align-items:start;margin:12px 0}.input{width:100%;border:1px solid var(--line);background:rgba(255,255,255,.56);border-radius:12px;padding:10px;color:#3d413b}textarea.input{min-height:100px;resize:none}.privacy{max-width:760px;margin:0 auto;background:rgba(255,255,255,.58);border:1px solid var(--line);border-radius:20px;padding:24px}.privacy-hero{display:grid;grid-template-columns:1fr 170px;gap:20px;align-items:center}.shield{height:150px;border-radius:22px;background:linear-gradient(145deg,#e2ded4,#f7f5ef);border:1px solid var(--line);display:grid;place-items:center;color:var(--green)}
+.character{display:grid;grid-template-columns:190px 1fr;gap:16px}.avatar{width:150px;height:150px;border-radius:28px;background:linear-gradient(145deg,#9aa4a4,#273134);margin:auto}.timeline{position:relative;padding-left:22px}.timeline:before{content:"";position:absolute;left:7px;top:0;bottom:0;width:1px;background:var(--line2)}.timeline .event{position:relative;background:rgba(255,255,255,.55);border:1px solid var(--line);border-radius:14px;padding:12px;margin:0 0 10px}.timeline .event:before{content:"";position:absolute;left:-20px;top:17px;width:10px;height:10px;background:var(--green);border-radius:99px}
+.error-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.error-card{background:rgba(255,255,255,.56);border:1px solid var(--line);border-radius:16px;padding:16px;text-align:center;min-height:190px}.error-card .hi{width:42px;height:42px;margin:10px auto;color:var(--muted)}.notice{background:#f5ead8;border:1px solid #e0c99f;color:#755b31;border-radius:14px;padding:12px;line-height:1.6}
+.mobile-wrap{display:grid;place-items:center;background:#e9e3d8;min-height:820px;border-radius:22px}.phone{width:390px;height:780px;background:var(--canvas);border:1px solid var(--line2);border-radius:34px;box-shadow:var(--shadow);overflow:hidden;position:relative}.phone-top{height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;border-bottom:1px solid var(--line)}.phone-content{padding:16px;height:650px;overflow:hidden}.phone-bottom{position:absolute;left:0;right:0;bottom:0;height:76px;border-top:1px solid var(--line);background:rgba(251,250,247,.94);display:grid;grid-template-columns:repeat(4,1fr)}.phone-bottom div{display:grid;place-items:center;color:#666a62;font-size:12px}.phone-bottom .active{color:var(--green);font-weight:700}.sheet{position:absolute;left:0;right:0;bottom:76px;background:var(--canvas);border-top:1px solid var(--line);border-radius:26px 26px 0 0;box-shadow:0 -10px 30px rgba(66,58,50,.14);padding:18px}.toast{border:1px solid var(--line);background:rgba(255,255,255,.68);border-radius:16px;padding:12px;margin:10px 0}.task{border:1px solid var(--line);border-radius:15px;background:rgba(255,255,255,.58);padding:12px;margin:9px 0}.task .bar{height:5px;background:#ded8ce;border-radius:99px;overflow:hidden;margin:8px 0}.task .bar span{display:block;height:100%;background:var(--green)}
+@media(max-width:1200px){.app{grid-template-columns:1fr}.nav{position:relative;height:auto}.workspace,.workspace.wide-right,.outline-layout,.export-layout,.settings-layout,.research-layout,.project-home{grid-template-columns:1fr}.project-grid{grid-template-columns:repeat(2,1fr)}.right,.sidebar{border:0}.error-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 0 4 24V4.5z"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h6"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H9l2 2h7.5A2.5 2.5 0 0 1 21 8.5v8A2.5 2.5 0 0 1 18.5 19h-13A2.5 2.5 0 0 1 3 16.5v-10z"/></symbol>
+  <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3z"/><path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14z"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18"/><path d="M12 3a14 14 0 0 0 0 18"/></symbol>
+  <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5z"/><path d="M19.4 15a1.8 1.8 0 0 0 .36 2l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.8 1.8 0 0 0-2-.36 1.8 1.8 0 0 0-1.1 1.65V21a2 2 0 0 1-4 0v-.09A1.8 1.8 0 0 0 8.7 19.3a1.8 1.8 0 0 0-2 .36l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.8 1.8 0 0 0 .36-2A1.8 1.8 0 0 0 2.6 13H2.5a2 2 0 0 1 0-4h.09a1.8 1.8 0 0 0 1.65-1.1 1.8 1.8 0 0 0-.36-2l-.06-.06A2 2 0 0 1 6.64 3l.06.06a1.8 1.8 0 0 0 2 .36A1.8 1.8 0 0 0 9.8 1.8V1.7a2 2 0 0 1 4 0v.09a1.8 1.8 0 0 0 1.1 1.65 1.8 1.8 0 0 0 2-.36l.06-.06A2 2 0 0 1 19.8 5.8l-.06.06a1.8 1.8 0 0 0-.36 2A1.8 1.8 0 0 0 21 9.5h.09a2 2 0 0 1 0 4H21a1.8 1.8 0 0 0-1.6 1.5z"/></symbol>
+  <symbol id="i-archive" viewBox="0 0 24 24"><path d="M21 8v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8"/><path d="M3 5h18v3H3z"/><path d="M10 12h4"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M17.5 19H7a5 5 0 1 1 1.1-9.9A7 7 0 0 1 21 12.7 3.5 3.5 0 0 1 17.5 19z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></symbol>
+  <symbol id="i-branch" viewBox="0 0 24 24"><path d="M6 3v6a6 6 0 0 0 6 6h6"/><path d="M18 9v6h-6"/><circle cx="6" cy="3" r="2"/><circle cx="18" cy="15" r="2"/><circle cx="6" cy="21" r="2"/><path d="M6 9v10"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></symbol>
+  <symbol id="i-warning" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+</svg>
+
+<div class="app">
+<aside class="nav">
+  <div class="logo-row"><div class="logo"><svg class="hi"><use href="#i-pencil"></use></svg></div><div>Novel Creator</div></div>
+  <p class="nav-desc">完整 HTML 原型。已包含此前主流程页面，并补齐 Gap Closure 报告中的缺口。</p>
+  <div class="nav-title">完整页面</div>
+  <button class="active" data-screen="home"><svg class="hi"><use href="#i-home"></use></svg>项目库首页</button>
+  <button data-screen="wizard"><svg class="hi"><use href="#i-plus"></use></svg>新建项目向导</button>
+  <button data-screen="privacy"><svg class="hi"><use href="#i-shield"></use></svg>隐私与模型调用确认</button>
+  <button data-screen="overview"><svg class="hi"><use href="#i-book"></use></svg>项目概览</button>
+  <button data-screen="editor"><svg class="hi"><use href="#i-pencil"></use></svg>写作编辑器</button>
+  <button data-screen="outline"><svg class="hi"><use href="#i-list"></use></svg>大纲与资料库</button>
+  <button data-screen="research"><svg class="hi"><use href="#i-search"></use></svg>联网调研与引用</button>
+  <button data-screen="revision"><svg class="hi"><use href="#i-check"></use></svg>修订追踪与审核</button>
+  <button data-screen="tasks"><svg class="hi"><use href="#i-clock"></use></svg>Agent 任务中心</button>
+  <button data-screen="changes"><svg class="hi"><use href="#i-archive"></use></svg>待确认变更中心</button>
+  <button data-screen="character"><svg class="hi"><use href="#i-users"></use></svg>角色详情</button>
+  <button data-screen="world"><svg class="hi"><use href="#i-globe"></use></svg>世界观设定</button>
+  <button data-screen="notes"><svg class="hi"><use href="#i-doc"></use></svg>笔记与素材库</button>
+  <button data-screen="sessions"><svg class="hi"><use href="#i-branch"></use></svg>会话、分支与时光机</button>
+  <button data-screen="export"><svg class="hi"><use href="#i-download"></use></svg>导出向导</button>
+  <button data-screen="backup"><svg class="hi"><use href="#i-archive"></use></svg>数据与备份</button>
+  <button data-screen="settings"><svg class="hi"><use href="#i-gear"></use></svg>设置与服务商</button>
+  <button data-screen="empty-error"><svg class="hi"><use href="#i-warning"></use></svg>空状态与错误态</button>
+  <button data-screen="mobile-editor"><svg class="hi"><use href="#i-book"></use></svg>移动端编辑器</button>
+  <button data-screen="mobile-agent"><svg class="hi"><use href="#i-sparkles"></use></svg>移动端 Agent</button>
+</aside>
+
+<main class="main">
+<div class="header">
+  <div><h1>Novel Creator 完整 HTML 原型</h1><p>莫兰迪色系，无 emoji，Heroicons 风格 SVG。此文件整合此前输出的主流程原型，并补齐报告中指出的缺口。</p></div>
+  <div class="badges"><span class="badge">本地优先</span><span class="badge">Agent 可审核写入</span><span class="badge">完整闭环</span><span class="badge">可直接打开</span></div>
+</div>
+
+<section id="home" class="screen active">
+  <div class="screen-head"><div><h2>01. 项目库首页</h2><p>从零进入产品的入口：本地项目、最近打开、收藏、回收站、导入项目包。</p></div></div>
+  <div class="canvas"><div class="desktop project-home">
+    <div class="home-sidebar">
+      <div class="logo-row"><div class="logo"><svg class="hi"><use href="#i-pencil"></use></svg></div><div>Novel Creator</div></div>
+      <div class="side-menu"><div class="item active"><svg class="hi"><use href="#i-folder"></use></svg>项目库</div><div class="item"><svg class="hi"><use href="#i-clock"></use></svg>最近打开</div><div class="item"><svg class="hi"><use href="#i-sparkles"></use></svg>收藏</div><div class="item"><svg class="hi"><use href="#i-archive"></use></svg>回收站</div><div class="item"><svg class="hi"><use href="#i-gear"></use></svg>设置</div></div>
+    </div>
+    <div class="center">
+      <div class="toolbar" style="justify-content:space-between"><div><h2 style="margin:0;color:var(--ink)">我的项目</h2><p style="margin:6px 0 0;color:var(--muted)">所有项目默认保存在本地设备。</p></div><div><button class="btn"><svg class="hi"><use href="#i-download"></use></svg>导入项目包</button><button class="btn primary"><svg class="hi"><use href="#i-plus"></use></svg>新建项目</button></div></div>
+      <div class="searchbox"><svg class="hi"><use href="#i-search"></use></svg>搜索项目</div>
+      <div class="project-grid">
+        <div class="project-tile"><div class="cover"></div><h3>暮色之城</h3><p>都市悬疑 · 128,450 字</p><span class="chip green">本地已保存</span> <span class="chip">进行中</span></div>
+        <div class="project-tile"><div class="cover purple"></div><h3>深渊回声</h3><p>科幻 · 20 章</p><span class="chip">草稿</span></div>
+        <div class="project-tile"><div class="cover mist"></div><h3>风起平川</h3><p>历史 · 15 章</p><span class="chip">暂停</span></div>
+        <div class="project-tile"><div class="cover" style="background:linear-gradient(145deg,#b6b0a5,#77756c)"></div><h3>显海旅人</h3><p>奇幻 · 8 章</p><span class="chip warn">待整理</span></div>
+        <div class="project-tile big-plus"><svg class="hi" style="width:54px;height:54px"><use href="#i-plus"></use></svg></div>
+      </div>
+      <p style="color:var(--muted);margin-top:18px">本地已使用 2.4GB / 10GB。可通过“数据与备份”导出 Project Package。</p>
+    </div>
+  </div></div>
+</section>
+
+<section id="wizard" class="screen">
+  <div class="screen-head"><div><h2>02. 新建项目向导</h2><p>项目创建流程：基础信息、类型与风格、写作偏好、完成确认。</p></div></div>
+  <div class="canvas"><div class="desktop"><div class="topbar"><b>新建项目</b><button class="btn small">取消</button></div><div class="center">
+    <div class="wizard">
+      <div class="steps"><div class="step active"><span class="num">1</span>基本信息</div><div class="step"><span class="num">2</span>类型与风格</div><div class="step"><span class="num">3</span>写作偏好</div><div class="step"><span class="num">4</span>完成</div></div>
+      <div class="form-row"><label>项目标题</label><input class="input" value="暮色之城"></div>
+      <div class="form-row"><label>作者</label><input class="input" value="你的名字"></div>
+      <div class="form-row"><label>简介</label><textarea class="input">一座被雾气笼罩的城市，隐藏着不为人知的旧档案。</textarea></div>
+      <div class="form-row"><label>封面</label><div><div class="cover" style="width:150px;height:90px"></div><button class="btn small" style="margin-top:8px">更换封面</button></div></div>
+      <div class="form-row"><label>标签</label><div><span class="chip green">都市</span> <span class="chip">悬疑</span> <span class="chip">犯罪</span> <span class="chip">人性</span> <button class="btn small">添加</button></div></div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px"><button class="btn">上一步</button><button class="btn primary">下一步</button></div>
+    </div>
+  </div></div></div>
+</section>
+
+<section id="privacy" class="screen">
+  <div class="screen-head"><div><h2>03. 隐私与模型调用确认</h2><p>用户明确知道哪些内容会发送给模型或搜索服务。</p></div></div>
+  <div class="canvas"><div class="desktop"><div class="topbar"><b>隐私与数据使用说明</b></div><div class="center">
+    <div class="privacy">
+      <div class="privacy-hero"><div><h2 style="margin-top:0;color:var(--ink)">Novel Creator 以本地优先方式保存项目</h2><p>默认情况下，项目正文、角色、世界观、笔记与会话历史保存于本地设备。只有在你主动调用模型或联网调研时，相关上下文才会发送至配置的服务商。</p></div><div class="shield"><svg class="hi" style="width:76px;height:76px"><use href="#i-shield"></use></svg></div></div>
+      <div class="panel"><h3><svg class="hi"><use href="#i-cloud"></use></svg>可能发送到外部服务的内容</h3><p>当前选区、章节摘要、角色卡、世界观摘要、你的提示词、搜索关键词和来源 URL。</p></div>
+      <div class="panel"><h3><svg class="hi"><use href="#i-gear"></use></svg>API Key 与 Web 风险</h3><p>API Key 可本地加密保存。Web 端直连 API 可能存在暴露风险，建议使用后端代理或仅在可信环境中启用。</p></div>
+      <label style="display:flex;gap:10px;align-items:center;margin:16px 0"><input type="checkbox" checked> 我已阅读并理解以上内容</label>
+      <div style="display:flex;justify-content:flex-end"><button class="btn primary">开始使用</button></div>
+    </div>
+  </div></div></div>
+</section>
+
+<section id="overview" class="screen">
+  <div class="screen-head"><div><h2>04. 项目概览</h2><p>此前主流程页面：项目进度、快速操作、今日目标、Agent 建议与风险提示。</p></div></div>
+  <div class="canvas"><div class="desktop">
+    <div class="topbar"><div class="tabs"><div class="tab active">暮色之城</div><div class="tab">归途纪元</div><div class="tab">风起平川</div></div><div class="actions"><svg class="hi"><use href="#i-cloud"></use></svg>本地已保存</div></div>
+    <div class="workspace">
+      <div class="sidebar">
+        <div class="project-card"><div class="cover"></div><div><b>暮色之城</b><p style="margin:6px 0;color:var(--muted)">字数 128,450 · 章节 24</p><div class="progress"><span style="width:62%"></span></div><small>进度 62%</small></div></div>
+        <div class="searchbox"><svg class="hi"><use href="#i-search"></use></svg>搜索</div>
+        <div class="side-menu"><div class="item active"><svg class="hi"><use href="#i-home"></use></svg>项目概览</div><div class="item"><svg class="hi"><use href="#i-list"></use></svg>大纲</div><div class="item"><svg class="hi"><use href="#i-doc"></use></svg>章节</div><div class="item"><svg class="hi"><use href="#i-users"></use></svg>角色</div><div class="item"><svg class="hi"><use href="#i-globe"></use></svg>世界观</div><div class="item"><svg class="hi"><use href="#i-archive"></use></svg>笔记</div><div class="item"><svg class="hi"><use href="#i-download"></use></svg>导出</div></div>
+      </div>
+      <div class="center">
+        <div class="panel"><div style="display:grid;grid-template-columns:130px 1fr 300px;gap:18px;align-items:center"><div class="cover" style="height:150px"></div><div><h2 style="margin:0;color:var(--ink)">暮色之城 <span class="chip green">进行中</span></h2><p>都市悬疑 · 128,450 字</p><p>连绵的雨夜中，一起旧案被重新翻开。档案里沉睡的名字，与城市地下的秩序缓缓重叠。</p><span class="chip">都市</span> <span class="chip">悬疑</span> <span class="chip">犯罪</span> <span class="chip">人性</span></div><div class="card-grid two"><button class="btn">新建章节</button><button class="btn">继续写作</button><button class="btn">生成大纲</button><button class="btn">打开角色库</button></div></div></div>
+        <div class="metrics"><div class="metric"><b>128,450</b><span>当前字数</span></div><div class="metric"><b>62%</b><span>整体进度</span></div><div class="metric"><b>24 / 38</b><span>完成章节</span></div><div class="metric"><b>16 天</b><span>创作天数</span></div></div>
+        <div class="card-grid two" style="margin-top:12px"><div class="card"><h3>字数趋势</h3><div class="chart"><svg viewBox="0 0 320 120"><polyline points="5,90 55,75 105,88 155,70 205,34 255,68 315,52" fill="none" stroke="#637b61" stroke-width="3"/><polygon points="5,120 5,90 55,75 105,88 155,70 205,34 255,68 315,52 315,120" fill="#dfe8db"/></svg></div></div><div class="card"><h3>章节完成进度</h3><div class="progress" style="height:22px"><span style="width:63%"></span></div><p><span class="chip green">已完成 24</span> <span class="chip">进行中 3</span> <span class="chip">未开始 11</span></p></div></div>
+        <div class="card-grid three" style="margin-top:12px"><div class="card"><h3>最近写作</h3><p>第二卷 第 6 章 迷雾边缘<br>今天 10:45 · 1,360 字</p></div><div class="card"><h3>置顶笔记</h3><p>世界观设定：城市结构与势力分布<br>关键线索汇总</p></div><div class="card"><h3>最近修订</h3><p>第二卷 第 4 章 无声之城<br>修订 2 处</p></div></div>
+      </div>
+      <div class="right"><div class="agent-tabs"><span class="chip active">推荐</span><span class="chip">洞察</span><span class="chip">风险</span><span class="chip">灵感</span></div><div class="panel"><h3>下一步建议</h3><ol><li>完善第二卷主线冲突</li><li>补充关键线索伏笔</li><li>优化角色动机</li></ol><button class="btn">应用建议到大纲</button></div><div class="panel"><h3>项目上下文</h3><p>当前处于第二卷“旧档案”阶段，主角林叙在调查旧案过程中逐步接近城市地下的秘密组织。</p></div><div class="panel notice"><h3>风险提示</h3><p>近期章节节奏偏慢，冲突升级不足。</p><button class="btn small">查看分析</button></div></div>
+    </div>
+  </div></div>
+</section>
+
+<section id="editor" class="screen">
+  <div class="screen-head"><div><h2>05. 写作编辑器</h2><p>此前主流程页面：三栏式布局、修订展示、AI 内联建议、右侧 Agent 面板。</p></div></div>
+  <div class="canvas"><div class="desktop">
+    <div class="topbar"><div class="tabs"><div class="tab active">暮色之城</div><div class="tab">归途纪元</div><div class="tab">风起平川</div></div><div class="actions"><svg class="hi"><use href="#i-cloud"></use></svg>本地已保存</div></div>
+    <div class="workspace wide-right">
+      <div class="sidebar"><div class="project-card"><div class="cover"></div><div><b>暮色之城</b><p style="margin:6px 0;color:var(--muted)">字数 128,450 · 章节 24</p><div class="progress"><span style="width:62%"></span></div><small>进度 62%</small></div></div><div class="searchbox"><svg class="hi"><use href="#i-search"></use></svg>搜索</div><div class="tree"><div class="row"><b>第一卷 雾起</b><span>6</span></div><div class="row">第 1 章 雨夜的来客</div><div class="row active">第 2 章 旧档案</div><div class="row">第 3 章 钥匙与门</div><div class="row">第 4 章 无声之城</div><div class="row">第 5 章 阴影之后</div><div class="row">第 6 章 迷雾边缘</div><div class="row"><b>第二卷 潮汐</b><span>7</span></div></div></div>
+      <div class="center"><div class="toolbar"><button class="btn">续写</button><button class="btn">改写</button><button class="btn">扩写</button><button class="btn">缩写</button><button class="btn">润色</button><select class="select"><option>正文</option></select><select class="select"><option>思源宋体</option></select><select class="select"><option>16</option></select></div><div class="editor"><h1>第2章　旧档案</h1><p>雨停了，城市却像被谁按下了静音键。空气里还残留着潮湿的铁锈味，远处的钟楼在雾中若隐若现，像一块被时间啃噬的骨头。</p><p>林叙把外套上的水珠甩在门口的地垫上，推开了档案馆厚重的木门。馆内灯光昏黄，尘埃在光束里缓慢浮动。</p><p>今天他 <span class="del">本不该来这里，</span><span class="ins">此刻却被一封匿名信引了进来。</span> 信上只有一句话：“当钟声敲响第十三下，翻开第七排第三个抽屉。”</p><p>他沿着书架的缝隙穿行，指尖拂过编号冰冷的金属牌。第七排，第三个抽屉——果然，锁上了锁。</p><div class="tip">AI 建议：将“本不该来这里”改为更具画面感的表达<br><b>接受 Tab</b>　|　忽略</div><p>照片上的人站在钟楼下，手里握着一把钥匙，表情却看不清。</p></div></div>
+      <div class="right"><h3>Agent <span style="color:var(--green);font-size:12px">在线</span></h3><div class="agent-tabs"><span class="chip">脑暴</span><span class="chip">调研</span><span class="chip">骨架</span><span class="chip active">写作</span><span class="chip">润色</span></div><div class="msg user">根据当前章节内容，继续推进故事情节，保持悬疑氛围，适当增加角色内心描写。</div><div class="msg">好的，我将延续当前悬疑氛围，推进情节并增加主角的内心冲突与思考。</div><div class="panel"><h3>工具状态</h3><div class="status-grid"><div class="status-cell"><span class="status-dot"></span>长文本理解<br>完成</div><div class="status-cell"><span class="status-dot"></span>情节连贯性<br>良好</div><div class="status-cell"><span class="status-dot"></span>角色一致性<br>良好</div><div class="status-cell"><span class="status-dot warn"></span>悬念强度<br>较强</div></div></div><div class="panel"><h3>上下文摘要</h3><p>当前章节：第 2 章 旧档案。角色：林叙。地点：城市档案馆。关键词：匿名信、钟楼、旧档案、钥匙。</p></div><button class="btn primary" style="width:100%">生成草稿</button></div>
+    </div>
+  </div></div>
+</section>
+
+<section id="outline" class="screen">
+  <div class="screen-head"><div><h2>06. 大纲与资料库</h2><p>此前主流程页面：大纲、角色、世界观、节拍卡、关系图、Agent 结构建议。</p></div></div>
+  <div class="canvas"><div class="desktop"><div class="topbar"><div class="tabs"><div class="tab active">暮色之城</div><div class="tab">归途纪元</div></div><div class="actions">本地已保存</div></div><div class="workspace">
+    <div class="sidebar"><div class="side-menu"><div class="item">项目概览</div><div class="item active">大纲</div><div class="item">章节</div><div class="item">角色</div><div class="item">世界观</div></div><div class="tree"><div class="row"><b>第一卷 雾起</b><span>6</span></div><div class="row active">第 2 章 旧档案</div><div class="row">第 3 章 钥匙与门</div></div></div>
+    <div class="center"><div class="toolbar"><button class="btn">新建卷</button><button class="btn">新建章</button><button class="btn">视图</button><button class="btn">筛选</button></div><div class="outline-layout"><div class="panel"><h3>章节列表</h3><div class="tree"><div class="row"><span class="chip green">已完成</span> 第 1 章</div><div class="row active"><span class="chip">进行中</span> 第 2 章</div><div class="row"><span class="chip">草稿</span> 第 3 章</div><div class="row"><span class="chip">未开始</span> 第 4 章</div></div></div><div><div class="panel"><h3>第一卷-第2章 旧档案 <span class="chip green">进行中</span></h3><p>林叙无意间在旧书摊发现一本破旧的档案册，里面夹着一张泛黄照片。照片中的人，与他梦中出现的身影一模一样。</p></div><div class="panel"><h3>故事节拍</h3><div class="beat"><span class="drag">1</span><span>开场钩子：旧书摊、雨夜、林叙发现档案册</span><span class="chip green">已完成</span><small>412字</small></div><div class="beat"><span class="drag">2</span><span>催化事件：照片中的人引发林叙的强烈既视感</span><span class="chip green">已完成</span><small>368字</small></div><div class="beat"><span class="drag">3</span><span>过渡：林叙决定前往城市档案馆查证</span><span class="chip warn">进行中</span><small>521字</small></div><button class="btn" style="width:100%;margin-top:8px">添加节拍</button></div></div><div class="panel"><h3>资料库</h3><div class="card"><h3>角色</h3><p>林叙、苏晚、陈默</p></div><div class="card"><h3>关系图谱</h3><p>林叙与苏晚合作调查，陈默守口如瓶。</p></div><div class="card"><h3>世界观条目</h3><p>城市档案馆、安河司、旧案制度。</p></div></div></div></div>
+    <div class="right"><div class="panel"><h3>情节建议</h3><p>当前节拍从“过渡”直接跳到“关键转折点”，建议补充角色行动或阻力。</p><button class="btn">添加为待确认节拍</button></div><div class="panel notice"><h3>一致性提醒</h3><p>角色“苏晚”的能力描写前后存在偏差，建议补充设定依据。</p><button class="btn small">查看位置</button></div></div>
+  </div></div></div>
+</section>
+
+<section id="research" class="screen">
+  <div class="screen-head"><div><h2>07. 联网调研与引用</h2><p>此前主流程页面并补充 retrievedAt、可信来源、引用治理与写入确认。</p></div></div>
+  <div class="canvas"><div class="desktop"><div class="topbar"><b>联网调研与笔记</b><div class="actions">仅显示可信来源 <span class="chip green">开启</span></div></div><div class="workspace wide-right">
+    <div class="sidebar"><div class="side-menu"><div class="item">全部笔记</div><div class="item">灵感与设定</div><div class="item active">研究与参考</div></div></div>
+    <div class="center research-layout"><div><div class="toolbar"><div class="searchbox" style="flex:1"><svg class="hi"><use href="#i-search"></use></svg>19世纪蒸汽机在北境城市取暖的普及程度</div><button class="btn primary">搜索</button><button class="btn">筛选</button></div><p style="color:var(--muted)">为你找到 18 条相关结果。检索时间：2026-06-03 10:32。</p><div class="result"><h4>19世纪欧洲城市供暖技术演进研究</h4><div class="url">https://example.edu/article/steam-heating</div><p>摘要：介绍工业革命中后期城市供暖系统的技术扩散和公共建筑应用。</p><span class="chip green">学术期刊</span> <span class="chip">蒸汽供暖</span> <button class="btn small">添加到笔记</button></div><div class="result"><h4>维多利亚时期城市基础设施与公共卫生</h4><div class="url">https://jstor.example/stable/40123456</div><p>摘要：探讨供暖、供水和工业动力设备在公共建筑中的应用。</p><span class="chip green">可信来源</span> <span class="chip">公共卫生</span></div></div><div><div class="panel"><h3>调研笔记</h3><input class="input" value="未命名笔记"><div class="toast"><b>蒸汽供暖在北境城市的普及时间</b><p>19世纪中叶后，蒸汽供暖在北境城市逐步普及，尤其是公共建筑与中产阶层住宅。</p><small>retrievedAt: 2026-06-03</small></div><button class="btn primary">保存到笔记</button></div></div></div>
+    <div class="right"><div class="agent-tabs"><span class="chip">脑暴</span><span class="chip active">调研</span><span class="chip">骨架</span><span class="chip">写作</span></div><div class="msg user">调研主题：19世纪蒸汽机在北境城市取暖的普及程度。</div><div class="panel"><h3>工具状态</h3><div class="status-grid"><div class="status-cell"><span class="status-dot"></span>联网搜索<br>完成</div><div class="status-cell"><span class="status-dot"></span>网页解析<br>完成</div><div class="status-cell"><span class="status-dot"></span>内容提取<br>完成</div><div class="status-cell"><span class="status-dot"></span>引用整理<br>完成</div></div></div><button class="btn primary" style="width:100%">生成调研摘要</button><button class="btn" style="width:100%;margin-top:8px">应用为参考</button></div>
+  </div></div></div>
+</section>
+
+<section id="revision" class="screen">
+  <div class="screen-head"><div><h2>08. 修订追踪与审核</h2><p>此前主流程页面：Diff 视图、接受/拒绝、时间线、修订理由。</p></div></div>
+  <div class="canvas"><div class="desktop"><div class="topbar"><b>第 2 章 旧档案 · 修订追踪与审核</b><div class="actions">字数 2,341</div></div><div class="workspace wide-right">
+    <div class="sidebar"><div class="tree"><div class="row"><b>第一卷 雾起</b></div><div class="row active">第 2 章 旧档案</div></div></div>
+    <div class="center"><div class="panel"><h3>修订摘要</h3><div class="metrics"><div class="metric"><b>12 条</b><span>修改建议</span></div><div class="metric"><b>5 条</b><span>已接受</span></div><div class="metric"><b>7 条</b><span>待处理</span></div><div class="metric"><b>+214 字</b><span>净改动</span></div></div><div class="progress"><span style="width:42%"></span></div><div class="toolbar" style="margin-top:12px"><button class="btn primary">接受全部</button><button class="btn">拒绝全部</button><button class="btn">上一条</button><button class="btn">下一条</button><button class="btn">仅接受当前段落</button></div></div><h2>第2章 旧档案</h2><div class="revision-grid"><div class="revision-col"><h4>修改前</h4><div class="diff-row"><div>1</div><div>雨停了，城市却像被按下了静音键。</div></div><div class="diff-row"><div>2</div><div>馆内灯光昏黄，尘埃在光束里浮动。</div></div><div class="diff-row"><div>3</div><div><span class="del">今天他本不该来这里，</span>此刻却被一封匿名信引了进来。</div></div></div><div class="revision-col"><h4>修改后</h4><div class="diff-row"><div>1</div><div>雨停了，城市却像被按下了静音键。<span class="ins">空气里弥漫潮湿与铁锈的气味。</span></div></div><div class="diff-row"><div>2</div><div>馆内灯光昏黄，尘埃在光束里缓慢浮动。</div></div><div class="diff-row"><div>3</div><div>今天他本不该来这里，<span class="ins">却还是因为一封匿名信而来。</span></div></div></div></div></div>
+    <div class="right"><div class="panel"><h3>本条建议原因</h3><p>增强环境描写的沉浸感，丰富感官细节，提升悬念与线索密度。</p><span class="chip">细节增强</span> <span class="chip">节奏优化</span></div><div class="panel"><h3>修订时间线</h3><div class="timeline"><div class="event"><b>第 3 条修改</b><p>待处理 · +28 / -18 字</p></div><div class="event"><b>第 2 条修改</b><p>已接受 · +16 / -6 字</p></div><div class="event"><b>第 1 条修改</b><p>已接受 · +22 / -10 字</p></div></div></div></div>
+  </div></div></div>
+</section>
+
+<section id="tasks" class="screen">
+  <div class="screen-head"><div><h2>09. Agent 任务中心</h2><p>补齐 AgentTask 的 running、completed、failed、cancelled、retry、partial success 状态。</p></div></div>
+  <div class="canvas"><div class="desktop"><div class="topbar"><b>Agent 任务中心</b><button class="btn small">全部暂停</button></div><div class="workspace two"><div class="sidebar"><div class="side-menu"><div class="item active">全部任务</div><div class="item">进行中</div><div class="item">已完成</div><div class="item">失败</div><div class="item">已取消</div></div></div><div class="center"><div class="toolbar"><span class="chip green">进行中 2</span><span class="chip">已完成 3</span><span class="chip red">失败 1</span><span class="chip warn">部分完成 1</span></div><div class="task"><b>续写第 3 章</b><p>生成中，1,256 / 2,000 字</p><div class="bar"><span style="width:45%"></span></div><button class="btn small">取消</button></div><div class="task"><b>联网搜索：城市档案馆制度</b><p>正在检索 8/10 结果</p><div class="bar"><span style="width:80%"></span></div></div><div class="task"><b>润色第 2 章</b><p>已完成 · 1,032 字</p><span class="chip green">完成</span></div><div class="task"><b>大纲建议：分支方案</b><p>失败：网络错误</p><span class="chip red">失败</span> <button class="btn small">重试</button></div><div class="task"><b>一致性检查</b><p>部分完成：章节 1-4 已检查，章节 5 因上下文超限跳过。</p><span class="chip warn">部分完成</span> <button class="btn small">继续检查</button></div></div></div></div></div>
+</section>
+
+<section id="changes" class="screen">
+  <div class="screen-head"><div><h2>10. 待确认变更中心</h2><p>Agent 不能直接覆盖项目数据，所有变更进入 pending change。</p></div></div>
+  <div class="canvas"><div class="desktop"><div class="topbar"><b>待确认变更中心</b><button class="btn primary">应用选中变更</button></div><div class="workspace two"><div class="sidebar"><div class="side-menu"><div class="item active">全部待确认</div><div class="item">正文修订</div><div class="item">大纲节拍</div><div class="item">角色资料</div><div class="item">世界观设定</div></div></div><div class="center"><div class="notice">Agent 不能直接覆盖项目数据。以下变更只有在用户确认后才会写入本地项目。</div><div class="list-row"><div><b>正文修订：第 2 章 旧档案</b><p>新增环境描写，调整句式节奏。</p></div><div><span class="chip warn">pending</span> <button class="btn small">查看 diff</button></div></div><div class="list-row"><div><b>新增节拍：第 3 章 钥匙与门</b><p>补充“钥匙无法打开正确门锁”的阻力事件。</p></div><div><span class="chip warn">pending</span> <button class="btn small">查看</button></div></div><div class="list-row"><div><b>角色卡更新：苏晚</b><p>新增职业线索：档案修复师。</p></div><div><span class="chip warn">pending</span> <button class="btn small">对比</button></div></div><div class="list-row"><div><b>世界观条目：安河司</b><p>新增组织层级与旧案管理规则。</p></div><div><span class="chip warn">pending</span> <button class="btn small">对比</button></div></div><div class="toolbar" style="margin-top:20px"><button class="btn primary">接受选中</button><button class="btn">拒绝选中</button><button class="btn">稍后处理</button></div></div></div></div></div>
+</section>
+
+<section id="character" class="screen">
+  <div class="screen-head"><div><h2>11. 角色详情</h2><p>结构化小说知识库的角色卡详情页、关系、时间线与笔记。</p></div></div>
+  <div class="canvas"><div class="desktop"><div class="topbar"><b>角色库 · 林叙</b><div><button class="btn">新建角色</button><button class="btn primary">编辑</button></div></div><div class="workspace two"><div class="sidebar"><div class="side-menu"><div class="item active">林叙</div><div class="item">苏晚</div><div class="item">陈默</div><div class="item">神秘人</div></div></div><div class="center"><div class="character"><div class="panel"><div class="avatar"></div><h2 style="text-align:center">林叙</h2><span class="chip green">主角</span> <span class="chip">核心</span></div><div class="panel"><h3>角色信息</h3><p>年龄：28。身份：档案修复师。性格：内敛、谨慎、擅长观察细节。目标：查明父亲失踪与旧档案之间的关系。</p><h3>关系</h3><p>苏晚：合作者，信任逐步建立。陈默：馆长，掌握旧案。神秘人：匿名信发送者。</p></div></div><div class="card-grid three" style="margin-top:12px"><div class="card"><h3>标签</h3><span class="chip">观察力</span> <span class="chip">旧案关联</span> <span class="chip">犹疑</span></div><div class="card"><h3>时间线</h3><p>05-10 发现旧档案<br>05-12 收到匿名信</p></div><div class="card"><h3>笔记</h3><p>林叙对“钟楼”有异常熟悉感。</p></div></div></div></div></div></div>
+</section>
+
+<section id="world" class="screen">
+  <div class="screen-head"><div><h2>12. 世界观设定</h2><p>世界观列表、分类、条目详情与一致性提示。</p></div></div>
+  <div class="canvas"><div class="desktop"><div class="topbar"><b>世界观设定</b><button class="btn primary">新建条目</button></div><div class="workspace two"><div class="sidebar"><div class="side-menu"><div class="item active">全部</div><div class="item">地理环境</div><div class="item">组织势力</div><div class="item">历史事件</div><div class="item">规则设定</div><div class="item">文化习俗</div></div></div><div class="center"><div class="card-grid two"><div class="card"><h3>雾域</h3><p>旧城区常年被雾气笼罩，是故事主要发生地。</p><span class="chip green">地理环境</span></div><div class="card"><h3>档案馆</h3><p>城市旧案的保存处，部分档案受到特殊权限管控。</p><span class="chip">组织机构</span></div><div class="card"><h3>旧案编号</h3><p>以“第十三夜”为核心暗号的旧案编号体系。</p><span class="chip warn">规则设定</span></div><div class="card"><h3>安河司</h3><p>负责秘密维护城市历史记录的组织。</p><span class="chip">组织势力</span></div></div><div class="panel notice" style="margin-top:12px"><h3>一致性提示</h3><p>“档案馆权限”在第 1 章描述为公开查询，但第 2 章变为严格管控。建议补充规则解释。</p><button class="btn">生成修复建议</button></div></div></div></div></div>
+</section>
+
+<section id="notes" class="screen">
+  <div class="screen-head"><div><h2>13. 笔记与素材库</h2><p>笔记分类、素材来源、标签、调研笔记与引用。</p></div></div>
+  <div class="canvas"><div class="desktop"><div class="topbar"><b>笔记与素材库</b><button class="btn primary">新建笔记</button></div><div class="workspace two"><div class="sidebar"><div class="searchbox"><svg class="hi"><use href="#i-search"></use></svg>搜索笔记</div><div class="side-menu"><div class="item active">全部笔记 126</div><div class="item">灵感与设定 34</div><div class="item">角色资料 18</div><div class="item">世界设定 22</div><div class="item">剧情线索 16</div><div class="item">研究与参考 36</div></div></div><div class="center" style="display:grid;grid-template-columns:320px 1fr;gap:12px"><div class="panel"><div class="list-row"><b>城市档案馆开放时间</b><span class="chip green">调研</span></div><div class="list-row"><b>旧钥匙照片</b><span class="chip">图片</span></div><div class="list-row"><b>雾域传说</b><span class="chip">设定</span></div><div class="list-row"><b>苏晚职业资料</b><span class="chip">角色</span></div></div><div class="panel"><h2>城市档案馆开放时间</h2><p>城市档案馆周二、四、六开放。开放时间：9:00 - 17:00。地址：雾街区旧巷 17 号。</p><p>来源：https://archives.mistcity.gov</p><span class="chip green">调研</span> <span class="chip">档案馆</span><div class="toolbar"><button class="btn">引用到章节</button><button class="btn">关联角色</button></div></div></div></div></div></div>
+</section>
+
+<section id="sessions" class="screen">
+  <div class="screen-head"><div><h2>14. 会话、分支与时光机</h2><p>阶段 7：多会话、多分支、上下文快照、历史节点回溯。</p></div></div>
+  <div class="canvas"><div class="desktop"><div class="topbar"><b>会话中心</b><button class="btn primary">新建会话</button></div><div class="workspace two"><div class="sidebar"><div class="side-menu"><div class="item">脑暴 · 会话 01</div><div class="item">调研 · 会话 05</div><div class="item active">写作 · 会话 12</div><div class="item">润色 · 会话 03</div></div></div><div class="center"><div class="toolbar"><span class="chip">脑暴</span><span class="chip">调研</span><span class="chip">骨架</span><span class="chip green">写作</span><span class="chip">润色</span></div><div class="panel"><h3>当前会话</h3><p>会话 12：围绕第 3 章“钥匙与门”的情节推进。上下文快照包含：大纲、角色摘要、前两章摘要。</p></div><div class="panel"><h3>分支</h3><div class="timeline"><div class="event"><b>主线 A：林叙继续调查档案馆</b><p>当前分支</p></div><div class="event"><b>分支 B：苏晚提前暴露身份</b><p>从 05-12 节点分出</p></div><div class="event"><b>分支 C：陈默成为第一嫌疑人</b><p>从 05-13 节点分出</p></div></div></div><div class="panel"><h3>时光机快照</h3><div class="list-row"><div>05-14 10:16 · 完成第 2 章修订</div><button class="btn small">回溯预览</button></div><div class="list-row"><div>05-13 18:20 · 生成关键节拍</div><button class="btn small">创建分支</button></div></div></div></div></div></div>
+</section>
+
+<section id="export" class="screen">
+  <div class="screen-head"><div><h2>15. 导出向导</h2><p>此前主流程页面并补齐导出范围、待处理修订规则、Project Package。</p></div></div>
+  <div class="canvas"><div class="desktop"><div class="topbar"><b>导出向导</b><div class="actions">本地已保存</div></div><div class="workspace"><div class="sidebar"><div class="tree"><div class="row active">第 2 章 旧档案</div></div></div><div class="center"><div class="steps"><div class="step active"><span class="num">1</span>选择格式</div><div class="step"><span class="num">2</span>预览效果</div><div class="step"><span class="num">3</span>排版设置</div><div class="step"><span class="num">4</span>导出文件</div></div><div class="export-layout"><div><h3>选择导出格式</h3><div class="card-grid three"><div class="format-card"><h3>TXT</h3><p>纯文本，兼容性强。</p></div><div class="format-card"><h3>Markdown</h3><p>轻量标记语言，适合持续写作。</p></div><div class="format-card"><h3>EPUB</h3><p>电子书标准格式。</p></div><div class="format-card active"><h3>PDF</h3><p>固定排版，适合打印分享。</p></div><div class="format-card"><h3>DOCX</h3><p>Word 兼容格式。</p></div><div class="format-card"><h3>Project Package</h3><p>完整项目备份与迁移包。</p></div></div><div class="panel" style="margin-top:12px"><h3>文档预览</h3><div style="height:260px;background:white;border:1px solid var(--line);border-radius:15px;padding:24px;font-family:var(--serif);line-height:1.8"><h2>第二章 旧档案</h2><p>雨停了，城市却像被按下了静音键。空气里还残留着潮湿的铁锈味……</p></div></div></div><div class="panel"><h3>导出设置</h3><label>导出范围</label><select class="input"><option>当前章节：第 2 章</option><option>当前卷：第一卷</option><option>全书</option></select><br><br><label>待处理修订</label><select class="input"><option>仅导出已接受内容</option><option>包含修订标记</option><option>导出前提示处理</option></select><br><br><label>字体</label><select class="input"><option>思源宋体</option></select><br><br><button class="btn primary" style="width:100%">导出文件</button></div><div class="panel"><h3>导出历史</h3><div class="list-row"><div>暮色之城_第二章.pdf<br><small>2026-06-03 10:42</small></div><span class="chip green">成功</span></div><div class="list-row"><div>暮色之城_完整小说.epub</div><span class="chip green">成功</span></div><div class="list-row"><div>暮色之城_项目包.ncpkg</div><span class="chip green">成功</span></div><div class="list-row"><div>暮色之城_第二章.pdf</div><span class="chip red">失败</span></div></div></div></div></div></div></div>
+</section>
+
+<section id="backup" class="screen">
+  <div class="screen-head"><div><h2>16. 数据与备份</h2><p>本地优先、项目包备份、恢复、迁移、加密与云同步占位。</p></div></div>
+  <div class="canvas"><div class="desktop"><div class="topbar"><b>数据与备份</b></div><div class="workspace two"><div class="sidebar"><div class="side-menu"><div class="item active">本地存储</div><div class="item">项目包</div><div class="item">加密</div><div class="item">恢复</div><div class="item">云同步占位</div></div></div><div class="center"><div class="metrics"><div class="metric"><b>4 个</b><span>本地项目</span></div><div class="metric"><b>2.4GB</b><span>已用空间</span></div><div class="metric"><b>今天</b><span>最近备份</span></div><div class="metric"><b>已启用</b><span>加密状态</span></div></div><div class="card-grid two" style="margin-top:12px"><div class="card"><h3>导出 Project Package</h3><p>包含项目元数据、章节、修订、角色、世界观、笔记、会话摘要与引用索引。</p><button class="btn primary">导出项目包</button></div><div class="card"><h3>导入项目包</h3><p>从 .ncpkg 文件恢复或迁移项目。导入前会生成本地快照。</p><button class="btn">选择文件</button></div><div class="card"><h3>本地加密</h3><p>保护 API Key 与项目数据库。忘记密码将无法恢复加密数据。</p><button class="btn">管理加密</button></div><div class="card"><h3>云同步占位</h3><p>当前版本不默认启用云同步。后续可接入用户自有云或托管同步。</p><button class="btn">了解规则</button></div></div></div></div></div></div>
+</section>
+
+<section id="settings" class="screen">
+  <div class="screen-head"><div><h2>17. 设置与服务商</h2><p>此前主流程页面并补充隐私提示、服务商配置、模型列表、写作偏好、快捷键。</p></div></div>
+  <div class="canvas"><div class="desktop"><div class="topbar"><b>设置</b><div class="actions">本地已保存</div></div><div class="settings-layout"><div class="settings-menu"><div class="side-menu"><div class="item active">模型与服务商</div><div class="item">通用设置</div><div class="item">写作设置</div><div class="item">编辑与校对</div><div class="item">快捷键</div><div class="item">数据与备份</div><div class="item">关于</div></div></div><div class="center"><div class="notice">Web 端直连第三方 API 可能暴露 API Key。建议只在可信环境使用，或配置后端代理。</div><h3>服务商管理</h3><table class="table"><tr><th>服务商</th><th>Base URL</th><th>API Key</th><th>状态</th><th>操作</th></tr><tr><td>OpenAI Compatible</td><td>https://api.openai.com/v1</td><td>sk-********1234</td><td><span class="chip green">已连接</span></td><td>编辑 删除</td></tr><tr><td>DeepSeek</td><td>https://api.deepseek.com/v1</td><td>sk-********5678</td><td><span class="chip green">已连接</span></td><td>编辑 删除</td></tr><tr><td>Ollama 本地</td><td>http://localhost:11434/v1</td><td>无</td><td><span class="chip blue">本地</span></td><td>编辑</td></tr></table><h3>模型列表</h3><table class="table"><tr><th>模型名称</th><th>上下文长度</th><th>最大输出</th><th>支持函数</th></tr><tr><td>GPT-4o</td><td>128K</td><td>16K</td><td>开启</td></tr><tr><td>Claude 3.5 Sonnet</td><td>200K</td><td>8K</td><td>开启</td></tr><tr><td>DeepSeek-V3</td><td>128K</td><td>8K</td><td>开启</td></tr></table><div class="card-grid two" style="margin-top:12px"><div class="card"><h3>写作偏好</h3><p>默认语言：简体中文<br>写作语气：沉稳克制<br>叙述视角：第三人称有限视角</p></div><div class="card"><h3>参数设置</h3><p>Temperature 0.70<br>Top P 0.90<br>流式输出：开启</p></div></div></div><div class="right"><div class="panel"><h3>Agent 状态</h3><p>模型：Claude 3.5 Sonnet<br>上下文：18,742 / 200K<br>输出：1,024</p></div></div></div></div></div>
+</section>
+
+<section id="empty-error" class="screen">
+  <div class="screen-head"><div><h2>18. 空状态与错误态</h2><p>保存失败、模型认证失败、搜索失败、空项目、无结果、导出失败、修订冲突等状态。</p></div></div>
+  <div class="canvas"><div class="desktop"><div class="topbar"><b>异常状态示例</b></div><div class="center"><div class="error-grid"><div class="error-card"><svg class="hi"><use href="#i-download"></use></svg><h3>保存失败</h3><p>请检查本地磁盘权限或剩余空间。</p><button class="btn small">重试</button></div><div class="error-card"><svg class="hi"><use href="#i-warning"></use></svg><h3>模型认证失败</h3><p>请检查 API Key 或服务商配置。</p><button class="btn small">去设置</button></div><div class="error-card"><svg class="hi"><use href="#i-search"></use></svg><h3>搜索失败</h3><p>网络异常或搜索服务不可用。</p><button class="btn small">重试</button></div><div class="error-card"><svg class="hi"><use href="#i-folder"></use></svg><h3>空项目</h3><p>当前项目还没有内容。</p><button class="btn small">新建章节</button></div><div class="error-card"><svg class="hi"><use href="#i-search"></use></svg><h3>无搜索结果</h3><p>未找到相关资料，建议换关键词。</p><button class="btn small">更换关键词</button></div><div class="error-card"><svg class="hi"><use href="#i-x"></use></svg><h3>导出失败</h3><p>字体文件缺失或目标路径不可写。</p><button class="btn small">查看原因</button></div><div class="error-card"><svg class="hi"><use href="#i-warning"></use></svg><h3>修订冲突</h3><p>用户编辑了同一区间，需手动合并。</p><button class="btn small">打开合并</button></div><div class="error-card"><svg class="hi"><use href="#i-cloud"></use></svg><h3>联网受限</h3><p>当前环境禁止外部访问。</p><button class="btn small">离线继续</button></div></div></div></div></div>
+</section>
+
+<section id="mobile-editor" class="screen">
+  <div class="screen-head"><div><h2>19. 移动端编辑器</h2><p>此前移动端主页面：单主界面、底部导航、Agent 半屏抽屉。</p></div></div>
+  <div class="canvas"><div class="mobile-wrap"><div class="phone"><div class="phone-top"><svg class="hi"><use href="#i-list"></use></svg><b>暮色之城</b><span><svg class="hi"><use href="#i-cloud"></use></svg></span></div><div class="phone-content"><div style="display:flex;justify-content:space-between;color:var(--muted);border-bottom:1px solid var(--line);padding-bottom:10px"><span>第一卷　雾起　〉　第2章</span><span>字数 2,341</span></div><div class="toolbar" style="margin-top:12px"><button class="btn">撤销</button><button class="btn">重做</button><select class="select"><option>正文</option></select></div><div class="editor" style="padding:0"><h1 style="font-size:29px">第2章　旧档案</h1><p style="font-size:18px">雨停了，城市却像被谁按下了静音键。空气里还残留着潮湿的铁锈味。</p><p style="font-size:18px">今天他 <span class="del">本不该来这里，</span><span class="ins">此刻却被一封匿名信引了进来。</span></p></div><div class="tip">AI 建议：将“本不该来这里”改为更具画面感的表达</div></div><div class="sheet"><h3>Agent <span style="color:var(--green);font-size:12px">在线</span></h3><div class="agent-tabs"><span class="chip">脑暴</span><span class="chip">调研</span><span class="chip">骨架</span><span class="chip active">写作</span></div><div class="msg">根据当前章节内容，继续推进故事情节。</div><button class="btn primary" style="width:100%">应用为修订</button></div><div class="phone-bottom"><div class="active">正文</div><div>大纲</div><div>资料</div><div>AI</div></div></div></div></div>
+</section>
+
+<section id="mobile-agent" class="screen">
+  <div class="screen-head"><div><h2>20. 移动端 Agent 助手</h2><p>移动端独立 Agent 页面，适配无 Tab 键、底部输入与待确认写入。</p></div></div>
+  <div class="canvas"><div class="mobile-wrap"><div class="phone"><div class="phone-top"><svg class="hi"><use href="#i-arrow"></use></svg><b>Agent 助手</b><span><svg class="hi"><use href="#i-gear"></use></svg></span></div><div class="phone-content"><select class="input"><option>写作阶段</option><option>调研阶段</option><option>润色阶段</option></select><div class="msg user">根据当前章节，帮我写一段门后房间的描写。</div><div class="msg">门内是一个被时间遗忘的房间，空气中弥漫着潮湿纸张的低鸣。墙角的旧钟没有指针，却仍在微微震颤。</div><div class="tip">AI 建议将生成内容作为 pending revision 插入当前章节。</div><button class="btn primary" style="width:100%;margin-top:10px">插入为修订</button><button class="btn" style="width:100%;margin-top:8px">保存到笔记</button></div><div style="position:absolute;left:14px;right:14px;bottom:86px;display:flex;gap:8px"><input class="input" placeholder="向 Agent 输入指令"><button class="btn primary"><svg class="hi"><use href="#i-arrow"></use></svg></button></div><div class="phone-bottom"><div>正文</div><div>大纲</div><div>资料</div><div class="active">AI</div></div></div></div></div>
+</section>
+
+</main>
+</div>
+<script>
+const buttons=[...document.querySelectorAll('.nav button')];
+const screens=[...document.querySelectorAll('.screen')];
+buttons.forEach(btn=>btn.addEventListener('click',()=>{
+  buttons.forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const id=btn.dataset.screen;
+  screens.forEach(s=>s.classList.toggle('active',s.id===id));
+  window.scrollTo({top:0,behavior:'smooth'});
+}));
+</script>
+</body>
+</html>
