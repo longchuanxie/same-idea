@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:drift/drift.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:novel_creator/core/secure_storage.dart';
 import 'package:novel_creator/data/local/database/app_database.dart';
 import 'package:novel_creator/domain/domain.dart';
 
@@ -8,7 +8,7 @@ class SettingsRepositoryImpl implements SettingsRepository {
   SettingsRepositoryImpl(this._db, this._secureStorage);
 
   final AppDatabase _db;
-  final FlutterSecureStorage _secureStorage;
+  final SecureStorage _secureStorage;
 
   static const _keyApiKeyPrefix = 'api_key_';
   static const _keyWritingPrefs = 'writing_preferences';
@@ -88,7 +88,7 @@ class SettingsRepositoryImpl implements SettingsRepository {
     try {
       await (_db.delete(_db.llmProvidersTable)..where((t) => t.id.equals(id)))
           .go();
-      await _secureStorage.delete(key: '$_keyApiKeyPrefix$id');
+      await _secureStorage.delete('$_keyApiKeyPrefix$id');
       return const AppResult.success(null);
     } catch (e) {
       return AppResult.failure(AppError(
@@ -105,7 +105,7 @@ class SettingsRepositoryImpl implements SettingsRepository {
   Future<AppResult<String?>> getApiKey(String providerId) async {
     try {
       final key =
-          await _secureStorage.read(key: '$_keyApiKeyPrefix$providerId');
+          await _secureStorage.read('$_keyApiKeyPrefix$providerId');
       return AppResult.success(key);
     } catch (e) {
       return AppResult.failure(AppError(
@@ -122,8 +122,8 @@ class SettingsRepositoryImpl implements SettingsRepository {
   Future<AppResult<void>> saveApiKey(String providerId, String apiKey) async {
     try {
       await _secureStorage.write(
-        key: '$_keyApiKeyPrefix$providerId',
-        value: apiKey,
+        '$_keyApiKeyPrefix$providerId',
+        apiKey,
       );
       return const AppResult.success(null);
     } catch (e) {
@@ -140,7 +140,7 @@ class SettingsRepositoryImpl implements SettingsRepository {
   @override
   Future<AppResult<WritingPreferences>> getWritingPreferences() async {
     try {
-      final json = await _secureStorage.read(key: _keyWritingPrefs);
+      final json = await _secureStorage.read(_keyWritingPrefs);
       if (json == null) {
         return const AppResult.success(WritingPreferences());
       }
@@ -166,8 +166,8 @@ class SettingsRepositoryImpl implements SettingsRepository {
   ) async {
     try {
       await _secureStorage.write(
-        key: _keyWritingPrefs,
-        value: jsonEncode(prefs.toJson()),
+        _keyWritingPrefs,
+        jsonEncode(prefs.toJson()),
       );
       return AppResult.success(prefs);
     } catch (e) {
@@ -184,7 +184,7 @@ class SettingsRepositoryImpl implements SettingsRepository {
   @override
   Future<AppResult<String?>> getDefaultProviderId() async {
     try {
-      final id = await _secureStorage.read(key: _keyDefaultProviderId);
+      final id = await _secureStorage.read(_keyDefaultProviderId);
       return AppResult.success(id);
     } catch (e) {
       return AppResult.failure(AppError(
@@ -201,8 +201,8 @@ class SettingsRepositoryImpl implements SettingsRepository {
   Future<AppResult<void>> setDefaultProviderId(String providerId) async {
     try {
       await _secureStorage.write(
-        key: _keyDefaultProviderId,
-        value: providerId,
+        _keyDefaultProviderId,
+        providerId,
       );
       return const AppResult.success(null);
     } catch (e) {

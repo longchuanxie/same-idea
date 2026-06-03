@@ -74,7 +74,7 @@ class _CreateProjectFormState extends State<_CreateProjectForm> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.error!),
-              backgroundColor: morandi.dustyRose,
+              backgroundColor: morandi.red,
             ),
           );
         }
@@ -87,7 +87,7 @@ class _CreateProjectFormState extends State<_CreateProjectForm> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('New Project'),
+          title: const Text('新建项目'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () => Navigator.of(context).pop(),
@@ -104,27 +104,25 @@ class _CreateProjectFormState extends State<_CreateProjectForm> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      'Start a New Novel',
+                      '创建新小说',
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Set up your project details to begin writing.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: morandi.inkLight,
-                          ),
+                      '设置项目详情以开始写作。',
+                      style: TextStyle(color: morandi.muted),
                     ),
                     const SizedBox(height: 32),
                     TextFormField(
                       controller: _titleController,
                       decoration: const InputDecoration(
-                        labelText: 'Title',
-                        hintText: 'Enter your novel title',
+                        labelText: '标题',
+                        hintText: '输入小说标题',
                         prefixIcon: Icon(Icons.title),
                       ),
                       validator: (value) =>
                           value == null || value.trim().isEmpty
-                              ? 'Title is required'
+                              ? '标题为必填项'
                               : null,
                       onChanged: (value) => context
                           .read<CreateProjectBloc>()
@@ -134,8 +132,8 @@ class _CreateProjectFormState extends State<_CreateProjectForm> {
                     TextFormField(
                       controller: _authorController,
                       decoration: const InputDecoration(
-                        labelText: 'Author',
-                        hintText: 'Your pen name or real name',
+                        labelText: '作者',
+                        hintText: '你的笔名或真名',
                         prefixIcon: Icon(Icons.person_outline),
                       ),
                       onChanged: (value) => context
@@ -149,7 +147,7 @@ class _CreateProjectFormState extends State<_CreateProjectForm> {
                         return DropdownButtonFormField<String>(
                           value: state.language,
                           decoration: const InputDecoration(
-                            labelText: 'Language',
+                            labelText: '语言',
                             prefixIcon: Icon(Icons.language),
                           ),
                           items: _languages
@@ -176,10 +174,10 @@ class _CreateProjectFormState extends State<_CreateProjectForm> {
                         return DropdownButtonFormField<String>(
                           value: state.genre.isEmpty ? null : state.genre,
                           decoration: const InputDecoration(
-                            labelText: 'Genre',
+                            labelText: '类型',
                             prefixIcon: Icon(Icons.category_outlined),
                           ),
-                          hint: const Text('Select a genre'),
+                          hint: const Text('选择类型'),
                           items: _genres
                               .map((genre) => DropdownMenuItem(
                                     value: genre,
@@ -221,7 +219,7 @@ class _CreateProjectFormState extends State<_CreateProjectForm> {
                                     color: Colors.white,
                                   ),
                                 )
-                              : const Text('Create Project'),
+                              : const Text('创建项目'),
                         );
                       },
                     ),

@@ -1,7 +1,7 @@
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get_it/get_it.dart';
 import 'package:novel_creator/core/clock.dart';
 import 'package:novel_creator/core/id_generator.dart';
+import 'package:novel_creator/core/secure_storage.dart';
 import 'package:novel_creator/data/local/database/app_database.dart';
 import 'package:novel_creator/data/repositories/agent_task_repository_impl.dart';
 import 'package:novel_creator/data/repositories/chapter_repository_impl.dart';
@@ -37,8 +37,8 @@ Future<void> configureDependencies() async {
 
   locator.registerSingleton<AppDatabase>(AppDatabase());
 
-  locator.registerSingleton<FlutterSecureStorage>(
-    const FlutterSecureStorage(),
+  locator.registerSingleton<SecureStorage>(
+    InMemorySecureStorage(),
   );
 
   locator.registerSingleton<ProjectRepository>(
@@ -71,7 +71,7 @@ Future<void> configureDependencies() async {
   locator.registerSingleton<SettingsRepository>(
     SettingsRepositoryImpl(
       locator<AppDatabase>(),
-      locator<FlutterSecureStorage>(),
+      locator<SecureStorage>(),
     ),
   );
   locator.registerSingleton<ExportService>(

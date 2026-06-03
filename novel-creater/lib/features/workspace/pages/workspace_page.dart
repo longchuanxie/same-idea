@@ -7,6 +7,7 @@ import 'package:novel_creator/data/di/injection.dart';
 import 'package:novel_creator/domain/domain.dart';
 import 'package:novel_creator/features/workspace/bloc/chapter_tree_bloc.dart';
 import 'package:novel_creator/features/workspace/bloc/editor_bloc.dart';
+import 'package:novel_creator/features/workspace/widgets/agent_panel.dart';
 import 'package:novel_creator/features/workspace/widgets/chapter_editor_widget.dart';
 import 'package:novel_creator/features/workspace/widgets/chapter_tree_sidebar.dart';
 
@@ -45,7 +46,7 @@ class _WorkspaceShell extends StatefulWidget {
 }
 
 class _WorkspaceShellState extends State<_WorkspaceShell> {
-  double _leftWidth = 280;
+  double _leftWidth = 260;
   double _rightWidth = 300;
   bool _rightPanelVisible = true;
 
@@ -71,9 +72,8 @@ class _WorkspaceShellState extends State<_WorkspaceShell> {
                   width: _leftWidth,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
                       border: Border(
-                        right: BorderSide(color: morandi.fog),
+                        right: BorderSide(color: morandi.line),
                       ),
                     ),
                     child: const ChapterTreeSidebar(),
@@ -119,12 +119,11 @@ class _WorkspaceShellState extends State<_WorkspaceShell> {
                     width: _rightWidth,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
                         border: Border(
-                          left: BorderSide(color: morandi.fog),
+                          left: BorderSide(color: morandi.line),
                         ),
                       ),
-                      child: const _AgentPanelPlaceholder(),
+                      child: const AgentPanel(),
                     ),
                   ),
                 ],
@@ -150,31 +149,39 @@ class _TopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final morandi = Theme.of(context).extension<MorandiColors>()!;
     return Container(
-      height: 48,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: morandi.fog)),
+        color: morandi.panel,
+        border: Border(bottom: BorderSide(color: morandi.line)),
       ),
       child: Row(
         children: [
           IconButton(
-            icon: Icon(Icons.arrow_back, size: 20, color: morandi.inkLight),
+            icon: Icon(Icons.arrow_back, size: 18, color: morandi.muted),
             onPressed: () => Navigator.of(context).pop(),
-            tooltip: 'Back to projects',
+            tooltip: '返回项目列表',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           ),
           const SizedBox(width: 8),
           BlocBuilder<EditorBloc, EditorState>(
             builder: (context, state) {
-              return Text(
-                state.chapter?.title ?? 'Workspace',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: morandi.inkDark,
-                    ),
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: morandi.canvas,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: morandi.line),
+                ),
+                child: Text(
+                  state.chapter?.title ?? '未选择章节',
+                  style: TextStyle(fontSize: 12, color: morandi.ink, fontWeight: FontWeight.w500),
+                ),
               );
             },
           ),
-          const Spacer(),
+          const SizedBox(width: 10),
           BlocBuilder<EditorBloc, EditorState>(
             buildWhen: (prev, curr) =>
                 prev.isSaving != curr.isSaving ||
@@ -185,20 +192,15 @@ class _TopBar extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     SizedBox(
-                      width: 14,
-                      height: 14,
+                      width: 12,
+                      height: 12,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: morandi.sage,
+                        color: morandi.green,
                       ),
                     ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Saving...',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: morandi.inkLight,
-                          ),
-                    ),
+                    const SizedBox(width: 4),
+                    Text('保存中...', style: TextStyle(fontSize: 11, color: morandi.muted)),
                   ],
                 );
               }
@@ -207,59 +209,53 @@ class _TopBar extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      width: 8,
-                      height: 8,
+                      width: 7,
+                      height: 7,
                       decoration: BoxDecoration(
-                        color: morandi.dustyRose,
+                        color: morandi.red,
                         shape: BoxShape.circle,
                       ),
                     ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Save error',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: morandi.dustyRose,
-                          ),
-                    ),
+                    const SizedBox(width: 4),
+                    Text('保存失败', style: TextStyle(fontSize: 11, color: morandi.red)),
                   ],
                 );
               }
               return Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.check_circle, size: 14, color: morandi.sage),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Saved',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: morandi.sage,
-                        ),
-                  ),
+                  Icon(Icons.check_circle, size: 12, color: morandi.green),
+                  const SizedBox(width: 4),
+                  Text('本地已保存', style: TextStyle(fontSize: 11, color: morandi.green)),
                 ],
               );
             },
           ),
-          const SizedBox(width: 16),
+          const Spacer(),
           IconButton(
-            icon: Icon(Icons.file_download_outlined,
-                size: 20, color: morandi.inkLight),
+            icon: Icon(Icons.file_download_outlined, size: 18, color: morandi.muted),
             onPressed: () {},
-            tooltip: 'Export',
+            tooltip: '导出',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           ),
           IconButton(
             icon: Icon(
               rightPanelVisible ? Icons.smart_toy : Icons.smart_toy_outlined,
-              size: 20,
-              color: rightPanelVisible ? morandi.sage : morandi.inkLight,
+              size: 18,
+              color: rightPanelVisible ? morandi.green : morandi.muted,
             ),
             onPressed: onToggleRightPanel,
-            tooltip: 'Toggle AI Panel',
+            tooltip: '切换 Agent 面板',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           ),
           IconButton(
-            icon: Icon(Icons.settings_outlined,
-                size: 20, color: morandi.inkLight),
+            icon: Icon(Icons.settings_outlined, size: 18, color: morandi.muted),
             onPressed: () {},
-            tooltip: 'Settings',
+            tooltip: '设置',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           ),
         ],
       ),
@@ -274,46 +270,14 @@ class _ResizeHandle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final morandi = Theme.of(context).extension<MorandiColors>()!;
     return MouseRegion(
       cursor: SystemMouseCursors.resizeColumn,
       child: GestureDetector(
         onHorizontalDragUpdate: (details) => onDrag(details.delta.dx),
         child: Container(
           width: 4,
-          color: morandi.fog,
+          color: Theme.of(context).extension<MorandiColors>()!.line,
         ),
-      ),
-    );
-  }
-}
-
-class _AgentPanelPlaceholder extends StatelessWidget {
-  const _AgentPanelPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    final morandi = Theme.of(context).extension<MorandiColors>()!;
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.smart_toy_outlined, size: 48, color: morandi.stone),
-          const SizedBox(height: 16),
-          Text(
-            'AI Assistant',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: morandi.inkLight,
-                ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Coming soon',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: morandi.stone,
-                ),
-          ),
-        ],
       ),
     );
   }

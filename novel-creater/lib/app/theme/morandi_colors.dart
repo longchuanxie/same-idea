@@ -3,83 +3,105 @@ import 'package:flutter/material.dart';
 @immutable
 class MorandiColors extends ThemeExtension<MorandiColors> {
   const MorandiColors({
-    this.sage = const Color(0xFF8B9D83),
-    this.dustyRose = const Color(0xFFC4A882),
-    this.warmGray = const Color(0xFF9E9689),
-    this.softBlue = const Color(0xFF7B9EA8),
-    this.mutedPlum = const Color(0xFF8E7B93),
-    this.sand = const Color(0xFFC8B8A4),
-    this.stone = const Color(0xFFA39E93),
-    this.lichen = const Color(0xFF9BAF91),
-    this.clay = const Color(0xFFB5A08E),
-    this.fog = const Color(0xFFD4CEC6),
-    this.parchment = const Color(0xFFF0EBE3),
-    this.inkLight = const Color(0xFF5C574F),
-    this.inkDark = const Color(0xFF3A3631),
+    this.bg = const Color(0xFFF5F1EA),
+    this.canvas = const Color(0xFFFBFAF7),
+    this.panel = const Color(0xFFF0EBE2),
+    this.panel2 = const Color(0xFFE8E1D7),
+    this.line = const Color(0xFFDED6CA),
+    this.line2 = const Color(0xFFCFC6B9),
+    this.ink = const Color(0xFF222620),
+    this.text = const Color(0xFF3D413B),
+    this.muted = const Color(0xFF77766E),
+    this.muted2 = const Color(0xFF9B998F),
+    this.green = const Color(0xFF637B61),
+    this.green2 = const Color(0xFF7F9479),
+    this.green3 = const Color(0xFFDFE8DB),
+    this.sage = const Color(0xFFA8B5A2),
+    this.sand = const Color(0xFFD8C5A6),
+    this.clay = const Color(0xFFC7A99A),
+    this.rose = const Color(0xFFD9B7AE),
+    this.blue = const Color(0xFF7C8F95),
+    this.orange = const Color(0xFFBA8D50),
+    this.red = const Color(0xFFB56A60),
   });
 
+  final Color bg;
+  final Color canvas;
+  final Color panel;
+  final Color panel2;
+  final Color line;
+  final Color line2;
+  final Color ink;
+  final Color text;
+  final Color muted;
+  final Color muted2;
+  final Color green;
+  final Color green2;
+  final Color green3;
   final Color sage;
-  final Color dustyRose;
-  final Color warmGray;
-  final Color softBlue;
-  final Color mutedPlum;
   final Color sand;
-  final Color stone;
-  final Color lichen;
   final Color clay;
-  final Color fog;
-  final Color parchment;
-  final Color inkLight;
-  final Color inkDark;
+  final Color rose;
+  final Color blue;
+  final Color orange;
+  final Color red;
 
   @override
   MorandiColors copyWith({
-    Color? sage,
-    Color? dustyRose,
-    Color? warmGray,
-    Color? softBlue,
-    Color? mutedPlum,
-    Color? sand,
-    Color? stone,
-    Color? lichen,
-    Color? clay,
-    Color? fog,
-    Color? parchment,
-    Color? inkLight,
-    Color? inkDark,
-  }) => MorandiColors(
+    Color? bg, Color? canvas, Color? panel, Color? panel2,
+    Color? line, Color? line2, Color? ink, Color? text,
+    Color? muted, Color? muted2, Color? green, Color? green2, Color? green3,
+    Color? sage, Color? sand, Color? clay, Color? rose,
+    Color? blue, Color? orange, Color? red,
+  }) {
+    return MorandiColors(
+      bg: bg ?? this.bg,
+      canvas: canvas ?? this.canvas,
+      panel: panel ?? this.panel,
+      panel2: panel2 ?? this.panel2,
+      line: line ?? this.line,
+      line2: line2 ?? this.line2,
+      ink: ink ?? this.ink,
+      text: text ?? this.text,
+      muted: muted ?? this.muted,
+      muted2: muted2 ?? this.muted2,
+      green: green ?? this.green,
+      green2: green2 ?? this.green2,
+      green3: green3 ?? this.green3,
       sage: sage ?? this.sage,
-      dustyRose: dustyRose ?? this.dustyRose,
-      warmGray: warmGray ?? this.warmGray,
-      softBlue: softBlue ?? this.softBlue,
-      mutedPlum: mutedPlum ?? this.mutedPlum,
       sand: sand ?? this.sand,
-      stone: stone ?? this.stone,
-      lichen: lichen ?? this.lichen,
       clay: clay ?? this.clay,
-      fog: fog ?? this.fog,
-      parchment: parchment ?? this.parchment,
-      inkLight: inkLight ?? this.inkLight,
-      inkDark: inkDark ?? this.inkDark,
+      rose: rose ?? this.rose,
+      blue: blue ?? this.blue,
+      orange: orange ?? this.orange,
+      red: red ?? this.red,
     );
+  }
 
   @override
   MorandiColors lerp(MorandiColors? other, double t) {
     if (other is! MorandiColors) return this;
     return MorandiColors(
+      bg: Color.lerp(bg, other.bg, t)!,
+      canvas: Color.lerp(canvas, other.canvas, t)!,
+      panel: Color.lerp(panel, other.panel, t)!,
+      panel2: Color.lerp(panel2, other.panel2, t)!,
+      line: Color.lerp(line, other.line, t)!,
+      line2: Color.lerp(line2, other.line2, t)!,
+      ink: Color.lerp(ink, other.ink, t)!,
+      text: Color.lerp(text, other.text, t)!,
+      muted: Color.lerp(muted, other.muted, t)!,
+      muted2: Color.lerp(muted2, other.muted2, t)!,
+      green: Color.lerp(green, other.green, t)!,
+      green2: Color.lerp(green2, other.green2, t)!,
+      green3: Color.lerp(green3, other.green3, t)!,
       sage: Color.lerp(sage, other.sage, t)!,
-      dustyRose: Color.lerp(dustyRose, other.dustyRose, t)!,
-      warmGray: Color.lerp(warmGray, other.warmGray, t)!,
-      softBlue: Color.lerp(softBlue, other.softBlue, t)!,
-      mutedPlum: Color.lerp(mutedPlum, other.mutedPlum, t)!,
       sand: Color.lerp(sand, other.sand, t)!,
-      stone: Color.lerp(stone, other.stone, t)!,
-      lichen: Color.lerp(lichen, other.lichen, t)!,
       clay: Color.lerp(clay, other.clay, t)!,
-      fog: Color.lerp(fog, other.fog, t)!,
-      parchment: Color.lerp(parchment, other.parchment, t)!,
-      inkLight: Color.lerp(inkLight, other.inkLight, t)!,
-      inkDark: Color.lerp(inkDark, other.inkDark, t)!,
+      rose: Color.lerp(rose, other.rose, t)!,
+      blue: Color.lerp(blue, other.blue, t)!,
+      orange: Color.lerp(orange, other.orange, t)!,
+      red: Color.lerp(red, other.red, t)!,
     );
   }
 }

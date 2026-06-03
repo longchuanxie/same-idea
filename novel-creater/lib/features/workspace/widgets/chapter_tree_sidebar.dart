@@ -10,62 +10,186 @@ class ChapterTreeSidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final morandi = Theme.of(context).extension<MorandiColors>()!;
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
-          decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: morandi.fog)),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.folder_open, size: 18, color: morandi.inkLight),
-              const SizedBox(width: 8),
-              Text(
-                'Chapters',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: morandi.inkDark,
-                    ),
+
+    return Container(
+      color: morandi.panel,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _ProjectCard(morandi: morandi),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+            child: SizedBox(
+              height: 30,
+              child: TextField(
+                decoration: InputDecoration(
+                  hintText: '搜索章节...',
+                  hintStyle: TextStyle(fontSize: 12, color: morandi.muted2),
+                  prefixIcon: Icon(Icons.search, size: 14, color: morandi.muted),
+                  filled: true,
+                  fillColor: morandi.canvas,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: BorderSide(color: morandi.line),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: BorderSide(color: morandi.line),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: BorderSide(color: morandi.green, width: 1),
+                  ),
+                ),
+                style: TextStyle(fontSize: 12, color: morandi.text),
               ),
-            ],
+            ),
           ),
-        ),
-        Expanded(
-          child: BlocBuilder<ChapterTreeBloc, ChapterTreeState>(
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: morandi.line)),
+            ),
+            child: Row(
+              children: [
+                Text(
+                  '章节目录',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: morandi.ink,
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: Icon(Icons.add, size: 16, color: morandi.green),
+                  onPressed: () {
+                    final state = context.read<ChapterTreeBloc>().state;
+                    if (state.chapters.isNotEmpty) {
+                      final projectId = state.chapters.first.projectId;
+                      context
+                          .read<ChapterTreeBloc>()
+                          .add(ChapterTreeChapterAdded(projectId: projectId));
+                    }
+                  },
+                  tooltip: '添加章节',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: BlocBuilder<ChapterTreeBloc, ChapterTreeState>(
+              builder: (context, state) {
+                if (state.isLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (state.chapters.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(
+                        '暂无章节',
+                        style: TextStyle(color: morandi.muted),
+                      ),
+                    ),
+                  );
+                }
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  itemCount: state.chapters.length,
+                  itemBuilder: (context, index) {
+                    final chapter = state.chapters[index];
+                    final isSelected = chapter.id == state.selectedChapterId;
+                    return _ChapterTile(
+                      chapter: chapter,
+                      isSelected: isSelected,
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProjectCard extends StatelessWidget {
+  const _ProjectCard({required this.morandi});
+
+  final MorandiColors morandi;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: morandi.line)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            height: 64,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF637B61), Color(0xFFA8B5A2)],
+              ),
+              borderRadius: BorderRadius.circular(6),
+            ),
+          ),
+          const SizedBox(height: 8),
+          BlocBuilder<ChapterTreeBloc, ChapterTreeState>(
             builder: (context, state) {
-              if (state.isLoading) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (state.chapters.isEmpty) {
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Text(
-                      'No chapters yet',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: morandi.inkLight,
-                          ),
+              final totalWords = state.chapters.fold<int>(
+                0,
+                (sum, c) => sum + c.wordCount,
+              );
+              final totalChapters = state.chapters.length;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    totalChapters > 0 ? '$totalChapters 章' : '无章节',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: morandi.ink,
                     ),
                   ),
-                );
-              }
-              return ListView.builder(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                itemCount: state.chapters.length,
-                itemBuilder: (context, index) {
-                  final chapter = state.chapters[index];
-                  final isSelected = chapter.id == state.selectedChapterId;
-                  return _ChapterTile(
-                    chapter: chapter,
-                    isSelected: isSelected,
-                  );
-                },
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(3),
+                          child: LinearProgressIndicator(
+                            value: totalChapters > 0 ? 0.3 : 0,
+                            backgroundColor: morandi.line,
+                            valueColor: AlwaysStoppedAnimation(morandi.green),
+                            minHeight: 4,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '$totalWords 字',
+                        style: TextStyle(fontSize: 11, color: morandi.muted),
+                      ),
+                    ],
+                  ),
+                ],
               );
             },
           ),
-        ),
-        const _AddChapterButton(),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -90,12 +214,12 @@ class _ChapterTile extends StatelessWidget {
       onSecondaryTapUp: (details) =>
           _showContextMenu(context, details.globalPosition),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? morandi.sage.withOpacity(0.1) : null,
+          color: isSelected ? morandi.green3 : null,
           border: Border(
             left: BorderSide(
-              color: isSelected ? morandi.sage : Colors.transparent,
+              color: isSelected ? morandi.green : Colors.transparent,
               width: 3,
             ),
           ),
@@ -103,28 +227,26 @@ class _ChapterTile extends StatelessWidget {
         child: Row(
           children: [
             _StatusDot(status: chapter.status),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     chapter.title,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight:
-                              isSelected ? FontWeight.w600 : FontWeight.w400,
-                          color: isSelected ? morandi.inkDark : morandi.inkLight,
-                        ),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                      color: isSelected ? morandi.ink : morandi.muted,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   if (chapter.wordCount > 0) ...[
                     const SizedBox(height: 2),
                     Text(
-                      '${chapter.wordCount} words',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: morandi.stone,
-                          ),
+                      '${chapter.wordCount} 字',
+                      style: TextStyle(fontSize: 11, color: morandi.muted2),
                     ),
                   ],
                 ],
@@ -160,16 +282,16 @@ class _ChapterTile extends StatelessWidget {
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Rename Chapter'),
+        title: const Text('重命名章节'),
         content: TextField(
           controller: controller,
           autofocus: true,
-          decoration: const InputDecoration(labelText: 'Chapter title'),
+          decoration: const InputDecoration(labelText: '章节标题'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
+            child: const Text('取消'),
           ),
           ElevatedButton(
             onPressed: () {
@@ -184,7 +306,7 @@ class _ChapterTile extends StatelessWidget {
               }
               Navigator.of(dialogContext).pop();
             },
-            child: const Text('Rename'),
+            child: const Text('重命名'),
           ),
         ],
       ),
@@ -192,17 +314,18 @@ class _ChapterTile extends StatelessWidget {
   }
 
   void _confirmDelete(BuildContext context) {
+    final morandi = Theme.of(context).extension<MorandiColors>()!;
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete Chapter'),
+        title: const Text('删除章节'),
         content: Text(
-          'Are you sure you want to delete "${chapter.title}"? This cannot be undone.',
+          '确定删除"${chapter.title}"吗？此操作不可撤销。',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
+            child: const Text('取消'),
           ),
           ElevatedButton(
             onPressed: () {
@@ -211,11 +334,8 @@ class _ChapterTile extends StatelessWidget {
                   );
               Navigator.of(dialogContext).pop();
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor:
-                  Theme.of(context).extension<MorandiColors>()?.dustyRose,
-            ),
-            child: const Text('Delete'),
+            style: ElevatedButton.styleFrom(backgroundColor: morandi.red),
+            child: const Text('删除'),
           ),
         ],
       ),
@@ -232,52 +352,18 @@ class _StatusDot extends StatelessWidget {
   Widget build(BuildContext context) {
     final morandi = Theme.of(context).extension<MorandiColors>()!;
     final color = switch (status) {
-      ChapterStatus.draft => morandi.stone,
-      ChapterStatus.reviewing => morandi.dustyRose,
-      ChapterStatus.revised => morandi.sage,
-      ChapterStatus.published => morandi.softBlue,
-      ChapterStatus.locked => morandi.dustyRose,
+      ChapterStatus.draft => morandi.muted2,
+      ChapterStatus.reviewing => morandi.orange,
+      ChapterStatus.revised => morandi.green,
+      ChapterStatus.published => morandi.blue,
+      ChapterStatus.locked => morandi.red,
     };
     return Container(
-      width: 8,
-      height: 8,
+      width: 7,
+      height: 7,
       decoration: BoxDecoration(
         color: color,
         shape: BoxShape.circle,
-      ),
-    );
-  }
-}
-
-class _AddChapterButton extends StatelessWidget {
-  const _AddChapterButton();
-
-  @override
-  Widget build(BuildContext context) {
-    final morandi = Theme.of(context).extension<MorandiColors>()!;
-    return Container(
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: morandi.fog)),
-      ),
-      child: TextButton.icon(
-        onPressed: () {
-          final state = context.read<ChapterTreeBloc>().state;
-          if (state.chapters.isNotEmpty) {
-            final projectId = state.chapters.first.projectId;
-            context
-                .read<ChapterTreeBloc>()
-                .add(ChapterTreeChapterAdded(projectId: projectId));
-          }
-        },
-        icon: Icon(Icons.add, size: 16, color: morandi.sage),
-        label: Text(
-          'Add Chapter',
-          style: TextStyle(color: morandi.sage),
-        ),
-        style: TextButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
-        ),
       ),
     );
   }
@@ -313,23 +399,23 @@ class _ContextMenu extends StatelessWidget {
             child: Container(
               width: 160,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: morandi.canvas,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: morandi.fog),
+                border: Border.all(color: morandi.line),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   ListTile(
                     dense: true,
-                    leading: Icon(Icons.edit_outlined, size: 18, color: morandi.inkLight),
-                    title: const Text('Rename'),
+                    leading: Icon(Icons.edit_outlined, size: 18, color: morandi.muted),
+                    title: const Text('重命名'),
                     onTap: onRename,
                   ),
                   ListTile(
                     dense: true,
-                    leading: Icon(Icons.delete_outline, size: 18, color: morandi.dustyRose),
-                    title: Text('Delete', style: TextStyle(color: morandi.dustyRose)),
+                    leading: Icon(Icons.delete_outline, size: 18, color: morandi.red),
+                    title: Text('删除', style: TextStyle(color: morandi.red)),
                     onTap: onDelete,
                   ),
                 ],
