@@ -502,6 +502,55 @@ export const ReaderPage: React.FC = () => {
     }, FIRST_PAGE_NOTICE_DURATION);
   }, []);
 
+  const saveVerticalProgressForPage = useCallback((page: number) => {
+    if (!comicId || !currentChapterId || totalPages === 0) return;
+    const verticalGlobalPageIndex = imagesBeforeCurrentChapter + page;
+    const percentage = getReadingPercentage(
+      verticalGlobalPageIndex,
+      totalImages,
+      DEFAULT_PAGE_SCROLL_RATIO,
+      'vertical'
+    );
+    const nextProgress = {
+      comicId,
+      chapterId: currentChapterId,
+      currentPage: page,
+      pageScrollRatio: DEFAULT_PAGE_SCROLL_RATIO,
+      chapterScrollRatio: getCurrentChapterScrollRatio(),
+      readingMode: 'vertical' as const,
+      pageLayout,
+      totalPages,
+      globalPageIndex: verticalGlobalPageIndex,
+      totalImages,
+      percentage,
+    };
+
+    progressRef.current = nextProgress;
+    setVerticalProgressPercent(percentage);
+    updateProgress(comicId, {
+      comicId,
+      chapterId: currentChapterId,
+      page,
+      pageScrollRatio: nextProgress.pageScrollRatio,
+      chapterScrollRatio: nextProgress.chapterScrollRatio,
+      readingMode: nextProgress.readingMode,
+      pageLayout,
+      totalPages,
+      percentage,
+      globalPageIndex: verticalGlobalPageIndex,
+      totalImages,
+    });
+  }, [
+    comicId,
+    currentChapterId,
+    getCurrentChapterScrollRatio,
+    imagesBeforeCurrentChapter,
+    pageLayout,
+    totalImages,
+    totalPages,
+    updateProgress,
+  ]);
+
   const revealPreviousVerticalPage = useCallback(() => {
     if (direction !== 'vertical' || isLoading || isRestoringVerticalScroll) return;
     const container = smoothScrollContainerRef.current;
@@ -529,6 +578,7 @@ export const ReaderPage: React.FC = () => {
               const previousPageTop = (previousPageSlot as HTMLElement).getBoundingClientRect().top - containerRect.top;
               container.scrollTop += previousPageTop;
             }
+            saveVerticalProgressForPage(previousPageIndex + PAGE_PROGRESS_OFFSET);
             requestAnimationFrame(() => {
               isPrependingVerticalScrollRef.current = false;
               setProgrammaticScroll(false);
@@ -541,6 +591,7 @@ export const ReaderPage: React.FC = () => {
     isLoading,
     isRestoringVerticalScroll,
     loadPage,
+    saveVerticalProgressForPage,
     setProgrammaticScroll,
     showFirstPageNotice,
     smoothScrollContainerRef,
