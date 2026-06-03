@@ -23,6 +23,11 @@ import 'package:novel_creator/domain/repositories/revision_repository.dart';
 import 'package:novel_creator/domain/repositories/session_repository.dart';
 import 'package:novel_creator/domain/repositories/settings_repository.dart';
 import 'package:novel_creator/domain/repositories/snapshot_repository.dart';
+import 'package:novel_creator/features/export/services/export_service.dart';
+import 'package:novel_creator/features/projects/bloc/create_project_bloc.dart';
+import 'package:novel_creator/features/projects/bloc/project_list_bloc.dart';
+import 'package:novel_creator/features/workspace/bloc/chapter_tree_bloc.dart';
+import 'package:novel_creator/features/workspace/bloc/editor_bloc.dart';
 
 final locator = GetIt.instance;
 
@@ -67,6 +72,39 @@ Future<void> configureDependencies() async {
     SettingsRepositoryImpl(
       locator<AppDatabase>(),
       locator<FlutterSecureStorage>(),
+    ),
+  );
+  locator.registerSingleton<ExportService>(
+    ExportService(
+      projectRepository: locator<ProjectRepository>(),
+      chapterRepository: locator<ChapterRepository>(),
+    ),
+  );
+
+  locator.registerFactory<ProjectListBloc>(
+    () => ProjectListBloc(
+      projectRepository: locator<ProjectRepository>(),
+    ),
+  );
+  locator.registerFactory<CreateProjectBloc>(
+    () => CreateProjectBloc(
+      projectRepository: locator<ProjectRepository>(),
+      chapterRepository: locator<ChapterRepository>(),
+      outlineNodeRepository: locator<OutlineNodeRepository>(),
+      idGenerator: locator<IdGenerator>(),
+      clock: locator<AppClock>(),
+    ),
+  );
+  locator.registerFactory<ChapterTreeBloc>(
+    () => ChapterTreeBloc(
+      chapterRepository: locator<ChapterRepository>(),
+      idGenerator: locator<IdGenerator>(),
+      clock: locator<AppClock>(),
+    ),
+  );
+  locator.registerFactory<EditorBloc>(
+    () => EditorBloc(
+      chapterRepository: locator<ChapterRepository>(),
     ),
   );
 }
