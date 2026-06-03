@@ -36,6 +36,8 @@ const DEFAULT_SETTINGS: UserSettings = {
   cloudSync: false,
   fontSize: 16,
   fontFamily: 'literata',
+  brightness: 100,
+  colorTemperature: 0,
   auth: {
     isEnabled: false,
     method: 'auto',
@@ -62,6 +64,7 @@ export const useAppStore = create<AppState>()(
       setActiveNav: (nav) => set({ activeNav: nav }),
       updateSettings: (partial) =>
         set((state) => ({
+          theme: partial.theme ?? state.theme,
           settings: { ...state.settings, ...partial },
         })),
       setAuthenticated: (value) =>

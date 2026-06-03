@@ -37,6 +37,10 @@ export interface ReadingProgress {
   comicId: string;
   chapterId: string;
   page: number;
+  pageScrollRatio?: number;
+  chapterScrollRatio?: number;
+  readingMode?: 'vertical' | 'horizontal';
+  pageLayout?: 'single' | 'double';
   totalPages: number;
   percentage: number;
   globalPageIndex: number;
@@ -62,6 +66,8 @@ export interface UserSettings {
   cloudSync: boolean;
   fontSize: number;
   fontFamily: 'literata' | 'inter';
+  brightness: number;
+  colorTemperature: number;
   auth: AuthConfig;
 }
 

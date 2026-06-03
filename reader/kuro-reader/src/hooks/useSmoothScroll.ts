@@ -5,195 +5,124 @@ interface SmoothScrollOptions {
   onPageChange: (page: number) => void;
   currentPage: number;
   totalPages: number;
+  isActive?: boolean;
 }
 
-/**
- * useSmoothScroll Hook
- *
- * @description 优化条漫模式的触摸滚动体验
- * 使用 requestAnimationFrame + 主动事件监听实现跟手滑动
- * 通过原生事件绑定 passive: false 阻止默认滚动，实现完全自定义的触摸响应
- */
+const SCROLL_THROTTLE_MS = 80;
+const PROGRAMMATIC_SCROLL_TIMEOUT_MS = 800;
+const INSTANT_SCROLL_SETTLE_MS = 100;
+const READING_ANCHOR_RATIO = 0.2;
+
 export const useSmoothScroll = (options: SmoothScrollOptions) => {
-  const { direction, onPageChange, currentPage } = options;
+  const { direction, onPageChange, currentPage, totalPages, isActive = true } = options;
   const containerRef = useRef<HTMLDivElement>(null);
-  const isDraggingRef = useRef(false);
-  const startYRef = useRef(0);
-  const startScrollRef = useRef(0);
-  const lastTouchYRef = useRef(0);
-  const lastTouchTimeRef = useRef(0);
-  const velocityRef = useRef(0);
-  const rafIdRef = useRef<number | null>(null);
-  const slotPositionsRef = useRef<number[]>([]);
   const isProgrammaticScrollRef = useRef(false);
-  const isMomentumScrollingRef = useRef(false);
+  const lastScrollEventRef = useRef(0);
+  const lastDetectedPageRef = useRef(currentPage);
+  const programmaticScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const updateSlotPositions = useCallback(() => {
+  useEffect(() => {
+    lastDetectedPageRef.current = currentPage;
+  }, [currentPage]);
+
+  const scrollToPage = useCallback(
+    (page: number, instant: boolean = false) => {
+      const container = containerRef.current;
+      if (!container || direction !== 'vertical' || !isActive) return;
+
+      const targetIndex = page - 1;
+      const targetSlot = container.querySelector(`[data-page-index="${targetIndex}"]`);
+      if (!targetSlot) return;
+
+      isProgrammaticScrollRef.current = true;
+      const containerRect = container.getBoundingClientRect();
+      const targetRect = (targetSlot as HTMLElement).getBoundingClientRect();
+      const targetOffset = targetRect.top - containerRect.top + container.scrollTop;
+      container.scrollTo({ top: targetOffset, behavior: instant ? 'instant' : 'smooth' });
+
+      if (programmaticScrollTimerRef.current) {
+        clearTimeout(programmaticScrollTimerRef.current);
+      }
+      programmaticScrollTimerRef.current = setTimeout(() => {
+        isProgrammaticScrollRef.current = false;
+        programmaticScrollTimerRef.current = null;
+      }, instant ? INSTANT_SCROLL_SETTLE_MS : PROGRAMMATIC_SCROLL_TIMEOUT_MS);
+    },
+    [direction, isActive]
+  );
+
+  const detectPageFromScroll = useCallback(() => {
     const container = containerRef.current;
-    if (!container || direction !== 'vertical') return;
+    if (!container || direction !== 'vertical' || !isActive) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const readingAnchor = containerRect.top + containerRect.height * READING_ANCHOR_RATIO;
     const slots = container.querySelectorAll('[data-page-index]');
-    slotPositionsRef.current = Array.from(slots).map(
-      (slot) => (slot as HTMLElement).offsetTop
-    );
-  }, [direction]);
-
-  const getPageFromScroll = useCallback(() => {
-    const positions = slotPositionsRef.current;
-    if (positions.length === 0) return currentPage;
-
-    const container = containerRef.current;
-    if (!container) return currentPage;
-
-    const scrollCenter = container.scrollTop + container.clientHeight / 2;
 
     let closestPage = 1;
     let minDistance = Infinity;
+    let anchoredPage: number | null = null;
 
-    for (let i = 0; i < positions.length; i++) {
-      const slot = container.querySelector(`[data-page-index="${i}"]`);
-      if (!slot) continue;
-      const slotHeight = (slot as HTMLElement).clientHeight;
-      const slotCenter = positions[i] + slotHeight / 2;
-      const distance = Math.abs(slotCenter - scrollCenter);
+    slots.forEach((slot) => {
+      const el = slot as HTMLElement;
+      const rect = el.getBoundingClientRect();
+      if (rect.height === 0) return;
+      const pageIndex = Number(el.dataset.pageIndex);
+      const distance = Math.abs(rect.top - readingAnchor);
+      if (rect.top <= readingAnchor && rect.bottom > readingAnchor) {
+        anchoredPage = pageIndex + 1;
+      }
       if (distance < minDistance) {
         minDistance = distance;
-        closestPage = i + 1;
+        closestPage = pageIndex + 1;
+      }
+    });
+
+    if (anchoredPage !== null) {
+      closestPage = anchoredPage;
+    }
+
+    if (closestPage !== lastDetectedPageRef.current) {
+      lastDetectedPageRef.current = closestPage;
+      if (!isProgrammaticScrollRef.current) {
+        onPageChange(closestPage);
       }
     }
+  }, [direction, isActive, onPageChange]);
 
-    return closestPage;
-  }, [currentPage]);
-
-  const snapToNearestPage = useCallback(() => {
+  useEffect(() => {
     const container = containerRef.current;
-    if (!container || direction !== 'vertical') return;
+    if (!container || direction !== 'vertical' || !isActive || totalPages === 0) return;
 
-    const targetPage = getPageFromScroll();
-    if (targetPage !== currentPage && !isProgrammaticScrollRef.current) {
-      onPageChange(targetPage);
-    }
-  }, [direction, currentPage, onPageChange, getPageFromScroll]);
+    let rafId: number | null = null;
 
-  const applyMomentum = useCallback(() => {
-    const container = containerRef.current;
-    if (!container || direction !== 'vertical') return;
-
-    const velocity = velocityRef.current;
-    if (Math.abs(velocity) < 0.5) {
-      isMomentumScrollingRef.current = false;
-      snapToNearestPage();
-      return;
-    }
-
-    container.scrollTop += velocity;
-    velocityRef.current *= 0.95;
-
-    rafIdRef.current = requestAnimationFrame(applyMomentum);
-  }, [direction, snapToNearestPage]);
-
-  const onTouchStart = useCallback(
-    (e: TouchEvent) => {
-      if (direction !== 'vertical') return;
-      const touch = e.touches[0];
-      isDraggingRef.current = true;
-      isMomentumScrollingRef.current = false;
-      startYRef.current = touch.clientY;
-      startScrollRef.current = containerRef.current?.scrollTop ?? 0;
-      lastTouchYRef.current = touch.clientY;
-      lastTouchTimeRef.current = Date.now();
-      velocityRef.current = 0;
-
-      if (rafIdRef.current) {
-        cancelAnimationFrame(rafIdRef.current);
-        rafIdRef.current = null;
-      }
-
-      updateSlotPositions();
-    },
-    [direction, updateSlotPositions]
-  );
-
-  const onTouchMove = useCallback(
-    (e: TouchEvent) => {
-      if (direction !== 'vertical' || !isDraggingRef.current) return;
-      e.preventDefault();
-      const touch = e.touches[0];
+    const onScroll = () => {
       const now = Date.now();
-      const deltaY = touch.clientY - lastTouchYRef.current;
-      const deltaTime = now - lastTouchTimeRef.current;
-
-      if (deltaTime > 0) {
-        velocityRef.current = deltaY * (16 / deltaTime);
+      if (now - lastScrollEventRef.current < SCROLL_THROTTLE_MS) {
+        if (!rafId) {
+          rafId = requestAnimationFrame(() => {
+            rafId = null;
+            detectPageFromScroll();
+          });
+        }
+        return;
       }
-
-      lastTouchYRef.current = touch.clientY;
-      lastTouchTimeRef.current = now;
-
-      const container = containerRef.current;
-      if (container) {
-        container.scrollTop = startScrollRef.current - (touch.clientY - startYRef.current);
-      }
-    },
-    [direction]
-  );
-
-  const onTouchEnd = useCallback(() => {
-    if (direction !== 'vertical' || !isDraggingRef.current) return;
-    isDraggingRef.current = false;
-
-    if (Math.abs(velocityRef.current) > 2) {
-      isMomentumScrollingRef.current = true;
-      rafIdRef.current = requestAnimationFrame(applyMomentum);
-    } else {
-      snapToNearestPage();
-    }
-  }, [direction, applyMomentum, snapToNearestPage]);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container || direction !== 'vertical') return;
-
-    container.addEventListener('touchstart', onTouchStart, { passive: true });
-    container.addEventListener('touchmove', onTouchMove, { passive: false });
-    container.addEventListener('touchend', onTouchEnd, { passive: true });
-    container.addEventListener('touchcancel', onTouchEnd, { passive: true });
-
-    return () => {
-      container.removeEventListener('touchstart', onTouchStart);
-      container.removeEventListener('touchmove', onTouchMove);
-      container.removeEventListener('touchend', onTouchEnd);
-      container.removeEventListener('touchcancel', onTouchEnd);
+      lastScrollEventRef.current = now;
+      detectPageFromScroll();
     };
-  }, [direction, onTouchStart, onTouchMove, onTouchEnd]);
 
-  const scrollToPage = useCallback(
-    (page: number) => {
-      const container = containerRef.current;
-      if (!container || direction !== 'vertical') return;
+    container.addEventListener('scroll', onScroll, { passive: true });
 
-      const positions = slotPositionsRef.current;
-      if (positions.length === 0) {
-        updateSlotPositions();
-      }
-
-      const targetIndex = page - 1;
-      const targetPosition = slotPositionsRef.current[targetIndex];
-      if (targetPosition === undefined) return;
-
-      isProgrammaticScrollRef.current = true;
-      container.scrollTo({ top: targetPosition, behavior: 'smooth' });
-
-      setTimeout(() => {
-        isProgrammaticScrollRef.current = false;
-      }, 500);
-    },
-    [direction, updateSlotPositions]
-  );
+    return () => {
+      container.removeEventListener('scroll', onScroll);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, [direction, isActive, totalPages, detectPageFromScroll]);
 
   useEffect(() => {
     return () => {
-      if (rafIdRef.current) {
-        cancelAnimationFrame(rafIdRef.current);
+      if (programmaticScrollTimerRef.current) {
+        clearTimeout(programmaticScrollTimerRef.current);
       }
     };
   }, []);
@@ -201,10 +130,14 @@ export const useSmoothScroll = (options: SmoothScrollOptions) => {
   return {
     containerRef,
     scrollToPage,
-    handleTouchStart: undefined,
-    handleTouchMove: undefined,
-    handleTouchEnd: undefined,
-    isDragging: () => isDraggingRef.current || isMomentumScrollingRef.current,
+    setProgrammaticScroll: (value: boolean) => {
+      isProgrammaticScrollRef.current = value;
+      if (!value && programmaticScrollTimerRef.current) {
+        clearTimeout(programmaticScrollTimerRef.current);
+        programmaticScrollTimerRef.current = null;
+      }
+    },
+    isDragging: () => isProgrammaticScrollRef.current,
   };
 };
 

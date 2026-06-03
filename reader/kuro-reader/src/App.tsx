@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 import { MainLayout } from '@/components/layouts/MainLayout';
@@ -17,8 +17,51 @@ import { SearchPage } from '@/pages/Search';
 import { TagsPage } from '@/pages/Tags';
 import { AuthPage } from '@/pages/Auth';
 import { ROUTES } from '@/constants/routes';
+import { useAppStore } from '@/stores/useAppStore';
+
+const SYSTEM_DARK_QUERY = '(prefers-color-scheme: dark)';
+const FONT_SCALE_BASE = 16;
+const BODY_LINE_HEIGHT_RATIO = 1.75;
+const BODY_SMALL_SCALE = 0.875;
+const BODY_LARGE_SCALE = 1.125;
+
+const getBodyFontFamily = (fontFamily: 'literata' | 'inter'): string =>
+  fontFamily === 'literata' ? "'Literata', serif" : "'Inter', sans-serif";
 
 const App: React.FC = () => {
+  const { theme, settings } = useAppStore();
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const mediaQuery = window.matchMedia(SYSTEM_DARK_QUERY);
+
+    const applyTheme = () => {
+      const shouldUseDarkTheme = theme === 'dark' || (theme === 'auto' && mediaQuery.matches);
+      root.classList.toggle('dark', shouldUseDarkTheme);
+      root.dataset.theme = shouldUseDarkTheme ? 'dark' : 'light';
+    };
+
+    applyTheme();
+    mediaQuery.addEventListener('change', applyTheme);
+
+    return () => {
+      mediaQuery.removeEventListener('change', applyTheme);
+    };
+  }, [theme]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const bodyFontSize = settings.fontSize;
+    const bodyLineHeight = Math.round(bodyFontSize * BODY_LINE_HEIGHT_RATIO);
+
+    root.style.setProperty('--app-body-font-family', getBodyFontFamily(settings.fontFamily));
+    root.style.setProperty('--app-body-font-size', `${bodyFontSize}px`);
+    root.style.setProperty('--app-body-line-height', `${bodyLineHeight}px`);
+    root.style.setProperty('--app-body-sm-font-size', `${Math.round(bodyFontSize * BODY_SMALL_SCALE)}px`);
+    root.style.setProperty('--app-body-lg-font-size', `${Math.round(bodyFontSize * BODY_LARGE_SCALE)}px`);
+    root.style.setProperty('--app-font-scale', `${bodyFontSize / FONT_SCALE_BASE}`);
+  }, [settings.fontFamily, settings.fontSize]);
+
   return (
     <BrowserRouter>
       <Routes>

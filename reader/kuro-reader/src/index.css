@@ -3,6 +3,48 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --color-background: #fdf8f8;
+    --color-on-background: #1c1b1c;
+    --color-surface: #fdf8f8;
+    --color-surface-bright: #fdf8f8;
+    --color-surface-variant: #e6e1e1;
+    --color-on-surface: #1c1b1c;
+    --color-on-surface-variant: #444748;
+    --color-surface-container-lowest: #ffffff;
+    --color-surface-container-low: #f7f2f2;
+    --color-surface-container: #f1eded;
+    --color-surface-container-high: #ece7e7;
+    --color-surface-container-highest: #e6e1e1;
+    --color-primary: #000000;
+    --color-on-primary: #ffffff;
+    --color-secondary: #5e5e5e;
+    --color-secondary-container: #e4e2e2;
+    --color-outline: #747878;
+    --color-outline-variant: #c4c7c7;
+  }
+
+  .dark {
+    --color-background: #111111;
+    --color-on-background: #f4f0f0;
+    --color-surface: #1c1b1c;
+    --color-surface-bright: #2b2a2b;
+    --color-surface-variant: #444748;
+    --color-on-surface: #f4f0f0;
+    --color-on-surface-variant: #c8c6c5;
+    --color-surface-container-lowest: #171717;
+    --color-surface-container-low: #201f20;
+    --color-surface-container: #252425;
+    --color-surface-container-high: #302f30;
+    --color-surface-container-highest: #3a393a;
+    --color-primary: #f4f0f0;
+    --color-on-primary: #1c1b1c;
+    --color-secondary: #c8c6c5;
+    --color-secondary-container: #313030;
+    --color-outline: #8f9191;
+    --color-outline-variant: #444748;
+  }
+
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -10,9 +52,11 @@
 
   body {
     @apply bg-background text-on-background;
-    font-family: 'Literata', serif;
-    font-size: 16px;
-    line-height: 28px;
+    background-color: var(--color-background);
+    color: var(--color-on-background);
+    font-family: var(--app-body-font-family, 'Literata', serif);
+    font-size: var(--app-body-font-size, 16px);
+    line-height: var(--app-body-line-height, 28px);
   }
 
   .material-symbols-outlined {
@@ -60,12 +104,109 @@
 }
 
 @layer utilities {
+  .bg-background {
+    background-color: var(--color-background);
+  }
+
+  .text-on-background {
+    color: var(--color-on-background);
+  }
+
+  .bg-surface {
+    background-color: var(--color-surface);
+  }
+
+  .bg-surface-bright {
+    background-color: var(--color-surface-bright);
+  }
+
+  .bg-surface-variant {
+    background-color: var(--color-surface-variant);
+  }
+
+  .text-on-surface {
+    color: var(--color-on-surface);
+  }
+
+  .text-on-surface-variant {
+    color: var(--color-on-surface-variant);
+  }
+
+  .bg-surface-container-lowest {
+    background-color: var(--color-surface-container-lowest);
+  }
+
+  .bg-surface-container-low {
+    background-color: var(--color-surface-container-low);
+  }
+
+  .bg-surface-container {
+    background-color: var(--color-surface-container);
+  }
+
+  .bg-surface-container-high {
+    background-color: var(--color-surface-container-high);
+  }
+
+  .bg-surface-container-highest {
+    background-color: var(--color-surface-container-highest);
+  }
+
+  .text-primary {
+    color: var(--color-primary);
+  }
+
+  .bg-primary {
+    background-color: var(--color-primary);
+  }
+
+  .text-on-primary {
+    color: var(--color-on-primary);
+  }
+
+  .text-secondary {
+    color: var(--color-secondary);
+  }
+
+  .bg-secondary-container {
+    background-color: var(--color-secondary-container);
+  }
+
+  .border-outline {
+    border-color: var(--color-outline);
+  }
+
+  .border-outline-variant {
+    border-color: var(--color-outline-variant);
+  }
+
+  .font-body {
+    font-family: var(--app-body-font-family, 'Literata', serif);
+  }
+
+  .text-body-sm {
+    font-size: var(--app-body-sm-font-size, 14px);
+  }
+
+  .text-body-md {
+    font-size: var(--app-body-font-size, 16px);
+    line-height: var(--app-body-line-height, 28px);
+  }
+
+  .text-body-lg {
+    font-size: var(--app-body-lg-font-size, 18px);
+  }
+
   .animate-slide-up {
     animation: slideUp 0.3s ease-out;
   }
 
   .animate-slide-down {
     animation: slideDown 0.3s ease-out;
+  }
+
+  .animate-slide-left {
+    animation: slideLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .animate-fade-in {
@@ -282,6 +423,15 @@
   to {
     transform: translateY(0);
     opacity: 1;
+  }
+}
+
+@keyframes slideLeft {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
   }
 }
 
