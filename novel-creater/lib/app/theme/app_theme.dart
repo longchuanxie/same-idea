@@ -11,6 +11,7 @@ class AppTheme {
       colorSchemeSeed: morandi.green,
       brightness: Brightness.light,
       scaffoldBackgroundColor: morandi.bg,
+      fontFamily: 'SF Pro Display',
       appBarTheme: AppBarTheme(
         backgroundColor: morandi.bg,
         foregroundColor: morandi.ink,
@@ -21,17 +22,18 @@ class AppTheme {
         color: morandi.canvas,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(16),
           side: BorderSide(color: morandi.line),
         ),
       ),
       dividerTheme: DividerThemeData(color: morandi.line, thickness: 1),
       textTheme: TextTheme(
         headlineLarge: TextStyle(
-          fontSize: 28,
+          fontSize: 31,
           fontWeight: FontWeight.w700,
           height: 1.3,
           color: morandi.ink,
+          letterSpacing: 0.04,
         ),
         headlineMedium: TextStyle(
           fontSize: 22,
@@ -56,15 +58,15 @@ class AppTheme {
         filled: true,
         fillColor: morandi.canvas,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: morandi.line),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: morandi.line),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: morandi.green, width: 1.5),
         ),
       ),
@@ -74,7 +76,7 @@ class AppTheme {
           foregroundColor: Colors.white,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       ),
       textButtonTheme: TextButtonThemeData(

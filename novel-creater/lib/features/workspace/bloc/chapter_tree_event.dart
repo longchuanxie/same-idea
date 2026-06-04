@@ -47,6 +47,15 @@ final class ChapterTreeChapterRenamed extends ChapterTreeEvent {
   List<Object?> get props => [chapterId, newTitle];
 }
 
+final class ChapterTreeChapterSynced extends ChapterTreeEvent {
+  const ChapterTreeChapterSynced({required this.chapter});
+
+  final Chapter chapter;
+
+  @override
+  List<Object?> get props => [chapter];
+}
+
 final class ChapterTreeChapterDeleted extends ChapterTreeEvent {
   const ChapterTreeChapterDeleted({required this.chapterId});
 

@@ -33,6 +33,7 @@ export 'repositories/outline_node_repository.dart';
 export 'repositories/project_repository.dart';
 export 'repositories/revision_repository.dart';
 export 'repositories/session_repository.dart';
+export 'repositories/setting_entry_repository.dart';
 export 'repositories/settings_repository.dart';
 export 'repositories/snapshot_repository.dart';
 export 'results/app_error.dart';

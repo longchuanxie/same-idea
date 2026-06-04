@@ -48,11 +48,26 @@ void main() {
     test('getByProjectId returns chapters for a project', () async {
       final now = DateTime.now();
       await repository.create(Chapter(
-          id: 'ch1', projectId: 'p1', title: 'Ch1', order: 1, createdAt: now, updatedAt: now));
+          id: 'ch1',
+          projectId: 'p1',
+          title: 'Ch1',
+          order: 1,
+          createdAt: now,
+          updatedAt: now));
       await repository.create(Chapter(
-          id: 'ch2', projectId: 'p1', title: 'Ch2', order: 2, createdAt: now, updatedAt: now));
+          id: 'ch2',
+          projectId: 'p1',
+          title: 'Ch2',
+          order: 2,
+          createdAt: now,
+          updatedAt: now));
       await repository.create(Chapter(
-          id: 'ch3', projectId: 'p2', title: 'Ch3', order: 1, createdAt: now, updatedAt: now));
+          id: 'ch3',
+          projectId: 'p2',
+          title: 'Ch3',
+          order: 1,
+          createdAt: now,
+          updatedAt: now));
 
       final result = await repository.getByProjectId('p1');
       expect(result.isSuccess, isTrue);
@@ -65,10 +80,16 @@ void main() {
       );
     });
 
-    test('saveContent updates content, plainTextCache, and wordCount', () async {
+    test('saveContent updates content, plainTextCache, and wordCount',
+        () async {
       final now = DateTime.now();
       await repository.create(Chapter(
-          id: 'ch1', projectId: 'p1', title: 'Ch1', order: 1, createdAt: now, updatedAt: now));
+          id: 'ch1',
+          projectId: 'p1',
+          title: 'Ch1',
+          order: 1,
+          createdAt: now,
+          updatedAt: now));
 
       const content = '# Hello **World**\nThis is a test.';
       final saveResult = await repository.saveContent('ch1', content);
@@ -81,7 +102,7 @@ void main() {
           expect(ch.plainTextCache, isNot(contains('#')));
           expect(ch.plainTextCache, isNot(contains('**')));
           expect(ch.wordCount, greaterThan(0));
-          expect(ch.wordCount, ch.plainTextCache.length);
+          expect(ch.wordCount, 6);
         },
         failure: (_) => fail('Should not fail'),
       );
@@ -90,10 +111,20 @@ void main() {
     test('update persists changes', () async {
       final now = DateTime.now();
       await repository.create(Chapter(
-          id: 'ch1', projectId: 'p1', title: 'Original', order: 1, createdAt: now, updatedAt: now));
+          id: 'ch1',
+          projectId: 'p1',
+          title: 'Original',
+          order: 1,
+          createdAt: now,
+          updatedAt: now));
 
       final updated = Chapter(
-          id: 'ch1', projectId: 'p1', title: 'Updated Title', order: 2, createdAt: now, updatedAt: now);
+          id: 'ch1',
+          projectId: 'p1',
+          title: 'Updated Title',
+          order: 2,
+          createdAt: now,
+          updatedAt: now);
       await repository.update(updated);
 
       final result = await repository.getById('ch1');
@@ -109,7 +140,12 @@ void main() {
     test('delete removes chapter', () async {
       final now = DateTime.now();
       await repository.create(Chapter(
-          id: 'ch1', projectId: 'p1', title: 'To Delete', order: 1, createdAt: now, updatedAt: now));
+          id: 'ch1',
+          projectId: 'p1',
+          title: 'To Delete',
+          order: 1,
+          createdAt: now,
+          updatedAt: now));
 
       await repository.delete('ch1');
 

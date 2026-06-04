@@ -27,6 +27,8 @@ mixin _$LlmProvider {
   DateTime get updatedAt => throw _privateConstructorUsedError;
   String get apiKey => throw _privateConstructorUsedError;
   String get defaultModel => throw _privateConstructorUsedError;
+  double get temperature => throw _privateConstructorUsedError;
+  int get maxTokens => throw _privateConstructorUsedError;
   bool get enabled => throw _privateConstructorUsedError;
 
   /// Serializes this LlmProvider to a JSON map.
@@ -53,6 +55,8 @@ abstract class $LlmProviderCopyWith<$Res> {
       DateTime updatedAt,
       String apiKey,
       String defaultModel,
+      double temperature,
+      int maxTokens,
       bool enabled});
 }
 
@@ -78,6 +82,8 @@ class _$LlmProviderCopyWithImpl<$Res, $Val extends LlmProvider>
     Object? updatedAt = null,
     Object? apiKey = null,
     Object? defaultModel = null,
+    Object? temperature = null,
+    Object? maxTokens = null,
     Object? enabled = null,
   }) {
     return _then(_value.copyWith(
@@ -109,6 +115,14 @@ class _$LlmProviderCopyWithImpl<$Res, $Val extends LlmProvider>
           ? _value.defaultModel
           : defaultModel // ignore: cast_nullable_to_non_nullable
               as String,
+      temperature: null == temperature
+          ? _value.temperature
+          : temperature // ignore: cast_nullable_to_non_nullable
+              as double,
+      maxTokens: null == maxTokens
+          ? _value.maxTokens
+          : maxTokens // ignore: cast_nullable_to_non_nullable
+              as int,
       enabled: null == enabled
           ? _value.enabled
           : enabled // ignore: cast_nullable_to_non_nullable
@@ -133,6 +147,8 @@ abstract class _$$LlmProviderImplCopyWith<$Res>
       DateTime updatedAt,
       String apiKey,
       String defaultModel,
+      double temperature,
+      int maxTokens,
       bool enabled});
 }
 
@@ -156,6 +172,8 @@ class __$$LlmProviderImplCopyWithImpl<$Res>
     Object? updatedAt = null,
     Object? apiKey = null,
     Object? defaultModel = null,
+    Object? temperature = null,
+    Object? maxTokens = null,
     Object? enabled = null,
   }) {
     return _then(_$LlmProviderImpl(
@@ -187,6 +205,14 @@ class __$$LlmProviderImplCopyWithImpl<$Res>
           ? _value.defaultModel
           : defaultModel // ignore: cast_nullable_to_non_nullable
               as String,
+      temperature: null == temperature
+          ? _value.temperature
+          : temperature // ignore: cast_nullable_to_non_nullable
+              as double,
+      maxTokens: null == maxTokens
+          ? _value.maxTokens
+          : maxTokens // ignore: cast_nullable_to_non_nullable
+              as int,
       enabled: null == enabled
           ? _value.enabled
           : enabled // ignore: cast_nullable_to_non_nullable
@@ -206,6 +232,8 @@ class _$LlmProviderImpl implements _LlmProvider {
       required this.updatedAt,
       this.apiKey = '',
       this.defaultModel = 'gpt-4o-mini',
+      this.temperature = 0.7,
+      this.maxTokens = 2048,
       this.enabled = true});
 
   factory _$LlmProviderImpl.fromJson(Map<String, dynamic> json) =>
@@ -229,11 +257,17 @@ class _$LlmProviderImpl implements _LlmProvider {
   final String defaultModel;
   @override
   @JsonKey()
+  final double temperature;
+  @override
+  @JsonKey()
+  final int maxTokens;
+  @override
+  @JsonKey()
   final bool enabled;
 
   @override
   String toString() {
-    return 'LlmProvider(id: $id, displayName: $displayName, baseUrl: $baseUrl, createdAt: $createdAt, updatedAt: $updatedAt, apiKey: $apiKey, defaultModel: $defaultModel, enabled: $enabled)';
+    return 'LlmProvider(id: $id, displayName: $displayName, baseUrl: $baseUrl, createdAt: $createdAt, updatedAt: $updatedAt, apiKey: $apiKey, defaultModel: $defaultModel, temperature: $temperature, maxTokens: $maxTokens, enabled: $enabled)';
   }
 
   @override
@@ -252,13 +286,27 @@ class _$LlmProviderImpl implements _LlmProvider {
             (identical(other.apiKey, apiKey) || other.apiKey == apiKey) &&
             (identical(other.defaultModel, defaultModel) ||
                 other.defaultModel == defaultModel) &&
+            (identical(other.temperature, temperature) ||
+                other.temperature == temperature) &&
+            (identical(other.maxTokens, maxTokens) ||
+                other.maxTokens == maxTokens) &&
             (identical(other.enabled, enabled) || other.enabled == enabled));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, id, displayName, baseUrl,
-      createdAt, updatedAt, apiKey, defaultModel, enabled);
+  int get hashCode => Object.hash(
+      runtimeType,
+      id,
+      displayName,
+      baseUrl,
+      createdAt,
+      updatedAt,
+      apiKey,
+      defaultModel,
+      temperature,
+      maxTokens,
+      enabled);
 
   /// Create a copy of LlmProvider
   /// with the given fields replaced by the non-null parameter values.
@@ -285,6 +333,8 @@ abstract class _LlmProvider implements LlmProvider {
       required final DateTime updatedAt,
       final String apiKey,
       final String defaultModel,
+      final double temperature,
+      final int maxTokens,
       final bool enabled}) = _$LlmProviderImpl;
 
   factory _LlmProvider.fromJson(Map<String, dynamic> json) =
@@ -304,6 +354,10 @@ abstract class _LlmProvider implements LlmProvider {
   String get apiKey;
   @override
   String get defaultModel;
+  @override
+  double get temperature;
+  @override
+  int get maxTokens;
   @override
   bool get enabled;
 

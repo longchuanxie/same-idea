@@ -15,6 +15,8 @@ _$LlmProviderImpl _$$LlmProviderImplFromJson(Map<String, dynamic> json) =>
       updatedAt: DateTime.parse(json['updatedAt'] as String),
       apiKey: json['apiKey'] as String? ?? '',
       defaultModel: json['defaultModel'] as String? ?? 'gpt-4o-mini',
+      temperature: (json['temperature'] as num?)?.toDouble() ?? 0.7,
+      maxTokens: (json['maxTokens'] as num?)?.toInt() ?? 2048,
       enabled: json['enabled'] as bool? ?? true,
     );
 
@@ -27,5 +29,7 @@ Map<String, dynamic> _$$LlmProviderImplToJson(_$LlmProviderImpl instance) =>
       'updatedAt': instance.updatedAt.toIso8601String(),
       'apiKey': instance.apiKey,
       'defaultModel': instance.defaultModel,
+      'temperature': instance.temperature,
+      'maxTokens': instance.maxTokens,
       'enabled': instance.enabled,
     };

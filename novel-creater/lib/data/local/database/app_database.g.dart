@@ -4594,6 +4594,476 @@ class SessionsTableCompanion extends UpdateCompanion<SessionsTableData> {
   }
 }
 
+class $SettingEntriesTableTable extends SettingEntriesTable
+    with TableInfo<$SettingEntriesTableTable, SettingEntriesTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SettingEntriesTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _projectIdMeta =
+      const VerificationMeta('projectId');
+  @override
+  late final GeneratedColumn<String> projectId = GeneratedColumn<String>(
+      'project_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _categoryMeta =
+      const VerificationMeta('category');
+  @override
+  late final GeneratedColumn<String> category = GeneratedColumn<String>(
+      'category', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+      'title', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _contentMeta =
+      const VerificationMeta('content');
+  @override
+  late final GeneratedColumn<String> content = GeneratedColumn<String>(
+      'content', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
+  static const VerificationMeta _tagsMeta = const VerificationMeta('tags');
+  @override
+  late final GeneratedColumn<String> tags = GeneratedColumn<String>(
+      'tags', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('[]'));
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _schemaVersionMeta =
+      const VerificationMeta('schemaVersion');
+  @override
+  late final GeneratedColumn<int> schemaVersion = GeneratedColumn<int>(
+      'schema_version', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(1));
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        projectId,
+        category,
+        title,
+        content,
+        tags,
+        createdAt,
+        updatedAt,
+        schemaVersion
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'setting_entries_table';
+  @override
+  VerificationContext validateIntegrity(
+      Insertable<SettingEntriesTableData> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('project_id')) {
+      context.handle(_projectIdMeta,
+          projectId.isAcceptableOrUnknown(data['project_id']!, _projectIdMeta));
+    } else if (isInserting) {
+      context.missing(_projectIdMeta);
+    }
+    if (data.containsKey('category')) {
+      context.handle(_categoryMeta,
+          category.isAcceptableOrUnknown(data['category']!, _categoryMeta));
+    } else if (isInserting) {
+      context.missing(_categoryMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+          _titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta));
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('content')) {
+      context.handle(_contentMeta,
+          content.isAcceptableOrUnknown(data['content']!, _contentMeta));
+    }
+    if (data.containsKey('tags')) {
+      context.handle(
+          _tagsMeta, tags.isAcceptableOrUnknown(data['tags']!, _tagsMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('schema_version')) {
+      context.handle(
+          _schemaVersionMeta,
+          schemaVersion.isAcceptableOrUnknown(
+              data['schema_version']!, _schemaVersionMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SettingEntriesTableData map(Map<String, dynamic> data,
+      {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SettingEntriesTableData(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      projectId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}project_id'])!,
+      category: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}category'])!,
+      title: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}title'])!,
+      content: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}content'])!,
+      tags: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}tags'])!,
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+      schemaVersion: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}schema_version'])!,
+    );
+  }
+
+  @override
+  $SettingEntriesTableTable createAlias(String alias) {
+    return $SettingEntriesTableTable(attachedDatabase, alias);
+  }
+}
+
+class SettingEntriesTableData extends DataClass
+    implements Insertable<SettingEntriesTableData> {
+  final String id;
+  final String projectId;
+  final String category;
+  final String title;
+  final String content;
+  final String tags;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final int schemaVersion;
+  const SettingEntriesTableData(
+      {required this.id,
+      required this.projectId,
+      required this.category,
+      required this.title,
+      required this.content,
+      required this.tags,
+      required this.createdAt,
+      required this.updatedAt,
+      required this.schemaVersion});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['project_id'] = Variable<String>(projectId);
+    map['category'] = Variable<String>(category);
+    map['title'] = Variable<String>(title);
+    map['content'] = Variable<String>(content);
+    map['tags'] = Variable<String>(tags);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['schema_version'] = Variable<int>(schemaVersion);
+    return map;
+  }
+
+  SettingEntriesTableCompanion toCompanion(bool nullToAbsent) {
+    return SettingEntriesTableCompanion(
+      id: Value(id),
+      projectId: Value(projectId),
+      category: Value(category),
+      title: Value(title),
+      content: Value(content),
+      tags: Value(tags),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      schemaVersion: Value(schemaVersion),
+    );
+  }
+
+  factory SettingEntriesTableData.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SettingEntriesTableData(
+      id: serializer.fromJson<String>(json['id']),
+      projectId: serializer.fromJson<String>(json['projectId']),
+      category: serializer.fromJson<String>(json['category']),
+      title: serializer.fromJson<String>(json['title']),
+      content: serializer.fromJson<String>(json['content']),
+      tags: serializer.fromJson<String>(json['tags']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      schemaVersion: serializer.fromJson<int>(json['schemaVersion']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'projectId': serializer.toJson<String>(projectId),
+      'category': serializer.toJson<String>(category),
+      'title': serializer.toJson<String>(title),
+      'content': serializer.toJson<String>(content),
+      'tags': serializer.toJson<String>(tags),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'schemaVersion': serializer.toJson<int>(schemaVersion),
+    };
+  }
+
+  SettingEntriesTableData copyWith(
+          {String? id,
+          String? projectId,
+          String? category,
+          String? title,
+          String? content,
+          String? tags,
+          DateTime? createdAt,
+          DateTime? updatedAt,
+          int? schemaVersion}) =>
+      SettingEntriesTableData(
+        id: id ?? this.id,
+        projectId: projectId ?? this.projectId,
+        category: category ?? this.category,
+        title: title ?? this.title,
+        content: content ?? this.content,
+        tags: tags ?? this.tags,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+        schemaVersion: schemaVersion ?? this.schemaVersion,
+      );
+  SettingEntriesTableData copyWithCompanion(SettingEntriesTableCompanion data) {
+    return SettingEntriesTableData(
+      id: data.id.present ? data.id.value : this.id,
+      projectId: data.projectId.present ? data.projectId.value : this.projectId,
+      category: data.category.present ? data.category.value : this.category,
+      title: data.title.present ? data.title.value : this.title,
+      content: data.content.present ? data.content.value : this.content,
+      tags: data.tags.present ? data.tags.value : this.tags,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      schemaVersion: data.schemaVersion.present
+          ? data.schemaVersion.value
+          : this.schemaVersion,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SettingEntriesTableData(')
+          ..write('id: $id, ')
+          ..write('projectId: $projectId, ')
+          ..write('category: $category, ')
+          ..write('title: $title, ')
+          ..write('content: $content, ')
+          ..write('tags: $tags, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('schemaVersion: $schemaVersion')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, projectId, category, title, content, tags,
+      createdAt, updatedAt, schemaVersion);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SettingEntriesTableData &&
+          other.id == this.id &&
+          other.projectId == this.projectId &&
+          other.category == this.category &&
+          other.title == this.title &&
+          other.content == this.content &&
+          other.tags == this.tags &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.schemaVersion == this.schemaVersion);
+}
+
+class SettingEntriesTableCompanion
+    extends UpdateCompanion<SettingEntriesTableData> {
+  final Value<String> id;
+  final Value<String> projectId;
+  final Value<String> category;
+  final Value<String> title;
+  final Value<String> content;
+  final Value<String> tags;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<int> schemaVersion;
+  final Value<int> rowid;
+  const SettingEntriesTableCompanion({
+    this.id = const Value.absent(),
+    this.projectId = const Value.absent(),
+    this.category = const Value.absent(),
+    this.title = const Value.absent(),
+    this.content = const Value.absent(),
+    this.tags = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.schemaVersion = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SettingEntriesTableCompanion.insert({
+    required String id,
+    required String projectId,
+    required String category,
+    required String title,
+    this.content = const Value.absent(),
+    this.tags = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.schemaVersion = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        projectId = Value(projectId),
+        category = Value(category),
+        title = Value(title),
+        createdAt = Value(createdAt),
+        updatedAt = Value(updatedAt);
+  static Insertable<SettingEntriesTableData> custom({
+    Expression<String>? id,
+    Expression<String>? projectId,
+    Expression<String>? category,
+    Expression<String>? title,
+    Expression<String>? content,
+    Expression<String>? tags,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? schemaVersion,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (projectId != null) 'project_id': projectId,
+      if (category != null) 'category': category,
+      if (title != null) 'title': title,
+      if (content != null) 'content': content,
+      if (tags != null) 'tags': tags,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (schemaVersion != null) 'schema_version': schemaVersion,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SettingEntriesTableCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? projectId,
+      Value<String>? category,
+      Value<String>? title,
+      Value<String>? content,
+      Value<String>? tags,
+      Value<DateTime>? createdAt,
+      Value<DateTime>? updatedAt,
+      Value<int>? schemaVersion,
+      Value<int>? rowid}) {
+    return SettingEntriesTableCompanion(
+      id: id ?? this.id,
+      projectId: projectId ?? this.projectId,
+      category: category ?? this.category,
+      title: title ?? this.title,
+      content: content ?? this.content,
+      tags: tags ?? this.tags,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      schemaVersion: schemaVersion ?? this.schemaVersion,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (projectId.present) {
+      map['project_id'] = Variable<String>(projectId.value);
+    }
+    if (category.present) {
+      map['category'] = Variable<String>(category.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
+    }
+    if (tags.present) {
+      map['tags'] = Variable<String>(tags.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (schemaVersion.present) {
+      map['schema_version'] = Variable<int>(schemaVersion.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SettingEntriesTableCompanion(')
+          ..write('id: $id, ')
+          ..write('projectId: $projectId, ')
+          ..write('category: $category, ')
+          ..write('title: $title, ')
+          ..write('content: $content, ')
+          ..write('tags: $tags, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('schemaVersion: $schemaVersion, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $AgentTasksTableTable extends AgentTasksTable
     with TableInfo<$AgentTasksTableTable, AgentTasksTableData> {
   @override
@@ -5747,6 +6217,22 @@ class $LlmProvidersTableTable extends LlmProvidersTable
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant('gpt-4o-mini'));
+  static const VerificationMeta _temperatureMeta =
+      const VerificationMeta('temperature');
+  @override
+  late final GeneratedColumn<double> temperature = GeneratedColumn<double>(
+      'temperature', aliasedName, false,
+      type: DriftSqlType.double,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0.7));
+  static const VerificationMeta _maxTokensMeta =
+      const VerificationMeta('maxTokens');
+  @override
+  late final GeneratedColumn<int> maxTokens = GeneratedColumn<int>(
+      'max_tokens', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(2048));
   static const VerificationMeta _enabledMeta =
       const VerificationMeta('enabled');
   @override
@@ -5770,8 +6256,17 @@ class $LlmProvidersTableTable extends LlmProvidersTable
       'updated_at', aliasedName, false,
       type: DriftSqlType.dateTime, requiredDuringInsert: true);
   @override
-  List<GeneratedColumn> get $columns =>
-      [id, displayName, baseUrl, defaultModel, enabled, createdAt, updatedAt];
+  List<GeneratedColumn> get $columns => [
+        id,
+        displayName,
+        baseUrl,
+        defaultModel,
+        temperature,
+        maxTokens,
+        enabled,
+        createdAt,
+        updatedAt
+      ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -5808,6 +6303,16 @@ class $LlmProvidersTableTable extends LlmProvidersTable
           defaultModel.isAcceptableOrUnknown(
               data['default_model']!, _defaultModelMeta));
     }
+    if (data.containsKey('temperature')) {
+      context.handle(
+          _temperatureMeta,
+          temperature.isAcceptableOrUnknown(
+              data['temperature']!, _temperatureMeta));
+    }
+    if (data.containsKey('max_tokens')) {
+      context.handle(_maxTokensMeta,
+          maxTokens.isAcceptableOrUnknown(data['max_tokens']!, _maxTokensMeta));
+    }
     if (data.containsKey('enabled')) {
       context.handle(_enabledMeta,
           enabled.isAcceptableOrUnknown(data['enabled']!, _enabledMeta));
@@ -5841,6 +6346,10 @@ class $LlmProvidersTableTable extends LlmProvidersTable
           .read(DriftSqlType.string, data['${effectivePrefix}base_url'])!,
       defaultModel: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}default_model'])!,
+      temperature: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}temperature'])!,
+      maxTokens: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}max_tokens'])!,
       enabled: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}enabled'])!,
       createdAt: attachedDatabase.typeMapping
@@ -5862,6 +6371,8 @@ class LlmProvidersTableData extends DataClass
   final String displayName;
   final String baseUrl;
   final String defaultModel;
+  final double temperature;
+  final int maxTokens;
   final bool enabled;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -5870,6 +6381,8 @@ class LlmProvidersTableData extends DataClass
       required this.displayName,
       required this.baseUrl,
       required this.defaultModel,
+      required this.temperature,
+      required this.maxTokens,
       required this.enabled,
       required this.createdAt,
       required this.updatedAt});
@@ -5880,6 +6393,8 @@ class LlmProvidersTableData extends DataClass
     map['display_name'] = Variable<String>(displayName);
     map['base_url'] = Variable<String>(baseUrl);
     map['default_model'] = Variable<String>(defaultModel);
+    map['temperature'] = Variable<double>(temperature);
+    map['max_tokens'] = Variable<int>(maxTokens);
     map['enabled'] = Variable<bool>(enabled);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
@@ -5892,6 +6407,8 @@ class LlmProvidersTableData extends DataClass
       displayName: Value(displayName),
       baseUrl: Value(baseUrl),
       defaultModel: Value(defaultModel),
+      temperature: Value(temperature),
+      maxTokens: Value(maxTokens),
       enabled: Value(enabled),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
@@ -5906,6 +6423,8 @@ class LlmProvidersTableData extends DataClass
       displayName: serializer.fromJson<String>(json['displayName']),
       baseUrl: serializer.fromJson<String>(json['baseUrl']),
       defaultModel: serializer.fromJson<String>(json['defaultModel']),
+      temperature: serializer.fromJson<double>(json['temperature']),
+      maxTokens: serializer.fromJson<int>(json['maxTokens']),
       enabled: serializer.fromJson<bool>(json['enabled']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
@@ -5919,6 +6438,8 @@ class LlmProvidersTableData extends DataClass
       'displayName': serializer.toJson<String>(displayName),
       'baseUrl': serializer.toJson<String>(baseUrl),
       'defaultModel': serializer.toJson<String>(defaultModel),
+      'temperature': serializer.toJson<double>(temperature),
+      'maxTokens': serializer.toJson<int>(maxTokens),
       'enabled': serializer.toJson<bool>(enabled),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
@@ -5930,6 +6451,8 @@ class LlmProvidersTableData extends DataClass
           String? displayName,
           String? baseUrl,
           String? defaultModel,
+          double? temperature,
+          int? maxTokens,
           bool? enabled,
           DateTime? createdAt,
           DateTime? updatedAt}) =>
@@ -5938,6 +6461,8 @@ class LlmProvidersTableData extends DataClass
         displayName: displayName ?? this.displayName,
         baseUrl: baseUrl ?? this.baseUrl,
         defaultModel: defaultModel ?? this.defaultModel,
+        temperature: temperature ?? this.temperature,
+        maxTokens: maxTokens ?? this.maxTokens,
         enabled: enabled ?? this.enabled,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
@@ -5951,6 +6476,9 @@ class LlmProvidersTableData extends DataClass
       defaultModel: data.defaultModel.present
           ? data.defaultModel.value
           : this.defaultModel,
+      temperature:
+          data.temperature.present ? data.temperature.value : this.temperature,
+      maxTokens: data.maxTokens.present ? data.maxTokens.value : this.maxTokens,
       enabled: data.enabled.present ? data.enabled.value : this.enabled,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
@@ -5964,6 +6492,8 @@ class LlmProvidersTableData extends DataClass
           ..write('displayName: $displayName, ')
           ..write('baseUrl: $baseUrl, ')
           ..write('defaultModel: $defaultModel, ')
+          ..write('temperature: $temperature, ')
+          ..write('maxTokens: $maxTokens, ')
           ..write('enabled: $enabled, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
@@ -5972,8 +6502,8 @@ class LlmProvidersTableData extends DataClass
   }
 
   @override
-  int get hashCode => Object.hash(
-      id, displayName, baseUrl, defaultModel, enabled, createdAt, updatedAt);
+  int get hashCode => Object.hash(id, displayName, baseUrl, defaultModel,
+      temperature, maxTokens, enabled, createdAt, updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -5982,6 +6512,8 @@ class LlmProvidersTableData extends DataClass
           other.displayName == this.displayName &&
           other.baseUrl == this.baseUrl &&
           other.defaultModel == this.defaultModel &&
+          other.temperature == this.temperature &&
+          other.maxTokens == this.maxTokens &&
           other.enabled == this.enabled &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
@@ -5993,6 +6525,8 @@ class LlmProvidersTableCompanion
   final Value<String> displayName;
   final Value<String> baseUrl;
   final Value<String> defaultModel;
+  final Value<double> temperature;
+  final Value<int> maxTokens;
   final Value<bool> enabled;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
@@ -6002,6 +6536,8 @@ class LlmProvidersTableCompanion
     this.displayName = const Value.absent(),
     this.baseUrl = const Value.absent(),
     this.defaultModel = const Value.absent(),
+    this.temperature = const Value.absent(),
+    this.maxTokens = const Value.absent(),
     this.enabled = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -6012,6 +6548,8 @@ class LlmProvidersTableCompanion
     required String displayName,
     required String baseUrl,
     this.defaultModel = const Value.absent(),
+    this.temperature = const Value.absent(),
+    this.maxTokens = const Value.absent(),
     this.enabled = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
@@ -6026,6 +6564,8 @@ class LlmProvidersTableCompanion
     Expression<String>? displayName,
     Expression<String>? baseUrl,
     Expression<String>? defaultModel,
+    Expression<double>? temperature,
+    Expression<int>? maxTokens,
     Expression<bool>? enabled,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
@@ -6036,6 +6576,8 @@ class LlmProvidersTableCompanion
       if (displayName != null) 'display_name': displayName,
       if (baseUrl != null) 'base_url': baseUrl,
       if (defaultModel != null) 'default_model': defaultModel,
+      if (temperature != null) 'temperature': temperature,
+      if (maxTokens != null) 'max_tokens': maxTokens,
       if (enabled != null) 'enabled': enabled,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
@@ -6048,6 +6590,8 @@ class LlmProvidersTableCompanion
       Value<String>? displayName,
       Value<String>? baseUrl,
       Value<String>? defaultModel,
+      Value<double>? temperature,
+      Value<int>? maxTokens,
       Value<bool>? enabled,
       Value<DateTime>? createdAt,
       Value<DateTime>? updatedAt,
@@ -6057,6 +6601,8 @@ class LlmProvidersTableCompanion
       displayName: displayName ?? this.displayName,
       baseUrl: baseUrl ?? this.baseUrl,
       defaultModel: defaultModel ?? this.defaultModel,
+      temperature: temperature ?? this.temperature,
+      maxTokens: maxTokens ?? this.maxTokens,
       enabled: enabled ?? this.enabled,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -6078,6 +6624,12 @@ class LlmProvidersTableCompanion
     }
     if (defaultModel.present) {
       map['default_model'] = Variable<String>(defaultModel.value);
+    }
+    if (temperature.present) {
+      map['temperature'] = Variable<double>(temperature.value);
+    }
+    if (maxTokens.present) {
+      map['max_tokens'] = Variable<int>(maxTokens.value);
     }
     if (enabled.present) {
       map['enabled'] = Variable<bool>(enabled.value);
@@ -6101,6 +6653,8 @@ class LlmProvidersTableCompanion
           ..write('displayName: $displayName, ')
           ..write('baseUrl: $baseUrl, ')
           ..write('defaultModel: $defaultModel, ')
+          ..write('temperature: $temperature, ')
+          ..write('maxTokens: $maxTokens, ')
           ..write('enabled: $enabled, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -6122,6 +6676,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $CharactersTableTable(this);
   late final $NotesTableTable notesTable = $NotesTableTable(this);
   late final $SessionsTableTable sessionsTable = $SessionsTableTable(this);
+  late final $SettingEntriesTableTable settingEntriesTable =
+      $SettingEntriesTableTable(this);
   late final $AgentTasksTableTable agentTasksTable =
       $AgentTasksTableTable(this);
   late final $SnapshotsTableTable snapshotsTable = $SnapshotsTableTable(this);
@@ -6139,6 +6695,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         charactersTable,
         notesTable,
         sessionsTable,
+        settingEntriesTable,
         agentTasksTable,
         snapshotsTable,
         llmProvidersTable
@@ -8258,6 +8815,245 @@ typedef $$SessionsTableTableProcessedTableManager = ProcessedTableManager<
     ),
     SessionsTableData,
     PrefetchHooks Function()>;
+typedef $$SettingEntriesTableTableCreateCompanionBuilder
+    = SettingEntriesTableCompanion Function({
+  required String id,
+  required String projectId,
+  required String category,
+  required String title,
+  Value<String> content,
+  Value<String> tags,
+  required DateTime createdAt,
+  required DateTime updatedAt,
+  Value<int> schemaVersion,
+  Value<int> rowid,
+});
+typedef $$SettingEntriesTableTableUpdateCompanionBuilder
+    = SettingEntriesTableCompanion Function({
+  Value<String> id,
+  Value<String> projectId,
+  Value<String> category,
+  Value<String> title,
+  Value<String> content,
+  Value<String> tags,
+  Value<DateTime> createdAt,
+  Value<DateTime> updatedAt,
+  Value<int> schemaVersion,
+  Value<int> rowid,
+});
+
+class $$SettingEntriesTableTableFilterComposer
+    extends Composer<_$AppDatabase, $SettingEntriesTableTable> {
+  $$SettingEntriesTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get projectId => $composableBuilder(
+      column: $table.projectId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get category => $composableBuilder(
+      column: $table.category, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get content => $composableBuilder(
+      column: $table.content, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get tags => $composableBuilder(
+      column: $table.tags, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get schemaVersion => $composableBuilder(
+      column: $table.schemaVersion, builder: (column) => ColumnFilters(column));
+}
+
+class $$SettingEntriesTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $SettingEntriesTableTable> {
+  $$SettingEntriesTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get projectId => $composableBuilder(
+      column: $table.projectId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get category => $composableBuilder(
+      column: $table.category, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get content => $composableBuilder(
+      column: $table.content, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get tags => $composableBuilder(
+      column: $table.tags, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get schemaVersion => $composableBuilder(
+      column: $table.schemaVersion,
+      builder: (column) => ColumnOrderings(column));
+}
+
+class $$SettingEntriesTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SettingEntriesTableTable> {
+  $$SettingEntriesTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get projectId =>
+      $composableBuilder(column: $table.projectId, builder: (column) => column);
+
+  GeneratedColumn<String> get category =>
+      $composableBuilder(column: $table.category, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => column);
+
+  GeneratedColumn<String> get tags =>
+      $composableBuilder(column: $table.tags, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get schemaVersion => $composableBuilder(
+      column: $table.schemaVersion, builder: (column) => column);
+}
+
+class $$SettingEntriesTableTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $SettingEntriesTableTable,
+    SettingEntriesTableData,
+    $$SettingEntriesTableTableFilterComposer,
+    $$SettingEntriesTableTableOrderingComposer,
+    $$SettingEntriesTableTableAnnotationComposer,
+    $$SettingEntriesTableTableCreateCompanionBuilder,
+    $$SettingEntriesTableTableUpdateCompanionBuilder,
+    (
+      SettingEntriesTableData,
+      BaseReferences<_$AppDatabase, $SettingEntriesTableTable,
+          SettingEntriesTableData>
+    ),
+    SettingEntriesTableData,
+    PrefetchHooks Function()> {
+  $$SettingEntriesTableTableTableManager(
+      _$AppDatabase db, $SettingEntriesTableTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SettingEntriesTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SettingEntriesTableTableOrderingComposer(
+                  $db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SettingEntriesTableTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> projectId = const Value.absent(),
+            Value<String> category = const Value.absent(),
+            Value<String> title = const Value.absent(),
+            Value<String> content = const Value.absent(),
+            Value<String> tags = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+            Value<int> schemaVersion = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              SettingEntriesTableCompanion(
+            id: id,
+            projectId: projectId,
+            category: category,
+            title: title,
+            content: content,
+            tags: tags,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            schemaVersion: schemaVersion,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String projectId,
+            required String category,
+            required String title,
+            Value<String> content = const Value.absent(),
+            Value<String> tags = const Value.absent(),
+            required DateTime createdAt,
+            required DateTime updatedAt,
+            Value<int> schemaVersion = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              SettingEntriesTableCompanion.insert(
+            id: id,
+            projectId: projectId,
+            category: category,
+            title: title,
+            content: content,
+            tags: tags,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            schemaVersion: schemaVersion,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$SettingEntriesTableTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $SettingEntriesTableTable,
+    SettingEntriesTableData,
+    $$SettingEntriesTableTableFilterComposer,
+    $$SettingEntriesTableTableOrderingComposer,
+    $$SettingEntriesTableTableAnnotationComposer,
+    $$SettingEntriesTableTableCreateCompanionBuilder,
+    $$SettingEntriesTableTableUpdateCompanionBuilder,
+    (
+      SettingEntriesTableData,
+      BaseReferences<_$AppDatabase, $SettingEntriesTableTable,
+          SettingEntriesTableData>
+    ),
+    SettingEntriesTableData,
+    PrefetchHooks Function()>;
 typedef $$AgentTasksTableTableCreateCompanionBuilder = AgentTasksTableCompanion
     Function({
   required String id,
@@ -8795,6 +9591,8 @@ typedef $$LlmProvidersTableTableCreateCompanionBuilder
   required String displayName,
   required String baseUrl,
   Value<String> defaultModel,
+  Value<double> temperature,
+  Value<int> maxTokens,
   Value<bool> enabled,
   required DateTime createdAt,
   required DateTime updatedAt,
@@ -8806,6 +9604,8 @@ typedef $$LlmProvidersTableTableUpdateCompanionBuilder
   Value<String> displayName,
   Value<String> baseUrl,
   Value<String> defaultModel,
+  Value<double> temperature,
+  Value<int> maxTokens,
   Value<bool> enabled,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
@@ -8832,6 +9632,12 @@ class $$LlmProvidersTableTableFilterComposer
 
   ColumnFilters<String> get defaultModel => $composableBuilder(
       column: $table.defaultModel, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get temperature => $composableBuilder(
+      column: $table.temperature, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get maxTokens => $composableBuilder(
+      column: $table.maxTokens, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<bool> get enabled => $composableBuilder(
       column: $table.enabled, builder: (column) => ColumnFilters(column));
@@ -8865,6 +9671,12 @@ class $$LlmProvidersTableTableOrderingComposer
       column: $table.defaultModel,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<double> get temperature => $composableBuilder(
+      column: $table.temperature, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get maxTokens => $composableBuilder(
+      column: $table.maxTokens, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<bool> get enabled => $composableBuilder(
       column: $table.enabled, builder: (column) => ColumnOrderings(column));
 
@@ -8895,6 +9707,12 @@ class $$LlmProvidersTableTableAnnotationComposer
 
   GeneratedColumn<String> get defaultModel => $composableBuilder(
       column: $table.defaultModel, builder: (column) => column);
+
+  GeneratedColumn<double> get temperature => $composableBuilder(
+      column: $table.temperature, builder: (column) => column);
+
+  GeneratedColumn<int> get maxTokens =>
+      $composableBuilder(column: $table.maxTokens, builder: (column) => column);
 
   GeneratedColumn<bool> get enabled =>
       $composableBuilder(column: $table.enabled, builder: (column) => column);
@@ -8939,6 +9757,8 @@ class $$LlmProvidersTableTableTableManager extends RootTableManager<
             Value<String> displayName = const Value.absent(),
             Value<String> baseUrl = const Value.absent(),
             Value<String> defaultModel = const Value.absent(),
+            Value<double> temperature = const Value.absent(),
+            Value<int> maxTokens = const Value.absent(),
             Value<bool> enabled = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<DateTime> updatedAt = const Value.absent(),
@@ -8949,6 +9769,8 @@ class $$LlmProvidersTableTableTableManager extends RootTableManager<
             displayName: displayName,
             baseUrl: baseUrl,
             defaultModel: defaultModel,
+            temperature: temperature,
+            maxTokens: maxTokens,
             enabled: enabled,
             createdAt: createdAt,
             updatedAt: updatedAt,
@@ -8959,6 +9781,8 @@ class $$LlmProvidersTableTableTableManager extends RootTableManager<
             required String displayName,
             required String baseUrl,
             Value<String> defaultModel = const Value.absent(),
+            Value<double> temperature = const Value.absent(),
+            Value<int> maxTokens = const Value.absent(),
             Value<bool> enabled = const Value.absent(),
             required DateTime createdAt,
             required DateTime updatedAt,
@@ -8969,6 +9793,8 @@ class $$LlmProvidersTableTableTableManager extends RootTableManager<
             displayName: displayName,
             baseUrl: baseUrl,
             defaultModel: defaultModel,
+            temperature: temperature,
+            maxTokens: maxTokens,
             enabled: enabled,
             createdAt: createdAt,
             updatedAt: updatedAt,
@@ -9015,6 +9841,8 @@ class $AppDatabaseManager {
       $$NotesTableTableTableManager(_db, _db.notesTable);
   $$SessionsTableTableTableManager get sessionsTable =>
       $$SessionsTableTableTableManager(_db, _db.sessionsTable);
+  $$SettingEntriesTableTableTableManager get settingEntriesTable =>
+      $$SettingEntriesTableTableTableManager(_db, _db.settingEntriesTable);
   $$AgentTasksTableTableTableManager get agentTasksTable =>
       $$AgentTasksTableTableTableManager(_db, _db.agentTasksTable);
   $$SnapshotsTableTableTableManager get snapshotsTable =>

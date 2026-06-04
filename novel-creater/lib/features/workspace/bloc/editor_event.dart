@@ -25,6 +25,20 @@ final class EditorContentChanged extends EditorEvent {
   List<Object?> get props => [content];
 }
 
+final class EditorTitleChanged extends EditorEvent {
+  const EditorTitleChanged({required this.title});
+
+  final String title;
+
+  @override
+  List<Object?> get props => [title];
+}
+
 final class EditorSaveRequested extends EditorEvent {
-  const EditorSaveRequested();
+  const EditorSaveRequested({this.completer});
+
+  final Completer<bool>? completer;
+
+  @override
+  List<Object?> get props => [completer];
 }

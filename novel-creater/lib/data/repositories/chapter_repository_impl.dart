@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:novel_creator/core/text_metrics.dart';
 import 'package:novel_creator/data/local/database/app_database.dart';
 import 'package:novel_creator/domain/domain.dart';
 
@@ -71,10 +72,8 @@ class ChapterRepositoryImpl implements ChapterRepository {
   @override
   Future<AppResult<Chapter>> saveContent(String id, String content) async {
     try {
-      final plainText = content
-          .replaceAll(RegExp(r'<[^>]*>'), '')
-          .replaceAll(RegExp(r'[#*_\[\]()!]'), '');
-      final wordCount = plainText.length;
+      final plainText = plainTextFromMarkdown(content);
+      final wordCount = countWritingUnits(content);
       await (_db.update(_db.chaptersTable)..where((t) => t.id.equals(id)))
           .write(ChaptersTableCompanion(
         content: Value(content),
@@ -116,8 +115,7 @@ class ChapterRepositoryImpl implements ChapterRepository {
   @override
   Future<AppResult<void>> delete(String id) async {
     try {
-      await (_db.delete(_db.chaptersTable)..where((t) => t.id.equals(id)))
-          .go();
+      await (_db.delete(_db.chaptersTable)..where((t) => t.id.equals(id))).go();
       return const AppResult.success(null);
     } catch (e) {
       return AppResult.failure(AppError(
@@ -151,7 +149,7 @@ class ChapterRepositoryImpl implements ChapterRepository {
   @override
   Stream<AppResult<List<Chapter>>> watchByProjectId(String projectId) {
     return (_db.select(_db.chaptersTable)
-            ..where((t) => t.projectId.equals(projectId)))
+          ..where((t) => t.projectId.equals(projectId)))
         .watch()
         .map((rows) => AppResult.success(rows.map(_toEntity).toList()));
   }

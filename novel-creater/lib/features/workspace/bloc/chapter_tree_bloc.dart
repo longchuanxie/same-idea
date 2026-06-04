@@ -20,6 +20,7 @@ class ChapterTreeBloc extends Bloc<ChapterTreeEvent, ChapterTreeState> {
     on<ChapterTreeChapterSelected>(_onChapterSelected);
     on<ChapterTreeChapterAdded>(_onChapterAdded);
     on<ChapterTreeChapterRenamed>(_onChapterRenamed);
+    on<ChapterTreeChapterSynced>(_onChapterSynced);
     on<ChapterTreeChapterDeleted>(_onChapterDeleted);
   }
 
@@ -31,22 +32,26 @@ class ChapterTreeBloc extends Bloc<ChapterTreeEvent, ChapterTreeState> {
     ChapterTreeStarted event,
     Emitter<ChapterTreeState> emit,
   ) async {
-    emit(state.copyWith(isLoading: true, error: null));
+    emit(state.copyWith(isLoading: true, projectId: event.projectId));
     final result = await _chapterRepository.getByProjectId(event.projectId);
     if (result.isSuccess) {
       final chapters = result.maybeSuccess!
         ..sort((a, b) => a.order.compareTo(b.order));
       final selectedId = chapters.isNotEmpty ? chapters.first.id : null;
-      emit(state.copyWith(
-        chapters: chapters,
-        isLoading: false,
-        selectedChapterId: selectedId,
-      ));
+      emit(
+        state.copyWith(
+          chapters: chapters,
+          isLoading: false,
+          selectedChapterId: selectedId,
+        ),
+      );
     } else {
-      emit(state.copyWith(
-        isLoading: false,
-        error: result.maybeFailure?.userMessage ?? 'Failed to load chapters',
-      ));
+      emit(
+        state.copyWith(
+          isLoading: false,
+          error: result.maybeFailure?.userMessage ?? 'Failed to load chapters',
+        ),
+      );
     }
   }
 
@@ -69,8 +74,6 @@ class ChapterTreeBloc extends Bloc<ChapterTreeEvent, ChapterTreeState> {
       projectId: event.projectId,
       title: 'Chapter ${nextOrder + 1}',
       order: nextOrder,
-      status: ChapterStatus.draft,
-      contentFormat: ContentFormat.markdown,
       createdAt: now,
       updatedAt: now,
     );
@@ -79,14 +82,18 @@ class ChapterTreeBloc extends Bloc<ChapterTreeEvent, ChapterTreeState> {
     if (result.isSuccess) {
       final updatedChapters = List<Chapter>.from(state.chapters)
         ..add(result.maybeSuccess!);
-      emit(state.copyWith(
-        chapters: updatedChapters,
-        selectedChapterId: chapterId,
-      ));
+      emit(
+        state.copyWith(
+          chapters: updatedChapters,
+          selectedChapterId: chapterId,
+        ),
+      );
     } else {
-      emit(state.copyWith(
-        error: result.maybeFailure?.userMessage ?? 'Failed to add chapter',
-      ));
+      emit(
+        state.copyWith(
+          error: result.maybeFailure?.userMessage ?? 'Failed to add chapter',
+        ),
+      );
     }
   }
 
@@ -108,10 +115,23 @@ class ChapterTreeBloc extends Bloc<ChapterTreeEvent, ChapterTreeState> {
         ..[idx] = result.maybeSuccess!;
       emit(state.copyWith(chapters: chapters));
     } else {
-      emit(state.copyWith(
-        error: result.maybeFailure?.userMessage ?? 'Failed to rename chapter',
-      ));
+      emit(
+        state.copyWith(
+          error: result.maybeFailure?.userMessage ?? 'Failed to rename chapter',
+        ),
+      );
     }
+  }
+
+  void _onChapterSynced(
+    ChapterTreeChapterSynced event,
+    Emitter<ChapterTreeState> emit,
+  ) {
+    final idx = state.chapters.indexWhere((c) => c.id == event.chapter.id);
+    if (idx == -1) return;
+
+    final chapters = List<Chapter>.from(state.chapters)..[idx] = event.chapter;
+    emit(state.copyWith(chapters: chapters));
   }
 
   Future<void> _onChapterDeleted(
@@ -120,20 +140,23 @@ class ChapterTreeBloc extends Bloc<ChapterTreeEvent, ChapterTreeState> {
   ) async {
     final result = await _chapterRepository.delete(event.chapterId);
     if (result.isSuccess) {
-      final chapters = state.chapters
-          .where((c) => c.id != event.chapterId)
-          .toList();
+      final chapters =
+          state.chapters.where((c) => c.id != event.chapterId).toList();
       final selectedId = state.selectedChapterId == event.chapterId
           ? (chapters.isNotEmpty ? chapters.first.id : null)
           : state.selectedChapterId;
-      emit(state.copyWith(
-        chapters: chapters,
-        selectedChapterId: selectedId,
-      ));
+      emit(
+        state.copyWith(
+          chapters: chapters,
+          selectedChapterId: selectedId,
+        ),
+      );
     } else {
-      emit(state.copyWith(
-        error: result.maybeFailure?.userMessage ?? 'Failed to delete chapter',
-      ));
+      emit(
+        state.copyWith(
+          error: result.maybeFailure?.userMessage ?? 'Failed to delete chapter',
+        ),
+      );
     }
   }
 }

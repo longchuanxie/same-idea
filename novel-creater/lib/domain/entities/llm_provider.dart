@@ -13,6 +13,8 @@ class LlmProvider with _$LlmProvider {
     required DateTime updatedAt,
     @Default('') String apiKey,
     @Default('gpt-4o-mini') String defaultModel,
+    @Default(0.7) double temperature,
+    @Default(2048) int maxTokens,
     @Default(true) bool enabled,
   }) = _LlmProvider;
 

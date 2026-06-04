@@ -7,4 +7,5 @@ export 'outline_nodes_table.dart';
 export 'projects_table.dart';
 export 'revisions_table.dart';
 export 'sessions_table.dart';
+export 'setting_entries_table.dart';
 export 'snapshots_table.dart';

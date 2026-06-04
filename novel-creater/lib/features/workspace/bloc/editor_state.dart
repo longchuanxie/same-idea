@@ -3,6 +3,7 @@ part of 'editor_bloc.dart';
 class EditorState extends Equatable {
   const EditorState({
     this.chapter,
+    this.title = '',
     this.content = '',
     this.isSaving = false,
     this.saveError,
@@ -10,21 +11,21 @@ class EditorState extends Equatable {
   });
 
   final Chapter? chapter;
+  final String title;
   final String content;
   final bool isSaving;
   final String? saveError;
   final DateTime? lastSavedAt;
 
-  int get wordCount {
-    if (content.isEmpty) return 0;
-    return content.replaceAll(RegExp(r'\s+'), ' ').trim().split(' ').where((w) => w.isNotEmpty).length;
-  }
+  int get wordCount => countWritingUnits(content);
 
   bool get hasUnsavedChanges =>
-      chapter != null && content != chapter!.content;
+      chapter != null &&
+      (content != chapter!.content || title != chapter!.title);
 
   EditorState copyWith({
     Chapter? chapter,
+    String? title,
     String? content,
     bool? isSaving,
     String? saveError,
@@ -32,6 +33,7 @@ class EditorState extends Equatable {
   }) =>
       EditorState(
         chapter: chapter ?? this.chapter,
+        title: title ?? this.title,
         content: content ?? this.content,
         isSaving: isSaving ?? this.isSaving,
         saveError: saveError,
@@ -41,6 +43,7 @@ class EditorState extends Equatable {
   @override
   List<Object?> get props => [
         chapter,
+        title,
         content,
         isSaving,
         saveError,
