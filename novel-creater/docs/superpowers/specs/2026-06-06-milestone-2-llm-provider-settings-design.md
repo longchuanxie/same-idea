@@ -67,12 +67,25 @@ class LlmModel with _$LlmModel {
     int? contextLength,
     int? maxOutput,
     @Default(true) bool supportsStreaming,
+    double? temperature,                 // 每模型独立温度；null 表示沿用 Provider/Default 设置
   }) = _LlmModel;
 
   factory LlmModel.fromJson(Map<String, dynamic> json) =>
       _$LlmModelFromJson(json);
 }
 ```
+
+**温度优先级解析**（构造 LlmRequest 时）：
+
+```
+LlmModel.temperature (per-model override)
+  ↓ null 时回退
+LlmProvider.temperature (per-provider default)
+  ↓ null 时回退
+LlmDefaultSettings.defaultTemperature (全局默认 0.7)
+```
+
+`ProviderResolver` 负责按上述优先级解析最终 temperature 后构造 LlmRequest。
 
 ### 值对象：LlmDefaultSettings
 
@@ -267,12 +280,28 @@ class RealLlmWritingTool implements AgentWritingTool {
 ### ProviderResolver
 
 ```dart
+class ResolvedProvider {
+  final LlmProvider provider;
+  final LlmModel? model;        // 选中的模型（可能为 null）
+  final String apiKey;
+  final double temperature;     // 已按优先级解析的温度
+  final double topP;
+  final bool streamingEnabled;
+}
+
 class ProviderResolver {
   final LlmProviderRepository providerRepo;
   final SecretStorage secretStorage;
 
   Future<AppResult<ResolvedProvider>> resolveWritingProvider();
-  // 从 defaultSettings → providerId → provider实体 → secretStorage.read(secretKeyRef) → apiKey_空白
+  // 流程：
+  //   1. getDefaultSettings → writingProviderId / writingModelId
+  //   2. providerRepo.getById(writingProviderId) → LlmProvider
+  //   3. model = provider.cachedModels.firstWhereOrNull(modelId == writingModelId)
+  //   4. apiKey = secretStorage.read(provider.secretKeyRef)
+  //   5. temperature = model?.temperature ?? provider.temperature ?? settings.defaultTemperature
+  //   6. 返回 ResolvedProvider
+  // 任一步失败返回 AppError(source: llm, code: ...)
 }
 ```
 
@@ -293,6 +322,7 @@ class ProviderResolver {
 | `TestConnection(providerId)` | testing → loaded(withStatus) / failure(error) |
 | `RefreshModels(providerId)` | loaded + models updated |
 | `SelectDefaultModel(providerId, modelId)` | loaded + provider.selectedModelId set |
+| `SetModelTemperature(providerId, modelId, temperature?)` | loaded + model.temperature 更新（null 表示清除覆盖） |
 | `UpdateParameters(temp, topP, stream)` | loaded + settings updated |
 | `SetDefaultSettings(settings)` | loaded + default settings saved |
 
@@ -326,9 +356,11 @@ class ProviderResolver {
     │                                  │
     │ 模型列表                         │
     │ [刷新模型] [手动添加]            │
-    │ ┌────┬───────┬────────┬──┬──┐   │
-    │ │ ● │GPT-4o │gpt-4o  │128K│16K│  │
-    │ └────┴───────┴────────┴──┴──┘   │
+    │ ┌───┬──────┬───────┬────┬───┬─────┐  │
+    │ │ ● │GPT-4o│gpt-4o │128K│16K│0.70│  │
+    │ └───┴──────┴───────┴────┴───┴─────┘  │
+    │  ↑ 温度列：点击可编辑（滑块/输入），  │
+    │    显示"默认"表示沿用 Provider 设置  │
     │                                  │
     │ ┌─ 默认模型 ─┐ ┌─ 参数 ────┐    │
     │ │写作模型 ▼  │ │Temp 0.70  │    │
@@ -368,6 +400,7 @@ class ProviderResolver {
 | Infra | openai_llm_client_test | mock HTTP 的流式/同步/testConnection |
 | Infra | flutter_secure_storage_secret_test | 接口 mock 测试（不依赖真设备） |
 | Agent | agent_writing_tool_test | continueWrite 含 mock LlmClient；fallback 到 mock |
+| Agent | provider_resolver_test | 温度优先级：model 覆盖 provider 覆盖 default；缺失链路返回 AppError |
 | Bloc | settings_bloc_test | 各 Event → 预期 State（含加载/失败/添加/删除/测试连接） |
 | Widget | settings_page_test | smoke test：渲染、Tab 切换、占位面板 |
 | Widget | agent_panel_extended_test | 模型状态行显示、未配置引导链接 |
