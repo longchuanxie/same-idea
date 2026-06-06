@@ -12,10 +12,7 @@ module.exports = {
   parser: '@typescript-eslint/parser',
   plugins: ['react-refresh'],
   rules: {
-    'react-refresh/only-export-components': [
-      'warn',
-      { allowConstantExport: true },
-    ],
+    'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
     // 禁止硬编码检测
     'no-magic-numbers': ['error', { ignore: [0, 1, -1], enforceConst: true }],
     // TypeScript 严格规则
@@ -29,11 +26,7 @@ module.exports = {
     'import/order': [
       'error',
       {
-        groups: [
-          ['builtin', 'external'],
-          'internal',
-          ['parent', 'sibling', 'index'],
-        ],
+        groups: [['builtin', 'external'], 'internal', ['parent', 'sibling', 'index']],
         pathGroups: [
           {
             pattern: 'react',
@@ -65,4 +58,14 @@ module.exports = {
       },
     },
   },
+  overrides: [
+    {
+      files: ['**/*.test.ts', '**/*.test.tsx', 'src/test/**/*.ts'],
+      rules: {
+        '@typescript-eslint/no-explicit-any': 'off',
+        '@typescript-eslint/no-non-null-assertion': 'off',
+        'no-magic-numbers': 'off',
+      },
+    },
+  ],
 }
