@@ -1,30 +1,41 @@
-import type { BookFormat, PageRef } from '@/types'
+import type { PageRef } from '@/types'
 
 /**
  * Parser 进度回调，pct 取值 0-100。
  */
 export type ParserProgressCallback = (pct: number) => void
 
-/**
- * Parser 输出的统一结构。
- * - 通用字段：format / title / coverBlob 三者必填
- * - comic 分支：imagePages / imagePageNames 必填（其他可选）
- * - pdf 分支：pdfFile / pdfTotalPages 必填（其他可选）
- * - pageRefs 由 parser 自行生成
- */
-export interface ParsedBook {
-  format: BookFormat
+interface ParsedBookBase {
   title: string
   coverBlob: Blob
-
-  imagePages?: Blob[]
-  imagePageNames?: string[]
-
-  pdfFile?: Blob
-  pdfTotalPages?: number
-
+  /** 由 parser 自行生成；未提供时由上层按 format 推导 */
   pageRefs?: PageRef[]
 }
+
+/**
+ * Comic 分支：解压后的图片页集合必填。
+ */
+export interface ParsedComicBook extends ParsedBookBase {
+  format: 'comic'
+  imagePages: Blob[]
+  imagePageNames: string[]
+}
+
+/**
+ * PDF 分支：原始 PDF 文件与总页数必填。
+ */
+export interface ParsedPdfBook extends ParsedBookBase {
+  format: 'pdf'
+  pdfFile: Blob
+  pdfTotalPages: number
+}
+
+/**
+ * Parser 输出的统一结构。通过 `format` 字段进行判别联合：
+ * - `format: 'comic'` → 必含 imagePages / imagePageNames
+ * - `format: 'pdf'`   → 必含 pdfFile / pdfTotalPages
+ */
+export type ParsedBook = ParsedComicBook | ParsedPdfBook
 
 /**
  * Book Parser 适配器接口。
@@ -34,8 +45,12 @@ export interface ParsedBook {
  * 3. 可选：流式解析大文件（parseStreaming）
  */
 export interface BookParser {
-  /** 通过文件名判断该 parser 是否能处理 */
-  canParse(file: File): boolean
+  /**
+   * 通过文件名判断该 parser 是否能处理。
+   * 仅依赖 `name` 字段以便在无 DOM File 的环境（如 Node 单测）调用；
+   * 真实 `File` 结构上满足 `{ name: string }`，调用点无需修改。
+   */
+  canParse(input: { name: string }): boolean
 
   /** 一次性解析（适合小文件） */
   parse(file: File, onProgress?: ParserProgressCallback): Promise<ParsedBook>
