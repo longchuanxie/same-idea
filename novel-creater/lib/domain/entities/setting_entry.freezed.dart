@@ -22,12 +22,12 @@ SettingEntry _$SettingEntryFromJson(Map<String, dynamic> json) {
 mixin _$SettingEntry {
   String get id => throw _privateConstructorUsedError;
   String get projectId => throw _privateConstructorUsedError;
-  String get category => throw _privateConstructorUsedError;
   String get title => throw _privateConstructorUsedError;
+  String get content => throw _privateConstructorUsedError;
+  SettingCategory get category => throw _privateConstructorUsedError;
+  List<String> get tags => throw _privateConstructorUsedError;
   DateTime get createdAt => throw _privateConstructorUsedError;
   DateTime get updatedAt => throw _privateConstructorUsedError;
-  String get content => throw _privateConstructorUsedError;
-  List<String> get tags => throw _privateConstructorUsedError;
   int get schemaVersion => throw _privateConstructorUsedError;
 
   /// Serializes this SettingEntry to a JSON map.
@@ -49,12 +49,12 @@ abstract class $SettingEntryCopyWith<$Res> {
   $Res call(
       {String id,
       String projectId,
-      String category,
       String title,
+      String content,
+      SettingCategory category,
+      List<String> tags,
       DateTime createdAt,
       DateTime updatedAt,
-      String content,
-      List<String> tags,
       int schemaVersion});
 }
 
@@ -75,12 +75,12 @@ class _$SettingEntryCopyWithImpl<$Res, $Val extends SettingEntry>
   $Res call({
     Object? id = null,
     Object? projectId = null,
-    Object? category = null,
     Object? title = null,
+    Object? content = null,
+    Object? category = null,
+    Object? tags = null,
     Object? createdAt = null,
     Object? updatedAt = null,
-    Object? content = null,
-    Object? tags = null,
     Object? schemaVersion = null,
   }) {
     return _then(_value.copyWith(
@@ -92,14 +92,22 @@ class _$SettingEntryCopyWithImpl<$Res, $Val extends SettingEntry>
           ? _value.projectId
           : projectId // ignore: cast_nullable_to_non_nullable
               as String,
-      category: null == category
-          ? _value.category
-          : category // ignore: cast_nullable_to_non_nullable
-              as String,
       title: null == title
           ? _value.title
           : title // ignore: cast_nullable_to_non_nullable
               as String,
+      content: null == content
+          ? _value.content
+          : content // ignore: cast_nullable_to_non_nullable
+              as String,
+      category: null == category
+          ? _value.category
+          : category // ignore: cast_nullable_to_non_nullable
+              as SettingCategory,
+      tags: null == tags
+          ? _value.tags
+          : tags // ignore: cast_nullable_to_non_nullable
+              as List<String>,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -108,14 +116,6 @@ class _$SettingEntryCopyWithImpl<$Res, $Val extends SettingEntry>
           ? _value.updatedAt
           : updatedAt // ignore: cast_nullable_to_non_nullable
               as DateTime,
-      content: null == content
-          ? _value.content
-          : content // ignore: cast_nullable_to_non_nullable
-              as String,
-      tags: null == tags
-          ? _value.tags
-          : tags // ignore: cast_nullable_to_non_nullable
-              as List<String>,
       schemaVersion: null == schemaVersion
           ? _value.schemaVersion
           : schemaVersion // ignore: cast_nullable_to_non_nullable
@@ -135,12 +135,12 @@ abstract class _$$SettingEntryImplCopyWith<$Res>
   $Res call(
       {String id,
       String projectId,
-      String category,
       String title,
+      String content,
+      SettingCategory category,
+      List<String> tags,
       DateTime createdAt,
       DateTime updatedAt,
-      String content,
-      List<String> tags,
       int schemaVersion});
 }
 
@@ -159,12 +159,12 @@ class __$$SettingEntryImplCopyWithImpl<$Res>
   $Res call({
     Object? id = null,
     Object? projectId = null,
-    Object? category = null,
     Object? title = null,
+    Object? content = null,
+    Object? category = null,
+    Object? tags = null,
     Object? createdAt = null,
     Object? updatedAt = null,
-    Object? content = null,
-    Object? tags = null,
     Object? schemaVersion = null,
   }) {
     return _then(_$SettingEntryImpl(
@@ -176,14 +176,22 @@ class __$$SettingEntryImplCopyWithImpl<$Res>
           ? _value.projectId
           : projectId // ignore: cast_nullable_to_non_nullable
               as String,
-      category: null == category
-          ? _value.category
-          : category // ignore: cast_nullable_to_non_nullable
-              as String,
       title: null == title
           ? _value.title
           : title // ignore: cast_nullable_to_non_nullable
               as String,
+      content: null == content
+          ? _value.content
+          : content // ignore: cast_nullable_to_non_nullable
+              as String,
+      category: null == category
+          ? _value.category
+          : category // ignore: cast_nullable_to_non_nullable
+              as SettingCategory,
+      tags: null == tags
+          ? _value._tags
+          : tags // ignore: cast_nullable_to_non_nullable
+              as List<String>,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -192,14 +200,6 @@ class __$$SettingEntryImplCopyWithImpl<$Res>
           ? _value.updatedAt
           : updatedAt // ignore: cast_nullable_to_non_nullable
               as DateTime,
-      content: null == content
-          ? _value.content
-          : content // ignore: cast_nullable_to_non_nullable
-              as String,
-      tags: null == tags
-          ? _value._tags
-          : tags // ignore: cast_nullable_to_non_nullable
-              as List<String>,
       schemaVersion: null == schemaVersion
           ? _value.schemaVersion
           : schemaVersion // ignore: cast_nullable_to_non_nullable
@@ -214,12 +214,12 @@ class _$SettingEntryImpl implements _SettingEntry {
   const _$SettingEntryImpl(
       {required this.id,
       required this.projectId,
-      required this.category,
       required this.title,
+      required this.content,
+      this.category = SettingCategory.other,
+      final List<String> tags = const [],
       required this.createdAt,
       required this.updatedAt,
-      this.content = '',
-      final List<String> tags = const [],
       this.schemaVersion = 1})
       : _tags = tags;
 
@@ -231,16 +231,12 @@ class _$SettingEntryImpl implements _SettingEntry {
   @override
   final String projectId;
   @override
-  final String category;
-  @override
   final String title;
   @override
-  final DateTime createdAt;
-  @override
-  final DateTime updatedAt;
+  final String content;
   @override
   @JsonKey()
-  final String content;
+  final SettingCategory category;
   final List<String> _tags;
   @override
   @JsonKey()
@@ -251,12 +247,16 @@ class _$SettingEntryImpl implements _SettingEntry {
   }
 
   @override
+  final DateTime createdAt;
+  @override
+  final DateTime updatedAt;
+  @override
   @JsonKey()
   final int schemaVersion;
 
   @override
   String toString() {
-    return 'SettingEntry(id: $id, projectId: $projectId, category: $category, title: $title, createdAt: $createdAt, updatedAt: $updatedAt, content: $content, tags: $tags, schemaVersion: $schemaVersion)';
+    return 'SettingEntry(id: $id, projectId: $projectId, title: $title, content: $content, category: $category, tags: $tags, createdAt: $createdAt, updatedAt: $updatedAt, schemaVersion: $schemaVersion)';
   }
 
   @override
@@ -267,15 +267,15 @@ class _$SettingEntryImpl implements _SettingEntry {
             (identical(other.id, id) || other.id == id) &&
             (identical(other.projectId, projectId) ||
                 other.projectId == projectId) &&
+            (identical(other.title, title) || other.title == title) &&
+            (identical(other.content, content) || other.content == content) &&
             (identical(other.category, category) ||
                 other.category == category) &&
-            (identical(other.title, title) || other.title == title) &&
+            const DeepCollectionEquality().equals(other._tags, _tags) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             (identical(other.updatedAt, updatedAt) ||
                 other.updatedAt == updatedAt) &&
-            (identical(other.content, content) || other.content == content) &&
-            const DeepCollectionEquality().equals(other._tags, _tags) &&
             (identical(other.schemaVersion, schemaVersion) ||
                 other.schemaVersion == schemaVersion));
   }
@@ -286,12 +286,12 @@ class _$SettingEntryImpl implements _SettingEntry {
       runtimeType,
       id,
       projectId,
-      category,
       title,
+      content,
+      category,
+      const DeepCollectionEquality().hash(_tags),
       createdAt,
       updatedAt,
-      content,
-      const DeepCollectionEquality().hash(_tags),
       schemaVersion);
 
   /// Create a copy of SettingEntry
@@ -314,12 +314,12 @@ abstract class _SettingEntry implements SettingEntry {
   const factory _SettingEntry(
       {required final String id,
       required final String projectId,
-      required final String category,
       required final String title,
+      required final String content,
+      final SettingCategory category,
+      final List<String> tags,
       required final DateTime createdAt,
       required final DateTime updatedAt,
-      final String content,
-      final List<String> tags,
       final int schemaVersion}) = _$SettingEntryImpl;
 
   factory _SettingEntry.fromJson(Map<String, dynamic> json) =
@@ -330,17 +330,17 @@ abstract class _SettingEntry implements SettingEntry {
   @override
   String get projectId;
   @override
-  String get category;
-  @override
   String get title;
+  @override
+  String get content;
+  @override
+  SettingCategory get category;
+  @override
+  List<String> get tags;
   @override
   DateTime get createdAt;
   @override
   DateTime get updatedAt;
-  @override
-  String get content;
-  @override
-  List<String> get tags;
   @override
   int get schemaVersion;
 

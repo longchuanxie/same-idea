@@ -23,16 +23,10 @@ mixin _$Revision {
   String get id => throw _privateConstructorUsedError;
   String get projectId => throw _privateConstructorUsedError;
   String get chapterId => throw _privateConstructorUsedError;
-  RevisionOperation get operation => throw _privateConstructorUsedError;
-  RevisionAnchor get anchor => throw _privateConstructorUsedError;
-  String get beforeText => throw _privateConstructorUsedError;
-  String get afterText => throw _privateConstructorUsedError;
+  RevisionPatch get patch => throw _privateConstructorUsedError;
   DateTime get createdAt => throw _privateConstructorUsedError;
   DateTime get updatedAt => throw _privateConstructorUsedError;
-  RevisionSource get source => throw _privateConstructorUsedError;
   RevisionStatus get status => throw _privateConstructorUsedError;
-  RevisionPatchMetadata? get metadata => throw _privateConstructorUsedError;
-  DateTime? get resolvedAt => throw _privateConstructorUsedError;
   int get schemaVersion => throw _privateConstructorUsedError;
 
   /// Serializes this Revision to a JSON map.
@@ -54,20 +48,13 @@ abstract class $RevisionCopyWith<$Res> {
       {String id,
       String projectId,
       String chapterId,
-      RevisionOperation operation,
-      RevisionAnchor anchor,
-      String beforeText,
-      String afterText,
+      RevisionPatch patch,
       DateTime createdAt,
       DateTime updatedAt,
-      RevisionSource source,
       RevisionStatus status,
-      RevisionPatchMetadata? metadata,
-      DateTime? resolvedAt,
       int schemaVersion});
 
-  $RevisionAnchorCopyWith<$Res> get anchor;
-  $RevisionPatchMetadataCopyWith<$Res>? get metadata;
+  $RevisionPatchCopyWith<$Res> get patch;
 }
 
 /// @nodoc
@@ -88,16 +75,10 @@ class _$RevisionCopyWithImpl<$Res, $Val extends Revision>
     Object? id = null,
     Object? projectId = null,
     Object? chapterId = null,
-    Object? operation = null,
-    Object? anchor = null,
-    Object? beforeText = null,
-    Object? afterText = null,
+    Object? patch = null,
     Object? createdAt = null,
     Object? updatedAt = null,
-    Object? source = null,
     Object? status = null,
-    Object? metadata = freezed,
-    Object? resolvedAt = freezed,
     Object? schemaVersion = null,
   }) {
     return _then(_value.copyWith(
@@ -113,22 +94,10 @@ class _$RevisionCopyWithImpl<$Res, $Val extends Revision>
           ? _value.chapterId
           : chapterId // ignore: cast_nullable_to_non_nullable
               as String,
-      operation: null == operation
-          ? _value.operation
-          : operation // ignore: cast_nullable_to_non_nullable
-              as RevisionOperation,
-      anchor: null == anchor
-          ? _value.anchor
-          : anchor // ignore: cast_nullable_to_non_nullable
-              as RevisionAnchor,
-      beforeText: null == beforeText
-          ? _value.beforeText
-          : beforeText // ignore: cast_nullable_to_non_nullable
-              as String,
-      afterText: null == afterText
-          ? _value.afterText
-          : afterText // ignore: cast_nullable_to_non_nullable
-              as String,
+      patch: null == patch
+          ? _value.patch
+          : patch // ignore: cast_nullable_to_non_nullable
+              as RevisionPatch,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -137,22 +106,10 @@ class _$RevisionCopyWithImpl<$Res, $Val extends Revision>
           ? _value.updatedAt
           : updatedAt // ignore: cast_nullable_to_non_nullable
               as DateTime,
-      source: null == source
-          ? _value.source
-          : source // ignore: cast_nullable_to_non_nullable
-              as RevisionSource,
       status: null == status
           ? _value.status
           : status // ignore: cast_nullable_to_non_nullable
               as RevisionStatus,
-      metadata: freezed == metadata
-          ? _value.metadata
-          : metadata // ignore: cast_nullable_to_non_nullable
-              as RevisionPatchMetadata?,
-      resolvedAt: freezed == resolvedAt
-          ? _value.resolvedAt
-          : resolvedAt // ignore: cast_nullable_to_non_nullable
-              as DateTime?,
       schemaVersion: null == schemaVersion
           ? _value.schemaVersion
           : schemaVersion // ignore: cast_nullable_to_non_nullable
@@ -164,23 +121,9 @@ class _$RevisionCopyWithImpl<$Res, $Val extends Revision>
   /// with the given fields replaced by the non-null parameter values.
   @override
   @pragma('vm:prefer-inline')
-  $RevisionAnchorCopyWith<$Res> get anchor {
-    return $RevisionAnchorCopyWith<$Res>(_value.anchor, (value) {
-      return _then(_value.copyWith(anchor: value) as $Val);
-    });
-  }
-
-  /// Create a copy of Revision
-  /// with the given fields replaced by the non-null parameter values.
-  @override
-  @pragma('vm:prefer-inline')
-  $RevisionPatchMetadataCopyWith<$Res>? get metadata {
-    if (_value.metadata == null) {
-      return null;
-    }
-
-    return $RevisionPatchMetadataCopyWith<$Res>(_value.metadata!, (value) {
-      return _then(_value.copyWith(metadata: value) as $Val);
+  $RevisionPatchCopyWith<$Res> get patch {
+    return $RevisionPatchCopyWith<$Res>(_value.patch, (value) {
+      return _then(_value.copyWith(patch: value) as $Val);
     });
   }
 }
@@ -197,22 +140,14 @@ abstract class _$$RevisionImplCopyWith<$Res>
       {String id,
       String projectId,
       String chapterId,
-      RevisionOperation operation,
-      RevisionAnchor anchor,
-      String beforeText,
-      String afterText,
+      RevisionPatch patch,
       DateTime createdAt,
       DateTime updatedAt,
-      RevisionSource source,
       RevisionStatus status,
-      RevisionPatchMetadata? metadata,
-      DateTime? resolvedAt,
       int schemaVersion});
 
   @override
-  $RevisionAnchorCopyWith<$Res> get anchor;
-  @override
-  $RevisionPatchMetadataCopyWith<$Res>? get metadata;
+  $RevisionPatchCopyWith<$Res> get patch;
 }
 
 /// @nodoc
@@ -231,16 +166,10 @@ class __$$RevisionImplCopyWithImpl<$Res>
     Object? id = null,
     Object? projectId = null,
     Object? chapterId = null,
-    Object? operation = null,
-    Object? anchor = null,
-    Object? beforeText = null,
-    Object? afterText = null,
+    Object? patch = null,
     Object? createdAt = null,
     Object? updatedAt = null,
-    Object? source = null,
     Object? status = null,
-    Object? metadata = freezed,
-    Object? resolvedAt = freezed,
     Object? schemaVersion = null,
   }) {
     return _then(_$RevisionImpl(
@@ -256,22 +185,10 @@ class __$$RevisionImplCopyWithImpl<$Res>
           ? _value.chapterId
           : chapterId // ignore: cast_nullable_to_non_nullable
               as String,
-      operation: null == operation
-          ? _value.operation
-          : operation // ignore: cast_nullable_to_non_nullable
-              as RevisionOperation,
-      anchor: null == anchor
-          ? _value.anchor
-          : anchor // ignore: cast_nullable_to_non_nullable
-              as RevisionAnchor,
-      beforeText: null == beforeText
-          ? _value.beforeText
-          : beforeText // ignore: cast_nullable_to_non_nullable
-              as String,
-      afterText: null == afterText
-          ? _value.afterText
-          : afterText // ignore: cast_nullable_to_non_nullable
-              as String,
+      patch: null == patch
+          ? _value.patch
+          : patch // ignore: cast_nullable_to_non_nullable
+              as RevisionPatch,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -280,22 +197,10 @@ class __$$RevisionImplCopyWithImpl<$Res>
           ? _value.updatedAt
           : updatedAt // ignore: cast_nullable_to_non_nullable
               as DateTime,
-      source: null == source
-          ? _value.source
-          : source // ignore: cast_nullable_to_non_nullable
-              as RevisionSource,
       status: null == status
           ? _value.status
           : status // ignore: cast_nullable_to_non_nullable
               as RevisionStatus,
-      metadata: freezed == metadata
-          ? _value.metadata
-          : metadata // ignore: cast_nullable_to_non_nullable
-              as RevisionPatchMetadata?,
-      resolvedAt: freezed == resolvedAt
-          ? _value.resolvedAt
-          : resolvedAt // ignore: cast_nullable_to_non_nullable
-              as DateTime?,
       schemaVersion: null == schemaVersion
           ? _value.schemaVersion
           : schemaVersion // ignore: cast_nullable_to_non_nullable
@@ -311,16 +216,10 @@ class _$RevisionImpl extends _Revision {
       {required this.id,
       required this.projectId,
       required this.chapterId,
-      required this.operation,
-      required this.anchor,
-      required this.beforeText,
-      required this.afterText,
+      required this.patch,
       required this.createdAt,
       required this.updatedAt,
-      this.source = RevisionSource.agent,
       this.status = RevisionStatus.pending,
-      this.metadata,
-      this.resolvedAt,
       this.schemaVersion = 1})
       : super._();
 
@@ -334,34 +233,21 @@ class _$RevisionImpl extends _Revision {
   @override
   final String chapterId;
   @override
-  final RevisionOperation operation;
-  @override
-  final RevisionAnchor anchor;
-  @override
-  final String beforeText;
-  @override
-  final String afterText;
+  final RevisionPatch patch;
   @override
   final DateTime createdAt;
   @override
   final DateTime updatedAt;
   @override
   @JsonKey()
-  final RevisionSource source;
-  @override
-  @JsonKey()
   final RevisionStatus status;
-  @override
-  final RevisionPatchMetadata? metadata;
-  @override
-  final DateTime? resolvedAt;
   @override
   @JsonKey()
   final int schemaVersion;
 
   @override
   String toString() {
-    return 'Revision(id: $id, projectId: $projectId, chapterId: $chapterId, operation: $operation, anchor: $anchor, beforeText: $beforeText, afterText: $afterText, createdAt: $createdAt, updatedAt: $updatedAt, source: $source, status: $status, metadata: $metadata, resolvedAt: $resolvedAt, schemaVersion: $schemaVersion)';
+    return 'Revision(id: $id, projectId: $projectId, chapterId: $chapterId, patch: $patch, createdAt: $createdAt, updatedAt: $updatedAt, status: $status, schemaVersion: $schemaVersion)';
   }
 
   @override
@@ -374,45 +260,20 @@ class _$RevisionImpl extends _Revision {
                 other.projectId == projectId) &&
             (identical(other.chapterId, chapterId) ||
                 other.chapterId == chapterId) &&
-            (identical(other.operation, operation) ||
-                other.operation == operation) &&
-            (identical(other.anchor, anchor) || other.anchor == anchor) &&
-            (identical(other.beforeText, beforeText) ||
-                other.beforeText == beforeText) &&
-            (identical(other.afterText, afterText) ||
-                other.afterText == afterText) &&
+            (identical(other.patch, patch) || other.patch == patch) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             (identical(other.updatedAt, updatedAt) ||
                 other.updatedAt == updatedAt) &&
-            (identical(other.source, source) || other.source == source) &&
             (identical(other.status, status) || other.status == status) &&
-            (identical(other.metadata, metadata) ||
-                other.metadata == metadata) &&
-            (identical(other.resolvedAt, resolvedAt) ||
-                other.resolvedAt == resolvedAt) &&
             (identical(other.schemaVersion, schemaVersion) ||
                 other.schemaVersion == schemaVersion));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(
-      runtimeType,
-      id,
-      projectId,
-      chapterId,
-      operation,
-      anchor,
-      beforeText,
-      afterText,
-      createdAt,
-      updatedAt,
-      source,
-      status,
-      metadata,
-      resolvedAt,
-      schemaVersion);
+  int get hashCode => Object.hash(runtimeType, id, projectId, chapterId, patch,
+      createdAt, updatedAt, status, schemaVersion);
 
   /// Create a copy of Revision
   /// with the given fields replaced by the non-null parameter values.
@@ -435,16 +296,10 @@ abstract class _Revision extends Revision {
       {required final String id,
       required final String projectId,
       required final String chapterId,
-      required final RevisionOperation operation,
-      required final RevisionAnchor anchor,
-      required final String beforeText,
-      required final String afterText,
+      required final RevisionPatch patch,
       required final DateTime createdAt,
       required final DateTime updatedAt,
-      final RevisionSource source,
       final RevisionStatus status,
-      final RevisionPatchMetadata? metadata,
-      final DateTime? resolvedAt,
       final int schemaVersion}) = _$RevisionImpl;
   const _Revision._() : super._();
 
@@ -458,25 +313,13 @@ abstract class _Revision extends Revision {
   @override
   String get chapterId;
   @override
-  RevisionOperation get operation;
-  @override
-  RevisionAnchor get anchor;
-  @override
-  String get beforeText;
-  @override
-  String get afterText;
+  RevisionPatch get patch;
   @override
   DateTime get createdAt;
   @override
   DateTime get updatedAt;
   @override
-  RevisionSource get source;
-  @override
   RevisionStatus get status;
-  @override
-  RevisionPatchMetadata? get metadata;
-  @override
-  DateTime? get resolvedAt;
   @override
   int get schemaVersion;
 

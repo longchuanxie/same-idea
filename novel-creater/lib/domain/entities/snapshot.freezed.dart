@@ -22,11 +22,15 @@ Snapshot _$SnapshotFromJson(Map<String, dynamic> json) {
 mixin _$Snapshot {
   String get id => throw _privateConstructorUsedError;
   String get projectId => throw _privateConstructorUsedError;
-  String get description => throw _privateConstructorUsedError;
+  String get name => throw _privateConstructorUsedError;
+  SnapshotType get type => throw _privateConstructorUsedError;
+  String get contentHash => throw _privateConstructorUsedError;
+  String get contentSnapshot => throw _privateConstructorUsedError;
   DateTime get createdAt => throw _privateConstructorUsedError;
-  SnapshotTrigger get trigger => throw _privateConstructorUsedError;
-  String get dataSnapshot => throw _privateConstructorUsedError;
+  DateTime get updatedAt => throw _privateConstructorUsedError;
   int get schemaVersion => throw _privateConstructorUsedError;
+  String? get chapterId => throw _privateConstructorUsedError;
+  String? get description => throw _privateConstructorUsedError;
 
   /// Serializes this Snapshot to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -46,11 +50,15 @@ abstract class $SnapshotCopyWith<$Res> {
   $Res call(
       {String id,
       String projectId,
-      String description,
+      String name,
+      SnapshotType type,
+      String contentHash,
+      String contentSnapshot,
       DateTime createdAt,
-      SnapshotTrigger trigger,
-      String dataSnapshot,
-      int schemaVersion});
+      DateTime updatedAt,
+      int schemaVersion,
+      String? chapterId,
+      String? description});
 }
 
 /// @nodoc
@@ -70,11 +78,15 @@ class _$SnapshotCopyWithImpl<$Res, $Val extends Snapshot>
   $Res call({
     Object? id = null,
     Object? projectId = null,
-    Object? description = null,
+    Object? name = null,
+    Object? type = null,
+    Object? contentHash = null,
+    Object? contentSnapshot = null,
     Object? createdAt = null,
-    Object? trigger = null,
-    Object? dataSnapshot = null,
+    Object? updatedAt = null,
     Object? schemaVersion = null,
+    Object? chapterId = freezed,
+    Object? description = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -85,26 +97,42 @@ class _$SnapshotCopyWithImpl<$Res, $Val extends Snapshot>
           ? _value.projectId
           : projectId // ignore: cast_nullable_to_non_nullable
               as String,
-      description: null == description
-          ? _value.description
-          : description // ignore: cast_nullable_to_non_nullable
+      name: null == name
+          ? _value.name
+          : name // ignore: cast_nullable_to_non_nullable
+              as String,
+      type: null == type
+          ? _value.type
+          : type // ignore: cast_nullable_to_non_nullable
+              as SnapshotType,
+      contentHash: null == contentHash
+          ? _value.contentHash
+          : contentHash // ignore: cast_nullable_to_non_nullable
+              as String,
+      contentSnapshot: null == contentSnapshot
+          ? _value.contentSnapshot
+          : contentSnapshot // ignore: cast_nullable_to_non_nullable
               as String,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
               as DateTime,
-      trigger: null == trigger
-          ? _value.trigger
-          : trigger // ignore: cast_nullable_to_non_nullable
-              as SnapshotTrigger,
-      dataSnapshot: null == dataSnapshot
-          ? _value.dataSnapshot
-          : dataSnapshot // ignore: cast_nullable_to_non_nullable
-              as String,
+      updatedAt: null == updatedAt
+          ? _value.updatedAt
+          : updatedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
       schemaVersion: null == schemaVersion
           ? _value.schemaVersion
           : schemaVersion // ignore: cast_nullable_to_non_nullable
               as int,
+      chapterId: freezed == chapterId
+          ? _value.chapterId
+          : chapterId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      description: freezed == description
+          ? _value.description
+          : description // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -120,11 +148,15 @@ abstract class _$$SnapshotImplCopyWith<$Res>
   $Res call(
       {String id,
       String projectId,
-      String description,
+      String name,
+      SnapshotType type,
+      String contentHash,
+      String contentSnapshot,
       DateTime createdAt,
-      SnapshotTrigger trigger,
-      String dataSnapshot,
-      int schemaVersion});
+      DateTime updatedAt,
+      int schemaVersion,
+      String? chapterId,
+      String? description});
 }
 
 /// @nodoc
@@ -142,11 +174,15 @@ class __$$SnapshotImplCopyWithImpl<$Res>
   $Res call({
     Object? id = null,
     Object? projectId = null,
-    Object? description = null,
+    Object? name = null,
+    Object? type = null,
+    Object? contentHash = null,
+    Object? contentSnapshot = null,
     Object? createdAt = null,
-    Object? trigger = null,
-    Object? dataSnapshot = null,
+    Object? updatedAt = null,
     Object? schemaVersion = null,
+    Object? chapterId = freezed,
+    Object? description = freezed,
   }) {
     return _then(_$SnapshotImpl(
       id: null == id
@@ -157,26 +193,42 @@ class __$$SnapshotImplCopyWithImpl<$Res>
           ? _value.projectId
           : projectId // ignore: cast_nullable_to_non_nullable
               as String,
-      description: null == description
-          ? _value.description
-          : description // ignore: cast_nullable_to_non_nullable
+      name: null == name
+          ? _value.name
+          : name // ignore: cast_nullable_to_non_nullable
+              as String,
+      type: null == type
+          ? _value.type
+          : type // ignore: cast_nullable_to_non_nullable
+              as SnapshotType,
+      contentHash: null == contentHash
+          ? _value.contentHash
+          : contentHash // ignore: cast_nullable_to_non_nullable
+              as String,
+      contentSnapshot: null == contentSnapshot
+          ? _value.contentSnapshot
+          : contentSnapshot // ignore: cast_nullable_to_non_nullable
               as String,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
               as DateTime,
-      trigger: null == trigger
-          ? _value.trigger
-          : trigger // ignore: cast_nullable_to_non_nullable
-              as SnapshotTrigger,
-      dataSnapshot: null == dataSnapshot
-          ? _value.dataSnapshot
-          : dataSnapshot // ignore: cast_nullable_to_non_nullable
-              as String,
+      updatedAt: null == updatedAt
+          ? _value.updatedAt
+          : updatedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
       schemaVersion: null == schemaVersion
           ? _value.schemaVersion
           : schemaVersion // ignore: cast_nullable_to_non_nullable
               as int,
+      chapterId: freezed == chapterId
+          ? _value.chapterId
+          : chapterId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      description: freezed == description
+          ? _value.description
+          : description // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -187,11 +239,15 @@ class _$SnapshotImpl implements _Snapshot {
   const _$SnapshotImpl(
       {required this.id,
       required this.projectId,
-      required this.description,
+      required this.name,
+      required this.type,
+      required this.contentHash,
+      required this.contentSnapshot,
       required this.createdAt,
-      this.trigger = SnapshotTrigger.manual,
-      this.dataSnapshot = '',
-      this.schemaVersion = 1});
+      required this.updatedAt,
+      this.schemaVersion = 1,
+      this.chapterId,
+      this.description});
 
   factory _$SnapshotImpl.fromJson(Map<String, dynamic> json) =>
       _$$SnapshotImplFromJson(json);
@@ -201,22 +257,28 @@ class _$SnapshotImpl implements _Snapshot {
   @override
   final String projectId;
   @override
-  final String description;
+  final String name;
+  @override
+  final SnapshotType type;
+  @override
+  final String contentHash;
+  @override
+  final String contentSnapshot;
   @override
   final DateTime createdAt;
   @override
-  @JsonKey()
-  final SnapshotTrigger trigger;
-  @override
-  @JsonKey()
-  final String dataSnapshot;
+  final DateTime updatedAt;
   @override
   @JsonKey()
   final int schemaVersion;
+  @override
+  final String? chapterId;
+  @override
+  final String? description;
 
   @override
   String toString() {
-    return 'Snapshot(id: $id, projectId: $projectId, description: $description, createdAt: $createdAt, trigger: $trigger, dataSnapshot: $dataSnapshot, schemaVersion: $schemaVersion)';
+    return 'Snapshot(id: $id, projectId: $projectId, name: $name, type: $type, contentHash: $contentHash, contentSnapshot: $contentSnapshot, createdAt: $createdAt, updatedAt: $updatedAt, schemaVersion: $schemaVersion, chapterId: $chapterId, description: $description)';
   }
 
   @override
@@ -227,21 +289,39 @@ class _$SnapshotImpl implements _Snapshot {
             (identical(other.id, id) || other.id == id) &&
             (identical(other.projectId, projectId) ||
                 other.projectId == projectId) &&
-            (identical(other.description, description) ||
-                other.description == description) &&
+            (identical(other.name, name) || other.name == name) &&
+            (identical(other.type, type) || other.type == type) &&
+            (identical(other.contentHash, contentHash) ||
+                other.contentHash == contentHash) &&
+            (identical(other.contentSnapshot, contentSnapshot) ||
+                other.contentSnapshot == contentSnapshot) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
-            (identical(other.trigger, trigger) || other.trigger == trigger) &&
-            (identical(other.dataSnapshot, dataSnapshot) ||
-                other.dataSnapshot == dataSnapshot) &&
+            (identical(other.updatedAt, updatedAt) ||
+                other.updatedAt == updatedAt) &&
             (identical(other.schemaVersion, schemaVersion) ||
-                other.schemaVersion == schemaVersion));
+                other.schemaVersion == schemaVersion) &&
+            (identical(other.chapterId, chapterId) ||
+                other.chapterId == chapterId) &&
+            (identical(other.description, description) ||
+                other.description == description));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, id, projectId, description,
-      createdAt, trigger, dataSnapshot, schemaVersion);
+  int get hashCode => Object.hash(
+      runtimeType,
+      id,
+      projectId,
+      name,
+      type,
+      contentHash,
+      contentSnapshot,
+      createdAt,
+      updatedAt,
+      schemaVersion,
+      chapterId,
+      description);
 
   /// Create a copy of Snapshot
   /// with the given fields replaced by the non-null parameter values.
@@ -263,11 +343,15 @@ abstract class _Snapshot implements Snapshot {
   const factory _Snapshot(
       {required final String id,
       required final String projectId,
-      required final String description,
+      required final String name,
+      required final SnapshotType type,
+      required final String contentHash,
+      required final String contentSnapshot,
       required final DateTime createdAt,
-      final SnapshotTrigger trigger,
-      final String dataSnapshot,
-      final int schemaVersion}) = _$SnapshotImpl;
+      required final DateTime updatedAt,
+      final int schemaVersion,
+      final String? chapterId,
+      final String? description}) = _$SnapshotImpl;
 
   factory _Snapshot.fromJson(Map<String, dynamic> json) =
       _$SnapshotImpl.fromJson;
@@ -277,15 +361,23 @@ abstract class _Snapshot implements Snapshot {
   @override
   String get projectId;
   @override
-  String get description;
+  String get name;
+  @override
+  SnapshotType get type;
+  @override
+  String get contentHash;
+  @override
+  String get contentSnapshot;
   @override
   DateTime get createdAt;
   @override
-  SnapshotTrigger get trigger;
-  @override
-  String get dataSnapshot;
+  DateTime get updatedAt;
   @override
   int get schemaVersion;
+  @override
+  String? get chapterId;
+  @override
+  String? get description;
 
   /// Create a copy of Snapshot
   /// with the given fields replaced by the non-null parameter values.

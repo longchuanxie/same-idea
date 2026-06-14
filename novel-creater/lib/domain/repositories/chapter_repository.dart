@@ -1,12 +1,22 @@
-import 'package:novel_creator/domain/domain.dart';
+import 'package:novel_creator/domain/entities/chapter.dart';
+import 'package:novel_creator/domain/enums/chapter_status.dart';
+import 'package:novel_creator/domain/results/app_result.dart';
 
-abstract class ChapterRepository {
-  Future<AppResult<Chapter>> getById(String id);
-  Future<AppResult<List<Chapter>>> getByProjectId(String projectId);
+abstract interface class ChapterRepository {
   Future<AppResult<Chapter>> create(Chapter chapter);
-  Future<AppResult<Chapter>> saveContent(String id, String content);
-  Future<AppResult<Chapter>> update(Chapter chapter);
-  Future<AppResult<void>> delete(String id);
-  Stream<AppResult<Chapter>> watchById(String id);
-  Stream<AppResult<List<Chapter>>> watchByProjectId(String projectId);
+
+  Future<AppResult<List<Chapter>>> list(String projectId);
+
+  Future<AppResult<Chapter?>> get(String id);
+
+  Future<AppResult<Chapter>> saveContent({
+    required String id,
+    required String markdownContent,
+    required String plainTextCache,
+  });
+
+  Future<AppResult<Chapter>> updateStatus({
+    required String id,
+    required ChapterStatus status,
+  });
 }

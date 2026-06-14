@@ -22,15 +22,14 @@ OutlineNode _$OutlineNodeFromJson(Map<String, dynamic> json) {
 mixin _$OutlineNode {
   String get id => throw _privateConstructorUsedError;
   String get projectId => throw _privateConstructorUsedError;
-  int get order => throw _privateConstructorUsedError;
   String get title => throw _privateConstructorUsedError;
+  String get summary => throw _privateConstructorUsedError;
+  String get chapterId => throw _privateConstructorUsedError;
+  String get parentId => throw _privateConstructorUsedError;
+  int get sortOrder => throw _privateConstructorUsedError;
+  List<String> get tags => throw _privateConstructorUsedError;
   DateTime get createdAt => throw _privateConstructorUsedError;
   DateTime get updatedAt => throw _privateConstructorUsedError;
-  String? get parentId => throw _privateConstructorUsedError;
-  OutlineNodeType get nodeType => throw _privateConstructorUsedError;
-  String get summary => throw _privateConstructorUsedError;
-  String? get linkedChapterId => throw _privateConstructorUsedError;
-  OutlineNodeStatus get status => throw _privateConstructorUsedError;
   int get schemaVersion => throw _privateConstructorUsedError;
 
   /// Serializes this OutlineNode to a JSON map.
@@ -52,15 +51,14 @@ abstract class $OutlineNodeCopyWith<$Res> {
   $Res call(
       {String id,
       String projectId,
-      int order,
       String title,
+      String summary,
+      String chapterId,
+      String parentId,
+      int sortOrder,
+      List<String> tags,
       DateTime createdAt,
       DateTime updatedAt,
-      String? parentId,
-      OutlineNodeType nodeType,
-      String summary,
-      String? linkedChapterId,
-      OutlineNodeStatus status,
       int schemaVersion});
 }
 
@@ -81,15 +79,14 @@ class _$OutlineNodeCopyWithImpl<$Res, $Val extends OutlineNode>
   $Res call({
     Object? id = null,
     Object? projectId = null,
-    Object? order = null,
     Object? title = null,
+    Object? summary = null,
+    Object? chapterId = null,
+    Object? parentId = null,
+    Object? sortOrder = null,
+    Object? tags = null,
     Object? createdAt = null,
     Object? updatedAt = null,
-    Object? parentId = freezed,
-    Object? nodeType = null,
-    Object? summary = null,
-    Object? linkedChapterId = freezed,
-    Object? status = null,
     Object? schemaVersion = null,
   }) {
     return _then(_value.copyWith(
@@ -101,14 +98,30 @@ class _$OutlineNodeCopyWithImpl<$Res, $Val extends OutlineNode>
           ? _value.projectId
           : projectId // ignore: cast_nullable_to_non_nullable
               as String,
-      order: null == order
-          ? _value.order
-          : order // ignore: cast_nullable_to_non_nullable
-              as int,
       title: null == title
           ? _value.title
           : title // ignore: cast_nullable_to_non_nullable
               as String,
+      summary: null == summary
+          ? _value.summary
+          : summary // ignore: cast_nullable_to_non_nullable
+              as String,
+      chapterId: null == chapterId
+          ? _value.chapterId
+          : chapterId // ignore: cast_nullable_to_non_nullable
+              as String,
+      parentId: null == parentId
+          ? _value.parentId
+          : parentId // ignore: cast_nullable_to_non_nullable
+              as String,
+      sortOrder: null == sortOrder
+          ? _value.sortOrder
+          : sortOrder // ignore: cast_nullable_to_non_nullable
+              as int,
+      tags: null == tags
+          ? _value.tags
+          : tags // ignore: cast_nullable_to_non_nullable
+              as List<String>,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -117,26 +130,6 @@ class _$OutlineNodeCopyWithImpl<$Res, $Val extends OutlineNode>
           ? _value.updatedAt
           : updatedAt // ignore: cast_nullable_to_non_nullable
               as DateTime,
-      parentId: freezed == parentId
-          ? _value.parentId
-          : parentId // ignore: cast_nullable_to_non_nullable
-              as String?,
-      nodeType: null == nodeType
-          ? _value.nodeType
-          : nodeType // ignore: cast_nullable_to_non_nullable
-              as OutlineNodeType,
-      summary: null == summary
-          ? _value.summary
-          : summary // ignore: cast_nullable_to_non_nullable
-              as String,
-      linkedChapterId: freezed == linkedChapterId
-          ? _value.linkedChapterId
-          : linkedChapterId // ignore: cast_nullable_to_non_nullable
-              as String?,
-      status: null == status
-          ? _value.status
-          : status // ignore: cast_nullable_to_non_nullable
-              as OutlineNodeStatus,
       schemaVersion: null == schemaVersion
           ? _value.schemaVersion
           : schemaVersion // ignore: cast_nullable_to_non_nullable
@@ -156,15 +149,14 @@ abstract class _$$OutlineNodeImplCopyWith<$Res>
   $Res call(
       {String id,
       String projectId,
-      int order,
       String title,
+      String summary,
+      String chapterId,
+      String parentId,
+      int sortOrder,
+      List<String> tags,
       DateTime createdAt,
       DateTime updatedAt,
-      String? parentId,
-      OutlineNodeType nodeType,
-      String summary,
-      String? linkedChapterId,
-      OutlineNodeStatus status,
       int schemaVersion});
 }
 
@@ -183,15 +175,14 @@ class __$$OutlineNodeImplCopyWithImpl<$Res>
   $Res call({
     Object? id = null,
     Object? projectId = null,
-    Object? order = null,
     Object? title = null,
+    Object? summary = null,
+    Object? chapterId = null,
+    Object? parentId = null,
+    Object? sortOrder = null,
+    Object? tags = null,
     Object? createdAt = null,
     Object? updatedAt = null,
-    Object? parentId = freezed,
-    Object? nodeType = null,
-    Object? summary = null,
-    Object? linkedChapterId = freezed,
-    Object? status = null,
     Object? schemaVersion = null,
   }) {
     return _then(_$OutlineNodeImpl(
@@ -203,14 +194,30 @@ class __$$OutlineNodeImplCopyWithImpl<$Res>
           ? _value.projectId
           : projectId // ignore: cast_nullable_to_non_nullable
               as String,
-      order: null == order
-          ? _value.order
-          : order // ignore: cast_nullable_to_non_nullable
-              as int,
       title: null == title
           ? _value.title
           : title // ignore: cast_nullable_to_non_nullable
               as String,
+      summary: null == summary
+          ? _value.summary
+          : summary // ignore: cast_nullable_to_non_nullable
+              as String,
+      chapterId: null == chapterId
+          ? _value.chapterId
+          : chapterId // ignore: cast_nullable_to_non_nullable
+              as String,
+      parentId: null == parentId
+          ? _value.parentId
+          : parentId // ignore: cast_nullable_to_non_nullable
+              as String,
+      sortOrder: null == sortOrder
+          ? _value.sortOrder
+          : sortOrder // ignore: cast_nullable_to_non_nullable
+              as int,
+      tags: null == tags
+          ? _value._tags
+          : tags // ignore: cast_nullable_to_non_nullable
+              as List<String>,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -219,26 +226,6 @@ class __$$OutlineNodeImplCopyWithImpl<$Res>
           ? _value.updatedAt
           : updatedAt // ignore: cast_nullable_to_non_nullable
               as DateTime,
-      parentId: freezed == parentId
-          ? _value.parentId
-          : parentId // ignore: cast_nullable_to_non_nullable
-              as String?,
-      nodeType: null == nodeType
-          ? _value.nodeType
-          : nodeType // ignore: cast_nullable_to_non_nullable
-              as OutlineNodeType,
-      summary: null == summary
-          ? _value.summary
-          : summary // ignore: cast_nullable_to_non_nullable
-              as String,
-      linkedChapterId: freezed == linkedChapterId
-          ? _value.linkedChapterId
-          : linkedChapterId // ignore: cast_nullable_to_non_nullable
-              as String?,
-      status: null == status
-          ? _value.status
-          : status // ignore: cast_nullable_to_non_nullable
-              as OutlineNodeStatus,
       schemaVersion: null == schemaVersion
           ? _value.schemaVersion
           : schemaVersion // ignore: cast_nullable_to_non_nullable
@@ -249,20 +236,21 @@ class __$$OutlineNodeImplCopyWithImpl<$Res>
 
 /// @nodoc
 @JsonSerializable()
-class _$OutlineNodeImpl implements _OutlineNode {
+class _$OutlineNodeImpl extends _OutlineNode {
   const _$OutlineNodeImpl(
       {required this.id,
       required this.projectId,
-      required this.order,
       required this.title,
+      this.summary = '',
+      this.chapterId = '',
+      this.parentId = '',
+      this.sortOrder = 0,
+      final List<String> tags = const [],
       required this.createdAt,
       required this.updatedAt,
-      this.parentId,
-      this.nodeType = OutlineNodeType.chapter,
-      this.summary = '',
-      this.linkedChapterId,
-      this.status = OutlineNodeStatus.planned,
-      this.schemaVersion = 1});
+      this.schemaVersion = 1})
+      : _tags = tags,
+        super._();
 
   factory _$OutlineNodeImpl.fromJson(Map<String, dynamic> json) =>
       _$$OutlineNodeImplFromJson(json);
@@ -272,33 +260,39 @@ class _$OutlineNodeImpl implements _OutlineNode {
   @override
   final String projectId;
   @override
-  final int order;
-  @override
   final String title;
-  @override
-  final DateTime createdAt;
-  @override
-  final DateTime updatedAt;
-  @override
-  final String? parentId;
-  @override
-  @JsonKey()
-  final OutlineNodeType nodeType;
   @override
   @JsonKey()
   final String summary;
   @override
-  final String? linkedChapterId;
+  @JsonKey()
+  final String chapterId;
   @override
   @JsonKey()
-  final OutlineNodeStatus status;
+  final String parentId;
+  @override
+  @JsonKey()
+  final int sortOrder;
+  final List<String> _tags;
+  @override
+  @JsonKey()
+  List<String> get tags {
+    if (_tags is EqualUnmodifiableListView) return _tags;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_tags);
+  }
+
+  @override
+  final DateTime createdAt;
+  @override
+  final DateTime updatedAt;
   @override
   @JsonKey()
   final int schemaVersion;
 
   @override
   String toString() {
-    return 'OutlineNode(id: $id, projectId: $projectId, order: $order, title: $title, createdAt: $createdAt, updatedAt: $updatedAt, parentId: $parentId, nodeType: $nodeType, summary: $summary, linkedChapterId: $linkedChapterId, status: $status, schemaVersion: $schemaVersion)';
+    return 'OutlineNode(id: $id, projectId: $projectId, title: $title, summary: $summary, chapterId: $chapterId, parentId: $parentId, sortOrder: $sortOrder, tags: $tags, createdAt: $createdAt, updatedAt: $updatedAt, schemaVersion: $schemaVersion)';
   }
 
   @override
@@ -309,20 +303,19 @@ class _$OutlineNodeImpl implements _OutlineNode {
             (identical(other.id, id) || other.id == id) &&
             (identical(other.projectId, projectId) ||
                 other.projectId == projectId) &&
-            (identical(other.order, order) || other.order == order) &&
             (identical(other.title, title) || other.title == title) &&
+            (identical(other.summary, summary) || other.summary == summary) &&
+            (identical(other.chapterId, chapterId) ||
+                other.chapterId == chapterId) &&
+            (identical(other.parentId, parentId) ||
+                other.parentId == parentId) &&
+            (identical(other.sortOrder, sortOrder) ||
+                other.sortOrder == sortOrder) &&
+            const DeepCollectionEquality().equals(other._tags, _tags) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             (identical(other.updatedAt, updatedAt) ||
                 other.updatedAt == updatedAt) &&
-            (identical(other.parentId, parentId) ||
-                other.parentId == parentId) &&
-            (identical(other.nodeType, nodeType) ||
-                other.nodeType == nodeType) &&
-            (identical(other.summary, summary) || other.summary == summary) &&
-            (identical(other.linkedChapterId, linkedChapterId) ||
-                other.linkedChapterId == linkedChapterId) &&
-            (identical(other.status, status) || other.status == status) &&
             (identical(other.schemaVersion, schemaVersion) ||
                 other.schemaVersion == schemaVersion));
   }
@@ -333,15 +326,14 @@ class _$OutlineNodeImpl implements _OutlineNode {
       runtimeType,
       id,
       projectId,
-      order,
       title,
+      summary,
+      chapterId,
+      parentId,
+      sortOrder,
+      const DeepCollectionEquality().hash(_tags),
       createdAt,
       updatedAt,
-      parentId,
-      nodeType,
-      summary,
-      linkedChapterId,
-      status,
       schemaVersion);
 
   /// Create a copy of OutlineNode
@@ -360,20 +352,20 @@ class _$OutlineNodeImpl implements _OutlineNode {
   }
 }
 
-abstract class _OutlineNode implements OutlineNode {
+abstract class _OutlineNode extends OutlineNode {
   const factory _OutlineNode(
       {required final String id,
       required final String projectId,
-      required final int order,
       required final String title,
+      final String summary,
+      final String chapterId,
+      final String parentId,
+      final int sortOrder,
+      final List<String> tags,
       required final DateTime createdAt,
       required final DateTime updatedAt,
-      final String? parentId,
-      final OutlineNodeType nodeType,
-      final String summary,
-      final String? linkedChapterId,
-      final OutlineNodeStatus status,
       final int schemaVersion}) = _$OutlineNodeImpl;
+  const _OutlineNode._() : super._();
 
   factory _OutlineNode.fromJson(Map<String, dynamic> json) =
       _$OutlineNodeImpl.fromJson;
@@ -383,23 +375,21 @@ abstract class _OutlineNode implements OutlineNode {
   @override
   String get projectId;
   @override
-  int get order;
-  @override
   String get title;
+  @override
+  String get summary;
+  @override
+  String get chapterId;
+  @override
+  String get parentId;
+  @override
+  int get sortOrder;
+  @override
+  List<String> get tags;
   @override
   DateTime get createdAt;
   @override
   DateTime get updatedAt;
-  @override
-  String? get parentId;
-  @override
-  OutlineNodeType get nodeType;
-  @override
-  String get summary;
-  @override
-  String? get linkedChapterId;
-  @override
-  OutlineNodeStatus get status;
   @override
   int get schemaVersion;
 

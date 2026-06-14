@@ -1,1 +1,4 @@
-enum RevisionSource { agent, user }
+enum RevisionSource {
+  agent,
+  user,
+}

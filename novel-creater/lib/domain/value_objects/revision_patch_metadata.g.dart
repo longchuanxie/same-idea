@@ -9,12 +9,10 @@ part of 'revision_patch_metadata.dart';
 _$RevisionPatchMetadataImpl _$$RevisionPatchMetadataImplFromJson(
         Map<String, dynamic> json) =>
     _$RevisionPatchMetadataImpl(
-      prompt: json['prompt'] as String?,
-      model: json['model'] as String?,
+      prompt: json['prompt'] as String,
+      model: json['model'] as String,
+      summary: json['summary'] as String,
       taskId: json['taskId'] as String?,
-      summary: json['summary'] as String?,
-      changeSummary: json['changeSummary'] as String?,
-      baseContentHash: json['baseContentHash'] as String?,
     );
 
 Map<String, dynamic> _$$RevisionPatchMetadataImplToJson(
@@ -22,8 +20,6 @@ Map<String, dynamic> _$$RevisionPatchMetadataImplToJson(
     <String, dynamic>{
       'prompt': instance.prompt,
       'model': instance.model,
-      'taskId': instance.taskId,
       'summary': instance.summary,
-      'changeSummary': instance.changeSummary,
-      'baseContentHash': instance.baseContentHash,
+      'taskId': instance.taskId,
     };

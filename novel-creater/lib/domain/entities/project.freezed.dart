@@ -21,17 +21,10 @@ Project _$ProjectFromJson(Map<String, dynamic> json) {
 /// @nodoc
 mixin _$Project {
   String get id => throw _privateConstructorUsedError;
-  String get title => throw _privateConstructorUsedError;
+  String get name => throw _privateConstructorUsedError;
   DateTime get createdAt => throw _privateConstructorUsedError;
   DateTime get updatedAt => throw _privateConstructorUsedError;
-  String get author => throw _privateConstructorUsedError;
   String get description => throw _privateConstructorUsedError;
-  String get language => throw _privateConstructorUsedError;
-  String get genre => throw _privateConstructorUsedError;
-  List<String> get tags => throw _privateConstructorUsedError;
-  String? get defaultStyleProfileId => throw _privateConstructorUsedError;
-  String? get activeChapterId => throw _privateConstructorUsedError;
-  bool get localEncryptionEnabled => throw _privateConstructorUsedError;
   int get schemaVersion => throw _privateConstructorUsedError;
 
   /// Serializes this Project to a JSON map.
@@ -50,17 +43,10 @@ abstract class $ProjectCopyWith<$Res> {
   @useResult
   $Res call(
       {String id,
-      String title,
+      String name,
       DateTime createdAt,
       DateTime updatedAt,
-      String author,
       String description,
-      String language,
-      String genre,
-      List<String> tags,
-      String? defaultStyleProfileId,
-      String? activeChapterId,
-      bool localEncryptionEnabled,
       int schemaVersion});
 }
 
@@ -80,17 +66,10 @@ class _$ProjectCopyWithImpl<$Res, $Val extends Project>
   @override
   $Res call({
     Object? id = null,
-    Object? title = null,
+    Object? name = null,
     Object? createdAt = null,
     Object? updatedAt = null,
-    Object? author = null,
     Object? description = null,
-    Object? language = null,
-    Object? genre = null,
-    Object? tags = null,
-    Object? defaultStyleProfileId = freezed,
-    Object? activeChapterId = freezed,
-    Object? localEncryptionEnabled = null,
     Object? schemaVersion = null,
   }) {
     return _then(_value.copyWith(
@@ -98,9 +77,9 @@ class _$ProjectCopyWithImpl<$Res, $Val extends Project>
           ? _value.id
           : id // ignore: cast_nullable_to_non_nullable
               as String,
-      title: null == title
-          ? _value.title
-          : title // ignore: cast_nullable_to_non_nullable
+      name: null == name
+          ? _value.name
+          : name // ignore: cast_nullable_to_non_nullable
               as String,
       createdAt: null == createdAt
           ? _value.createdAt
@@ -110,38 +89,10 @@ class _$ProjectCopyWithImpl<$Res, $Val extends Project>
           ? _value.updatedAt
           : updatedAt // ignore: cast_nullable_to_non_nullable
               as DateTime,
-      author: null == author
-          ? _value.author
-          : author // ignore: cast_nullable_to_non_nullable
-              as String,
       description: null == description
           ? _value.description
           : description // ignore: cast_nullable_to_non_nullable
               as String,
-      language: null == language
-          ? _value.language
-          : language // ignore: cast_nullable_to_non_nullable
-              as String,
-      genre: null == genre
-          ? _value.genre
-          : genre // ignore: cast_nullable_to_non_nullable
-              as String,
-      tags: null == tags
-          ? _value.tags
-          : tags // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      defaultStyleProfileId: freezed == defaultStyleProfileId
-          ? _value.defaultStyleProfileId
-          : defaultStyleProfileId // ignore: cast_nullable_to_non_nullable
-              as String?,
-      activeChapterId: freezed == activeChapterId
-          ? _value.activeChapterId
-          : activeChapterId // ignore: cast_nullable_to_non_nullable
-              as String?,
-      localEncryptionEnabled: null == localEncryptionEnabled
-          ? _value.localEncryptionEnabled
-          : localEncryptionEnabled // ignore: cast_nullable_to_non_nullable
-              as bool,
       schemaVersion: null == schemaVersion
           ? _value.schemaVersion
           : schemaVersion // ignore: cast_nullable_to_non_nullable
@@ -159,17 +110,10 @@ abstract class _$$ProjectImplCopyWith<$Res> implements $ProjectCopyWith<$Res> {
   @useResult
   $Res call(
       {String id,
-      String title,
+      String name,
       DateTime createdAt,
       DateTime updatedAt,
-      String author,
       String description,
-      String language,
-      String genre,
-      List<String> tags,
-      String? defaultStyleProfileId,
-      String? activeChapterId,
-      bool localEncryptionEnabled,
       int schemaVersion});
 }
 
@@ -187,17 +131,10 @@ class __$$ProjectImplCopyWithImpl<$Res>
   @override
   $Res call({
     Object? id = null,
-    Object? title = null,
+    Object? name = null,
     Object? createdAt = null,
     Object? updatedAt = null,
-    Object? author = null,
     Object? description = null,
-    Object? language = null,
-    Object? genre = null,
-    Object? tags = null,
-    Object? defaultStyleProfileId = freezed,
-    Object? activeChapterId = freezed,
-    Object? localEncryptionEnabled = null,
     Object? schemaVersion = null,
   }) {
     return _then(_$ProjectImpl(
@@ -205,9 +142,9 @@ class __$$ProjectImplCopyWithImpl<$Res>
           ? _value.id
           : id // ignore: cast_nullable_to_non_nullable
               as String,
-      title: null == title
-          ? _value.title
-          : title // ignore: cast_nullable_to_non_nullable
+      name: null == name
+          ? _value.name
+          : name // ignore: cast_nullable_to_non_nullable
               as String,
       createdAt: null == createdAt
           ? _value.createdAt
@@ -217,38 +154,10 @@ class __$$ProjectImplCopyWithImpl<$Res>
           ? _value.updatedAt
           : updatedAt // ignore: cast_nullable_to_non_nullable
               as DateTime,
-      author: null == author
-          ? _value.author
-          : author // ignore: cast_nullable_to_non_nullable
-              as String,
       description: null == description
           ? _value.description
           : description // ignore: cast_nullable_to_non_nullable
               as String,
-      language: null == language
-          ? _value.language
-          : language // ignore: cast_nullable_to_non_nullable
-              as String,
-      genre: null == genre
-          ? _value.genre
-          : genre // ignore: cast_nullable_to_non_nullable
-              as String,
-      tags: null == tags
-          ? _value._tags
-          : tags // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      defaultStyleProfileId: freezed == defaultStyleProfileId
-          ? _value.defaultStyleProfileId
-          : defaultStyleProfileId // ignore: cast_nullable_to_non_nullable
-              as String?,
-      activeChapterId: freezed == activeChapterId
-          ? _value.activeChapterId
-          : activeChapterId // ignore: cast_nullable_to_non_nullable
-              as String?,
-      localEncryptionEnabled: null == localEncryptionEnabled
-          ? _value.localEncryptionEnabled
-          : localEncryptionEnabled // ignore: cast_nullable_to_non_nullable
-              as bool,
       schemaVersion: null == schemaVersion
           ? _value.schemaVersion
           : schemaVersion // ignore: cast_nullable_to_non_nullable
@@ -259,23 +168,14 @@ class __$$ProjectImplCopyWithImpl<$Res>
 
 /// @nodoc
 @JsonSerializable()
-class _$ProjectImpl extends _Project {
+class _$ProjectImpl implements _Project {
   const _$ProjectImpl(
       {required this.id,
-      required this.title,
+      required this.name,
       required this.createdAt,
       required this.updatedAt,
-      this.author = '',
       this.description = '',
-      this.language = 'zh',
-      this.genre = '',
-      final List<String> tags = const [],
-      this.defaultStyleProfileId,
-      this.activeChapterId,
-      this.localEncryptionEnabled = false,
-      this.schemaVersion = 1})
-      : _tags = tags,
-        super._();
+      this.schemaVersion = 1});
 
   factory _$ProjectImpl.fromJson(Map<String, dynamic> json) =>
       _$$ProjectImplFromJson(json);
@@ -283,46 +183,21 @@ class _$ProjectImpl extends _Project {
   @override
   final String id;
   @override
-  final String title;
+  final String name;
   @override
   final DateTime createdAt;
   @override
   final DateTime updatedAt;
   @override
   @JsonKey()
-  final String author;
-  @override
-  @JsonKey()
   final String description;
-  @override
-  @JsonKey()
-  final String language;
-  @override
-  @JsonKey()
-  final String genre;
-  final List<String> _tags;
-  @override
-  @JsonKey()
-  List<String> get tags {
-    if (_tags is EqualUnmodifiableListView) return _tags;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_tags);
-  }
-
-  @override
-  final String? defaultStyleProfileId;
-  @override
-  final String? activeChapterId;
-  @override
-  @JsonKey()
-  final bool localEncryptionEnabled;
   @override
   @JsonKey()
   final int schemaVersion;
 
   @override
   String toString() {
-    return 'Project(id: $id, title: $title, createdAt: $createdAt, updatedAt: $updatedAt, author: $author, description: $description, language: $language, genre: $genre, tags: $tags, defaultStyleProfileId: $defaultStyleProfileId, activeChapterId: $activeChapterId, localEncryptionEnabled: $localEncryptionEnabled, schemaVersion: $schemaVersion)';
+    return 'Project(id: $id, name: $name, createdAt: $createdAt, updatedAt: $updatedAt, description: $description, schemaVersion: $schemaVersion)';
   }
 
   @override
@@ -331,24 +206,13 @@ class _$ProjectImpl extends _Project {
         (other.runtimeType == runtimeType &&
             other is _$ProjectImpl &&
             (identical(other.id, id) || other.id == id) &&
-            (identical(other.title, title) || other.title == title) &&
+            (identical(other.name, name) || other.name == name) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             (identical(other.updatedAt, updatedAt) ||
                 other.updatedAt == updatedAt) &&
-            (identical(other.author, author) || other.author == author) &&
             (identical(other.description, description) ||
                 other.description == description) &&
-            (identical(other.language, language) ||
-                other.language == language) &&
-            (identical(other.genre, genre) || other.genre == genre) &&
-            const DeepCollectionEquality().equals(other._tags, _tags) &&
-            (identical(other.defaultStyleProfileId, defaultStyleProfileId) ||
-                other.defaultStyleProfileId == defaultStyleProfileId) &&
-            (identical(other.activeChapterId, activeChapterId) ||
-                other.activeChapterId == activeChapterId) &&
-            (identical(other.localEncryptionEnabled, localEncryptionEnabled) ||
-                other.localEncryptionEnabled == localEncryptionEnabled) &&
             (identical(other.schemaVersion, schemaVersion) ||
                 other.schemaVersion == schemaVersion));
   }
@@ -356,20 +220,7 @@ class _$ProjectImpl extends _Project {
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   int get hashCode => Object.hash(
-      runtimeType,
-      id,
-      title,
-      createdAt,
-      updatedAt,
-      author,
-      description,
-      language,
-      genre,
-      const DeepCollectionEquality().hash(_tags),
-      defaultStyleProfileId,
-      activeChapterId,
-      localEncryptionEnabled,
-      schemaVersion);
+      runtimeType, id, name, createdAt, updatedAt, description, schemaVersion);
 
   /// Create a copy of Project
   /// with the given fields replaced by the non-null parameter values.
@@ -387,49 +238,27 @@ class _$ProjectImpl extends _Project {
   }
 }
 
-abstract class _Project extends Project {
+abstract class _Project implements Project {
   const factory _Project(
       {required final String id,
-      required final String title,
+      required final String name,
       required final DateTime createdAt,
       required final DateTime updatedAt,
-      final String author,
       final String description,
-      final String language,
-      final String genre,
-      final List<String> tags,
-      final String? defaultStyleProfileId,
-      final String? activeChapterId,
-      final bool localEncryptionEnabled,
       final int schemaVersion}) = _$ProjectImpl;
-  const _Project._() : super._();
 
   factory _Project.fromJson(Map<String, dynamic> json) = _$ProjectImpl.fromJson;
 
   @override
   String get id;
   @override
-  String get title;
+  String get name;
   @override
   DateTime get createdAt;
   @override
   DateTime get updatedAt;
   @override
-  String get author;
-  @override
   String get description;
-  @override
-  String get language;
-  @override
-  String get genre;
-  @override
-  List<String> get tags;
-  @override
-  String? get defaultStyleProfileId;
-  @override
-  String? get activeChapterId;
-  @override
-  bool get localEncryptionEnabled;
   @override
   int get schemaVersion;
 

@@ -1,1 +1,6 @@
-enum CharacterRole { protagonist, antagonist, supporting, minor, custom }
+enum CharacterRole {
+  protagonist,
+  antagonist,
+  supporting,
+  minor,
+}

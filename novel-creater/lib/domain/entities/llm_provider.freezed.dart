@@ -21,15 +21,19 @@ LlmProvider _$LlmProviderFromJson(Map<String, dynamic> json) {
 /// @nodoc
 mixin _$LlmProvider {
   String get id => throw _privateConstructorUsedError;
-  String get displayName => throw _privateConstructorUsedError;
+  String get projectId => throw _privateConstructorUsedError;
+  String get name => throw _privateConstructorUsedError;
   String get baseUrl => throw _privateConstructorUsedError;
+  String get secretKeyRef => throw _privateConstructorUsedError;
+  String? get selectedModelId => throw _privateConstructorUsedError;
+  ProviderStatus get status => throw _privateConstructorUsedError;
   DateTime get createdAt => throw _privateConstructorUsedError;
   DateTime get updatedAt => throw _privateConstructorUsedError;
-  String get apiKey => throw _privateConstructorUsedError;
-  String get defaultModel => throw _privateConstructorUsedError;
+  List<LlmModel> get cachedModels => throw _privateConstructorUsedError;
   double get temperature => throw _privateConstructorUsedError;
-  int get maxTokens => throw _privateConstructorUsedError;
-  bool get enabled => throw _privateConstructorUsedError;
+  double get topP => throw _privateConstructorUsedError;
+  bool get streamingEnabled => throw _privateConstructorUsedError;
+  int get schemaVersion => throw _privateConstructorUsedError;
 
   /// Serializes this LlmProvider to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -49,15 +53,19 @@ abstract class $LlmProviderCopyWith<$Res> {
   @useResult
   $Res call(
       {String id,
-      String displayName,
+      String projectId,
+      String name,
       String baseUrl,
+      String secretKeyRef,
+      String? selectedModelId,
+      ProviderStatus status,
       DateTime createdAt,
       DateTime updatedAt,
-      String apiKey,
-      String defaultModel,
+      List<LlmModel> cachedModels,
       double temperature,
-      int maxTokens,
-      bool enabled});
+      double topP,
+      bool streamingEnabled,
+      int schemaVersion});
 }
 
 /// @nodoc
@@ -76,29 +84,49 @@ class _$LlmProviderCopyWithImpl<$Res, $Val extends LlmProvider>
   @override
   $Res call({
     Object? id = null,
-    Object? displayName = null,
+    Object? projectId = null,
+    Object? name = null,
     Object? baseUrl = null,
+    Object? secretKeyRef = null,
+    Object? selectedModelId = freezed,
+    Object? status = null,
     Object? createdAt = null,
     Object? updatedAt = null,
-    Object? apiKey = null,
-    Object? defaultModel = null,
+    Object? cachedModels = null,
     Object? temperature = null,
-    Object? maxTokens = null,
-    Object? enabled = null,
+    Object? topP = null,
+    Object? streamingEnabled = null,
+    Object? schemaVersion = null,
   }) {
     return _then(_value.copyWith(
       id: null == id
           ? _value.id
           : id // ignore: cast_nullable_to_non_nullable
               as String,
-      displayName: null == displayName
-          ? _value.displayName
-          : displayName // ignore: cast_nullable_to_non_nullable
+      projectId: null == projectId
+          ? _value.projectId
+          : projectId // ignore: cast_nullable_to_non_nullable
+              as String,
+      name: null == name
+          ? _value.name
+          : name // ignore: cast_nullable_to_non_nullable
               as String,
       baseUrl: null == baseUrl
           ? _value.baseUrl
           : baseUrl // ignore: cast_nullable_to_non_nullable
               as String,
+      secretKeyRef: null == secretKeyRef
+          ? _value.secretKeyRef
+          : secretKeyRef // ignore: cast_nullable_to_non_nullable
+              as String,
+      selectedModelId: freezed == selectedModelId
+          ? _value.selectedModelId
+          : selectedModelId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      status: null == status
+          ? _value.status
+          : status // ignore: cast_nullable_to_non_nullable
+              as ProviderStatus,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -107,26 +135,26 @@ class _$LlmProviderCopyWithImpl<$Res, $Val extends LlmProvider>
           ? _value.updatedAt
           : updatedAt // ignore: cast_nullable_to_non_nullable
               as DateTime,
-      apiKey: null == apiKey
-          ? _value.apiKey
-          : apiKey // ignore: cast_nullable_to_non_nullable
-              as String,
-      defaultModel: null == defaultModel
-          ? _value.defaultModel
-          : defaultModel // ignore: cast_nullable_to_non_nullable
-              as String,
+      cachedModels: null == cachedModels
+          ? _value.cachedModels
+          : cachedModels // ignore: cast_nullable_to_non_nullable
+              as List<LlmModel>,
       temperature: null == temperature
           ? _value.temperature
           : temperature // ignore: cast_nullable_to_non_nullable
               as double,
-      maxTokens: null == maxTokens
-          ? _value.maxTokens
-          : maxTokens // ignore: cast_nullable_to_non_nullable
-              as int,
-      enabled: null == enabled
-          ? _value.enabled
-          : enabled // ignore: cast_nullable_to_non_nullable
+      topP: null == topP
+          ? _value.topP
+          : topP // ignore: cast_nullable_to_non_nullable
+              as double,
+      streamingEnabled: null == streamingEnabled
+          ? _value.streamingEnabled
+          : streamingEnabled // ignore: cast_nullable_to_non_nullable
               as bool,
+      schemaVersion: null == schemaVersion
+          ? _value.schemaVersion
+          : schemaVersion // ignore: cast_nullable_to_non_nullable
+              as int,
     ) as $Val);
   }
 }
@@ -141,15 +169,19 @@ abstract class _$$LlmProviderImplCopyWith<$Res>
   @useResult
   $Res call(
       {String id,
-      String displayName,
+      String projectId,
+      String name,
       String baseUrl,
+      String secretKeyRef,
+      String? selectedModelId,
+      ProviderStatus status,
       DateTime createdAt,
       DateTime updatedAt,
-      String apiKey,
-      String defaultModel,
+      List<LlmModel> cachedModels,
       double temperature,
-      int maxTokens,
-      bool enabled});
+      double topP,
+      bool streamingEnabled,
+      int schemaVersion});
 }
 
 /// @nodoc
@@ -166,29 +198,49 @@ class __$$LlmProviderImplCopyWithImpl<$Res>
   @override
   $Res call({
     Object? id = null,
-    Object? displayName = null,
+    Object? projectId = null,
+    Object? name = null,
     Object? baseUrl = null,
+    Object? secretKeyRef = null,
+    Object? selectedModelId = freezed,
+    Object? status = null,
     Object? createdAt = null,
     Object? updatedAt = null,
-    Object? apiKey = null,
-    Object? defaultModel = null,
+    Object? cachedModels = null,
     Object? temperature = null,
-    Object? maxTokens = null,
-    Object? enabled = null,
+    Object? topP = null,
+    Object? streamingEnabled = null,
+    Object? schemaVersion = null,
   }) {
     return _then(_$LlmProviderImpl(
       id: null == id
           ? _value.id
           : id // ignore: cast_nullable_to_non_nullable
               as String,
-      displayName: null == displayName
-          ? _value.displayName
-          : displayName // ignore: cast_nullable_to_non_nullable
+      projectId: null == projectId
+          ? _value.projectId
+          : projectId // ignore: cast_nullable_to_non_nullable
+              as String,
+      name: null == name
+          ? _value.name
+          : name // ignore: cast_nullable_to_non_nullable
               as String,
       baseUrl: null == baseUrl
           ? _value.baseUrl
           : baseUrl // ignore: cast_nullable_to_non_nullable
               as String,
+      secretKeyRef: null == secretKeyRef
+          ? _value.secretKeyRef
+          : secretKeyRef // ignore: cast_nullable_to_non_nullable
+              as String,
+      selectedModelId: freezed == selectedModelId
+          ? _value.selectedModelId
+          : selectedModelId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      status: null == status
+          ? _value.status
+          : status // ignore: cast_nullable_to_non_nullable
+              as ProviderStatus,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -197,44 +249,50 @@ class __$$LlmProviderImplCopyWithImpl<$Res>
           ? _value.updatedAt
           : updatedAt // ignore: cast_nullable_to_non_nullable
               as DateTime,
-      apiKey: null == apiKey
-          ? _value.apiKey
-          : apiKey // ignore: cast_nullable_to_non_nullable
-              as String,
-      defaultModel: null == defaultModel
-          ? _value.defaultModel
-          : defaultModel // ignore: cast_nullable_to_non_nullable
-              as String,
+      cachedModels: null == cachedModels
+          ? _value._cachedModels
+          : cachedModels // ignore: cast_nullable_to_non_nullable
+              as List<LlmModel>,
       temperature: null == temperature
           ? _value.temperature
           : temperature // ignore: cast_nullable_to_non_nullable
               as double,
-      maxTokens: null == maxTokens
-          ? _value.maxTokens
-          : maxTokens // ignore: cast_nullable_to_non_nullable
-              as int,
-      enabled: null == enabled
-          ? _value.enabled
-          : enabled // ignore: cast_nullable_to_non_nullable
+      topP: null == topP
+          ? _value.topP
+          : topP // ignore: cast_nullable_to_non_nullable
+              as double,
+      streamingEnabled: null == streamingEnabled
+          ? _value.streamingEnabled
+          : streamingEnabled // ignore: cast_nullable_to_non_nullable
               as bool,
+      schemaVersion: null == schemaVersion
+          ? _value.schemaVersion
+          : schemaVersion // ignore: cast_nullable_to_non_nullable
+              as int,
     ));
   }
 }
 
 /// @nodoc
-@JsonSerializable()
+
+@JsonSerializable(explicitToJson: true)
 class _$LlmProviderImpl implements _LlmProvider {
   const _$LlmProviderImpl(
       {required this.id,
-      required this.displayName,
+      required this.projectId,
+      required this.name,
       required this.baseUrl,
+      required this.secretKeyRef,
+      required this.selectedModelId,
+      required this.status,
       required this.createdAt,
       required this.updatedAt,
-      this.apiKey = '',
-      this.defaultModel = 'gpt-4o-mini',
+      final List<LlmModel> cachedModels = const <LlmModel>[],
       this.temperature = 0.7,
-      this.maxTokens = 2048,
-      this.enabled = true});
+      this.topP = 0.9,
+      this.streamingEnabled = true,
+      this.schemaVersion = 1})
+      : _cachedModels = cachedModels;
 
   factory _$LlmProviderImpl.fromJson(Map<String, dynamic> json) =>
       _$$LlmProviderImplFromJson(json);
@@ -242,32 +300,46 @@ class _$LlmProviderImpl implements _LlmProvider {
   @override
   final String id;
   @override
-  final String displayName;
+  final String projectId;
+  @override
+  final String name;
   @override
   final String baseUrl;
+  @override
+  final String secretKeyRef;
+  @override
+  final String? selectedModelId;
+  @override
+  final ProviderStatus status;
   @override
   final DateTime createdAt;
   @override
   final DateTime updatedAt;
+  final List<LlmModel> _cachedModels;
   @override
   @JsonKey()
-  final String apiKey;
-  @override
-  @JsonKey()
-  final String defaultModel;
+  List<LlmModel> get cachedModels {
+    if (_cachedModels is EqualUnmodifiableListView) return _cachedModels;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_cachedModels);
+  }
+
   @override
   @JsonKey()
   final double temperature;
   @override
   @JsonKey()
-  final int maxTokens;
+  final double topP;
   @override
   @JsonKey()
-  final bool enabled;
+  final bool streamingEnabled;
+  @override
+  @JsonKey()
+  final int schemaVersion;
 
   @override
   String toString() {
-    return 'LlmProvider(id: $id, displayName: $displayName, baseUrl: $baseUrl, createdAt: $createdAt, updatedAt: $updatedAt, apiKey: $apiKey, defaultModel: $defaultModel, temperature: $temperature, maxTokens: $maxTokens, enabled: $enabled)';
+    return 'LlmProvider(id: $id, projectId: $projectId, name: $name, baseUrl: $baseUrl, secretKeyRef: $secretKeyRef, selectedModelId: $selectedModelId, status: $status, createdAt: $createdAt, updatedAt: $updatedAt, cachedModels: $cachedModels, temperature: $temperature, topP: $topP, streamingEnabled: $streamingEnabled, schemaVersion: $schemaVersion)';
   }
 
   @override
@@ -276,21 +348,28 @@ class _$LlmProviderImpl implements _LlmProvider {
         (other.runtimeType == runtimeType &&
             other is _$LlmProviderImpl &&
             (identical(other.id, id) || other.id == id) &&
-            (identical(other.displayName, displayName) ||
-                other.displayName == displayName) &&
+            (identical(other.projectId, projectId) ||
+                other.projectId == projectId) &&
+            (identical(other.name, name) || other.name == name) &&
             (identical(other.baseUrl, baseUrl) || other.baseUrl == baseUrl) &&
+            (identical(other.secretKeyRef, secretKeyRef) ||
+                other.secretKeyRef == secretKeyRef) &&
+            (identical(other.selectedModelId, selectedModelId) ||
+                other.selectedModelId == selectedModelId) &&
+            (identical(other.status, status) || other.status == status) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             (identical(other.updatedAt, updatedAt) ||
                 other.updatedAt == updatedAt) &&
-            (identical(other.apiKey, apiKey) || other.apiKey == apiKey) &&
-            (identical(other.defaultModel, defaultModel) ||
-                other.defaultModel == defaultModel) &&
+            const DeepCollectionEquality()
+                .equals(other._cachedModels, _cachedModels) &&
             (identical(other.temperature, temperature) ||
                 other.temperature == temperature) &&
-            (identical(other.maxTokens, maxTokens) ||
-                other.maxTokens == maxTokens) &&
-            (identical(other.enabled, enabled) || other.enabled == enabled));
+            (identical(other.topP, topP) || other.topP == topP) &&
+            (identical(other.streamingEnabled, streamingEnabled) ||
+                other.streamingEnabled == streamingEnabled) &&
+            (identical(other.schemaVersion, schemaVersion) ||
+                other.schemaVersion == schemaVersion));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -298,15 +377,19 @@ class _$LlmProviderImpl implements _LlmProvider {
   int get hashCode => Object.hash(
       runtimeType,
       id,
-      displayName,
+      projectId,
+      name,
       baseUrl,
+      secretKeyRef,
+      selectedModelId,
+      status,
       createdAt,
       updatedAt,
-      apiKey,
-      defaultModel,
+      const DeepCollectionEquality().hash(_cachedModels),
       temperature,
-      maxTokens,
-      enabled);
+      topP,
+      streamingEnabled,
+      schemaVersion);
 
   /// Create a copy of LlmProvider
   /// with the given fields replaced by the non-null parameter values.
@@ -327,15 +410,19 @@ class _$LlmProviderImpl implements _LlmProvider {
 abstract class _LlmProvider implements LlmProvider {
   const factory _LlmProvider(
       {required final String id,
-      required final String displayName,
+      required final String projectId,
+      required final String name,
       required final String baseUrl,
+      required final String secretKeyRef,
+      required final String? selectedModelId,
+      required final ProviderStatus status,
       required final DateTime createdAt,
       required final DateTime updatedAt,
-      final String apiKey,
-      final String defaultModel,
+      final List<LlmModel> cachedModels,
       final double temperature,
-      final int maxTokens,
-      final bool enabled}) = _$LlmProviderImpl;
+      final double topP,
+      final bool streamingEnabled,
+      final int schemaVersion}) = _$LlmProviderImpl;
 
   factory _LlmProvider.fromJson(Map<String, dynamic> json) =
       _$LlmProviderImpl.fromJson;
@@ -343,23 +430,31 @@ abstract class _LlmProvider implements LlmProvider {
   @override
   String get id;
   @override
-  String get displayName;
+  String get projectId;
+  @override
+  String get name;
   @override
   String get baseUrl;
+  @override
+  String get secretKeyRef;
+  @override
+  String? get selectedModelId;
+  @override
+  ProviderStatus get status;
   @override
   DateTime get createdAt;
   @override
   DateTime get updatedAt;
   @override
-  String get apiKey;
-  @override
-  String get defaultModel;
+  List<LlmModel> get cachedModels;
   @override
   double get temperature;
   @override
-  int get maxTokens;
+  double get topP;
   @override
-  bool get enabled;
+  bool get streamingEnabled;
+  @override
+  int get schemaVersion;
 
   /// Create a copy of LlmProvider
   /// with the given fields replaced by the non-null parameter values.

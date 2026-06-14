@@ -1,18 +1,19 @@
 import 'package:drift/drift.dart';
 
-class NotesTable extends Table {
+@DataClassName('NoteRow')
+class Notes extends Table {
   TextColumn get id => text()();
   TextColumn get projectId => text()();
   TextColumn get title => text()();
-  TextColumn get content => text().withDefault(const Constant(''))();
-  TextColumn get type => text().withDefault(const Constant('idea'))();
-  TextColumn get sourceUrl => text().nullable()();
-  TextColumn get agentTaskId => text().nullable()();
-  TextColumn get tags => text().withDefault(const Constant('[]'))();
-  DateTimeColumn get createdAt => dateTime()();
-  DateTimeColumn get updatedAt => dateTime()();
+  TextColumn get content => text()();
+  TextColumn get category =>
+      text().withDefault(const Constant('misc'))();
+  TextColumn get tagsJson =>
+      text().withDefault(const Constant('[]'))();
+  IntColumn get createdAt => integer()();
+  IntColumn get updatedAt => integer()();
   IntColumn get schemaVersion => integer().withDefault(const Constant(1))();
 
   @override
-  Set<Column> get primaryKey => {id};
+  Set<Column<Object>> get primaryKey => <Column<Object>>{id};
 }

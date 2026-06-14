@@ -1,495 +1,359 @@
-import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:novel_creator/core/clock.dart';
-import 'package:novel_creator/core/id_generator.dart';
-import 'package:novel_creator/domain/domain.dart';
+import 'package:novel_creator/core/event_bus.dart';
+import 'package:novel_creator/domain/entities/character.dart';
+import 'package:novel_creator/domain/entities/note.dart';
+import 'package:novel_creator/domain/entities/setting_entry.dart';
+import 'package:novel_creator/domain/events/domain_events.dart' as domain_events;
+import 'package:novel_creator/domain/repositories/character_repository.dart';
+import 'package:novel_creator/domain/repositories/note_repository.dart';
+import 'package:novel_creator/domain/repositories/setting_entry_repository.dart';
+import 'package:novel_creator/domain/results/app_error.dart';
+import 'package:novel_creator/domain/results/app_result.dart';
+import 'package:novel_creator/features/knowledge_base/bloc/knowledge_base_event.dart';
+import 'package:novel_creator/features/knowledge_base/bloc/knowledge_base_state.dart';
 
-part 'knowledge_base_event.dart';
-part 'knowledge_base_state.dart';
+export 'package:novel_creator/features/knowledge_base/bloc/knowledge_base_state.dart';
 
-class KnowledgeBaseBloc extends Bloc<KnowledgeBaseEvent, KnowledgeBaseState> {
+class KnowledgeBaseBloc
+    extends Bloc<KnowledgeBaseEvent, KnowledgeBaseState> {
   KnowledgeBaseBloc({
     required CharacterRepository characterRepository,
-    required NoteRepository noteRepository,
     required SettingEntryRepository settingEntryRepository,
-    required OutlineNodeRepository outlineNodeRepository,
-    required IdGenerator idGenerator,
-    required AppClock clock,
+    required NoteRepository noteRepository,
+    required AppEventBus eventBus,
   })  : _characterRepository = characterRepository,
-        _noteRepository = noteRepository,
         _settingEntryRepository = settingEntryRepository,
-        _outlineNodeRepository = outlineNodeRepository,
-        _idGenerator = idGenerator,
-        _clock = clock,
-        super(const KnowledgeBaseState()) {
-    on<KnowledgeBaseStarted>(_onStarted);
-    on<KnowledgeBaseQueryChanged>(_onQueryChanged);
-    on<KnowledgeCharacterCreated>(_onCharacterCreated);
-    on<KnowledgeCharacterUpdated>(_onCharacterUpdated);
-    on<KnowledgeCharacterDeleted>(_onCharacterDeleted);
-    on<KnowledgeNoteCreated>(_onNoteCreated);
-    on<KnowledgeNoteUpdated>(_onNoteUpdated);
-    on<KnowledgeNoteDeleted>(_onNoteDeleted);
-    on<KnowledgeSettingEntryCreated>(_onSettingEntryCreated);
-    on<KnowledgeSettingEntryUpdated>(_onSettingEntryUpdated);
-    on<KnowledgeSettingEntryDeleted>(_onSettingEntryDeleted);
-    on<KnowledgeOutlineNodeCreated>(_onOutlineNodeCreated);
-    on<KnowledgeOutlineNodeUpdated>(_onOutlineNodeUpdated);
-    on<KnowledgeOutlineNodeDeleted>(_onOutlineNodeDeleted);
+        _noteRepository = noteRepository,
+        _eventBus = eventBus,
+        super(const KnowledgeBaseState.initial()) {
+    on<KnowledgeBaseLoaded>(_onKnowledgeBaseLoaded);
+    on<CharacterCreated>(_onCharacterCreated);
+    on<CharacterUpdated>(_onCharacterUpdated);
+    on<CharacterDeleted>(_onCharacterDeleted);
+    on<SettingEntryCreated>(_onSettingEntryCreated);
+    on<SettingEntryUpdated>(_onSettingEntryUpdated);
+    on<SettingEntryDeleted>(_onSettingEntryDeleted);
+    on<NoteCreated>(_onNoteCreated);
+    on<NoteUpdated>(_onNoteUpdated);
+    on<NoteDeleted>(_onNoteDeleted);
+    on<TabChanged>(_onTabChanged);
   }
 
   final CharacterRepository _characterRepository;
-  final NoteRepository _noteRepository;
   final SettingEntryRepository _settingEntryRepository;
-  final OutlineNodeRepository _outlineNodeRepository;
-  final IdGenerator _idGenerator;
-  final AppClock _clock;
+  final NoteRepository _noteRepository;
+  final AppEventBus _eventBus;
 
-  Future<void> _onStarted(
-    KnowledgeBaseStarted event,
+  Future<void> _onKnowledgeBaseLoaded(
+    KnowledgeBaseLoaded event,
     Emitter<KnowledgeBaseState> emit,
   ) async {
-    emit(
-      state.copyWith(
-        projectId: event.projectId,
-        isLoading: true,
-      ),
-    );
+    emit(state.copyWith(isLoading: true, clearError: true));
 
-    final charactersResult =
-        await _characterRepository.getByProjectId(event.projectId);
-    if (charactersResult.isFailure) {
-      emit(_failureState(charactersResult.maybeFailure));
-      return;
+    try {
+      final results = await Future.wait([
+        _characterRepository.list(event.projectId),
+        _settingEntryRepository.list(event.projectId),
+        _noteRepository.list(event.projectId),
+      ]);
+
+      final charResult =
+          results[0] as AppResult<List<Character>>;
+      final settingResult =
+          results[1] as AppResult<List<SettingEntry>>;
+      final noteResult = results[2] as AppResult<List<Note>>;
+
+      if (charResult case AppFailure(:final error)) {
+        emit(state.copyWith(isLoading: false, error: error));
+        return;
+      }
+      if (settingResult case AppFailure(:final error)) {
+        emit(state.copyWith(isLoading: false, error: error));
+        return;
+      }
+      if (noteResult case AppFailure(:final error)) {
+        emit(state.copyWith(isLoading: false, error: error));
+        return;
+      }
+
+      emit(
+        state.copyWith(
+          isLoading: false,
+          characters: (charResult as AppSuccess<List<Character>>).value,
+          settingEntries:
+              (settingResult as AppSuccess<List<SettingEntry>>).value,
+          notes: (noteResult as AppSuccess<List<Note>>).value,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          isLoading: false,
+          error: AppError(
+            code: 'knowledge_base.load_failed',
+            message: e.toString(),
+            userMessage: '加载知识库数据失败',
+            source: AppErrorSource.storage,
+            recoverable: true,
+          ),
+        ),
+      );
     }
-
-    final notesResult = await _noteRepository.getByProjectId(event.projectId);
-    if (notesResult.isFailure) {
-      emit(_failureState(notesResult.maybeFailure));
-      return;
-    }
-
-    final settingsResult =
-        await _settingEntryRepository.getByProjectId(event.projectId);
-    if (settingsResult.isFailure) {
-      emit(_failureState(settingsResult.maybeFailure));
-      return;
-    }
-
-    final outlinesResult =
-        await _outlineNodeRepository.getByProjectId(event.projectId);
-    if (outlinesResult.isFailure) {
-      emit(_failureState(outlinesResult.maybeFailure));
-      return;
-    }
-
-    final characters = charactersResult.maybeSuccess ?? const <Character>[];
-    final notes = notesResult.maybeSuccess ?? const <Note>[];
-    final settings = settingsResult.maybeSuccess ?? const <SettingEntry>[];
-    final outlines = List<OutlineNode>.from(
-      outlinesResult.maybeSuccess ?? const <OutlineNode>[],
-    )..sort((a, b) => a.order.compareTo(b.order));
-
-    emit(
-      state.copyWith(
-        characters: characters,
-        notes: notes,
-        settingEntries: settings,
-        outlineNodes: outlines,
-        isLoading: false,
-      ),
-    );
-  }
-
-  void _onQueryChanged(
-    KnowledgeBaseQueryChanged event,
-    Emitter<KnowledgeBaseState> emit,
-  ) {
-    emit(state.copyWith(query: event.query));
   }
 
   Future<void> _onCharacterCreated(
-    KnowledgeCharacterCreated event,
+    CharacterCreated event,
     Emitter<KnowledgeBaseState> emit,
   ) async {
-    final name = event.name.trim();
-    if (name.isEmpty) {
-      emit(state.copyWith(error: '角色名称不能为空'));
-      return;
+    try {
+      final result = await _characterRepository.create(event.character);
+      if (result case AppFailure(:final error)) {
+        emit(state.copyWith(error: error));
+        return;
+      }
+      await _reloadFromProject(emit, event.character.projectId);
+    } catch (e) {
+      emit(state.copyWith(
+        error: AppError(
+          code: 'knowledge_base.character_create_failed',
+          message: e.toString(),
+          userMessage: '创建角色失败',
+          source: AppErrorSource.storage,
+          recoverable: true,
+        ),
+      ));
     }
-
-    final now = _clock.now();
-    final character = Character(
-      id: _idGenerator.generate(),
-      projectId: _requireProjectId(),
-      name: name,
-      description: event.description.trim(),
-      tags: _parseTags(event.tags),
-      createdAt: now,
-      updatedAt: now,
-    );
-    final result = await _characterRepository.create(character);
-    if (result.isFailure) {
-      emit(_failureState(result.maybeFailure));
-      return;
-    }
-    emit(
-      state.copyWith(
-        characters: [...state.characters, result.maybeSuccess!],
-        lastMessage: '角色已创建',
-      ),
-    );
   }
 
   Future<void> _onCharacterUpdated(
-    KnowledgeCharacterUpdated event,
+    CharacterUpdated event,
     Emitter<KnowledgeBaseState> emit,
   ) async {
-    final name = event.name.trim();
-    if (name.isEmpty) {
-      emit(state.copyWith(error: '角色名称不能为空'));
-      return;
+    try {
+      final result = await _characterRepository.update(event.character);
+      if (result case AppFailure(:final error)) {
+        emit(state.copyWith(error: error));
+        return;
+      }
+      _eventBus.publish(
+        domain_events.CharacterUpdated(
+          projectId: event.character.projectId,
+          characterId: event.character.id,
+          characterName: event.character.name,
+        ),
+      );
+      await _reloadFromProject(emit, event.character.projectId);
+    } catch (e) {
+      emit(state.copyWith(
+        error: AppError(
+          code: 'knowledge_base.character_update_failed',
+          message: e.toString(),
+          userMessage: '更新角色失败',
+          source: AppErrorSource.storage,
+          recoverable: true,
+        ),
+      ));
     }
-
-    final updated = event.character.copyWith(
-      name: name,
-      description: event.description.trim(),
-      tags: _parseTags(event.tags),
-      updatedAt: _clock.now(),
-    );
-    final result = await _characterRepository.update(updated);
-    if (result.isFailure) {
-      emit(_failureState(result.maybeFailure));
-      return;
-    }
-    emit(
-      state.copyWith(
-        characters: _replaceById(state.characters, result.maybeSuccess!),
-        lastMessage: '角色已更新',
-      ),
-    );
   }
 
   Future<void> _onCharacterDeleted(
-    KnowledgeCharacterDeleted event,
+    CharacterDeleted event,
     Emitter<KnowledgeBaseState> emit,
   ) async {
-    final result = await _characterRepository.delete(event.characterId);
-    if (result.isFailure) {
-      emit(_failureState(result.maybeFailure));
-      return;
+    try {
+      final result = await _characterRepository.delete(event.id);
+      if (result case AppFailure(:final error)) {
+        emit(state.copyWith(error: error));
+        return;
+      }
+      emit(state.copyWith(
+        characters:
+            state.characters.where((c) => c.id != event.id).toList(),
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        error: AppError(
+          code: 'knowledge_base.character_delete_failed',
+          message: e.toString(),
+          userMessage: '删除角色失败',
+          source: AppErrorSource.storage,
+          recoverable: true,
+        ),
+      ));
     }
-    emit(
-      state.copyWith(
-        characters: state.characters
-            .where((character) => character.id != event.characterId)
-            .toList(),
-        lastMessage: '角色已删除',
-      ),
-    );
-  }
-
-  Future<void> _onNoteCreated(
-    KnowledgeNoteCreated event,
-    Emitter<KnowledgeBaseState> emit,
-  ) async {
-    final title = event.title.trim();
-    if (title.isEmpty) {
-      emit(state.copyWith(error: '笔记标题不能为空'));
-      return;
-    }
-
-    final now = _clock.now();
-    final note = Note(
-      id: _idGenerator.generate(),
-      projectId: _requireProjectId(),
-      title: title,
-      content: event.content.trim(),
-      type: event.type,
-      sourceUrl: _emptyToNull(event.sourceUrl),
-      tags: _parseTags(event.tags),
-      createdAt: now,
-      updatedAt: now,
-    );
-    final result = await _noteRepository.create(note);
-    if (result.isFailure) {
-      emit(_failureState(result.maybeFailure));
-      return;
-    }
-    emit(
-      state.copyWith(
-        notes: [...state.notes, result.maybeSuccess!],
-        lastMessage: '笔记已创建',
-      ),
-    );
-  }
-
-  Future<void> _onNoteUpdated(
-    KnowledgeNoteUpdated event,
-    Emitter<KnowledgeBaseState> emit,
-  ) async {
-    final title = event.title.trim();
-    if (title.isEmpty) {
-      emit(state.copyWith(error: '笔记标题不能为空'));
-      return;
-    }
-
-    final updated = event.note.copyWith(
-      title: title,
-      content: event.content.trim(),
-      type: event.type,
-      sourceUrl: _emptyToNull(event.sourceUrl),
-      tags: _parseTags(event.tags),
-      updatedAt: _clock.now(),
-    );
-    final result = await _noteRepository.update(updated);
-    if (result.isFailure) {
-      emit(_failureState(result.maybeFailure));
-      return;
-    }
-    emit(
-      state.copyWith(
-        notes: _replaceById(state.notes, result.maybeSuccess!),
-        lastMessage: '笔记已更新',
-      ),
-    );
-  }
-
-  Future<void> _onNoteDeleted(
-    KnowledgeNoteDeleted event,
-    Emitter<KnowledgeBaseState> emit,
-  ) async {
-    final result = await _noteRepository.delete(event.noteId);
-    if (result.isFailure) {
-      emit(_failureState(result.maybeFailure));
-      return;
-    }
-    emit(
-      state.copyWith(
-        notes: state.notes.where((note) => note.id != event.noteId).toList(),
-        lastMessage: '笔记已删除',
-      ),
-    );
   }
 
   Future<void> _onSettingEntryCreated(
-    KnowledgeSettingEntryCreated event,
+    SettingEntryCreated event,
     Emitter<KnowledgeBaseState> emit,
   ) async {
-    final category = event.category.trim();
-    final title = event.title.trim();
-    if (category.isEmpty) {
-      emit(state.copyWith(error: '设定分类不能为空'));
-      return;
+    try {
+      final result =
+          await _settingEntryRepository.create(event.entry);
+      if (result case AppFailure(:final error)) {
+        emit(state.copyWith(error: error));
+        return;
+      }
+      await _reloadFromProject(emit, event.entry.projectId);
+    } catch (e) {
+      emit(state.copyWith(
+        error: AppError(
+          code: 'knowledge_base.setting_create_failed',
+          message: e.toString(),
+          userMessage: '创建设定失败',
+          source: AppErrorSource.storage,
+          recoverable: true,
+        ),
+      ));
     }
-    if (title.isEmpty) {
-      emit(state.copyWith(error: '设定标题不能为空'));
-      return;
-    }
-
-    final now = _clock.now();
-    final entry = SettingEntry(
-      id: _idGenerator.generate(),
-      projectId: _requireProjectId(),
-      category: category,
-      title: title,
-      content: event.content.trim(),
-      tags: _parseTags(event.tags),
-      createdAt: now,
-      updatedAt: now,
-    );
-    final result = await _settingEntryRepository.create(entry);
-    if (result.isFailure) {
-      emit(_failureState(result.maybeFailure));
-      return;
-    }
-    emit(
-      state.copyWith(
-        settingEntries: [...state.settingEntries, result.maybeSuccess!],
-        lastMessage: '设定已创建',
-      ),
-    );
   }
 
   Future<void> _onSettingEntryUpdated(
-    KnowledgeSettingEntryUpdated event,
+    SettingEntryUpdated event,
     Emitter<KnowledgeBaseState> emit,
   ) async {
-    final category = event.category.trim();
-    final title = event.title.trim();
-    if (category.isEmpty) {
-      emit(state.copyWith(error: '设定分类不能为空'));
-      return;
-    }
-    if (title.isEmpty) {
-      emit(state.copyWith(error: '设定标题不能为空'));
-      return;
-    }
-
-    final updated = event.entry.copyWith(
-      category: category,
-      title: title,
-      content: event.content.trim(),
-      tags: _parseTags(event.tags),
-      updatedAt: _clock.now(),
-    );
-    final result = await _settingEntryRepository.update(updated);
-    if (result.isFailure) {
-      emit(_failureState(result.maybeFailure));
-      return;
-    }
-    emit(
-      state.copyWith(
-        settingEntries: _replaceById(
-          state.settingEntries,
-          result.maybeSuccess!,
+    try {
+      final result =
+          await _settingEntryRepository.update(event.entry);
+      if (result case AppFailure(:final error)) {
+        emit(state.copyWith(error: error));
+        return;
+      }
+      await _reloadFromProject(emit, event.entry.projectId);
+    } catch (e) {
+      emit(state.copyWith(
+        error: AppError(
+          code: 'knowledge_base.setting_update_failed',
+          message: e.toString(),
+          userMessage: '更新设定失败',
+          source: AppErrorSource.storage,
+          recoverable: true,
         ),
-        lastMessage: '设定已更新',
-      ),
-    );
+      ));
+    }
   }
 
   Future<void> _onSettingEntryDeleted(
-    KnowledgeSettingEntryDeleted event,
+    SettingEntryDeleted event,
     Emitter<KnowledgeBaseState> emit,
   ) async {
-    final result = await _settingEntryRepository.delete(event.entryId);
-    if (result.isFailure) {
-      emit(_failureState(result.maybeFailure));
-      return;
-    }
-    emit(
-      state.copyWith(
+    try {
+      final result = await _settingEntryRepository.delete(event.id);
+      if (result case AppFailure(:final error)) {
+        emit(state.copyWith(error: error));
+        return;
+      }
+      emit(state.copyWith(
         settingEntries: state.settingEntries
-            .where((entry) => entry.id != event.entryId)
+            .where((s) => s.id != event.id)
             .toList(),
-        lastMessage: '设定已删除',
-      ),
-    );
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        error: AppError(
+          code: 'knowledge_base.setting_delete_failed',
+          message: e.toString(),
+          userMessage: '删除设定失败',
+          source: AppErrorSource.storage,
+          recoverable: true,
+        ),
+      ));
+    }
   }
 
-  Future<void> _onOutlineNodeCreated(
-    KnowledgeOutlineNodeCreated event,
+  Future<void> _onNoteCreated(
+    NoteCreated event,
     Emitter<KnowledgeBaseState> emit,
   ) async {
-    final title = event.title.trim();
-    if (title.isEmpty) {
-      emit(state.copyWith(error: '大纲标题不能为空'));
-      return;
-    }
-
-    final now = _clock.now();
-    final node = OutlineNode(
-      id: _idGenerator.generate(),
-      projectId: _requireProjectId(),
-      order: state.outlineNodes.length,
-      title: title,
-      summary: event.summary.trim(),
-      nodeType: event.nodeType,
-      status: event.status,
-      createdAt: now,
-      updatedAt: now,
-    );
-    final result = await _outlineNodeRepository.create(node);
-    if (result.isFailure) {
-      emit(_failureState(result.maybeFailure));
-      return;
-    }
-    emit(
-      state.copyWith(
-        outlineNodes: [...state.outlineNodes, result.maybeSuccess!],
-        lastMessage: '大纲节点已创建',
-      ),
-    );
-  }
-
-  Future<void> _onOutlineNodeUpdated(
-    KnowledgeOutlineNodeUpdated event,
-    Emitter<KnowledgeBaseState> emit,
-  ) async {
-    final title = event.title.trim();
-    if (title.isEmpty) {
-      emit(state.copyWith(error: '大纲标题不能为空'));
-      return;
-    }
-
-    final updated = event.node.copyWith(
-      title: title,
-      summary: event.summary.trim(),
-      nodeType: event.nodeType,
-      status: event.status,
-      updatedAt: _clock.now(),
-    );
-    final result = await _outlineNodeRepository.update(updated);
-    if (result.isFailure) {
-      emit(_failureState(result.maybeFailure));
-      return;
-    }
-    final nodes = _replaceById(state.outlineNodes, result.maybeSuccess!)
-      ..sort((a, b) => a.order.compareTo(b.order));
-    emit(
-      state.copyWith(
-        outlineNodes: nodes,
-        lastMessage: '大纲节点已更新',
-      ),
-    );
-  }
-
-  Future<void> _onOutlineNodeDeleted(
-    KnowledgeOutlineNodeDeleted event,
-    Emitter<KnowledgeBaseState> emit,
-  ) async {
-    final result = await _outlineNodeRepository.delete(event.nodeId);
-    if (result.isFailure) {
-      emit(_failureState(result.maybeFailure));
-      return;
-    }
-    emit(
-      state.copyWith(
-        outlineNodes: state.outlineNodes
-            .where((node) => node.id != event.nodeId)
-            .toList(),
-        lastMessage: '大纲节点已删除',
-      ),
-    );
-  }
-
-  KnowledgeBaseState _failureState(AppError? error) => state.copyWith(
-        isLoading: false,
-        error: error?.userMessage ?? '知识库操作失败',
+    try {
+      final result = await _noteRepository.create(event.note);
+      if (result case AppFailure(:final error)) {
+        emit(state.copyWith(error: error));
+        return;
+      }
+      _eventBus.publish(
+        domain_events.NoteCreated(
+          projectId: event.note.projectId,
+          noteId: event.note.id,
+          noteTitle: event.note.title,
+        ),
       );
-
-  String _requireProjectId() {
-    final projectId = state.projectId;
-    if (projectId == null || projectId.isEmpty) {
-      throw StateError('KnowledgeBaseBloc must be started before writes.');
+      await _reloadFromProject(emit, event.note.projectId);
+    } catch (e) {
+      emit(state.copyWith(
+        error: AppError(
+          code: 'knowledge_base.note_create_failed',
+          message: e.toString(),
+          userMessage: '创建笔记失败',
+          source: AppErrorSource.storage,
+          recoverable: true,
+        ),
+      ));
     }
-    return projectId;
   }
 
-  List<String> _parseTags(String input) => input
-      .replaceAll('\uFF0C', ',')
-      .split(RegExp(r'[,\s]+'))
-      .map((tag) => tag.trim())
-      .where((tag) => tag.isNotEmpty)
-      .toList();
-
-  String? _emptyToNull(String input) {
-    final trimmed = input.trim();
-    return trimmed.isEmpty ? null : trimmed;
+  Future<void> _onNoteUpdated(
+    NoteUpdated event,
+    Emitter<KnowledgeBaseState> emit,
+  ) async {
+    try {
+      final result = await _noteRepository.update(event.note);
+      if (result case AppFailure(:final error)) {
+        emit(state.copyWith(error: error));
+        return;
+      }
+      await _reloadFromProject(emit, event.note.projectId);
+    } catch (e) {
+      emit(state.copyWith(
+        error: AppError(
+          code: 'knowledge_base.note_update_failed',
+          message: e.toString(),
+          userMessage: '更新笔记失败',
+          source: AppErrorSource.storage,
+          recoverable: true,
+        ),
+      ));
+    }
   }
 
-  List<T> _replaceById<T>(List<T> items, T updated) {
-    String idOf(T item) => switch (item) {
-          Character(:final id) => id,
-          Note(:final id) => id,
-          SettingEntry(:final id) => id,
-          OutlineNode(:final id) => id,
-          _ => throw ArgumentError('Unsupported knowledge item type'),
-        };
+  Future<void> _onNoteDeleted(
+    NoteDeleted event,
+    Emitter<KnowledgeBaseState> emit,
+  ) async {
+    try {
+      final result = await _noteRepository.delete(event.id);
+      if (result case AppFailure(:final error)) {
+        emit(state.copyWith(error: error));
+        return;
+      }
+      emit(state.copyWith(
+        notes: state.notes.where((n) => n.id != event.id).toList(),
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        error: AppError(
+          code: 'knowledge_base.note_delete_failed',
+          message: e.toString(),
+          userMessage: '删除笔记失败',
+          source: AppErrorSource.storage,
+          recoverable: true,
+        ),
+      ));
+    }
+  }
 
-    return items
-        .map((item) => idOf(item) == idOf(updated) ? updated : item)
-        .toList();
+  void _onTabChanged(TabChanged event, Emitter<KnowledgeBaseState> emit) {
+    emit(state.copyWith(activeTab: event.tab));
+  }
+
+  Future<void> _reloadFromProject(
+    Emitter<KnowledgeBaseState> emit,
+    String projectId,
+  ) async {
+    if (state.characters.isNotEmpty ||
+        state.settingEntries.isNotEmpty ||
+        state.notes.isNotEmpty) {
+      add(KnowledgeBaseLoaded(projectId));
+    }
   }
 }

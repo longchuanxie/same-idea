@@ -14,392 +14,6 @@ T _$identity<T>(T value) => value;
 final _privateConstructorUsedError = UnsupportedError(
     'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
 
-CharacterRelationship _$CharacterRelationshipFromJson(
-    Map<String, dynamic> json) {
-  return _CharacterRelationship.fromJson(json);
-}
-
-/// @nodoc
-mixin _$CharacterRelationship {
-  String get targetCharacterId => throw _privateConstructorUsedError;
-  String get relationType => throw _privateConstructorUsedError;
-  String get description => throw _privateConstructorUsedError;
-
-  /// Serializes this CharacterRelationship to a JSON map.
-  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of CharacterRelationship
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  $CharacterRelationshipCopyWith<CharacterRelationship> get copyWith =>
-      throw _privateConstructorUsedError;
-}
-
-/// @nodoc
-abstract class $CharacterRelationshipCopyWith<$Res> {
-  factory $CharacterRelationshipCopyWith(CharacterRelationship value,
-          $Res Function(CharacterRelationship) then) =
-      _$CharacterRelationshipCopyWithImpl<$Res, CharacterRelationship>;
-  @useResult
-  $Res call(
-      {String targetCharacterId, String relationType, String description});
-}
-
-/// @nodoc
-class _$CharacterRelationshipCopyWithImpl<$Res,
-        $Val extends CharacterRelationship>
-    implements $CharacterRelationshipCopyWith<$Res> {
-  _$CharacterRelationshipCopyWithImpl(this._value, this._then);
-
-  // ignore: unused_field
-  final $Val _value;
-  // ignore: unused_field
-  final $Res Function($Val) _then;
-
-  /// Create a copy of CharacterRelationship
-  /// with the given fields replaced by the non-null parameter values.
-  @pragma('vm:prefer-inline')
-  @override
-  $Res call({
-    Object? targetCharacterId = null,
-    Object? relationType = null,
-    Object? description = null,
-  }) {
-    return _then(_value.copyWith(
-      targetCharacterId: null == targetCharacterId
-          ? _value.targetCharacterId
-          : targetCharacterId // ignore: cast_nullable_to_non_nullable
-              as String,
-      relationType: null == relationType
-          ? _value.relationType
-          : relationType // ignore: cast_nullable_to_non_nullable
-              as String,
-      description: null == description
-          ? _value.description
-          : description // ignore: cast_nullable_to_non_nullable
-              as String,
-    ) as $Val);
-  }
-}
-
-/// @nodoc
-abstract class _$$CharacterRelationshipImplCopyWith<$Res>
-    implements $CharacterRelationshipCopyWith<$Res> {
-  factory _$$CharacterRelationshipImplCopyWith(
-          _$CharacterRelationshipImpl value,
-          $Res Function(_$CharacterRelationshipImpl) then) =
-      __$$CharacterRelationshipImplCopyWithImpl<$Res>;
-  @override
-  @useResult
-  $Res call(
-      {String targetCharacterId, String relationType, String description});
-}
-
-/// @nodoc
-class __$$CharacterRelationshipImplCopyWithImpl<$Res>
-    extends _$CharacterRelationshipCopyWithImpl<$Res,
-        _$CharacterRelationshipImpl>
-    implements _$$CharacterRelationshipImplCopyWith<$Res> {
-  __$$CharacterRelationshipImplCopyWithImpl(_$CharacterRelationshipImpl _value,
-      $Res Function(_$CharacterRelationshipImpl) _then)
-      : super(_value, _then);
-
-  /// Create a copy of CharacterRelationship
-  /// with the given fields replaced by the non-null parameter values.
-  @pragma('vm:prefer-inline')
-  @override
-  $Res call({
-    Object? targetCharacterId = null,
-    Object? relationType = null,
-    Object? description = null,
-  }) {
-    return _then(_$CharacterRelationshipImpl(
-      targetCharacterId: null == targetCharacterId
-          ? _value.targetCharacterId
-          : targetCharacterId // ignore: cast_nullable_to_non_nullable
-              as String,
-      relationType: null == relationType
-          ? _value.relationType
-          : relationType // ignore: cast_nullable_to_non_nullable
-              as String,
-      description: null == description
-          ? _value.description
-          : description // ignore: cast_nullable_to_non_nullable
-              as String,
-    ));
-  }
-}
-
-/// @nodoc
-@JsonSerializable()
-class _$CharacterRelationshipImpl implements _CharacterRelationship {
-  const _$CharacterRelationshipImpl(
-      {required this.targetCharacterId,
-      required this.relationType,
-      this.description = ''});
-
-  factory _$CharacterRelationshipImpl.fromJson(Map<String, dynamic> json) =>
-      _$$CharacterRelationshipImplFromJson(json);
-
-  @override
-  final String targetCharacterId;
-  @override
-  final String relationType;
-  @override
-  @JsonKey()
-  final String description;
-
-  @override
-  String toString() {
-    return 'CharacterRelationship(targetCharacterId: $targetCharacterId, relationType: $relationType, description: $description)';
-  }
-
-  @override
-  bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is _$CharacterRelationshipImpl &&
-            (identical(other.targetCharacterId, targetCharacterId) ||
-                other.targetCharacterId == targetCharacterId) &&
-            (identical(other.relationType, relationType) ||
-                other.relationType == relationType) &&
-            (identical(other.description, description) ||
-                other.description == description));
-  }
-
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  @override
-  int get hashCode =>
-      Object.hash(runtimeType, targetCharacterId, relationType, description);
-
-  /// Create a copy of CharacterRelationship
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  @override
-  @pragma('vm:prefer-inline')
-  _$$CharacterRelationshipImplCopyWith<_$CharacterRelationshipImpl>
-      get copyWith => __$$CharacterRelationshipImplCopyWithImpl<
-          _$CharacterRelationshipImpl>(this, _$identity);
-
-  @override
-  Map<String, dynamic> toJson() {
-    return _$$CharacterRelationshipImplToJson(
-      this,
-    );
-  }
-}
-
-abstract class _CharacterRelationship implements CharacterRelationship {
-  const factory _CharacterRelationship(
-      {required final String targetCharacterId,
-      required final String relationType,
-      final String description}) = _$CharacterRelationshipImpl;
-
-  factory _CharacterRelationship.fromJson(Map<String, dynamic> json) =
-      _$CharacterRelationshipImpl.fromJson;
-
-  @override
-  String get targetCharacterId;
-  @override
-  String get relationType;
-  @override
-  String get description;
-
-  /// Create a copy of CharacterRelationship
-  /// with the given fields replaced by the non-null parameter values.
-  @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  _$$CharacterRelationshipImplCopyWith<_$CharacterRelationshipImpl>
-      get copyWith => throw _privateConstructorUsedError;
-}
-
-ConsistencyFact _$ConsistencyFactFromJson(Map<String, dynamic> json) {
-  return _ConsistencyFact.fromJson(json);
-}
-
-/// @nodoc
-mixin _$ConsistencyFact {
-  String get key => throw _privateConstructorUsedError;
-  String get value => throw _privateConstructorUsedError;
-  String? get sourceChapterId => throw _privateConstructorUsedError;
-
-  /// Serializes this ConsistencyFact to a JSON map.
-  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of ConsistencyFact
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  $ConsistencyFactCopyWith<ConsistencyFact> get copyWith =>
-      throw _privateConstructorUsedError;
-}
-
-/// @nodoc
-abstract class $ConsistencyFactCopyWith<$Res> {
-  factory $ConsistencyFactCopyWith(
-          ConsistencyFact value, $Res Function(ConsistencyFact) then) =
-      _$ConsistencyFactCopyWithImpl<$Res, ConsistencyFact>;
-  @useResult
-  $Res call({String key, String value, String? sourceChapterId});
-}
-
-/// @nodoc
-class _$ConsistencyFactCopyWithImpl<$Res, $Val extends ConsistencyFact>
-    implements $ConsistencyFactCopyWith<$Res> {
-  _$ConsistencyFactCopyWithImpl(this._value, this._then);
-
-  // ignore: unused_field
-  final $Val _value;
-  // ignore: unused_field
-  final $Res Function($Val) _then;
-
-  /// Create a copy of ConsistencyFact
-  /// with the given fields replaced by the non-null parameter values.
-  @pragma('vm:prefer-inline')
-  @override
-  $Res call({
-    Object? key = null,
-    Object? value = null,
-    Object? sourceChapterId = freezed,
-  }) {
-    return _then(_value.copyWith(
-      key: null == key
-          ? _value.key
-          : key // ignore: cast_nullable_to_non_nullable
-              as String,
-      value: null == value
-          ? _value.value
-          : value // ignore: cast_nullable_to_non_nullable
-              as String,
-      sourceChapterId: freezed == sourceChapterId
-          ? _value.sourceChapterId
-          : sourceChapterId // ignore: cast_nullable_to_non_nullable
-              as String?,
-    ) as $Val);
-  }
-}
-
-/// @nodoc
-abstract class _$$ConsistencyFactImplCopyWith<$Res>
-    implements $ConsistencyFactCopyWith<$Res> {
-  factory _$$ConsistencyFactImplCopyWith(_$ConsistencyFactImpl value,
-          $Res Function(_$ConsistencyFactImpl) then) =
-      __$$ConsistencyFactImplCopyWithImpl<$Res>;
-  @override
-  @useResult
-  $Res call({String key, String value, String? sourceChapterId});
-}
-
-/// @nodoc
-class __$$ConsistencyFactImplCopyWithImpl<$Res>
-    extends _$ConsistencyFactCopyWithImpl<$Res, _$ConsistencyFactImpl>
-    implements _$$ConsistencyFactImplCopyWith<$Res> {
-  __$$ConsistencyFactImplCopyWithImpl(
-      _$ConsistencyFactImpl _value, $Res Function(_$ConsistencyFactImpl) _then)
-      : super(_value, _then);
-
-  /// Create a copy of ConsistencyFact
-  /// with the given fields replaced by the non-null parameter values.
-  @pragma('vm:prefer-inline')
-  @override
-  $Res call({
-    Object? key = null,
-    Object? value = null,
-    Object? sourceChapterId = freezed,
-  }) {
-    return _then(_$ConsistencyFactImpl(
-      key: null == key
-          ? _value.key
-          : key // ignore: cast_nullable_to_non_nullable
-              as String,
-      value: null == value
-          ? _value.value
-          : value // ignore: cast_nullable_to_non_nullable
-              as String,
-      sourceChapterId: freezed == sourceChapterId
-          ? _value.sourceChapterId
-          : sourceChapterId // ignore: cast_nullable_to_non_nullable
-              as String?,
-    ));
-  }
-}
-
-/// @nodoc
-@JsonSerializable()
-class _$ConsistencyFactImpl implements _ConsistencyFact {
-  const _$ConsistencyFactImpl(
-      {required this.key, required this.value, this.sourceChapterId});
-
-  factory _$ConsistencyFactImpl.fromJson(Map<String, dynamic> json) =>
-      _$$ConsistencyFactImplFromJson(json);
-
-  @override
-  final String key;
-  @override
-  final String value;
-  @override
-  final String? sourceChapterId;
-
-  @override
-  String toString() {
-    return 'ConsistencyFact(key: $key, value: $value, sourceChapterId: $sourceChapterId)';
-  }
-
-  @override
-  bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is _$ConsistencyFactImpl &&
-            (identical(other.key, key) || other.key == key) &&
-            (identical(other.value, value) || other.value == value) &&
-            (identical(other.sourceChapterId, sourceChapterId) ||
-                other.sourceChapterId == sourceChapterId));
-  }
-
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  @override
-  int get hashCode => Object.hash(runtimeType, key, value, sourceChapterId);
-
-  /// Create a copy of ConsistencyFact
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  @override
-  @pragma('vm:prefer-inline')
-  _$$ConsistencyFactImplCopyWith<_$ConsistencyFactImpl> get copyWith =>
-      __$$ConsistencyFactImplCopyWithImpl<_$ConsistencyFactImpl>(
-          this, _$identity);
-
-  @override
-  Map<String, dynamic> toJson() {
-    return _$$ConsistencyFactImplToJson(
-      this,
-    );
-  }
-}
-
-abstract class _ConsistencyFact implements ConsistencyFact {
-  const factory _ConsistencyFact(
-      {required final String key,
-      required final String value,
-      final String? sourceChapterId}) = _$ConsistencyFactImpl;
-
-  factory _ConsistencyFact.fromJson(Map<String, dynamic> json) =
-      _$ConsistencyFactImpl.fromJson;
-
-  @override
-  String get key;
-  @override
-  String get value;
-  @override
-  String? get sourceChapterId;
-
-  /// Create a copy of ConsistencyFact
-  /// with the given fields replaced by the non-null parameter values.
-  @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  _$$ConsistencyFactImplCopyWith<_$ConsistencyFactImpl> get copyWith =>
-      throw _privateConstructorUsedError;
-}
-
 Character _$CharacterFromJson(Map<String, dynamic> json) {
   return _Character.fromJson(json);
 }
@@ -409,11 +23,12 @@ mixin _$Character {
   String get id => throw _privateConstructorUsedError;
   String get projectId => throw _privateConstructorUsedError;
   String get name => throw _privateConstructorUsedError;
-  DateTime get createdAt => throw _privateConstructorUsedError;
-  DateTime get updatedAt => throw _privateConstructorUsedError;
-  List<String> get aliases => throw _privateConstructorUsedError;
-  CharacterRole get role => throw _privateConstructorUsedError;
   String get description => throw _privateConstructorUsedError;
+  CharacterRole get role => throw _privateConstructorUsedError;
+  String get avatarUrl => throw _privateConstructorUsedError;
+  Map<String, String> get traits => throw _privateConstructorUsedError;
+  String get background => throw _privateConstructorUsedError;
+  List<String> get aliases => throw _privateConstructorUsedError;
   String get appearance => throw _privateConstructorUsedError;
   String get personality => throw _privateConstructorUsedError;
   String get goals => throw _privateConstructorUsedError;
@@ -421,10 +36,9 @@ mixin _$Character {
   String get secrets => throw _privateConstructorUsedError;
   List<CharacterRelationship> get relationships =>
       throw _privateConstructorUsedError;
-  String? get firstAppearanceChapterId => throw _privateConstructorUsedError;
-  List<String> get tags => throw _privateConstructorUsedError;
-  List<ConsistencyFact> get consistencyFacts =>
-      throw _privateConstructorUsedError;
+  List<String> get consistencyFacts => throw _privateConstructorUsedError;
+  DateTime get createdAt => throw _privateConstructorUsedError;
+  DateTime get updatedAt => throw _privateConstructorUsedError;
   int get schemaVersion => throw _privateConstructorUsedError;
 
   /// Serializes this Character to a JSON map.
@@ -446,20 +60,21 @@ abstract class $CharacterCopyWith<$Res> {
       {String id,
       String projectId,
       String name,
-      DateTime createdAt,
-      DateTime updatedAt,
-      List<String> aliases,
-      CharacterRole role,
       String description,
+      CharacterRole role,
+      String avatarUrl,
+      Map<String, String> traits,
+      String background,
+      List<String> aliases,
       String appearance,
       String personality,
       String goals,
       String conflicts,
       String secrets,
       List<CharacterRelationship> relationships,
-      String? firstAppearanceChapterId,
-      List<String> tags,
-      List<ConsistencyFact> consistencyFacts,
+      List<String> consistencyFacts,
+      DateTime createdAt,
+      DateTime updatedAt,
       int schemaVersion});
 }
 
@@ -481,20 +96,21 @@ class _$CharacterCopyWithImpl<$Res, $Val extends Character>
     Object? id = null,
     Object? projectId = null,
     Object? name = null,
-    Object? createdAt = null,
-    Object? updatedAt = null,
-    Object? aliases = null,
-    Object? role = null,
     Object? description = null,
+    Object? role = null,
+    Object? avatarUrl = null,
+    Object? traits = null,
+    Object? background = null,
+    Object? aliases = null,
     Object? appearance = null,
     Object? personality = null,
     Object? goals = null,
     Object? conflicts = null,
     Object? secrets = null,
     Object? relationships = null,
-    Object? firstAppearanceChapterId = freezed,
-    Object? tags = null,
     Object? consistencyFacts = null,
+    Object? createdAt = null,
+    Object? updatedAt = null,
     Object? schemaVersion = null,
   }) {
     return _then(_value.copyWith(
@@ -510,26 +126,30 @@ class _$CharacterCopyWithImpl<$Res, $Val extends Character>
           ? _value.name
           : name // ignore: cast_nullable_to_non_nullable
               as String,
-      createdAt: null == createdAt
-          ? _value.createdAt
-          : createdAt // ignore: cast_nullable_to_non_nullable
-              as DateTime,
-      updatedAt: null == updatedAt
-          ? _value.updatedAt
-          : updatedAt // ignore: cast_nullable_to_non_nullable
-              as DateTime,
-      aliases: null == aliases
-          ? _value.aliases
-          : aliases // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      role: null == role
-          ? _value.role
-          : role // ignore: cast_nullable_to_non_nullable
-              as CharacterRole,
       description: null == description
           ? _value.description
           : description // ignore: cast_nullable_to_non_nullable
               as String,
+      role: null == role
+          ? _value.role
+          : role // ignore: cast_nullable_to_non_nullable
+              as CharacterRole,
+      avatarUrl: null == avatarUrl
+          ? _value.avatarUrl
+          : avatarUrl // ignore: cast_nullable_to_non_nullable
+              as String,
+      traits: null == traits
+          ? _value.traits
+          : traits // ignore: cast_nullable_to_non_nullable
+              as Map<String, String>,
+      background: null == background
+          ? _value.background
+          : background // ignore: cast_nullable_to_non_nullable
+              as String,
+      aliases: null == aliases
+          ? _value.aliases
+          : aliases // ignore: cast_nullable_to_non_nullable
+              as List<String>,
       appearance: null == appearance
           ? _value.appearance
           : appearance // ignore: cast_nullable_to_non_nullable
@@ -554,18 +174,18 @@ class _$CharacterCopyWithImpl<$Res, $Val extends Character>
           ? _value.relationships
           : relationships // ignore: cast_nullable_to_non_nullable
               as List<CharacterRelationship>,
-      firstAppearanceChapterId: freezed == firstAppearanceChapterId
-          ? _value.firstAppearanceChapterId
-          : firstAppearanceChapterId // ignore: cast_nullable_to_non_nullable
-              as String?,
-      tags: null == tags
-          ? _value.tags
-          : tags // ignore: cast_nullable_to_non_nullable
-              as List<String>,
       consistencyFacts: null == consistencyFacts
           ? _value.consistencyFacts
           : consistencyFacts // ignore: cast_nullable_to_non_nullable
-              as List<ConsistencyFact>,
+              as List<String>,
+      createdAt: null == createdAt
+          ? _value.createdAt
+          : createdAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      updatedAt: null == updatedAt
+          ? _value.updatedAt
+          : updatedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
       schemaVersion: null == schemaVersion
           ? _value.schemaVersion
           : schemaVersion // ignore: cast_nullable_to_non_nullable
@@ -586,20 +206,21 @@ abstract class _$$CharacterImplCopyWith<$Res>
       {String id,
       String projectId,
       String name,
-      DateTime createdAt,
-      DateTime updatedAt,
-      List<String> aliases,
-      CharacterRole role,
       String description,
+      CharacterRole role,
+      String avatarUrl,
+      Map<String, String> traits,
+      String background,
+      List<String> aliases,
       String appearance,
       String personality,
       String goals,
       String conflicts,
       String secrets,
       List<CharacterRelationship> relationships,
-      String? firstAppearanceChapterId,
-      List<String> tags,
-      List<ConsistencyFact> consistencyFacts,
+      List<String> consistencyFacts,
+      DateTime createdAt,
+      DateTime updatedAt,
       int schemaVersion});
 }
 
@@ -619,20 +240,21 @@ class __$$CharacterImplCopyWithImpl<$Res>
     Object? id = null,
     Object? projectId = null,
     Object? name = null,
-    Object? createdAt = null,
-    Object? updatedAt = null,
-    Object? aliases = null,
-    Object? role = null,
     Object? description = null,
+    Object? role = null,
+    Object? avatarUrl = null,
+    Object? traits = null,
+    Object? background = null,
+    Object? aliases = null,
     Object? appearance = null,
     Object? personality = null,
     Object? goals = null,
     Object? conflicts = null,
     Object? secrets = null,
     Object? relationships = null,
-    Object? firstAppearanceChapterId = freezed,
-    Object? tags = null,
     Object? consistencyFacts = null,
+    Object? createdAt = null,
+    Object? updatedAt = null,
     Object? schemaVersion = null,
   }) {
     return _then(_$CharacterImpl(
@@ -648,26 +270,30 @@ class __$$CharacterImplCopyWithImpl<$Res>
           ? _value.name
           : name // ignore: cast_nullable_to_non_nullable
               as String,
-      createdAt: null == createdAt
-          ? _value.createdAt
-          : createdAt // ignore: cast_nullable_to_non_nullable
-              as DateTime,
-      updatedAt: null == updatedAt
-          ? _value.updatedAt
-          : updatedAt // ignore: cast_nullable_to_non_nullable
-              as DateTime,
-      aliases: null == aliases
-          ? _value._aliases
-          : aliases // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      role: null == role
-          ? _value.role
-          : role // ignore: cast_nullable_to_non_nullable
-              as CharacterRole,
       description: null == description
           ? _value.description
           : description // ignore: cast_nullable_to_non_nullable
               as String,
+      role: null == role
+          ? _value.role
+          : role // ignore: cast_nullable_to_non_nullable
+              as CharacterRole,
+      avatarUrl: null == avatarUrl
+          ? _value.avatarUrl
+          : avatarUrl // ignore: cast_nullable_to_non_nullable
+              as String,
+      traits: null == traits
+          ? _value._traits
+          : traits // ignore: cast_nullable_to_non_nullable
+              as Map<String, String>,
+      background: null == background
+          ? _value.background
+          : background // ignore: cast_nullable_to_non_nullable
+              as String,
+      aliases: null == aliases
+          ? _value._aliases
+          : aliases // ignore: cast_nullable_to_non_nullable
+              as List<String>,
       appearance: null == appearance
           ? _value.appearance
           : appearance // ignore: cast_nullable_to_non_nullable
@@ -692,18 +318,18 @@ class __$$CharacterImplCopyWithImpl<$Res>
           ? _value._relationships
           : relationships // ignore: cast_nullable_to_non_nullable
               as List<CharacterRelationship>,
-      firstAppearanceChapterId: freezed == firstAppearanceChapterId
-          ? _value.firstAppearanceChapterId
-          : firstAppearanceChapterId // ignore: cast_nullable_to_non_nullable
-              as String?,
-      tags: null == tags
-          ? _value._tags
-          : tags // ignore: cast_nullable_to_non_nullable
-              as List<String>,
       consistencyFacts: null == consistencyFacts
           ? _value._consistencyFacts
           : consistencyFacts // ignore: cast_nullable_to_non_nullable
-              as List<ConsistencyFact>,
+              as List<String>,
+      createdAt: null == createdAt
+          ? _value.createdAt
+          : createdAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      updatedAt: null == updatedAt
+          ? _value.updatedAt
+          : updatedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
       schemaVersion: null == schemaVersion
           ? _value.schemaVersion
           : schemaVersion // ignore: cast_nullable_to_non_nullable
@@ -719,24 +345,25 @@ class _$CharacterImpl implements _Character {
       {required this.id,
       required this.projectId,
       required this.name,
-      required this.createdAt,
-      required this.updatedAt,
-      final List<String> aliases = const [],
-      this.role = CharacterRole.supporting,
       this.description = '',
+      this.role = CharacterRole.supporting,
+      this.avatarUrl = '',
+      final Map<String, String> traits = const {},
+      this.background = '',
+      final List<String> aliases = const [],
       this.appearance = '',
       this.personality = '',
       this.goals = '',
       this.conflicts = '',
       this.secrets = '',
       final List<CharacterRelationship> relationships = const [],
-      this.firstAppearanceChapterId,
-      final List<String> tags = const [],
-      final List<ConsistencyFact> consistencyFacts = const [],
+      final List<String> consistencyFacts = const [],
+      required this.createdAt,
+      required this.updatedAt,
       this.schemaVersion = 1})
-      : _aliases = aliases,
+      : _traits = traits,
+        _aliases = aliases,
         _relationships = relationships,
-        _tags = tags,
         _consistencyFacts = consistencyFacts;
 
   factory _$CharacterImpl.fromJson(Map<String, dynamic> json) =>
@@ -749,9 +376,26 @@ class _$CharacterImpl implements _Character {
   @override
   final String name;
   @override
-  final DateTime createdAt;
+  @JsonKey()
+  final String description;
   @override
-  final DateTime updatedAt;
+  @JsonKey()
+  final CharacterRole role;
+  @override
+  @JsonKey()
+  final String avatarUrl;
+  final Map<String, String> _traits;
+  @override
+  @JsonKey()
+  Map<String, String> get traits {
+    if (_traits is EqualUnmodifiableMapView) return _traits;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableMapView(_traits);
+  }
+
+  @override
+  @JsonKey()
+  final String background;
   final List<String> _aliases;
   @override
   @JsonKey()
@@ -761,12 +405,6 @@ class _$CharacterImpl implements _Character {
     return EqualUnmodifiableListView(_aliases);
   }
 
-  @override
-  @JsonKey()
-  final CharacterRole role;
-  @override
-  @JsonKey()
-  final String description;
   @override
   @JsonKey()
   final String appearance;
@@ -791,21 +429,10 @@ class _$CharacterImpl implements _Character {
     return EqualUnmodifiableListView(_relationships);
   }
 
-  @override
-  final String? firstAppearanceChapterId;
-  final List<String> _tags;
+  final List<String> _consistencyFacts;
   @override
   @JsonKey()
-  List<String> get tags {
-    if (_tags is EqualUnmodifiableListView) return _tags;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_tags);
-  }
-
-  final List<ConsistencyFact> _consistencyFacts;
-  @override
-  @JsonKey()
-  List<ConsistencyFact> get consistencyFacts {
+  List<String> get consistencyFacts {
     if (_consistencyFacts is EqualUnmodifiableListView)
       return _consistencyFacts;
     // ignore: implicit_dynamic_type
@@ -813,12 +440,16 @@ class _$CharacterImpl implements _Character {
   }
 
   @override
+  final DateTime createdAt;
+  @override
+  final DateTime updatedAt;
+  @override
   @JsonKey()
   final int schemaVersion;
 
   @override
   String toString() {
-    return 'Character(id: $id, projectId: $projectId, name: $name, createdAt: $createdAt, updatedAt: $updatedAt, aliases: $aliases, role: $role, description: $description, appearance: $appearance, personality: $personality, goals: $goals, conflicts: $conflicts, secrets: $secrets, relationships: $relationships, firstAppearanceChapterId: $firstAppearanceChapterId, tags: $tags, consistencyFacts: $consistencyFacts, schemaVersion: $schemaVersion)';
+    return 'Character(id: $id, projectId: $projectId, name: $name, description: $description, role: $role, avatarUrl: $avatarUrl, traits: $traits, background: $background, aliases: $aliases, appearance: $appearance, personality: $personality, goals: $goals, conflicts: $conflicts, secrets: $secrets, relationships: $relationships, consistencyFacts: $consistencyFacts, createdAt: $createdAt, updatedAt: $updatedAt, schemaVersion: $schemaVersion)';
   }
 
   @override
@@ -830,14 +461,15 @@ class _$CharacterImpl implements _Character {
             (identical(other.projectId, projectId) ||
                 other.projectId == projectId) &&
             (identical(other.name, name) || other.name == name) &&
-            (identical(other.createdAt, createdAt) ||
-                other.createdAt == createdAt) &&
-            (identical(other.updatedAt, updatedAt) ||
-                other.updatedAt == updatedAt) &&
-            const DeepCollectionEquality().equals(other._aliases, _aliases) &&
-            (identical(other.role, role) || other.role == role) &&
             (identical(other.description, description) ||
                 other.description == description) &&
+            (identical(other.role, role) || other.role == role) &&
+            (identical(other.avatarUrl, avatarUrl) ||
+                other.avatarUrl == avatarUrl) &&
+            const DeepCollectionEquality().equals(other._traits, _traits) &&
+            (identical(other.background, background) ||
+                other.background == background) &&
+            const DeepCollectionEquality().equals(other._aliases, _aliases) &&
             (identical(other.appearance, appearance) ||
                 other.appearance == appearance) &&
             (identical(other.personality, personality) ||
@@ -848,38 +480,40 @@ class _$CharacterImpl implements _Character {
             (identical(other.secrets, secrets) || other.secrets == secrets) &&
             const DeepCollectionEquality()
                 .equals(other._relationships, _relationships) &&
-            (identical(
-                    other.firstAppearanceChapterId, firstAppearanceChapterId) ||
-                other.firstAppearanceChapterId == firstAppearanceChapterId) &&
-            const DeepCollectionEquality().equals(other._tags, _tags) &&
             const DeepCollectionEquality()
                 .equals(other._consistencyFacts, _consistencyFacts) &&
+            (identical(other.createdAt, createdAt) ||
+                other.createdAt == createdAt) &&
+            (identical(other.updatedAt, updatedAt) ||
+                other.updatedAt == updatedAt) &&
             (identical(other.schemaVersion, schemaVersion) ||
                 other.schemaVersion == schemaVersion));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(
-      runtimeType,
-      id,
-      projectId,
-      name,
-      createdAt,
-      updatedAt,
-      const DeepCollectionEquality().hash(_aliases),
-      role,
-      description,
-      appearance,
-      personality,
-      goals,
-      conflicts,
-      secrets,
-      const DeepCollectionEquality().hash(_relationships),
-      firstAppearanceChapterId,
-      const DeepCollectionEquality().hash(_tags),
-      const DeepCollectionEquality().hash(_consistencyFacts),
-      schemaVersion);
+  int get hashCode => Object.hashAll([
+        runtimeType,
+        id,
+        projectId,
+        name,
+        description,
+        role,
+        avatarUrl,
+        const DeepCollectionEquality().hash(_traits),
+        background,
+        const DeepCollectionEquality().hash(_aliases),
+        appearance,
+        personality,
+        goals,
+        conflicts,
+        secrets,
+        const DeepCollectionEquality().hash(_relationships),
+        const DeepCollectionEquality().hash(_consistencyFacts),
+        createdAt,
+        updatedAt,
+        schemaVersion
+      ]);
 
   /// Create a copy of Character
   /// with the given fields replaced by the non-null parameter values.
@@ -902,20 +536,21 @@ abstract class _Character implements Character {
       {required final String id,
       required final String projectId,
       required final String name,
-      required final DateTime createdAt,
-      required final DateTime updatedAt,
-      final List<String> aliases,
-      final CharacterRole role,
       final String description,
+      final CharacterRole role,
+      final String avatarUrl,
+      final Map<String, String> traits,
+      final String background,
+      final List<String> aliases,
       final String appearance,
       final String personality,
       final String goals,
       final String conflicts,
       final String secrets,
       final List<CharacterRelationship> relationships,
-      final String? firstAppearanceChapterId,
-      final List<String> tags,
-      final List<ConsistencyFact> consistencyFacts,
+      final List<String> consistencyFacts,
+      required final DateTime createdAt,
+      required final DateTime updatedAt,
       final int schemaVersion}) = _$CharacterImpl;
 
   factory _Character.fromJson(Map<String, dynamic> json) =
@@ -928,15 +563,17 @@ abstract class _Character implements Character {
   @override
   String get name;
   @override
-  DateTime get createdAt;
-  @override
-  DateTime get updatedAt;
-  @override
-  List<String> get aliases;
+  String get description;
   @override
   CharacterRole get role;
   @override
-  String get description;
+  String get avatarUrl;
+  @override
+  Map<String, String> get traits;
+  @override
+  String get background;
+  @override
+  List<String> get aliases;
   @override
   String get appearance;
   @override
@@ -950,11 +587,11 @@ abstract class _Character implements Character {
   @override
   List<CharacterRelationship> get relationships;
   @override
-  String? get firstAppearanceChapterId;
+  List<String> get consistencyFacts;
   @override
-  List<String> get tags;
+  DateTime get createdAt;
   @override
-  List<ConsistencyFact> get consistencyFacts;
+  DateTime get updatedAt;
   @override
   int get schemaVersion;
 

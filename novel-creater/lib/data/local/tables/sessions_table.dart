@@ -1,20 +1,22 @@
 import 'package:drift/drift.dart';
+import 'package:novel_creator/data/local/tables/projects_table.dart';
 
-class SessionsTable extends Table {
+@DataClassName('SessionRow')
+class Sessions extends Table {
   TextColumn get id => text()();
-  TextColumn get projectId => text()();
+  TextColumn get projectId =>
+      text().references(Projects, #id, onDelete: KeyAction.cascade)();
   TextColumn get title => text()();
-  TextColumn get stage => text().withDefault(const Constant('writing'))();
-  TextColumn get parentSessionId => text().nullable()();
-  TextColumn get branchName => text().nullable()();
-  TextColumn get messages => text().withDefault(const Constant('[]'))();
-  TextColumn get contextSnapshotId => text().nullable()();
-  BoolColumn get archived =>
-      boolean().withDefault(const Constant(false))();
-  DateTimeColumn get createdAt => dateTime()();
-  DateTimeColumn get updatedAt => dateTime()();
+  TextColumn get status => text()();
+  IntColumn get createdAt => integer()();
+  IntColumn get updatedAt => integer()();
   IntColumn get schemaVersion => integer().withDefault(const Constant(1))();
+  TextColumn get chapterId => text().nullable()();
+  TextColumn get agentMode => text().nullable()();
+  TextColumn get summary => text().nullable()();
+  IntColumn get startedAt => integer().nullable()();
+  IntColumn get endedAt => integer().nullable()();
 
   @override
-  Set<Column> get primaryKey => {id};
+  Set<Column<Object>> get primaryKey => <Column<Object>>{id};
 }

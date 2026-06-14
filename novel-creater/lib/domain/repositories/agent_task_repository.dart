@@ -1,10 +1,23 @@
-import 'package:novel_creator/domain/domain.dart';
+import 'package:novel_creator/domain/entities/agent_task.dart';
+import 'package:novel_creator/domain/enums/agent_task_status.dart';
+import 'package:novel_creator/domain/results/app_result.dart';
 
-abstract class AgentTaskRepository {
-  Future<AppResult<AgentTask>> getById(String id);
-  Future<AppResult<List<AgentTask>>> getByProjectId(String projectId);
-  Future<AppResult<List<AgentTask>>> getActiveByProjectId(String projectId);
+abstract interface class AgentTaskRepository {
   Future<AppResult<AgentTask>> create(AgentTask task);
-  Future<AppResult<AgentTask>> update(AgentTask task);
-  Future<AppResult<void>> delete(String id);
+
+  Future<AppResult<AgentTask>> getById(String id);
+
+  Future<AppResult<List<AgentTask>>> listByProject(String projectId);
+
+  Future<AppResult<List<AgentTask>>> listByStatus(
+    String projectId,
+    AgentTaskStatus status,
+  );
+
+  Future<AppResult<AgentTask>> updateStatus({
+    required String id,
+    required AgentTaskStatus status,
+    String? result,
+    String? errorMessage,
+  });
 }

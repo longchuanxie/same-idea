@@ -1,10 +1,14 @@
-import 'package:novel_creator/domain/domain.dart';
+import 'package:novel_creator/domain/entities/revision.dart';
+import 'package:novel_creator/domain/enums/revision_status.dart';
+import 'package:novel_creator/domain/results/app_result.dart';
 
-abstract class RevisionRepository {
-  Future<AppResult<Revision>> getById(String id);
-  Future<AppResult<List<Revision>>> getByChapterId(String chapterId);
-  Future<AppResult<List<Revision>>> getPendingByProjectId(String projectId);
+abstract interface class RevisionRepository {
   Future<AppResult<Revision>> create(Revision revision);
-  Future<AppResult<Revision>> update(Revision revision);
-  Future<AppResult<void>> delete(String id);
+
+  Future<AppResult<List<Revision>>> listPending(String chapterId);
+
+  Future<AppResult<Revision>> updateStatus({
+    required String id,
+    required RevisionStatus status,
+  });
 }

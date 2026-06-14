@@ -1,46 +1,76 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:novel_creator/domain/enums/agent_task_status.dart';
-import 'package:novel_creator/domain/enums/agent_task_type.dart';
 
 part 'agent_task.freezed.dart';
 part 'agent_task.g.dart';
 
-@Freezed(toJson: true, fromJson: true)
-class TokenUsage with _$TokenUsage {
-  const factory TokenUsage({
-    @Default(0) int promptTokens,
-    @Default(0) int completionTokens,
-    @Default(false) bool isEstimated,
-  }) = _TokenUsage;
+/// Valid state transitions for AgentTask.
+///
+/// ```
+/// created → queued → running → succeeded
+///                          |→ failed
+///                          |→ cancelled
+/// ```
+///
+/// Terminal states: succeeded, failed, cancelled.
+/// Once a task reaches a terminal state, no further transitions are allowed.
+const Map<AgentTaskStatus, Set<AgentTaskStatus>> _validTransitions =
+    <AgentTaskStatus, Set<AgentTaskStatus>>{
+  AgentTaskStatus.created: <AgentTaskStatus>{
+    AgentTaskStatus.queued,
+  },
+  AgentTaskStatus.queued: <AgentTaskStatus>{
+    AgentTaskStatus.running,
+    AgentTaskStatus.cancelled,
+  },
+  AgentTaskStatus.running: <AgentTaskStatus>{
+    AgentTaskStatus.succeeded,
+    AgentTaskStatus.failed,
+    AgentTaskStatus.cancelled,
+  },
+  AgentTaskStatus.succeeded: <AgentTaskStatus>{},
+  AgentTaskStatus.failed: <AgentTaskStatus>{},
+  AgentTaskStatus.cancelled: <AgentTaskStatus>{},
+};
 
-  factory TokenUsage.fromJson(Map<String, dynamic> json) =>
-      _$TokenUsageFromJson(json);
+/// Checks whether transitioning from [from] to [to] is valid.
+bool isValidAgentTaskTransition(AgentTaskStatus from, AgentTaskStatus to) {
+  return _validTransitions[from]?.contains(to) ?? false;
 }
 
-@Freezed(toJson: true, fromJson: true)
+@freezed
 class AgentTask with _$AgentTask {
-  const AgentTask._();
-
   const factory AgentTask({
     required String id,
     required String projectId,
-    required AgentTaskType taskType,
+    required String taskType,
     required DateTime createdAt,
     required DateTime updatedAt,
     @Default(AgentTaskStatus.created) AgentTaskStatus status,
-    @Default('') String inputJson,
-    @Default('') String outputJson,
-    String? model,
-    TokenUsage? tokenUsage,
-    String? error,
-    @Default([]) List<String> sideEffects,
-    DateTime? startedAt,
-    DateTime? completedAt,
     @Default(1) int schemaVersion,
+    String? chapterId,
+    String? instruction,
+    String? result,
+    String? errorMessage,
   }) = _AgentTask;
 
   factory AgentTask.fromJson(Map<String, dynamic> json) =>
       _$AgentTaskFromJson(json);
 
-  bool get isTerminal => status.isTerminal;
+  const AgentTask._();
+
+  /// Whether this task is in a terminal state (no further transitions allowed).
+  bool get isTerminal => status == AgentTaskStatus.succeeded ||
+      status == AgentTaskStatus.failed ||
+      status == AgentTaskStatus.cancelled;
+
+  /// Validates that transitioning to [newStatus] is legal.
+  /// Returns an error message if invalid, or null if valid.
+  String? validateTransition(AgentTaskStatus newStatus) {
+    if (status == newStatus) return null;
+    if (!isValidAgentTaskTransition(status, newStatus)) {
+      return 'Invalid transition from ${status.name} to ${newStatus.name}.';
+    }
+    return null;
+  }
 }

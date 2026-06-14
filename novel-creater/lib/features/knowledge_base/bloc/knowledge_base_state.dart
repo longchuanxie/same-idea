@@ -1,114 +1,50 @@
-part of 'knowledge_base_bloc.dart';
+import 'package:novel_creator/domain/entities/character.dart';
+import 'package:novel_creator/domain/entities/note.dart';
+import 'package:novel_creator/domain/entities/setting_entry.dart';
+import 'package:novel_creator/domain/results/app_error.dart';
 
-class KnowledgeBaseState extends Equatable {
+enum KnowledgeBaseTab { characters, settings, notes }
+
+final class KnowledgeBaseState {
   const KnowledgeBaseState({
-    this.projectId,
-    this.characters = const [],
-    this.notes = const [],
-    this.settingEntries = const [],
-    this.outlineNodes = const [],
-    this.query = '',
-    this.isLoading = false,
+    required this.isLoading,
+    required this.characters,
+    required this.settingEntries,
+    required this.notes,
+    required this.activeTab,
     this.error,
-    this.lastMessage,
   });
 
-  final String? projectId;
-  final List<Character> characters;
-  final List<Note> notes;
-  final List<SettingEntry> settingEntries;
-  final List<OutlineNode> outlineNodes;
-  final String query;
+  const KnowledgeBaseState.initial()
+      : isLoading = false,
+        characters = const <Character>[],
+        settingEntries = const <SettingEntry>[],
+        notes = const <Note>[],
+        activeTab = KnowledgeBaseTab.characters,
+        error = null;
+
   final bool isLoading;
-  final String? error;
-  final String? lastMessage;
-
-  List<Character> get filteredCharacters {
-    final normalized = query.trim().toLowerCase();
-    if (normalized.isEmpty) return characters;
-    return characters
-        .where(
-          (character) =>
-              character.name.toLowerCase().contains(normalized) ||
-              character.description.toLowerCase().contains(normalized) ||
-              character.tags
-                  .any((tag) => tag.toLowerCase().contains(normalized)),
-        )
-        .toList();
-  }
-
-  List<Note> get filteredNotes {
-    final normalized = query.trim().toLowerCase();
-    if (normalized.isEmpty) return notes;
-    return notes
-        .where(
-          (note) =>
-              note.title.toLowerCase().contains(normalized) ||
-              note.content.toLowerCase().contains(normalized) ||
-              note.tags.any((tag) => tag.toLowerCase().contains(normalized)),
-        )
-        .toList();
-  }
-
-  List<OutlineNode> get filteredOutlineNodes {
-    final normalized = query.trim().toLowerCase();
-    if (normalized.isEmpty) return outlineNodes;
-    return outlineNodes
-        .where(
-          (node) =>
-              node.title.toLowerCase().contains(normalized) ||
-              node.summary.toLowerCase().contains(normalized),
-        )
-        .toList();
-  }
-
-  List<SettingEntry> get filteredSettingEntries {
-    final normalized = query.trim().toLowerCase();
-    if (normalized.isEmpty) return settingEntries;
-    return settingEntries
-        .where(
-          (entry) =>
-              entry.category.toLowerCase().contains(normalized) ||
-              entry.title.toLowerCase().contains(normalized) ||
-              entry.content.toLowerCase().contains(normalized) ||
-              entry.tags.any((tag) => tag.toLowerCase().contains(normalized)),
-        )
-        .toList();
-  }
+  final List<Character> characters;
+  final List<SettingEntry> settingEntries;
+  final List<Note> notes;
+  final KnowledgeBaseTab activeTab;
+  final AppError? error;
 
   KnowledgeBaseState copyWith({
-    String? projectId,
-    List<Character>? characters,
-    List<Note>? notes,
-    List<SettingEntry>? settingEntries,
-    List<OutlineNode>? outlineNodes,
-    String? query,
     bool? isLoading,
-    String? error,
-    String? lastMessage,
+    List<Character>? characters,
+    List<SettingEntry>? settingEntries,
+    List<Note>? notes,
+    KnowledgeBaseTab? activeTab,
+    AppError? error,
+    bool clearError = false,
   }) =>
       KnowledgeBaseState(
-        projectId: projectId ?? this.projectId,
-        characters: characters ?? this.characters,
-        notes: notes ?? this.notes,
-        settingEntries: settingEntries ?? this.settingEntries,
-        outlineNodes: outlineNodes ?? this.outlineNodes,
-        query: query ?? this.query,
         isLoading: isLoading ?? this.isLoading,
-        error: error,
-        lastMessage: lastMessage,
+        characters: characters ?? this.characters,
+        settingEntries: settingEntries ?? this.settingEntries,
+        notes: notes ?? this.notes,
+        activeTab: activeTab ?? this.activeTab,
+        error: clearError ? null : error ?? this.error,
       );
-
-  @override
-  List<Object?> get props => [
-        projectId,
-        characters,
-        notes,
-        settingEntries,
-        outlineNodes,
-        query,
-        isLoading,
-        error,
-        lastMessage,
-      ];
 }

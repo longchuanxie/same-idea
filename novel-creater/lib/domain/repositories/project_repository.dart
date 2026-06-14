@@ -1,10 +1,14 @@
-import 'package:novel_creator/domain/domain.dart';
+import 'package:novel_creator/domain/entities/project.dart';
+import 'package:novel_creator/domain/results/app_result.dart';
 
-abstract class ProjectRepository {
-  Future<AppResult<Project>> getById(String id);
-  Future<AppResult<List<Project>>> getAll();
+abstract interface class ProjectRepository {
   Future<AppResult<Project>> create(Project project);
-  Future<AppResult<Project>> update(Project project);
+
+  Future<AppResult<List<Project>>> list();
+
+  Future<AppResult<Project?>> get(String id);
+
+  Future<AppResult<Project>> saveContent(Project project);
+
   Future<AppResult<void>> delete(String id);
-  Stream<AppResult<Project>> watchById(String id);
 }

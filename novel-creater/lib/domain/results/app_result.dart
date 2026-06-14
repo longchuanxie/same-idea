@@ -1,18 +1,35 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:novel_creator/domain/results/app_error.dart';
 
-part 'app_result.freezed.dart';
+sealed class AppResult<T> {
+  const AppResult();
 
-@Freezed(toJson: false, fromJson: false)
-sealed class AppResult<T> with _$AppResult<T> {
-  const factory AppResult.success(T data) = Success<T>;
-  const factory AppResult.failure(AppError error) = Failure<T>;
+  const factory AppResult.success(T value) = AppSuccess<T>;
 
-  const AppResult._();
+  const factory AppResult.failure(AppError error) = AppFailure<T>;
 
-  bool get isSuccess => this is Success<T>;
-  bool get isFailure => this is Failure<T>;
+  bool get isSuccess => this is AppSuccess<T>;
 
-  T? get maybeSuccess => when(success: (d) => d, failure: (_) => null);
-  AppError? get maybeFailure => when(success: (_) => null, failure: (e) => e);
+  bool get isFailure => this is AppFailure<T>;
+
+  T? get valueOrNull => switch (this) {
+        AppSuccess<T>(:final value) => value,
+        AppFailure<T>() => null,
+      };
+
+  AppError? get errorOrNull => switch (this) {
+        AppSuccess<T>() => null,
+        AppFailure<T>(:final error) => error,
+      };
+}
+
+final class AppSuccess<T> extends AppResult<T> {
+  const AppSuccess(this.value);
+
+  final T value;
+}
+
+final class AppFailure<T> extends AppResult<T> {
+  const AppFailure(this.error);
+
+  final AppError error;
 }

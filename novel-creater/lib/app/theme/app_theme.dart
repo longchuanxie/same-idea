@@ -1,98 +1,160 @@
 import 'package:flutter/material.dart';
 import 'package:novel_creator/app/theme/morandi_colors.dart';
+import 'package:novel_creator/app/theme/app_radius.dart';
+import 'package:novel_creator/app/theme/app_spacing.dart';
+import 'package:novel_creator/app/theme/app_typography.dart';
 
-class AppTheme {
-  AppTheme._();
+abstract final class AppTheme {
+  /// 浅色主题
+  static ThemeData light() => _buildTheme(isDark: false);
 
-  static ThemeData lightTheme() {
-    const morandi = MorandiColors();
+  /// 暗色主题
+  static ThemeData dark() => _buildTheme(isDark: true);
+
+  static ThemeData _buildTheme({required bool isDark}) {
+    // 浅色/暗色色值选取
+    final background = isDark ? MorandiColors.darkBackground : MorandiColors.background;
+    final surface = isDark ? MorandiColors.darkSurface : MorandiColors.surface;
+    final surface2 = isDark ? MorandiColors.darkSurface2 : MorandiColors.surface2;
+    final surface3 = isDark ? MorandiColors.darkSurface3 : MorandiColors.surface3;
+    final line = isDark ? MorandiColors.darkLine : MorandiColors.line;
+    final line2 = isDark ? MorandiColors.darkLine2 : MorandiColors.line2;
+    final text = isDark ? MorandiColors.darkText : MorandiColors.text;
+    final muted = isDark ? MorandiColors.darkMuted : MorandiColors.muted;
+    final faint = isDark ? MorandiColors.darkFaint : MorandiColors.faint;
+    final green = isDark ? MorandiColors.darkGreen : MorandiColors.green;
+    final green2 = isDark ? MorandiColors.darkGreen2 : MorandiColors.green2;
+    final green3 = isDark ? MorandiColors.darkGreen3 : MorandiColors.green3;
+    final orange = isDark ? MorandiColors.darkOrange : MorandiColors.orange;
+    final danger = isDark ? MorandiColors.darkDanger : MorandiColors.danger;
+
     return ThemeData(
-      useMaterial3: true,
-      colorSchemeSeed: morandi.green,
-      brightness: Brightness.light,
-      scaffoldBackgroundColor: morandi.bg,
-      fontFamily: 'SF Pro Display',
-      appBarTheme: AppBarTheme(
-        backgroundColor: morandi.bg,
-        foregroundColor: morandi.ink,
-        elevation: 0,
-        scrolledUnderElevation: 0.5,
+      brightness: isDark ? Brightness.dark : Brightness.light,
+      colorScheme: ColorScheme(
+        brightness: isDark ? Brightness.dark : Brightness.light,
+        primary: green,
+        onPrimary: isDark ? MorandiColors.darkText : Colors.white,
+        primaryContainer: green2,
+        onPrimaryContainer: text,
+        secondary: orange,
+        onSecondary: Colors.white,
+        secondaryContainer: green3,
+        onSecondaryContainer: text,
+        surface: surface,
+        onSurface: text,
+        surfaceContainerHighest: surface2,
+        error: danger,
+        onError: Colors.white,
+        outline: line,
+        outlineVariant: line2,
+        shadow: Colors.black,
+        scrim: Colors.black,
+        inverseSurface: isDark ? MorandiColors.surface : MorandiColors.darkSurface,
+        onInverseSurface: isDark ? MorandiColors.text : MorandiColors.darkText,
       ),
+      scaffoldBackgroundColor: background,
       cardTheme: CardTheme(
-        color: morandi.canvas,
+        color: surface,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: morandi.line),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          side: BorderSide(color: line),
         ),
+        margin: EdgeInsets.zero,
       ),
-      dividerTheme: DividerThemeData(color: morandi.line, thickness: 1),
-      textTheme: TextTheme(
-        headlineLarge: TextStyle(
-          fontSize: 31,
-          fontWeight: FontWeight.w700,
-          height: 1.3,
-          color: morandi.ink,
-          letterSpacing: 0.04,
-        ),
-        headlineMedium: TextStyle(
-          fontSize: 22,
-          fontWeight: FontWeight.w600,
-          height: 1.3,
-          color: morandi.ink,
-        ),
-        headlineSmall: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-          height: 1.4,
-          color: morandi.ink,
-        ),
-        bodyLarge: TextStyle(fontSize: 16, height: 1.7, color: morandi.text),
-        bodyMedium: TextStyle(fontSize: 14, height: 1.6, color: morandi.text),
-        bodySmall: TextStyle(fontSize: 12, height: 1.5, color: morandi.muted),
-        labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: morandi.ink),
-        labelMedium: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: morandi.text),
-        labelSmall: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: morandi.muted),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: morandi.canvas,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: morandi.line),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: morandi.line),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: morandi.green, width: 1.5),
-        ),
+      dividerTheme: DividerThemeData(
+        color: line,
+        thickness: 1,
+        space: 1,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: morandi.green,
+          backgroundColor: green,
           foregroundColor: Colors.white,
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.cardPadding,
+            vertical: AppSpacing.md,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+          ),
+          textStyle: AppTypography.body(color: Colors.white, weight: AppTypography.weightBold),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: text,
+          side: BorderSide(color: line),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.cardPadding,
+            vertical: AppSpacing.md,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+          ),
+          textStyle: AppTypography.body(color: text, weight: AppTypography.weightBold),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: morandi.green,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          foregroundColor: green,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+          ),
+          textStyle: AppTypography.small(color: green, weight: AppTypography.weightBold),
         ),
       ),
-      floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: morandi.green,
-        foregroundColor: Colors.white,
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: surface,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: BorderSide(color: line),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: BorderSide(color: line),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: BorderSide(color: green),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.md,
+        ),
+        hintStyle: AppTypography.body(color: faint),
       ),
-      iconTheme: IconThemeData(color: morandi.muted, size: 20),
-      extensions: const [morandi],
+      chipTheme: ChipThemeData(
+        backgroundColor: surface2,
+        selectedColor: green2,
+        labelStyle: AppTypography.small(color: text, weight: AppTypography.weightBold),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.pill.toDouble()),
+          side: BorderSide(color: line),
+        ),
+      ),
+      appBarTheme: AppBarTheme(
+        backgroundColor: surface,
+        foregroundColor: text,
+        elevation: 0,
+        centerTitle: false,
+        titleTextStyle: AppTypography.title(
+          color: text,
+          weight: AppTypography.weightBold,
+        ),
+      ),
+      iconTheme: IconThemeData(
+        size: AppSpacing.iconMedium,
+        color: muted,
+      ),
+      useMaterial3: true,
     );
   }
 }

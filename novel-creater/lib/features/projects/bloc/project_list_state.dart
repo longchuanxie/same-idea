@@ -1,27 +1,31 @@
-part of 'project_list_bloc.dart';
+import 'package:novel_creator/domain/entities/project.dart';
+import 'package:novel_creator/domain/results/app_error.dart';
 
-class ProjectListState extends Equatable {
+final class ProjectListState {
   const ProjectListState({
-    this.projects = const [],
-    this.isLoading = false,
+    required this.isLoading,
+    required this.projects,
     this.error,
   });
 
-  final List<Project> projects;
+  const ProjectListState.initial()
+      : isLoading = false,
+        projects = const <Project>[],
+        error = null;
+
   final bool isLoading;
-  final String? error;
+  final List<Project> projects;
+  final AppError? error;
 
   ProjectListState copyWith({
-    List<Project>? projects,
     bool? isLoading,
-    String? error,
+    List<Project>? projects,
+    AppError? error,
+    bool clearError = false,
   }) =>
       ProjectListState(
-        projects: projects ?? this.projects,
         isLoading: isLoading ?? this.isLoading,
-        error: error,
+        projects: projects ?? this.projects,
+        error: clearError ? null : error ?? this.error,
       );
-
-  @override
-  List<Object?> get props => [projects, isLoading, error];
 }

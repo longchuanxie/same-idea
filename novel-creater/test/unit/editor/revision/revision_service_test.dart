@@ -1,331 +1,202 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:novel_creator/agent/tools/tools.dart';
-import 'package:novel_creator/core/clock.dart';
 import 'package:novel_creator/core/content_hash.dart';
-import 'package:novel_creator/core/id_generator.dart';
-import 'package:novel_creator/domain/domain.dart';
-import 'package:novel_creator/editor/revision/revision.dart';
+import 'package:novel_creator/data/repositories/in_memory_revision_repository.dart';
+import 'package:novel_creator/domain/entities/revision.dart';
+import 'package:novel_creator/domain/enums/revision_operation.dart';
+import 'package:novel_creator/domain/enums/revision_source.dart';
+import 'package:novel_creator/domain/enums/revision_status.dart';
+import 'package:novel_creator/domain/value_objects/revision_anchor.dart';
+import 'package:novel_creator/domain/value_objects/revision_patch.dart';
+import 'package:novel_creator/domain/value_objects/revision_patch_metadata.dart';
+import 'package:novel_creator/editor/revision/revision_service.dart';
 
 void main() {
-  final fixedNow = DateTime(2026, 6, 4, 14, 10);
-  late _FakeChapterRepository chapterRepository;
-  late _FakeRevisionRepository revisionRepository;
-  late RevisionService service;
-
-  setUp(() {
-    chapterRepository = _FakeChapterRepository();
-    revisionRepository = _FakeRevisionRepository();
-    service = RevisionService(
-      chapterRepository: chapterRepository,
-      revisionRepository: revisionRepository,
-      idGenerator: const IdGenerator(),
-      clock: FixedClock(fixedNow),
-    );
-  });
-
   group('RevisionService', () {
-    test('createPendingFromSuggestion stores base content hash', () async {
-      final chapter = _chapter(content: '原文');
-      chapterRepository.chapters[chapter.id] = chapter;
+    const service = RevisionService();
 
-      final result = await service.createPendingFromSuggestion(
-        WritingRevisionSuggestion(
-          chapterId: chapter.id,
-          operation: RevisionOperation.replace,
-          anchor: const RevisionAnchor(
-            type: AnchorType.selection,
-            offset: 0,
-            length: 2,
-          ),
-          beforeText: '原文',
-          afterText: '新文',
-          metadata: const RevisionPatchMetadata(
-            prompt: 'rewrite',
-            model: 'mock',
-          ),
-        ),
-      );
-
-      expect(result.isSuccess, isTrue);
-      final revision = result.maybeSuccess!;
-      expect(revision.status, RevisionStatus.pending);
-      expect(revision.metadata?.baseContentHash, stableContentHash('原文'));
-      expect(revisionRepository.revisions.length, 1);
-    });
-
-    test('accept replace revision updates chapter and marks accepted',
-        () async {
-      final chapter = _chapter(content: '旧文字');
-      chapterRepository.chapters[chapter.id] = chapter;
-      final revision = _revision(
-        chapter: chapter,
-        beforeText: '旧文',
-        afterText: '新文',
-      );
-      revisionRepository.revisions[revision.id] = revision;
-
-      final result = await service.accept(revision.id);
-
-      expect(result.isSuccess, isTrue);
-      expect(chapterRepository.chapters[chapter.id]!.content, '新文字');
-      expect(chapterRepository.chapters[chapter.id]!.plainTextCache, '新文字');
-      expect(chapterRepository.chapters[chapter.id]!.wordCount, 3);
-      expect(result.maybeSuccess!.status, RevisionStatus.accepted);
-      expect(result.maybeSuccess!.resolvedAt, fixedNow);
-    });
-
-    test('accept insert revision inserts text at anchor', () async {
-      final chapter = _chapter(content: '前后');
-      chapterRepository.chapters[chapter.id] = chapter;
-      final revision = _revision(
-        chapter: chapter,
+    test('insert patch inserts text at anchor offset', () {
+      const baseContent = 'The door opened.';
+      final patch = _patch(
+        baseContent: baseContent,
         operation: RevisionOperation.insert,
-        offset: 1,
-        afterText: '中',
+        startOffset: 4,
+        endOffset: 4,
+        beforeText: '',
+        afterText: 'old ',
       );
-      revisionRepository.revisions[revision.id] = revision;
 
-      final result = await service.accept(revision.id);
+      final result = service.preview(baseContent: baseContent, patch: patch);
 
-      expect(result.isSuccess, isTrue);
-      expect(chapterRepository.chapters[chapter.id]!.content, '前中后');
+      expect(result.valueOrNull, equals('The old door opened.'));
     });
 
-    test('reject marks revision rejected without changing chapter', () async {
-      final chapter = _chapter(content: '原文');
-      chapterRepository.chapters[chapter.id] = chapter;
-      final revision = _revision(
-        chapter: chapter,
-        beforeText: '原文',
-        afterText: '新文',
+    test('insert patch rejects non-collapsed anchor range', () {
+      const baseContent = 'The door opened.';
+      final patch = _patch(
+        baseContent: baseContent,
+        operation: RevisionOperation.insert,
+        startOffset: 4,
+        endOffset: 8,
+        beforeText: '',
+        afterText: 'old ',
       );
-      revisionRepository.revisions[revision.id] = revision;
 
-      final result = await service.reject(revision.id);
-
-      expect(result.isSuccess, isTrue);
-      expect(chapterRepository.chapters[chapter.id]!.content, '原文');
-      expect(result.maybeSuccess!.status, RevisionStatus.rejected);
-      expect(result.maybeSuccess!.resolvedAt, fixedNow);
-    });
-
-    test('accept detects conflict when chapter content changed', () async {
-      final chapter = _chapter(content: '原文');
-      chapterRepository.chapters[chapter.id] = chapter.copyWith(
-        content: '用户已改原文',
-      );
-      final revision = _revision(
-        chapter: chapter,
-        beforeText: '原文',
-        afterText: '新文',
-      );
-      revisionRepository.revisions[revision.id] = revision;
-
-      final result = await service.accept(revision.id);
+      final result = service.preview(baseContent: baseContent, patch: patch);
 
       expect(result.isFailure, isTrue);
-      expect(result.maybeFailure?.code, 'REVISION_CONFLICT');
-      expect(chapterRepository.chapters[chapter.id]!.content, '用户已改原文');
-      expect(
-        revisionRepository.revisions[revision.id]!.status,
-        RevisionStatus.pending,
-      );
+      expect(result.errorOrNull?.code, equals('revision.invalid_anchor'));
     });
 
-    test('accept fails when anchor text no longer matches beforeText',
-        () async {
-      final chapter = _chapter(content: '原文');
-      chapterRepository.chapters[chapter.id] = chapter;
-      final revision = _revision(
-        chapter: chapter,
-        beforeText: '别的',
-        afterText: '新文',
-        baseContentHash: stableContentHash(chapter.content),
+    test('insert patch rejects non-empty beforeText', () {
+      const baseContent = 'The door opened.';
+      final patch = _patch(
+        baseContent: baseContent,
+        operation: RevisionOperation.insert,
+        startOffset: 4,
+        endOffset: 4,
+        beforeText: 'door',
+        afterText: 'old ',
       );
-      revisionRepository.revisions[revision.id] = revision;
 
-      final result = await service.accept(revision.id);
+      final result = service.preview(baseContent: baseContent, patch: patch);
 
       expect(result.isFailure, isTrue);
-      expect(result.maybeFailure?.code, 'REVISION_TEXT_MISMATCH');
-      expect(chapterRepository.chapters[chapter.id]!.content, '原文');
+      expect(result.errorOrNull?.code, equals('revision.before_text_mismatch'));
     });
 
-    test('supersede marks pending revision superseded', () async {
-      final chapter = _chapter(content: '原文');
-      chapterRepository.chapters[chapter.id] = chapter;
-      final revision = _revision(
-        chapter: chapter,
-        beforeText: '原文',
-        afterText: '新文',
+    test('replace patch requires matching beforeText', () {
+      const baseContent = 'The door opened.';
+      final patch = _patch(
+        baseContent: baseContent,
+        operation: RevisionOperation.replace,
+        startOffset: 4,
+        endOffset: 8,
+        beforeText: 'door',
+        afterText: 'gate',
       );
-      revisionRepository.revisions[revision.id] = revision;
 
-      final result = await service.supersede(revision.id);
+      final result = service.apply(baseContent: baseContent, patch: patch);
 
-      expect(result.isSuccess, isTrue);
-      expect(result.maybeSuccess!.status, RevisionStatus.superseded);
-      expect(chapterRepository.chapters[chapter.id]!.content, '原文');
+      expect(result.valueOrNull, equals('The gate opened.'));
     });
+
+    test('delete patch removes only matching beforeText', () {
+      const baseContent = 'The old door opened.';
+      final patch = _patch(
+        baseContent: baseContent,
+        operation: RevisionOperation.delete,
+        startOffset: 4,
+        endOffset: 8,
+        beforeText: 'old ',
+      );
+
+      final result = service.apply(baseContent: baseContent, patch: patch);
+
+      expect(result.valueOrNull, equals('The door opened.'));
+    });
+
+    test('mismatched baseContentHash returns revision conflict failure', () {
+      const baseContent = 'The door opened.';
+      final patch = _patch(
+        baseContent: 'Different content.',
+        operation: RevisionOperation.insert,
+        startOffset: 4,
+        endOffset: 4,
+        beforeText: '',
+        afterText: 'old ',
+      );
+
+      final result = service.preview(baseContent: baseContent, patch: patch);
+
+      expect(result.isFailure, isTrue);
+      expect(result.errorOrNull?.code, equals('revision.conflict'));
+    });
+
+    test('beforeText mismatch returns before text mismatch failure', () {
+      const baseContent = 'The door opened.';
+      final patch = _patch(
+        baseContent: baseContent,
+        operation: RevisionOperation.replace,
+        startOffset: 4,
+        endOffset: 8,
+        beforeText: 'wall',
+        afterText: 'gate',
+      );
+
+      final result = service.apply(baseContent: baseContent, patch: patch);
+
+      expect(result.isFailure, isTrue);
+      expect(result.errorOrNull?.code, equals('revision.before_text_mismatch'));
+    });
+
+    test(
+      'reject updates repository status without modifying content',
+      () async {
+        const baseContent = 'The door opened.';
+        final repository = InMemoryRevisionRepository();
+        final revision = _revision(
+          patch: _patch(
+            baseContent: baseContent,
+            operation: RevisionOperation.replace,
+            startOffset: 4,
+            endOffset: 8,
+            beforeText: 'door',
+            afterText: 'gate',
+          ),
+        );
+        await repository.create(revision);
+
+        final rejectResult = await repository.updateStatus(
+          id: revision.id,
+          status: RevisionStatus.rejected,
+        );
+        final previewResult = service.preview(
+          baseContent: baseContent,
+          patch: revision.patch,
+        );
+
+        expect(
+          rejectResult.valueOrNull?.status,
+          equals(RevisionStatus.rejected),
+        );
+        expect(baseContent, equals('The door opened.'));
+        expect(previewResult.valueOrNull, equals('The gate opened.'));
+      },
+    );
   });
 }
 
-Chapter _chapter({String content = ''}) => Chapter(
-      id: 'chapter-1',
-      projectId: 'project-1',
-      title: 'Chapter',
-      order: 1,
-      content: content,
-      createdAt: DateTime(2026, 6, 4),
-      updatedAt: DateTime(2026, 6, 4),
-    );
-
-Revision _revision({
-  required Chapter chapter,
-  RevisionOperation operation = RevisionOperation.replace,
-  String id = 'revision-1',
-  int offset = 0,
-  String beforeText = '',
+RevisionPatch _patch({
+  required String baseContent,
+  required RevisionOperation operation,
+  required int startOffset,
+  required int endOffset,
+  required String beforeText,
   String afterText = '',
-  String? baseContentHash,
 }) =>
-    Revision(
-      id: id,
-      projectId: chapter.projectId,
-      chapterId: chapter.id,
+    RevisionPatch(
+      chapterId: 'chapter-1',
+      baseContentHash: contentHash(baseContent).toString(),
       operation: operation,
-      anchor: RevisionAnchor(
-        type: AnchorType.selection,
-        offset: offset,
-        length: beforeText.length,
-      ),
+      anchor: RevisionAnchor(startOffset: startOffset, endOffset: endOffset),
       beforeText: beforeText,
       afterText: afterText,
-      metadata: RevisionPatchMetadata(
-        baseContentHash: baseContentHash ?? stableContentHash(chapter.content),
+      source: RevisionSource.agent,
+      metadata: const RevisionPatchMetadata(
+        prompt: 'revise',
+        model: 'mock',
+        summary: 'test patch',
       ),
-      createdAt: DateTime(2026, 6, 4),
-      updatedAt: DateTime(2026, 6, 4),
     );
 
-class _FakeChapterRepository implements ChapterRepository {
-  final chapters = <String, Chapter>{};
-
-  @override
-  Future<AppResult<Chapter>> create(Chapter chapter) async {
-    chapters[chapter.id] = chapter;
-    return AppResult.success(chapter);
-  }
-
-  @override
-  Future<AppResult<void>> delete(String id) async {
-    chapters.remove(id);
-    return const AppResult.success(null);
-  }
-
-  @override
-  Future<AppResult<Chapter>> getById(String id) async {
-    final chapter = chapters[id];
-    if (chapter == null) {
-      return const AppResult.failure(_notFoundError);
-    }
-    return AppResult.success(chapter);
-  }
-
-  @override
-  Future<AppResult<List<Chapter>>> getByProjectId(String projectId) async =>
-      AppResult.success(
-        chapters.values
-            .where((chapter) => chapter.projectId == projectId)
-            .toList(),
-      );
-
-  @override
-  Future<AppResult<Chapter>> saveContent(String id, String content) async {
-    final chapter = chapters[id];
-    if (chapter == null) {
-      return const AppResult.failure(_notFoundError);
-    }
-    final updated = chapter.copyWith(content: content);
-    chapters[id] = updated;
-    return AppResult.success(updated);
-  }
-
-  @override
-  Future<AppResult<Chapter>> update(Chapter chapter) async {
-    chapters[chapter.id] = chapter;
-    return AppResult.success(chapter);
-  }
-
-  @override
-  Stream<AppResult<Chapter>> watchById(String id) async* {
-    final result = await getById(id);
-    yield result;
-  }
-
-  @override
-  Stream<AppResult<List<Chapter>>> watchByProjectId(String projectId) async* {
-    yield await getByProjectId(projectId);
-  }
+Revision _revision({required RevisionPatch patch}) {
+  final now = DateTime.utc(2026);
+  return Revision(
+    id: 'revision-1',
+    projectId: 'project-1',
+    chapterId: patch.chapterId,
+    patch: patch,
+    createdAt: now,
+    updatedAt: now,
+  );
 }
-
-class _FakeRevisionRepository implements RevisionRepository {
-  final revisions = <String, Revision>{};
-
-  @override
-  Future<AppResult<Revision>> create(Revision revision) async {
-    revisions[revision.id] = revision;
-    return AppResult.success(revision);
-  }
-
-  @override
-  Future<AppResult<void>> delete(String id) async {
-    revisions.remove(id);
-    return const AppResult.success(null);
-  }
-
-  @override
-  Future<AppResult<Revision>> getById(String id) async {
-    final revision = revisions[id];
-    if (revision == null) {
-      return const AppResult.failure(_notFoundError);
-    }
-    return AppResult.success(revision);
-  }
-
-  @override
-  Future<AppResult<List<Revision>>> getByChapterId(String chapterId) async =>
-      AppResult.success(
-        revisions.values
-            .where((revision) => revision.chapterId == chapterId)
-            .toList(),
-      );
-
-  @override
-  Future<AppResult<List<Revision>>> getPendingByProjectId(
-    String projectId,
-  ) async =>
-      AppResult.success(
-        revisions.values
-            .where(
-              (revision) =>
-                  revision.projectId == projectId &&
-                  revision.status == RevisionStatus.pending,
-            )
-            .toList(),
-      );
-
-  @override
-  Future<AppResult<Revision>> update(Revision revision) async {
-    revisions[revision.id] = revision;
-    return AppResult.success(revision);
-  }
-}
-
-const _notFoundError = AppError(
-  code: 'NOT_FOUND',
-  message: 'Not found',
-  userMessage: 'Not found',
-  recoverable: false,
-  source: AppErrorSource.storage,
-);

@@ -3,29 +3,22 @@
 part of 'app_database.dart';
 
 // ignore_for_file: type=lint
-class $ProjectsTableTable extends ProjectsTable
-    with TableInfo<$ProjectsTableTable, ProjectsTableData> {
+class $ProjectsTable extends Projects
+    with TableInfo<$ProjectsTable, ProjectRow> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $ProjectsTableTable(this.attachedDatabase, [this._alias]);
+  $ProjectsTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
       'id', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
   @override
-  late final GeneratedColumn<String> title = GeneratedColumn<String>(
-      'title', aliasedName, false,
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+      'name', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _authorMeta = const VerificationMeta('author');
-  @override
-  late final GeneratedColumn<String> author = GeneratedColumn<String>(
-      'author', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      defaultValue: const Constant(''));
   static const VerificationMeta _descriptionMeta =
       const VerificationMeta('description');
   @override
@@ -34,62 +27,18 @@ class $ProjectsTableTable extends ProjectsTable
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant(''));
-  static const VerificationMeta _languageMeta =
-      const VerificationMeta('language');
-  @override
-  late final GeneratedColumn<String> language = GeneratedColumn<String>(
-      'language', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      defaultValue: const Constant('zh'));
-  static const VerificationMeta _genreMeta = const VerificationMeta('genre');
-  @override
-  late final GeneratedColumn<String> genre = GeneratedColumn<String>(
-      'genre', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      defaultValue: const Constant(''));
-  static const VerificationMeta _tagsMeta = const VerificationMeta('tags');
-  @override
-  late final GeneratedColumn<String> tags = GeneratedColumn<String>(
-      'tags', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      defaultValue: const Constant('[]'));
-  static const VerificationMeta _defaultStyleProfileIdMeta =
-      const VerificationMeta('defaultStyleProfileId');
-  @override
-  late final GeneratedColumn<String> defaultStyleProfileId =
-      GeneratedColumn<String>('default_style_profile_id', aliasedName, true,
-          type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _activeChapterIdMeta =
-      const VerificationMeta('activeChapterId');
-  @override
-  late final GeneratedColumn<String> activeChapterId = GeneratedColumn<String>(
-      'active_chapter_id', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _localEncryptionEnabledMeta =
-      const VerificationMeta('localEncryptionEnabled');
-  @override
-  late final GeneratedColumn<bool> localEncryptionEnabled =
-      GeneratedColumn<bool>('local_encryption_enabled', aliasedName, false,
-          type: DriftSqlType.bool,
-          requiredDuringInsert: false,
-          defaultConstraints: GeneratedColumn.constraintIsAlways(
-              'CHECK ("local_encryption_enabled" IN (0, 1))'),
-          defaultValue: const Constant(false));
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
-  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
       'created_at', aliasedName, false,
-      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+      type: DriftSqlType.int, requiredDuringInsert: true);
   static const VerificationMeta _updatedAtMeta =
       const VerificationMeta('updatedAt');
   @override
-  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
       'updated_at', aliasedName, false,
-      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+      type: DriftSqlType.int, requiredDuringInsert: true);
   static const VerificationMeta _schemaVersionMeta =
       const VerificationMeta('schemaVersion');
   @override
@@ -99,28 +48,15 @@ class $ProjectsTableTable extends ProjectsTable
       requiredDuringInsert: false,
       defaultValue: const Constant(1));
   @override
-  List<GeneratedColumn> get $columns => [
-        id,
-        title,
-        author,
-        description,
-        language,
-        genre,
-        tags,
-        defaultStyleProfileId,
-        activeChapterId,
-        localEncryptionEnabled,
-        createdAt,
-        updatedAt,
-        schemaVersion
-      ];
+  List<GeneratedColumn> get $columns =>
+      [id, name, description, createdAt, updatedAt, schemaVersion];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'projects_table';
+  static const String $name = 'projects';
   @override
-  VerificationContext validateIntegrity(Insertable<ProjectsTableData> instance,
+  VerificationContext validateIntegrity(Insertable<ProjectRow> instance,
       {bool isInserting = false}) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
@@ -129,51 +65,17 @@ class $ProjectsTableTable extends ProjectsTable
     } else if (isInserting) {
       context.missing(_idMeta);
     }
-    if (data.containsKey('title')) {
+    if (data.containsKey('name')) {
       context.handle(
-          _titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta));
+          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
     } else if (isInserting) {
-      context.missing(_titleMeta);
-    }
-    if (data.containsKey('author')) {
-      context.handle(_authorMeta,
-          author.isAcceptableOrUnknown(data['author']!, _authorMeta));
+      context.missing(_nameMeta);
     }
     if (data.containsKey('description')) {
       context.handle(
           _descriptionMeta,
           description.isAcceptableOrUnknown(
               data['description']!, _descriptionMeta));
-    }
-    if (data.containsKey('language')) {
-      context.handle(_languageMeta,
-          language.isAcceptableOrUnknown(data['language']!, _languageMeta));
-    }
-    if (data.containsKey('genre')) {
-      context.handle(
-          _genreMeta, genre.isAcceptableOrUnknown(data['genre']!, _genreMeta));
-    }
-    if (data.containsKey('tags')) {
-      context.handle(
-          _tagsMeta, tags.isAcceptableOrUnknown(data['tags']!, _tagsMeta));
-    }
-    if (data.containsKey('default_style_profile_id')) {
-      context.handle(
-          _defaultStyleProfileIdMeta,
-          defaultStyleProfileId.isAcceptableOrUnknown(
-              data['default_style_profile_id']!, _defaultStyleProfileIdMeta));
-    }
-    if (data.containsKey('active_chapter_id')) {
-      context.handle(
-          _activeChapterIdMeta,
-          activeChapterId.isAcceptableOrUnknown(
-              data['active_chapter_id']!, _activeChapterIdMeta));
-    }
-    if (data.containsKey('local_encryption_enabled')) {
-      context.handle(
-          _localEncryptionEnabledMeta,
-          localEncryptionEnabled.isAcceptableOrUnknown(
-              data['local_encryption_enabled']!, _localEncryptionEnabledMeta));
     }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
@@ -199,72 +101,41 @@ class $ProjectsTableTable extends ProjectsTable
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  ProjectsTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
+  ProjectRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return ProjectsTableData(
+    return ProjectRow(
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
-      title: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}title'])!,
-      author: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}author'])!,
+      name: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
       description: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}description'])!,
-      language: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}language'])!,
-      genre: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}genre'])!,
-      tags: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}tags'])!,
-      defaultStyleProfileId: attachedDatabase.typeMapping.read(
-          DriftSqlType.string,
-          data['${effectivePrefix}default_style_profile_id']),
-      activeChapterId: attachedDatabase.typeMapping.read(
-          DriftSqlType.string, data['${effectivePrefix}active_chapter_id']),
-      localEncryptionEnabled: attachedDatabase.typeMapping.read(
-          DriftSqlType.bool,
-          data['${effectivePrefix}local_encryption_enabled'])!,
       createdAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+          .read(DriftSqlType.int, data['${effectivePrefix}created_at'])!,
       updatedAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+          .read(DriftSqlType.int, data['${effectivePrefix}updated_at'])!,
       schemaVersion: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}schema_version'])!,
     );
   }
 
   @override
-  $ProjectsTableTable createAlias(String alias) {
-    return $ProjectsTableTable(attachedDatabase, alias);
+  $ProjectsTable createAlias(String alias) {
+    return $ProjectsTable(attachedDatabase, alias);
   }
 }
 
-class ProjectsTableData extends DataClass
-    implements Insertable<ProjectsTableData> {
+class ProjectRow extends DataClass implements Insertable<ProjectRow> {
   final String id;
-  final String title;
-  final String author;
+  final String name;
   final String description;
-  final String language;
-  final String genre;
-  final String tags;
-  final String? defaultStyleProfileId;
-  final String? activeChapterId;
-  final bool localEncryptionEnabled;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final int createdAt;
+  final int updatedAt;
   final int schemaVersion;
-  const ProjectsTableData(
+  const ProjectRow(
       {required this.id,
-      required this.title,
-      required this.author,
+      required this.name,
       required this.description,
-      required this.language,
-      required this.genre,
-      required this.tags,
-      this.defaultStyleProfileId,
-      this.activeChapterId,
-      required this.localEncryptionEnabled,
       required this.createdAt,
       required this.updatedAt,
       required this.schemaVersion});
@@ -272,65 +143,34 @@ class ProjectsTableData extends DataClass
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
-    map['title'] = Variable<String>(title);
-    map['author'] = Variable<String>(author);
+    map['name'] = Variable<String>(name);
     map['description'] = Variable<String>(description);
-    map['language'] = Variable<String>(language);
-    map['genre'] = Variable<String>(genre);
-    map['tags'] = Variable<String>(tags);
-    if (!nullToAbsent || defaultStyleProfileId != null) {
-      map['default_style_profile_id'] = Variable<String>(defaultStyleProfileId);
-    }
-    if (!nullToAbsent || activeChapterId != null) {
-      map['active_chapter_id'] = Variable<String>(activeChapterId);
-    }
-    map['local_encryption_enabled'] = Variable<bool>(localEncryptionEnabled);
-    map['created_at'] = Variable<DateTime>(createdAt);
-    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['created_at'] = Variable<int>(createdAt);
+    map['updated_at'] = Variable<int>(updatedAt);
     map['schema_version'] = Variable<int>(schemaVersion);
     return map;
   }
 
-  ProjectsTableCompanion toCompanion(bool nullToAbsent) {
-    return ProjectsTableCompanion(
+  ProjectsCompanion toCompanion(bool nullToAbsent) {
+    return ProjectsCompanion(
       id: Value(id),
-      title: Value(title),
-      author: Value(author),
+      name: Value(name),
       description: Value(description),
-      language: Value(language),
-      genre: Value(genre),
-      tags: Value(tags),
-      defaultStyleProfileId: defaultStyleProfileId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(defaultStyleProfileId),
-      activeChapterId: activeChapterId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(activeChapterId),
-      localEncryptionEnabled: Value(localEncryptionEnabled),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       schemaVersion: Value(schemaVersion),
     );
   }
 
-  factory ProjectsTableData.fromJson(Map<String, dynamic> json,
+  factory ProjectRow.fromJson(Map<String, dynamic> json,
       {ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return ProjectsTableData(
+    return ProjectRow(
       id: serializer.fromJson<String>(json['id']),
-      title: serializer.fromJson<String>(json['title']),
-      author: serializer.fromJson<String>(json['author']),
+      name: serializer.fromJson<String>(json['name']),
       description: serializer.fromJson<String>(json['description']),
-      language: serializer.fromJson<String>(json['language']),
-      genre: serializer.fromJson<String>(json['genre']),
-      tags: serializer.fromJson<String>(json['tags']),
-      defaultStyleProfileId:
-          serializer.fromJson<String?>(json['defaultStyleProfileId']),
-      activeChapterId: serializer.fromJson<String?>(json['activeChapterId']),
-      localEncryptionEnabled:
-          serializer.fromJson<bool>(json['localEncryptionEnabled']),
-      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
-      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      updatedAt: serializer.fromJson<int>(json['updatedAt']),
       schemaVersion: serializer.fromJson<int>(json['schemaVersion']),
     );
   }
@@ -339,75 +179,35 @@ class ProjectsTableData extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
-      'title': serializer.toJson<String>(title),
-      'author': serializer.toJson<String>(author),
+      'name': serializer.toJson<String>(name),
       'description': serializer.toJson<String>(description),
-      'language': serializer.toJson<String>(language),
-      'genre': serializer.toJson<String>(genre),
-      'tags': serializer.toJson<String>(tags),
-      'defaultStyleProfileId':
-          serializer.toJson<String?>(defaultStyleProfileId),
-      'activeChapterId': serializer.toJson<String?>(activeChapterId),
-      'localEncryptionEnabled': serializer.toJson<bool>(localEncryptionEnabled),
-      'createdAt': serializer.toJson<DateTime>(createdAt),
-      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'updatedAt': serializer.toJson<int>(updatedAt),
       'schemaVersion': serializer.toJson<int>(schemaVersion),
     };
   }
 
-  ProjectsTableData copyWith(
+  ProjectRow copyWith(
           {String? id,
-          String? title,
-          String? author,
+          String? name,
           String? description,
-          String? language,
-          String? genre,
-          String? tags,
-          Value<String?> defaultStyleProfileId = const Value.absent(),
-          Value<String?> activeChapterId = const Value.absent(),
-          bool? localEncryptionEnabled,
-          DateTime? createdAt,
-          DateTime? updatedAt,
+          int? createdAt,
+          int? updatedAt,
           int? schemaVersion}) =>
-      ProjectsTableData(
+      ProjectRow(
         id: id ?? this.id,
-        title: title ?? this.title,
-        author: author ?? this.author,
+        name: name ?? this.name,
         description: description ?? this.description,
-        language: language ?? this.language,
-        genre: genre ?? this.genre,
-        tags: tags ?? this.tags,
-        defaultStyleProfileId: defaultStyleProfileId.present
-            ? defaultStyleProfileId.value
-            : this.defaultStyleProfileId,
-        activeChapterId: activeChapterId.present
-            ? activeChapterId.value
-            : this.activeChapterId,
-        localEncryptionEnabled:
-            localEncryptionEnabled ?? this.localEncryptionEnabled,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
         schemaVersion: schemaVersion ?? this.schemaVersion,
       );
-  ProjectsTableData copyWithCompanion(ProjectsTableCompanion data) {
-    return ProjectsTableData(
+  ProjectRow copyWithCompanion(ProjectsCompanion data) {
+    return ProjectRow(
       id: data.id.present ? data.id.value : this.id,
-      title: data.title.present ? data.title.value : this.title,
-      author: data.author.present ? data.author.value : this.author,
+      name: data.name.present ? data.name.value : this.name,
       description:
           data.description.present ? data.description.value : this.description,
-      language: data.language.present ? data.language.value : this.language,
-      genre: data.genre.present ? data.genre.value : this.genre,
-      tags: data.tags.present ? data.tags.value : this.tags,
-      defaultStyleProfileId: data.defaultStyleProfileId.present
-          ? data.defaultStyleProfileId.value
-          : this.defaultStyleProfileId,
-      activeChapterId: data.activeChapterId.present
-          ? data.activeChapterId.value
-          : this.activeChapterId,
-      localEncryptionEnabled: data.localEncryptionEnabled.present
-          ? data.localEncryptionEnabled.value
-          : this.localEncryptionEnabled,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       schemaVersion: data.schemaVersion.present
@@ -418,17 +218,10 @@ class ProjectsTableData extends DataClass
 
   @override
   String toString() {
-    return (StringBuffer('ProjectsTableData(')
+    return (StringBuffer('ProjectRow(')
           ..write('id: $id, ')
-          ..write('title: $title, ')
-          ..write('author: $author, ')
+          ..write('name: $name, ')
           ..write('description: $description, ')
-          ..write('language: $language, ')
-          ..write('genre: $genre, ')
-          ..write('tags: $tags, ')
-          ..write('defaultStyleProfileId: $defaultStyleProfileId, ')
-          ..write('activeChapterId: $activeChapterId, ')
-          ..write('localEncryptionEnabled: $localEncryptionEnabled, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('schemaVersion: $schemaVersion')
@@ -437,118 +230,62 @@ class ProjectsTableData extends DataClass
   }
 
   @override
-  int get hashCode => Object.hash(
-      id,
-      title,
-      author,
-      description,
-      language,
-      genre,
-      tags,
-      defaultStyleProfileId,
-      activeChapterId,
-      localEncryptionEnabled,
-      createdAt,
-      updatedAt,
-      schemaVersion);
+  int get hashCode =>
+      Object.hash(id, name, description, createdAt, updatedAt, schemaVersion);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is ProjectsTableData &&
+      (other is ProjectRow &&
           other.id == this.id &&
-          other.title == this.title &&
-          other.author == this.author &&
+          other.name == this.name &&
           other.description == this.description &&
-          other.language == this.language &&
-          other.genre == this.genre &&
-          other.tags == this.tags &&
-          other.defaultStyleProfileId == this.defaultStyleProfileId &&
-          other.activeChapterId == this.activeChapterId &&
-          other.localEncryptionEnabled == this.localEncryptionEnabled &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.schemaVersion == this.schemaVersion);
 }
 
-class ProjectsTableCompanion extends UpdateCompanion<ProjectsTableData> {
+class ProjectsCompanion extends UpdateCompanion<ProjectRow> {
   final Value<String> id;
-  final Value<String> title;
-  final Value<String> author;
+  final Value<String> name;
   final Value<String> description;
-  final Value<String> language;
-  final Value<String> genre;
-  final Value<String> tags;
-  final Value<String?> defaultStyleProfileId;
-  final Value<String?> activeChapterId;
-  final Value<bool> localEncryptionEnabled;
-  final Value<DateTime> createdAt;
-  final Value<DateTime> updatedAt;
+  final Value<int> createdAt;
+  final Value<int> updatedAt;
   final Value<int> schemaVersion;
   final Value<int> rowid;
-  const ProjectsTableCompanion({
+  const ProjectsCompanion({
     this.id = const Value.absent(),
-    this.title = const Value.absent(),
-    this.author = const Value.absent(),
+    this.name = const Value.absent(),
     this.description = const Value.absent(),
-    this.language = const Value.absent(),
-    this.genre = const Value.absent(),
-    this.tags = const Value.absent(),
-    this.defaultStyleProfileId = const Value.absent(),
-    this.activeChapterId = const Value.absent(),
-    this.localEncryptionEnabled = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.schemaVersion = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-  ProjectsTableCompanion.insert({
+  ProjectsCompanion.insert({
     required String id,
-    required String title,
-    this.author = const Value.absent(),
+    required String name,
     this.description = const Value.absent(),
-    this.language = const Value.absent(),
-    this.genre = const Value.absent(),
-    this.tags = const Value.absent(),
-    this.defaultStyleProfileId = const Value.absent(),
-    this.activeChapterId = const Value.absent(),
-    this.localEncryptionEnabled = const Value.absent(),
-    required DateTime createdAt,
-    required DateTime updatedAt,
+    required int createdAt,
+    required int updatedAt,
     this.schemaVersion = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
-        title = Value(title),
+        name = Value(name),
         createdAt = Value(createdAt),
         updatedAt = Value(updatedAt);
-  static Insertable<ProjectsTableData> custom({
+  static Insertable<ProjectRow> custom({
     Expression<String>? id,
-    Expression<String>? title,
-    Expression<String>? author,
+    Expression<String>? name,
     Expression<String>? description,
-    Expression<String>? language,
-    Expression<String>? genre,
-    Expression<String>? tags,
-    Expression<String>? defaultStyleProfileId,
-    Expression<String>? activeChapterId,
-    Expression<bool>? localEncryptionEnabled,
-    Expression<DateTime>? createdAt,
-    Expression<DateTime>? updatedAt,
+    Expression<int>? createdAt,
+    Expression<int>? updatedAt,
     Expression<int>? schemaVersion,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
-      if (title != null) 'title': title,
-      if (author != null) 'author': author,
+      if (name != null) 'name': name,
       if (description != null) 'description': description,
-      if (language != null) 'language': language,
-      if (genre != null) 'genre': genre,
-      if (tags != null) 'tags': tags,
-      if (defaultStyleProfileId != null)
-        'default_style_profile_id': defaultStyleProfileId,
-      if (activeChapterId != null) 'active_chapter_id': activeChapterId,
-      if (localEncryptionEnabled != null)
-        'local_encryption_enabled': localEncryptionEnabled,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (schemaVersion != null) 'schema_version': schemaVersion,
@@ -556,34 +293,18 @@ class ProjectsTableCompanion extends UpdateCompanion<ProjectsTableData> {
     });
   }
 
-  ProjectsTableCompanion copyWith(
+  ProjectsCompanion copyWith(
       {Value<String>? id,
-      Value<String>? title,
-      Value<String>? author,
+      Value<String>? name,
       Value<String>? description,
-      Value<String>? language,
-      Value<String>? genre,
-      Value<String>? tags,
-      Value<String?>? defaultStyleProfileId,
-      Value<String?>? activeChapterId,
-      Value<bool>? localEncryptionEnabled,
-      Value<DateTime>? createdAt,
-      Value<DateTime>? updatedAt,
+      Value<int>? createdAt,
+      Value<int>? updatedAt,
       Value<int>? schemaVersion,
       Value<int>? rowid}) {
-    return ProjectsTableCompanion(
+    return ProjectsCompanion(
       id: id ?? this.id,
-      title: title ?? this.title,
-      author: author ?? this.author,
+      name: name ?? this.name,
       description: description ?? this.description,
-      language: language ?? this.language,
-      genre: genre ?? this.genre,
-      tags: tags ?? this.tags,
-      defaultStyleProfileId:
-          defaultStyleProfileId ?? this.defaultStyleProfileId,
-      activeChapterId: activeChapterId ?? this.activeChapterId,
-      localEncryptionEnabled:
-          localEncryptionEnabled ?? this.localEncryptionEnabled,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       schemaVersion: schemaVersion ?? this.schemaVersion,
@@ -597,40 +318,17 @@ class ProjectsTableCompanion extends UpdateCompanion<ProjectsTableData> {
     if (id.present) {
       map['id'] = Variable<String>(id.value);
     }
-    if (title.present) {
-      map['title'] = Variable<String>(title.value);
-    }
-    if (author.present) {
-      map['author'] = Variable<String>(author.value);
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
     }
     if (description.present) {
       map['description'] = Variable<String>(description.value);
     }
-    if (language.present) {
-      map['language'] = Variable<String>(language.value);
-    }
-    if (genre.present) {
-      map['genre'] = Variable<String>(genre.value);
-    }
-    if (tags.present) {
-      map['tags'] = Variable<String>(tags.value);
-    }
-    if (defaultStyleProfileId.present) {
-      map['default_style_profile_id'] =
-          Variable<String>(defaultStyleProfileId.value);
-    }
-    if (activeChapterId.present) {
-      map['active_chapter_id'] = Variable<String>(activeChapterId.value);
-    }
-    if (localEncryptionEnabled.present) {
-      map['local_encryption_enabled'] =
-          Variable<bool>(localEncryptionEnabled.value);
-    }
     if (createdAt.present) {
-      map['created_at'] = Variable<DateTime>(createdAt.value);
+      map['created_at'] = Variable<int>(createdAt.value);
     }
     if (updatedAt.present) {
-      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+      map['updated_at'] = Variable<int>(updatedAt.value);
     }
     if (schemaVersion.present) {
       map['schema_version'] = Variable<int>(schemaVersion.value);
@@ -643,17 +341,10 @@ class ProjectsTableCompanion extends UpdateCompanion<ProjectsTableData> {
 
   @override
   String toString() {
-    return (StringBuffer('ProjectsTableCompanion(')
+    return (StringBuffer('ProjectsCompanion(')
           ..write('id: $id, ')
-          ..write('title: $title, ')
-          ..write('author: $author, ')
+          ..write('name: $name, ')
           ..write('description: $description, ')
-          ..write('language: $language, ')
-          ..write('genre: $genre, ')
-          ..write('tags: $tags, ')
-          ..write('defaultStyleProfileId: $defaultStyleProfileId, ')
-          ..write('activeChapterId: $activeChapterId, ')
-          ..write('localEncryptionEnabled: $localEncryptionEnabled, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('schemaVersion: $schemaVersion, ')
@@ -663,12 +354,12 @@ class ProjectsTableCompanion extends UpdateCompanion<ProjectsTableData> {
   }
 }
 
-class $ChaptersTableTable extends ChaptersTable
-    with TableInfo<$ChaptersTableTable, ChaptersTableData> {
+class $ChaptersTable extends Chapters
+    with TableInfo<$ChaptersTable, ChapterRow> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $ChaptersTableTable(this.attachedDatabase, [this._alias]);
+  $ChaptersTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -679,37 +370,20 @@ class $ChaptersTableTable extends ChaptersTable
   @override
   late final GeneratedColumn<String> projectId = GeneratedColumn<String>(
       'project_id', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _outlineNodeIdMeta =
-      const VerificationMeta('outlineNodeId');
-  @override
-  late final GeneratedColumn<String> outlineNodeId = GeneratedColumn<String>(
-      'outline_node_id', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES projects (id) ON DELETE CASCADE'));
   static const VerificationMeta _titleMeta = const VerificationMeta('title');
   @override
   late final GeneratedColumn<String> title = GeneratedColumn<String>(
       'title', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _orderIndexMeta =
-      const VerificationMeta('orderIndex');
+  static const VerificationMeta _markdownContentMeta =
+      const VerificationMeta('markdownContent');
   @override
-  late final GeneratedColumn<int> orderIndex = GeneratedColumn<int>(
-      'order_index', aliasedName, false,
-      type: DriftSqlType.int, requiredDuringInsert: true);
-  static const VerificationMeta _contentFormatMeta =
-      const VerificationMeta('contentFormat');
-  @override
-  late final GeneratedColumn<String> contentFormat = GeneratedColumn<String>(
-      'content_format', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      defaultValue: const Constant('markdown'));
-  static const VerificationMeta _contentMeta =
-      const VerificationMeta('content');
-  @override
-  late final GeneratedColumn<String> content = GeneratedColumn<String>(
-      'content', aliasedName, false,
+  late final GeneratedColumn<String> markdownContent = GeneratedColumn<String>(
+      'markdown_content', aliasedName, false,
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant(''));
@@ -733,21 +407,19 @@ class $ChaptersTableTable extends ChaptersTable
   @override
   late final GeneratedColumn<String> status = GeneratedColumn<String>(
       'status', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      defaultValue: const Constant('draft'));
+      type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
-  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
       'created_at', aliasedName, false,
-      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+      type: DriftSqlType.int, requiredDuringInsert: true);
   static const VerificationMeta _updatedAtMeta =
       const VerificationMeta('updatedAt');
   @override
-  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
       'updated_at', aliasedName, false,
-      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+      type: DriftSqlType.int, requiredDuringInsert: true);
   static const VerificationMeta _schemaVersionMeta =
       const VerificationMeta('schemaVersion');
   @override
@@ -760,11 +432,8 @@ class $ChaptersTableTable extends ChaptersTable
   List<GeneratedColumn> get $columns => [
         id,
         projectId,
-        outlineNodeId,
         title,
-        orderIndex,
-        contentFormat,
-        content,
+        markdownContent,
         plainTextCache,
         wordCount,
         status,
@@ -776,9 +445,9 @@ class $ChaptersTableTable extends ChaptersTable
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'chapters_table';
+  static const String $name = 'chapters';
   @override
-  VerificationContext validateIntegrity(Insertable<ChaptersTableData> instance,
+  VerificationContext validateIntegrity(Insertable<ChapterRow> instance,
       {bool isInserting = false}) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
@@ -793,35 +462,17 @@ class $ChaptersTableTable extends ChaptersTable
     } else if (isInserting) {
       context.missing(_projectIdMeta);
     }
-    if (data.containsKey('outline_node_id')) {
-      context.handle(
-          _outlineNodeIdMeta,
-          outlineNodeId.isAcceptableOrUnknown(
-              data['outline_node_id']!, _outlineNodeIdMeta));
-    }
     if (data.containsKey('title')) {
       context.handle(
           _titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta));
     } else if (isInserting) {
       context.missing(_titleMeta);
     }
-    if (data.containsKey('order_index')) {
+    if (data.containsKey('markdown_content')) {
       context.handle(
-          _orderIndexMeta,
-          orderIndex.isAcceptableOrUnknown(
-              data['order_index']!, _orderIndexMeta));
-    } else if (isInserting) {
-      context.missing(_orderIndexMeta);
-    }
-    if (data.containsKey('content_format')) {
-      context.handle(
-          _contentFormatMeta,
-          contentFormat.isAcceptableOrUnknown(
-              data['content_format']!, _contentFormatMeta));
-    }
-    if (data.containsKey('content')) {
-      context.handle(_contentMeta,
-          content.isAcceptableOrUnknown(data['content']!, _contentMeta));
+          _markdownContentMeta,
+          markdownContent.isAcceptableOrUnknown(
+              data['markdown_content']!, _markdownContentMeta));
     }
     if (data.containsKey('plain_text_cache')) {
       context.handle(
@@ -836,6 +487,8 @@ class $ChaptersTableTable extends ChaptersTable
     if (data.containsKey('status')) {
       context.handle(_statusMeta,
           status.isAcceptableOrUnknown(data['status']!, _statusMeta));
+    } else if (isInserting) {
+      context.missing(_statusMeta);
     }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
@@ -861,23 +514,17 @@ class $ChaptersTableTable extends ChaptersTable
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  ChaptersTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
+  ChapterRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return ChaptersTableData(
+    return ChapterRow(
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
       projectId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}project_id'])!,
-      outlineNodeId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}outline_node_id']),
       title: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}title'])!,
-      orderIndex: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}order_index'])!,
-      contentFormat: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}content_format'])!,
-      content: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}content'])!,
+      markdownContent: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}markdown_content'])!,
       plainTextCache: attachedDatabase.typeMapping.read(
           DriftSqlType.string, data['${effectivePrefix}plain_text_cache'])!,
       wordCount: attachedDatabase.typeMapping
@@ -885,43 +532,36 @@ class $ChaptersTableTable extends ChaptersTable
       status: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
       createdAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+          .read(DriftSqlType.int, data['${effectivePrefix}created_at'])!,
       updatedAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+          .read(DriftSqlType.int, data['${effectivePrefix}updated_at'])!,
       schemaVersion: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}schema_version'])!,
     );
   }
 
   @override
-  $ChaptersTableTable createAlias(String alias) {
-    return $ChaptersTableTable(attachedDatabase, alias);
+  $ChaptersTable createAlias(String alias) {
+    return $ChaptersTable(attachedDatabase, alias);
   }
 }
 
-class ChaptersTableData extends DataClass
-    implements Insertable<ChaptersTableData> {
+class ChapterRow extends DataClass implements Insertable<ChapterRow> {
   final String id;
   final String projectId;
-  final String? outlineNodeId;
   final String title;
-  final int orderIndex;
-  final String contentFormat;
-  final String content;
+  final String markdownContent;
   final String plainTextCache;
   final int wordCount;
   final String status;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final int createdAt;
+  final int updatedAt;
   final int schemaVersion;
-  const ChaptersTableData(
+  const ChapterRow(
       {required this.id,
       required this.projectId,
-      this.outlineNodeId,
       required this.title,
-      required this.orderIndex,
-      required this.contentFormat,
-      required this.content,
+      required this.markdownContent,
       required this.plainTextCache,
       required this.wordCount,
       required this.status,
@@ -933,33 +573,23 @@ class ChaptersTableData extends DataClass
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['project_id'] = Variable<String>(projectId);
-    if (!nullToAbsent || outlineNodeId != null) {
-      map['outline_node_id'] = Variable<String>(outlineNodeId);
-    }
     map['title'] = Variable<String>(title);
-    map['order_index'] = Variable<int>(orderIndex);
-    map['content_format'] = Variable<String>(contentFormat);
-    map['content'] = Variable<String>(content);
+    map['markdown_content'] = Variable<String>(markdownContent);
     map['plain_text_cache'] = Variable<String>(plainTextCache);
     map['word_count'] = Variable<int>(wordCount);
     map['status'] = Variable<String>(status);
-    map['created_at'] = Variable<DateTime>(createdAt);
-    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['created_at'] = Variable<int>(createdAt);
+    map['updated_at'] = Variable<int>(updatedAt);
     map['schema_version'] = Variable<int>(schemaVersion);
     return map;
   }
 
-  ChaptersTableCompanion toCompanion(bool nullToAbsent) {
-    return ChaptersTableCompanion(
+  ChaptersCompanion toCompanion(bool nullToAbsent) {
+    return ChaptersCompanion(
       id: Value(id),
       projectId: Value(projectId),
-      outlineNodeId: outlineNodeId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(outlineNodeId),
       title: Value(title),
-      orderIndex: Value(orderIndex),
-      contentFormat: Value(contentFormat),
-      content: Value(content),
+      markdownContent: Value(markdownContent),
       plainTextCache: Value(plainTextCache),
       wordCount: Value(wordCount),
       status: Value(status),
@@ -969,22 +599,19 @@ class ChaptersTableData extends DataClass
     );
   }
 
-  factory ChaptersTableData.fromJson(Map<String, dynamic> json,
+  factory ChapterRow.fromJson(Map<String, dynamic> json,
       {ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return ChaptersTableData(
+    return ChapterRow(
       id: serializer.fromJson<String>(json['id']),
       projectId: serializer.fromJson<String>(json['projectId']),
-      outlineNodeId: serializer.fromJson<String?>(json['outlineNodeId']),
       title: serializer.fromJson<String>(json['title']),
-      orderIndex: serializer.fromJson<int>(json['orderIndex']),
-      contentFormat: serializer.fromJson<String>(json['contentFormat']),
-      content: serializer.fromJson<String>(json['content']),
+      markdownContent: serializer.fromJson<String>(json['markdownContent']),
       plainTextCache: serializer.fromJson<String>(json['plainTextCache']),
       wordCount: serializer.fromJson<int>(json['wordCount']),
       status: serializer.fromJson<String>(json['status']),
-      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
-      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      updatedAt: serializer.fromJson<int>(json['updatedAt']),
       schemaVersion: serializer.fromJson<int>(json['schemaVersion']),
     );
   }
@@ -994,43 +621,33 @@ class ChaptersTableData extends DataClass
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'projectId': serializer.toJson<String>(projectId),
-      'outlineNodeId': serializer.toJson<String?>(outlineNodeId),
       'title': serializer.toJson<String>(title),
-      'orderIndex': serializer.toJson<int>(orderIndex),
-      'contentFormat': serializer.toJson<String>(contentFormat),
-      'content': serializer.toJson<String>(content),
+      'markdownContent': serializer.toJson<String>(markdownContent),
       'plainTextCache': serializer.toJson<String>(plainTextCache),
       'wordCount': serializer.toJson<int>(wordCount),
       'status': serializer.toJson<String>(status),
-      'createdAt': serializer.toJson<DateTime>(createdAt),
-      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'updatedAt': serializer.toJson<int>(updatedAt),
       'schemaVersion': serializer.toJson<int>(schemaVersion),
     };
   }
 
-  ChaptersTableData copyWith(
+  ChapterRow copyWith(
           {String? id,
           String? projectId,
-          Value<String?> outlineNodeId = const Value.absent(),
           String? title,
-          int? orderIndex,
-          String? contentFormat,
-          String? content,
+          String? markdownContent,
           String? plainTextCache,
           int? wordCount,
           String? status,
-          DateTime? createdAt,
-          DateTime? updatedAt,
+          int? createdAt,
+          int? updatedAt,
           int? schemaVersion}) =>
-      ChaptersTableData(
+      ChapterRow(
         id: id ?? this.id,
         projectId: projectId ?? this.projectId,
-        outlineNodeId:
-            outlineNodeId.present ? outlineNodeId.value : this.outlineNodeId,
         title: title ?? this.title,
-        orderIndex: orderIndex ?? this.orderIndex,
-        contentFormat: contentFormat ?? this.contentFormat,
-        content: content ?? this.content,
+        markdownContent: markdownContent ?? this.markdownContent,
         plainTextCache: plainTextCache ?? this.plainTextCache,
         wordCount: wordCount ?? this.wordCount,
         status: status ?? this.status,
@@ -1038,20 +655,14 @@ class ChaptersTableData extends DataClass
         updatedAt: updatedAt ?? this.updatedAt,
         schemaVersion: schemaVersion ?? this.schemaVersion,
       );
-  ChaptersTableData copyWithCompanion(ChaptersTableCompanion data) {
-    return ChaptersTableData(
+  ChapterRow copyWithCompanion(ChaptersCompanion data) {
+    return ChapterRow(
       id: data.id.present ? data.id.value : this.id,
       projectId: data.projectId.present ? data.projectId.value : this.projectId,
-      outlineNodeId: data.outlineNodeId.present
-          ? data.outlineNodeId.value
-          : this.outlineNodeId,
       title: data.title.present ? data.title.value : this.title,
-      orderIndex:
-          data.orderIndex.present ? data.orderIndex.value : this.orderIndex,
-      contentFormat: data.contentFormat.present
-          ? data.contentFormat.value
-          : this.contentFormat,
-      content: data.content.present ? data.content.value : this.content,
+      markdownContent: data.markdownContent.present
+          ? data.markdownContent.value
+          : this.markdownContent,
       plainTextCache: data.plainTextCache.present
           ? data.plainTextCache.value
           : this.plainTextCache,
@@ -1067,14 +678,11 @@ class ChaptersTableData extends DataClass
 
   @override
   String toString() {
-    return (StringBuffer('ChaptersTableData(')
+    return (StringBuffer('ChapterRow(')
           ..write('id: $id, ')
           ..write('projectId: $projectId, ')
-          ..write('outlineNodeId: $outlineNodeId, ')
           ..write('title: $title, ')
-          ..write('orderIndex: $orderIndex, ')
-          ..write('contentFormat: $contentFormat, ')
-          ..write('content: $content, ')
+          ..write('markdownContent: $markdownContent, ')
           ..write('plainTextCache: $plainTextCache, ')
           ..write('wordCount: $wordCount, ')
           ..write('status: $status, ')
@@ -1086,31 +694,16 @@ class ChaptersTableData extends DataClass
   }
 
   @override
-  int get hashCode => Object.hash(
-      id,
-      projectId,
-      outlineNodeId,
-      title,
-      orderIndex,
-      contentFormat,
-      content,
-      plainTextCache,
-      wordCount,
-      status,
-      createdAt,
-      updatedAt,
-      schemaVersion);
+  int get hashCode => Object.hash(id, projectId, title, markdownContent,
+      plainTextCache, wordCount, status, createdAt, updatedAt, schemaVersion);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is ChaptersTableData &&
+      (other is ChapterRow &&
           other.id == this.id &&
           other.projectId == this.projectId &&
-          other.outlineNodeId == this.outlineNodeId &&
           other.title == this.title &&
-          other.orderIndex == this.orderIndex &&
-          other.contentFormat == this.contentFormat &&
-          other.content == this.content &&
+          other.markdownContent == this.markdownContent &&
           other.plainTextCache == this.plainTextCache &&
           other.wordCount == this.wordCount &&
           other.status == this.status &&
@@ -1119,29 +712,23 @@ class ChaptersTableData extends DataClass
           other.schemaVersion == this.schemaVersion);
 }
 
-class ChaptersTableCompanion extends UpdateCompanion<ChaptersTableData> {
+class ChaptersCompanion extends UpdateCompanion<ChapterRow> {
   final Value<String> id;
   final Value<String> projectId;
-  final Value<String?> outlineNodeId;
   final Value<String> title;
-  final Value<int> orderIndex;
-  final Value<String> contentFormat;
-  final Value<String> content;
+  final Value<String> markdownContent;
   final Value<String> plainTextCache;
   final Value<int> wordCount;
   final Value<String> status;
-  final Value<DateTime> createdAt;
-  final Value<DateTime> updatedAt;
+  final Value<int> createdAt;
+  final Value<int> updatedAt;
   final Value<int> schemaVersion;
   final Value<int> rowid;
-  const ChaptersTableCompanion({
+  const ChaptersCompanion({
     this.id = const Value.absent(),
     this.projectId = const Value.absent(),
-    this.outlineNodeId = const Value.absent(),
     this.title = const Value.absent(),
-    this.orderIndex = const Value.absent(),
-    this.contentFormat = const Value.absent(),
-    this.content = const Value.absent(),
+    this.markdownContent = const Value.absent(),
     this.plainTextCache = const Value.absent(),
     this.wordCount = const Value.absent(),
     this.status = const Value.absent(),
@@ -1150,51 +737,42 @@ class ChaptersTableCompanion extends UpdateCompanion<ChaptersTableData> {
     this.schemaVersion = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-  ChaptersTableCompanion.insert({
+  ChaptersCompanion.insert({
     required String id,
     required String projectId,
-    this.outlineNodeId = const Value.absent(),
     required String title,
-    required int orderIndex,
-    this.contentFormat = const Value.absent(),
-    this.content = const Value.absent(),
+    this.markdownContent = const Value.absent(),
     this.plainTextCache = const Value.absent(),
     this.wordCount = const Value.absent(),
-    this.status = const Value.absent(),
-    required DateTime createdAt,
-    required DateTime updatedAt,
+    required String status,
+    required int createdAt,
+    required int updatedAt,
     this.schemaVersion = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         projectId = Value(projectId),
         title = Value(title),
-        orderIndex = Value(orderIndex),
+        status = Value(status),
         createdAt = Value(createdAt),
         updatedAt = Value(updatedAt);
-  static Insertable<ChaptersTableData> custom({
+  static Insertable<ChapterRow> custom({
     Expression<String>? id,
     Expression<String>? projectId,
-    Expression<String>? outlineNodeId,
     Expression<String>? title,
-    Expression<int>? orderIndex,
-    Expression<String>? contentFormat,
-    Expression<String>? content,
+    Expression<String>? markdownContent,
     Expression<String>? plainTextCache,
     Expression<int>? wordCount,
     Expression<String>? status,
-    Expression<DateTime>? createdAt,
-    Expression<DateTime>? updatedAt,
+    Expression<int>? createdAt,
+    Expression<int>? updatedAt,
     Expression<int>? schemaVersion,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (projectId != null) 'project_id': projectId,
-      if (outlineNodeId != null) 'outline_node_id': outlineNodeId,
       if (title != null) 'title': title,
-      if (orderIndex != null) 'order_index': orderIndex,
-      if (contentFormat != null) 'content_format': contentFormat,
-      if (content != null) 'content': content,
+      if (markdownContent != null) 'markdown_content': markdownContent,
       if (plainTextCache != null) 'plain_text_cache': plainTextCache,
       if (wordCount != null) 'word_count': wordCount,
       if (status != null) 'status': status,
@@ -1205,29 +783,23 @@ class ChaptersTableCompanion extends UpdateCompanion<ChaptersTableData> {
     });
   }
 
-  ChaptersTableCompanion copyWith(
+  ChaptersCompanion copyWith(
       {Value<String>? id,
       Value<String>? projectId,
-      Value<String?>? outlineNodeId,
       Value<String>? title,
-      Value<int>? orderIndex,
-      Value<String>? contentFormat,
-      Value<String>? content,
+      Value<String>? markdownContent,
       Value<String>? plainTextCache,
       Value<int>? wordCount,
       Value<String>? status,
-      Value<DateTime>? createdAt,
-      Value<DateTime>? updatedAt,
+      Value<int>? createdAt,
+      Value<int>? updatedAt,
       Value<int>? schemaVersion,
       Value<int>? rowid}) {
-    return ChaptersTableCompanion(
+    return ChaptersCompanion(
       id: id ?? this.id,
       projectId: projectId ?? this.projectId,
-      outlineNodeId: outlineNodeId ?? this.outlineNodeId,
       title: title ?? this.title,
-      orderIndex: orderIndex ?? this.orderIndex,
-      contentFormat: contentFormat ?? this.contentFormat,
-      content: content ?? this.content,
+      markdownContent: markdownContent ?? this.markdownContent,
       plainTextCache: plainTextCache ?? this.plainTextCache,
       wordCount: wordCount ?? this.wordCount,
       status: status ?? this.status,
@@ -1247,20 +819,11 @@ class ChaptersTableCompanion extends UpdateCompanion<ChaptersTableData> {
     if (projectId.present) {
       map['project_id'] = Variable<String>(projectId.value);
     }
-    if (outlineNodeId.present) {
-      map['outline_node_id'] = Variable<String>(outlineNodeId.value);
-    }
     if (title.present) {
       map['title'] = Variable<String>(title.value);
     }
-    if (orderIndex.present) {
-      map['order_index'] = Variable<int>(orderIndex.value);
-    }
-    if (contentFormat.present) {
-      map['content_format'] = Variable<String>(contentFormat.value);
-    }
-    if (content.present) {
-      map['content'] = Variable<String>(content.value);
+    if (markdownContent.present) {
+      map['markdown_content'] = Variable<String>(markdownContent.value);
     }
     if (plainTextCache.present) {
       map['plain_text_cache'] = Variable<String>(plainTextCache.value);
@@ -1272,10 +835,10 @@ class ChaptersTableCompanion extends UpdateCompanion<ChaptersTableData> {
       map['status'] = Variable<String>(status.value);
     }
     if (createdAt.present) {
-      map['created_at'] = Variable<DateTime>(createdAt.value);
+      map['created_at'] = Variable<int>(createdAt.value);
     }
     if (updatedAt.present) {
-      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+      map['updated_at'] = Variable<int>(updatedAt.value);
     }
     if (schemaVersion.present) {
       map['schema_version'] = Variable<int>(schemaVersion.value);
@@ -1288,14 +851,11 @@ class ChaptersTableCompanion extends UpdateCompanion<ChaptersTableData> {
 
   @override
   String toString() {
-    return (StringBuffer('ChaptersTableCompanion(')
+    return (StringBuffer('ChaptersCompanion(')
           ..write('id: $id, ')
           ..write('projectId: $projectId, ')
-          ..write('outlineNodeId: $outlineNodeId, ')
           ..write('title: $title, ')
-          ..write('orderIndex: $orderIndex, ')
-          ..write('contentFormat: $contentFormat, ')
-          ..write('content: $content, ')
+          ..write('markdownContent: $markdownContent, ')
           ..write('plainTextCache: $plainTextCache, ')
           ..write('wordCount: $wordCount, ')
           ..write('status: $status, ')
@@ -1308,12 +868,12 @@ class ChaptersTableCompanion extends UpdateCompanion<ChaptersTableData> {
   }
 }
 
-class $RevisionsTableTable extends RevisionsTable
-    with TableInfo<$RevisionsTableTable, RevisionsTableData> {
+class $RevisionsTable extends Revisions
+    with TableInfo<$RevisionsTable, RevisionRow> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $RevisionsTableTable(this.attachedDatabase, [this._alias]);
+  $RevisionsTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -1330,68 +890,33 @@ class $RevisionsTableTable extends RevisionsTable
   @override
   late final GeneratedColumn<String> chapterId = GeneratedColumn<String>(
       'chapter_id', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _operationMeta =
-      const VerificationMeta('operation');
-  @override
-  late final GeneratedColumn<String> operation = GeneratedColumn<String>(
-      'operation', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _anchorMeta = const VerificationMeta('anchor');
-  @override
-  late final GeneratedColumn<String> anchor = GeneratedColumn<String>(
-      'anchor', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _beforeTextMeta =
-      const VerificationMeta('beforeText');
-  @override
-  late final GeneratedColumn<String> beforeText = GeneratedColumn<String>(
-      'before_text', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _afterTextMeta =
-      const VerificationMeta('afterText');
-  @override
-  late final GeneratedColumn<String> afterText = GeneratedColumn<String>(
-      'after_text', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _sourceMeta = const VerificationMeta('source');
-  @override
-  late final GeneratedColumn<String> source = GeneratedColumn<String>(
-      'source', aliasedName, false,
       type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      defaultValue: const Constant('agent'));
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES chapters (id) ON DELETE CASCADE'));
+  static const VerificationMeta _patchJsonMeta =
+      const VerificationMeta('patchJson');
+  @override
+  late final GeneratedColumn<String> patchJson = GeneratedColumn<String>(
+      'patch_json', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _statusMeta = const VerificationMeta('status');
   @override
   late final GeneratedColumn<String> status = GeneratedColumn<String>(
       'status', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      defaultValue: const Constant('pending'));
-  static const VerificationMeta _metadataMeta =
-      const VerificationMeta('metadata');
-  @override
-  late final GeneratedColumn<String> metadata = GeneratedColumn<String>(
-      'metadata', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _resolvedAtMeta =
-      const VerificationMeta('resolvedAt');
-  @override
-  late final GeneratedColumn<DateTime> resolvedAt = GeneratedColumn<DateTime>(
-      'resolved_at', aliasedName, true,
-      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+      type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
-  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
       'created_at', aliasedName, false,
-      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+      type: DriftSqlType.int, requiredDuringInsert: true);
   static const VerificationMeta _updatedAtMeta =
       const VerificationMeta('updatedAt');
   @override
-  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
       'updated_at', aliasedName, false,
-      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+      type: DriftSqlType.int, requiredDuringInsert: true);
   static const VerificationMeta _schemaVersionMeta =
       const VerificationMeta('schemaVersion');
   @override
@@ -1405,14 +930,8 @@ class $RevisionsTableTable extends RevisionsTable
         id,
         projectId,
         chapterId,
-        operation,
-        anchor,
-        beforeText,
-        afterText,
-        source,
+        patchJson,
         status,
-        metadata,
-        resolvedAt,
         createdAt,
         updatedAt,
         schemaVersion
@@ -1421,9 +940,9 @@ class $RevisionsTableTable extends RevisionsTable
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'revisions_table';
+  static const String $name = 'revisions';
   @override
-  VerificationContext validateIntegrity(Insertable<RevisionsTableData> instance,
+  VerificationContext validateIntegrity(Insertable<RevisionRow> instance,
       {bool isInserting = false}) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
@@ -1444,49 +963,17 @@ class $RevisionsTableTable extends RevisionsTable
     } else if (isInserting) {
       context.missing(_chapterIdMeta);
     }
-    if (data.containsKey('operation')) {
-      context.handle(_operationMeta,
-          operation.isAcceptableOrUnknown(data['operation']!, _operationMeta));
+    if (data.containsKey('patch_json')) {
+      context.handle(_patchJsonMeta,
+          patchJson.isAcceptableOrUnknown(data['patch_json']!, _patchJsonMeta));
     } else if (isInserting) {
-      context.missing(_operationMeta);
-    }
-    if (data.containsKey('anchor')) {
-      context.handle(_anchorMeta,
-          anchor.isAcceptableOrUnknown(data['anchor']!, _anchorMeta));
-    } else if (isInserting) {
-      context.missing(_anchorMeta);
-    }
-    if (data.containsKey('before_text')) {
-      context.handle(
-          _beforeTextMeta,
-          beforeText.isAcceptableOrUnknown(
-              data['before_text']!, _beforeTextMeta));
-    } else if (isInserting) {
-      context.missing(_beforeTextMeta);
-    }
-    if (data.containsKey('after_text')) {
-      context.handle(_afterTextMeta,
-          afterText.isAcceptableOrUnknown(data['after_text']!, _afterTextMeta));
-    } else if (isInserting) {
-      context.missing(_afterTextMeta);
-    }
-    if (data.containsKey('source')) {
-      context.handle(_sourceMeta,
-          source.isAcceptableOrUnknown(data['source']!, _sourceMeta));
+      context.missing(_patchJsonMeta);
     }
     if (data.containsKey('status')) {
       context.handle(_statusMeta,
           status.isAcceptableOrUnknown(data['status']!, _statusMeta));
-    }
-    if (data.containsKey('metadata')) {
-      context.handle(_metadataMeta,
-          metadata.isAcceptableOrUnknown(data['metadata']!, _metadataMeta));
-    }
-    if (data.containsKey('resolved_at')) {
-      context.handle(
-          _resolvedAtMeta,
-          resolvedAt.isAcceptableOrUnknown(
-              data['resolved_at']!, _resolvedAtMeta));
+    } else if (isInserting) {
+      context.missing(_statusMeta);
     }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
@@ -1512,74 +999,49 @@ class $RevisionsTableTable extends RevisionsTable
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  RevisionsTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
+  RevisionRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return RevisionsTableData(
+    return RevisionRow(
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
       projectId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}project_id'])!,
       chapterId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}chapter_id'])!,
-      operation: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}operation'])!,
-      anchor: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}anchor'])!,
-      beforeText: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}before_text'])!,
-      afterText: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}after_text'])!,
-      source: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}source'])!,
+      patchJson: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}patch_json'])!,
       status: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
-      metadata: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}metadata']),
-      resolvedAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}resolved_at']),
       createdAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+          .read(DriftSqlType.int, data['${effectivePrefix}created_at'])!,
       updatedAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+          .read(DriftSqlType.int, data['${effectivePrefix}updated_at'])!,
       schemaVersion: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}schema_version'])!,
     );
   }
 
   @override
-  $RevisionsTableTable createAlias(String alias) {
-    return $RevisionsTableTable(attachedDatabase, alias);
+  $RevisionsTable createAlias(String alias) {
+    return $RevisionsTable(attachedDatabase, alias);
   }
 }
 
-class RevisionsTableData extends DataClass
-    implements Insertable<RevisionsTableData> {
+class RevisionRow extends DataClass implements Insertable<RevisionRow> {
   final String id;
   final String projectId;
   final String chapterId;
-  final String operation;
-  final String anchor;
-  final String beforeText;
-  final String afterText;
-  final String source;
+  final String patchJson;
   final String status;
-  final String? metadata;
-  final DateTime? resolvedAt;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final int createdAt;
+  final int updatedAt;
   final int schemaVersion;
-  const RevisionsTableData(
+  const RevisionRow(
       {required this.id,
       required this.projectId,
       required this.chapterId,
-      required this.operation,
-      required this.anchor,
-      required this.beforeText,
-      required this.afterText,
-      required this.source,
+      required this.patchJson,
       required this.status,
-      this.metadata,
-      this.resolvedAt,
       required this.createdAt,
       required this.updatedAt,
       required this.schemaVersion});
@@ -1589,64 +1051,38 @@ class RevisionsTableData extends DataClass
     map['id'] = Variable<String>(id);
     map['project_id'] = Variable<String>(projectId);
     map['chapter_id'] = Variable<String>(chapterId);
-    map['operation'] = Variable<String>(operation);
-    map['anchor'] = Variable<String>(anchor);
-    map['before_text'] = Variable<String>(beforeText);
-    map['after_text'] = Variable<String>(afterText);
-    map['source'] = Variable<String>(source);
+    map['patch_json'] = Variable<String>(patchJson);
     map['status'] = Variable<String>(status);
-    if (!nullToAbsent || metadata != null) {
-      map['metadata'] = Variable<String>(metadata);
-    }
-    if (!nullToAbsent || resolvedAt != null) {
-      map['resolved_at'] = Variable<DateTime>(resolvedAt);
-    }
-    map['created_at'] = Variable<DateTime>(createdAt);
-    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['created_at'] = Variable<int>(createdAt);
+    map['updated_at'] = Variable<int>(updatedAt);
     map['schema_version'] = Variable<int>(schemaVersion);
     return map;
   }
 
-  RevisionsTableCompanion toCompanion(bool nullToAbsent) {
-    return RevisionsTableCompanion(
+  RevisionsCompanion toCompanion(bool nullToAbsent) {
+    return RevisionsCompanion(
       id: Value(id),
       projectId: Value(projectId),
       chapterId: Value(chapterId),
-      operation: Value(operation),
-      anchor: Value(anchor),
-      beforeText: Value(beforeText),
-      afterText: Value(afterText),
-      source: Value(source),
+      patchJson: Value(patchJson),
       status: Value(status),
-      metadata: metadata == null && nullToAbsent
-          ? const Value.absent()
-          : Value(metadata),
-      resolvedAt: resolvedAt == null && nullToAbsent
-          ? const Value.absent()
-          : Value(resolvedAt),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       schemaVersion: Value(schemaVersion),
     );
   }
 
-  factory RevisionsTableData.fromJson(Map<String, dynamic> json,
+  factory RevisionRow.fromJson(Map<String, dynamic> json,
       {ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return RevisionsTableData(
+    return RevisionRow(
       id: serializer.fromJson<String>(json['id']),
       projectId: serializer.fromJson<String>(json['projectId']),
       chapterId: serializer.fromJson<String>(json['chapterId']),
-      operation: serializer.fromJson<String>(json['operation']),
-      anchor: serializer.fromJson<String>(json['anchor']),
-      beforeText: serializer.fromJson<String>(json['beforeText']),
-      afterText: serializer.fromJson<String>(json['afterText']),
-      source: serializer.fromJson<String>(json['source']),
+      patchJson: serializer.fromJson<String>(json['patchJson']),
       status: serializer.fromJson<String>(json['status']),
-      metadata: serializer.fromJson<String?>(json['metadata']),
-      resolvedAt: serializer.fromJson<DateTime?>(json['resolvedAt']),
-      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
-      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      updatedAt: serializer.fromJson<int>(json['updatedAt']),
       schemaVersion: serializer.fromJson<int>(json['schemaVersion']),
     );
   }
@@ -1657,66 +1093,40 @@ class RevisionsTableData extends DataClass
       'id': serializer.toJson<String>(id),
       'projectId': serializer.toJson<String>(projectId),
       'chapterId': serializer.toJson<String>(chapterId),
-      'operation': serializer.toJson<String>(operation),
-      'anchor': serializer.toJson<String>(anchor),
-      'beforeText': serializer.toJson<String>(beforeText),
-      'afterText': serializer.toJson<String>(afterText),
-      'source': serializer.toJson<String>(source),
+      'patchJson': serializer.toJson<String>(patchJson),
       'status': serializer.toJson<String>(status),
-      'metadata': serializer.toJson<String?>(metadata),
-      'resolvedAt': serializer.toJson<DateTime?>(resolvedAt),
-      'createdAt': serializer.toJson<DateTime>(createdAt),
-      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'updatedAt': serializer.toJson<int>(updatedAt),
       'schemaVersion': serializer.toJson<int>(schemaVersion),
     };
   }
 
-  RevisionsTableData copyWith(
+  RevisionRow copyWith(
           {String? id,
           String? projectId,
           String? chapterId,
-          String? operation,
-          String? anchor,
-          String? beforeText,
-          String? afterText,
-          String? source,
+          String? patchJson,
           String? status,
-          Value<String?> metadata = const Value.absent(),
-          Value<DateTime?> resolvedAt = const Value.absent(),
-          DateTime? createdAt,
-          DateTime? updatedAt,
+          int? createdAt,
+          int? updatedAt,
           int? schemaVersion}) =>
-      RevisionsTableData(
+      RevisionRow(
         id: id ?? this.id,
         projectId: projectId ?? this.projectId,
         chapterId: chapterId ?? this.chapterId,
-        operation: operation ?? this.operation,
-        anchor: anchor ?? this.anchor,
-        beforeText: beforeText ?? this.beforeText,
-        afterText: afterText ?? this.afterText,
-        source: source ?? this.source,
+        patchJson: patchJson ?? this.patchJson,
         status: status ?? this.status,
-        metadata: metadata.present ? metadata.value : this.metadata,
-        resolvedAt: resolvedAt.present ? resolvedAt.value : this.resolvedAt,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
         schemaVersion: schemaVersion ?? this.schemaVersion,
       );
-  RevisionsTableData copyWithCompanion(RevisionsTableCompanion data) {
-    return RevisionsTableData(
+  RevisionRow copyWithCompanion(RevisionsCompanion data) {
+    return RevisionRow(
       id: data.id.present ? data.id.value : this.id,
       projectId: data.projectId.present ? data.projectId.value : this.projectId,
       chapterId: data.chapterId.present ? data.chapterId.value : this.chapterId,
-      operation: data.operation.present ? data.operation.value : this.operation,
-      anchor: data.anchor.present ? data.anchor.value : this.anchor,
-      beforeText:
-          data.beforeText.present ? data.beforeText.value : this.beforeText,
-      afterText: data.afterText.present ? data.afterText.value : this.afterText,
-      source: data.source.present ? data.source.value : this.source,
+      patchJson: data.patchJson.present ? data.patchJson.value : this.patchJson,
       status: data.status.present ? data.status.value : this.status,
-      metadata: data.metadata.present ? data.metadata.value : this.metadata,
-      resolvedAt:
-          data.resolvedAt.present ? data.resolvedAt.value : this.resolvedAt,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       schemaVersion: data.schemaVersion.present
@@ -1727,18 +1137,12 @@ class RevisionsTableData extends DataClass
 
   @override
   String toString() {
-    return (StringBuffer('RevisionsTableData(')
+    return (StringBuffer('RevisionRow(')
           ..write('id: $id, ')
           ..write('projectId: $projectId, ')
           ..write('chapterId: $chapterId, ')
-          ..write('operation: $operation, ')
-          ..write('anchor: $anchor, ')
-          ..write('beforeText: $beforeText, ')
-          ..write('afterText: $afterText, ')
-          ..write('source: $source, ')
+          ..write('patchJson: $patchJson, ')
           ..write('status: $status, ')
-          ..write('metadata: $metadata, ')
-          ..write('resolvedAt: $resolvedAt, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('schemaVersion: $schemaVersion')
@@ -1747,113 +1151,68 @@ class RevisionsTableData extends DataClass
   }
 
   @override
-  int get hashCode => Object.hash(
-      id,
-      projectId,
-      chapterId,
-      operation,
-      anchor,
-      beforeText,
-      afterText,
-      source,
-      status,
-      metadata,
-      resolvedAt,
-      createdAt,
-      updatedAt,
-      schemaVersion);
+  int get hashCode => Object.hash(id, projectId, chapterId, patchJson, status,
+      createdAt, updatedAt, schemaVersion);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is RevisionsTableData &&
+      (other is RevisionRow &&
           other.id == this.id &&
           other.projectId == this.projectId &&
           other.chapterId == this.chapterId &&
-          other.operation == this.operation &&
-          other.anchor == this.anchor &&
-          other.beforeText == this.beforeText &&
-          other.afterText == this.afterText &&
-          other.source == this.source &&
+          other.patchJson == this.patchJson &&
           other.status == this.status &&
-          other.metadata == this.metadata &&
-          other.resolvedAt == this.resolvedAt &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.schemaVersion == this.schemaVersion);
 }
 
-class RevisionsTableCompanion extends UpdateCompanion<RevisionsTableData> {
+class RevisionsCompanion extends UpdateCompanion<RevisionRow> {
   final Value<String> id;
   final Value<String> projectId;
   final Value<String> chapterId;
-  final Value<String> operation;
-  final Value<String> anchor;
-  final Value<String> beforeText;
-  final Value<String> afterText;
-  final Value<String> source;
+  final Value<String> patchJson;
   final Value<String> status;
-  final Value<String?> metadata;
-  final Value<DateTime?> resolvedAt;
-  final Value<DateTime> createdAt;
-  final Value<DateTime> updatedAt;
+  final Value<int> createdAt;
+  final Value<int> updatedAt;
   final Value<int> schemaVersion;
   final Value<int> rowid;
-  const RevisionsTableCompanion({
+  const RevisionsCompanion({
     this.id = const Value.absent(),
     this.projectId = const Value.absent(),
     this.chapterId = const Value.absent(),
-    this.operation = const Value.absent(),
-    this.anchor = const Value.absent(),
-    this.beforeText = const Value.absent(),
-    this.afterText = const Value.absent(),
-    this.source = const Value.absent(),
+    this.patchJson = const Value.absent(),
     this.status = const Value.absent(),
-    this.metadata = const Value.absent(),
-    this.resolvedAt = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.schemaVersion = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-  RevisionsTableCompanion.insert({
+  RevisionsCompanion.insert({
     required String id,
     required String projectId,
     required String chapterId,
-    required String operation,
-    required String anchor,
-    required String beforeText,
-    required String afterText,
-    this.source = const Value.absent(),
-    this.status = const Value.absent(),
-    this.metadata = const Value.absent(),
-    this.resolvedAt = const Value.absent(),
-    required DateTime createdAt,
-    required DateTime updatedAt,
+    required String patchJson,
+    required String status,
+    required int createdAt,
+    required int updatedAt,
     this.schemaVersion = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         projectId = Value(projectId),
         chapterId = Value(chapterId),
-        operation = Value(operation),
-        anchor = Value(anchor),
-        beforeText = Value(beforeText),
-        afterText = Value(afterText),
+        patchJson = Value(patchJson),
+        status = Value(status),
         createdAt = Value(createdAt),
         updatedAt = Value(updatedAt);
-  static Insertable<RevisionsTableData> custom({
+  static Insertable<RevisionRow> custom({
     Expression<String>? id,
     Expression<String>? projectId,
     Expression<String>? chapterId,
-    Expression<String>? operation,
-    Expression<String>? anchor,
-    Expression<String>? beforeText,
-    Expression<String>? afterText,
-    Expression<String>? source,
+    Expression<String>? patchJson,
     Expression<String>? status,
-    Expression<String>? metadata,
-    Expression<DateTime>? resolvedAt,
-    Expression<DateTime>? createdAt,
-    Expression<DateTime>? updatedAt,
+    Expression<int>? createdAt,
+    Expression<int>? updatedAt,
     Expression<int>? schemaVersion,
     Expression<int>? rowid,
   }) {
@@ -1861,14 +1220,8 @@ class RevisionsTableCompanion extends UpdateCompanion<RevisionsTableData> {
       if (id != null) 'id': id,
       if (projectId != null) 'project_id': projectId,
       if (chapterId != null) 'chapter_id': chapterId,
-      if (operation != null) 'operation': operation,
-      if (anchor != null) 'anchor': anchor,
-      if (beforeText != null) 'before_text': beforeText,
-      if (afterText != null) 'after_text': afterText,
-      if (source != null) 'source': source,
+      if (patchJson != null) 'patch_json': patchJson,
       if (status != null) 'status': status,
-      if (metadata != null) 'metadata': metadata,
-      if (resolvedAt != null) 'resolved_at': resolvedAt,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (schemaVersion != null) 'schema_version': schemaVersion,
@@ -1876,34 +1229,22 @@ class RevisionsTableCompanion extends UpdateCompanion<RevisionsTableData> {
     });
   }
 
-  RevisionsTableCompanion copyWith(
+  RevisionsCompanion copyWith(
       {Value<String>? id,
       Value<String>? projectId,
       Value<String>? chapterId,
-      Value<String>? operation,
-      Value<String>? anchor,
-      Value<String>? beforeText,
-      Value<String>? afterText,
-      Value<String>? source,
+      Value<String>? patchJson,
       Value<String>? status,
-      Value<String?>? metadata,
-      Value<DateTime?>? resolvedAt,
-      Value<DateTime>? createdAt,
-      Value<DateTime>? updatedAt,
+      Value<int>? createdAt,
+      Value<int>? updatedAt,
       Value<int>? schemaVersion,
       Value<int>? rowid}) {
-    return RevisionsTableCompanion(
+    return RevisionsCompanion(
       id: id ?? this.id,
       projectId: projectId ?? this.projectId,
       chapterId: chapterId ?? this.chapterId,
-      operation: operation ?? this.operation,
-      anchor: anchor ?? this.anchor,
-      beforeText: beforeText ?? this.beforeText,
-      afterText: afterText ?? this.afterText,
-      source: source ?? this.source,
+      patchJson: patchJson ?? this.patchJson,
       status: status ?? this.status,
-      metadata: metadata ?? this.metadata,
-      resolvedAt: resolvedAt ?? this.resolvedAt,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       schemaVersion: schemaVersion ?? this.schemaVersion,
@@ -1923,35 +1264,17 @@ class RevisionsTableCompanion extends UpdateCompanion<RevisionsTableData> {
     if (chapterId.present) {
       map['chapter_id'] = Variable<String>(chapterId.value);
     }
-    if (operation.present) {
-      map['operation'] = Variable<String>(operation.value);
-    }
-    if (anchor.present) {
-      map['anchor'] = Variable<String>(anchor.value);
-    }
-    if (beforeText.present) {
-      map['before_text'] = Variable<String>(beforeText.value);
-    }
-    if (afterText.present) {
-      map['after_text'] = Variable<String>(afterText.value);
-    }
-    if (source.present) {
-      map['source'] = Variable<String>(source.value);
+    if (patchJson.present) {
+      map['patch_json'] = Variable<String>(patchJson.value);
     }
     if (status.present) {
       map['status'] = Variable<String>(status.value);
     }
-    if (metadata.present) {
-      map['metadata'] = Variable<String>(metadata.value);
-    }
-    if (resolvedAt.present) {
-      map['resolved_at'] = Variable<DateTime>(resolvedAt.value);
-    }
     if (createdAt.present) {
-      map['created_at'] = Variable<DateTime>(createdAt.value);
+      map['created_at'] = Variable<int>(createdAt.value);
     }
     if (updatedAt.present) {
-      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+      map['updated_at'] = Variable<int>(updatedAt.value);
     }
     if (schemaVersion.present) {
       map['schema_version'] = Variable<int>(schemaVersion.value);
@@ -1964,621 +1287,11 @@ class RevisionsTableCompanion extends UpdateCompanion<RevisionsTableData> {
 
   @override
   String toString() {
-    return (StringBuffer('RevisionsTableCompanion(')
+    return (StringBuffer('RevisionsCompanion(')
           ..write('id: $id, ')
           ..write('projectId: $projectId, ')
           ..write('chapterId: $chapterId, ')
-          ..write('operation: $operation, ')
-          ..write('anchor: $anchor, ')
-          ..write('beforeText: $beforeText, ')
-          ..write('afterText: $afterText, ')
-          ..write('source: $source, ')
-          ..write('status: $status, ')
-          ..write('metadata: $metadata, ')
-          ..write('resolvedAt: $resolvedAt, ')
-          ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt, ')
-          ..write('schemaVersion: $schemaVersion, ')
-          ..write('rowid: $rowid')
-          ..write(')'))
-        .toString();
-  }
-}
-
-class $OutlineNodesTableTable extends OutlineNodesTable
-    with TableInfo<$OutlineNodesTableTable, OutlineNodesTableData> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $OutlineNodesTableTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  @override
-  late final GeneratedColumn<String> id = GeneratedColumn<String>(
-      'id', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _projectIdMeta =
-      const VerificationMeta('projectId');
-  @override
-  late final GeneratedColumn<String> projectId = GeneratedColumn<String>(
-      'project_id', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _parentIdMeta =
-      const VerificationMeta('parentId');
-  @override
-  late final GeneratedColumn<String> parentId = GeneratedColumn<String>(
-      'parent_id', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _orderIndexMeta =
-      const VerificationMeta('orderIndex');
-  @override
-  late final GeneratedColumn<int> orderIndex = GeneratedColumn<int>(
-      'order_index', aliasedName, false,
-      type: DriftSqlType.int, requiredDuringInsert: true);
-  static const VerificationMeta _titleMeta = const VerificationMeta('title');
-  @override
-  late final GeneratedColumn<String> title = GeneratedColumn<String>(
-      'title', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _nodeTypeMeta =
-      const VerificationMeta('nodeType');
-  @override
-  late final GeneratedColumn<String> nodeType = GeneratedColumn<String>(
-      'node_type', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      defaultValue: const Constant('chapter'));
-  static const VerificationMeta _summaryMeta =
-      const VerificationMeta('summary');
-  @override
-  late final GeneratedColumn<String> summary = GeneratedColumn<String>(
-      'summary', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      defaultValue: const Constant(''));
-  static const VerificationMeta _linkedChapterIdMeta =
-      const VerificationMeta('linkedChapterId');
-  @override
-  late final GeneratedColumn<String> linkedChapterId = GeneratedColumn<String>(
-      'linked_chapter_id', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _statusMeta = const VerificationMeta('status');
-  @override
-  late final GeneratedColumn<String> status = GeneratedColumn<String>(
-      'status', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      defaultValue: const Constant('planned'));
-  static const VerificationMeta _createdAtMeta =
-      const VerificationMeta('createdAt');
-  @override
-  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
-      'created_at', aliasedName, false,
-      type: DriftSqlType.dateTime, requiredDuringInsert: true);
-  static const VerificationMeta _updatedAtMeta =
-      const VerificationMeta('updatedAt');
-  @override
-  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
-      'updated_at', aliasedName, false,
-      type: DriftSqlType.dateTime, requiredDuringInsert: true);
-  static const VerificationMeta _schemaVersionMeta =
-      const VerificationMeta('schemaVersion');
-  @override
-  late final GeneratedColumn<int> schemaVersion = GeneratedColumn<int>(
-      'schema_version', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      defaultValue: const Constant(1));
-  @override
-  List<GeneratedColumn> get $columns => [
-        id,
-        projectId,
-        parentId,
-        orderIndex,
-        title,
-        nodeType,
-        summary,
-        linkedChapterId,
-        status,
-        createdAt,
-        updatedAt,
-        schemaVersion
-      ];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'outline_nodes_table';
-  @override
-  VerificationContext validateIntegrity(
-      Insertable<OutlineNodesTableData> instance,
-      {bool isInserting = false}) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    } else if (isInserting) {
-      context.missing(_idMeta);
-    }
-    if (data.containsKey('project_id')) {
-      context.handle(_projectIdMeta,
-          projectId.isAcceptableOrUnknown(data['project_id']!, _projectIdMeta));
-    } else if (isInserting) {
-      context.missing(_projectIdMeta);
-    }
-    if (data.containsKey('parent_id')) {
-      context.handle(_parentIdMeta,
-          parentId.isAcceptableOrUnknown(data['parent_id']!, _parentIdMeta));
-    }
-    if (data.containsKey('order_index')) {
-      context.handle(
-          _orderIndexMeta,
-          orderIndex.isAcceptableOrUnknown(
-              data['order_index']!, _orderIndexMeta));
-    } else if (isInserting) {
-      context.missing(_orderIndexMeta);
-    }
-    if (data.containsKey('title')) {
-      context.handle(
-          _titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta));
-    } else if (isInserting) {
-      context.missing(_titleMeta);
-    }
-    if (data.containsKey('node_type')) {
-      context.handle(_nodeTypeMeta,
-          nodeType.isAcceptableOrUnknown(data['node_type']!, _nodeTypeMeta));
-    }
-    if (data.containsKey('summary')) {
-      context.handle(_summaryMeta,
-          summary.isAcceptableOrUnknown(data['summary']!, _summaryMeta));
-    }
-    if (data.containsKey('linked_chapter_id')) {
-      context.handle(
-          _linkedChapterIdMeta,
-          linkedChapterId.isAcceptableOrUnknown(
-              data['linked_chapter_id']!, _linkedChapterIdMeta));
-    }
-    if (data.containsKey('status')) {
-      context.handle(_statusMeta,
-          status.isAcceptableOrUnknown(data['status']!, _statusMeta));
-    }
-    if (data.containsKey('created_at')) {
-      context.handle(_createdAtMeta,
-          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
-    } else if (isInserting) {
-      context.missing(_createdAtMeta);
-    }
-    if (data.containsKey('updated_at')) {
-      context.handle(_updatedAtMeta,
-          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
-    } else if (isInserting) {
-      context.missing(_updatedAtMeta);
-    }
-    if (data.containsKey('schema_version')) {
-      context.handle(
-          _schemaVersionMeta,
-          schemaVersion.isAcceptableOrUnknown(
-              data['schema_version']!, _schemaVersionMeta));
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {id};
-  @override
-  OutlineNodesTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return OutlineNodesTableData(
-      id: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
-      projectId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}project_id'])!,
-      parentId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}parent_id']),
-      orderIndex: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}order_index'])!,
-      title: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}title'])!,
-      nodeType: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}node_type'])!,
-      summary: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}summary'])!,
-      linkedChapterId: attachedDatabase.typeMapping.read(
-          DriftSqlType.string, data['${effectivePrefix}linked_chapter_id']),
-      status: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
-      createdAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
-      updatedAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
-      schemaVersion: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}schema_version'])!,
-    );
-  }
-
-  @override
-  $OutlineNodesTableTable createAlias(String alias) {
-    return $OutlineNodesTableTable(attachedDatabase, alias);
-  }
-}
-
-class OutlineNodesTableData extends DataClass
-    implements Insertable<OutlineNodesTableData> {
-  final String id;
-  final String projectId;
-  final String? parentId;
-  final int orderIndex;
-  final String title;
-  final String nodeType;
-  final String summary;
-  final String? linkedChapterId;
-  final String status;
-  final DateTime createdAt;
-  final DateTime updatedAt;
-  final int schemaVersion;
-  const OutlineNodesTableData(
-      {required this.id,
-      required this.projectId,
-      this.parentId,
-      required this.orderIndex,
-      required this.title,
-      required this.nodeType,
-      required this.summary,
-      this.linkedChapterId,
-      required this.status,
-      required this.createdAt,
-      required this.updatedAt,
-      required this.schemaVersion});
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['id'] = Variable<String>(id);
-    map['project_id'] = Variable<String>(projectId);
-    if (!nullToAbsent || parentId != null) {
-      map['parent_id'] = Variable<String>(parentId);
-    }
-    map['order_index'] = Variable<int>(orderIndex);
-    map['title'] = Variable<String>(title);
-    map['node_type'] = Variable<String>(nodeType);
-    map['summary'] = Variable<String>(summary);
-    if (!nullToAbsent || linkedChapterId != null) {
-      map['linked_chapter_id'] = Variable<String>(linkedChapterId);
-    }
-    map['status'] = Variable<String>(status);
-    map['created_at'] = Variable<DateTime>(createdAt);
-    map['updated_at'] = Variable<DateTime>(updatedAt);
-    map['schema_version'] = Variable<int>(schemaVersion);
-    return map;
-  }
-
-  OutlineNodesTableCompanion toCompanion(bool nullToAbsent) {
-    return OutlineNodesTableCompanion(
-      id: Value(id),
-      projectId: Value(projectId),
-      parentId: parentId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(parentId),
-      orderIndex: Value(orderIndex),
-      title: Value(title),
-      nodeType: Value(nodeType),
-      summary: Value(summary),
-      linkedChapterId: linkedChapterId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(linkedChapterId),
-      status: Value(status),
-      createdAt: Value(createdAt),
-      updatedAt: Value(updatedAt),
-      schemaVersion: Value(schemaVersion),
-    );
-  }
-
-  factory OutlineNodesTableData.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return OutlineNodesTableData(
-      id: serializer.fromJson<String>(json['id']),
-      projectId: serializer.fromJson<String>(json['projectId']),
-      parentId: serializer.fromJson<String?>(json['parentId']),
-      orderIndex: serializer.fromJson<int>(json['orderIndex']),
-      title: serializer.fromJson<String>(json['title']),
-      nodeType: serializer.fromJson<String>(json['nodeType']),
-      summary: serializer.fromJson<String>(json['summary']),
-      linkedChapterId: serializer.fromJson<String?>(json['linkedChapterId']),
-      status: serializer.fromJson<String>(json['status']),
-      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
-      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
-      schemaVersion: serializer.fromJson<int>(json['schemaVersion']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'id': serializer.toJson<String>(id),
-      'projectId': serializer.toJson<String>(projectId),
-      'parentId': serializer.toJson<String?>(parentId),
-      'orderIndex': serializer.toJson<int>(orderIndex),
-      'title': serializer.toJson<String>(title),
-      'nodeType': serializer.toJson<String>(nodeType),
-      'summary': serializer.toJson<String>(summary),
-      'linkedChapterId': serializer.toJson<String?>(linkedChapterId),
-      'status': serializer.toJson<String>(status),
-      'createdAt': serializer.toJson<DateTime>(createdAt),
-      'updatedAt': serializer.toJson<DateTime>(updatedAt),
-      'schemaVersion': serializer.toJson<int>(schemaVersion),
-    };
-  }
-
-  OutlineNodesTableData copyWith(
-          {String? id,
-          String? projectId,
-          Value<String?> parentId = const Value.absent(),
-          int? orderIndex,
-          String? title,
-          String? nodeType,
-          String? summary,
-          Value<String?> linkedChapterId = const Value.absent(),
-          String? status,
-          DateTime? createdAt,
-          DateTime? updatedAt,
-          int? schemaVersion}) =>
-      OutlineNodesTableData(
-        id: id ?? this.id,
-        projectId: projectId ?? this.projectId,
-        parentId: parentId.present ? parentId.value : this.parentId,
-        orderIndex: orderIndex ?? this.orderIndex,
-        title: title ?? this.title,
-        nodeType: nodeType ?? this.nodeType,
-        summary: summary ?? this.summary,
-        linkedChapterId: linkedChapterId.present
-            ? linkedChapterId.value
-            : this.linkedChapterId,
-        status: status ?? this.status,
-        createdAt: createdAt ?? this.createdAt,
-        updatedAt: updatedAt ?? this.updatedAt,
-        schemaVersion: schemaVersion ?? this.schemaVersion,
-      );
-  OutlineNodesTableData copyWithCompanion(OutlineNodesTableCompanion data) {
-    return OutlineNodesTableData(
-      id: data.id.present ? data.id.value : this.id,
-      projectId: data.projectId.present ? data.projectId.value : this.projectId,
-      parentId: data.parentId.present ? data.parentId.value : this.parentId,
-      orderIndex:
-          data.orderIndex.present ? data.orderIndex.value : this.orderIndex,
-      title: data.title.present ? data.title.value : this.title,
-      nodeType: data.nodeType.present ? data.nodeType.value : this.nodeType,
-      summary: data.summary.present ? data.summary.value : this.summary,
-      linkedChapterId: data.linkedChapterId.present
-          ? data.linkedChapterId.value
-          : this.linkedChapterId,
-      status: data.status.present ? data.status.value : this.status,
-      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
-      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
-      schemaVersion: data.schemaVersion.present
-          ? data.schemaVersion.value
-          : this.schemaVersion,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('OutlineNodesTableData(')
-          ..write('id: $id, ')
-          ..write('projectId: $projectId, ')
-          ..write('parentId: $parentId, ')
-          ..write('orderIndex: $orderIndex, ')
-          ..write('title: $title, ')
-          ..write('nodeType: $nodeType, ')
-          ..write('summary: $summary, ')
-          ..write('linkedChapterId: $linkedChapterId, ')
-          ..write('status: $status, ')
-          ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt, ')
-          ..write('schemaVersion: $schemaVersion')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(
-      id,
-      projectId,
-      parentId,
-      orderIndex,
-      title,
-      nodeType,
-      summary,
-      linkedChapterId,
-      status,
-      createdAt,
-      updatedAt,
-      schemaVersion);
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is OutlineNodesTableData &&
-          other.id == this.id &&
-          other.projectId == this.projectId &&
-          other.parentId == this.parentId &&
-          other.orderIndex == this.orderIndex &&
-          other.title == this.title &&
-          other.nodeType == this.nodeType &&
-          other.summary == this.summary &&
-          other.linkedChapterId == this.linkedChapterId &&
-          other.status == this.status &&
-          other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt &&
-          other.schemaVersion == this.schemaVersion);
-}
-
-class OutlineNodesTableCompanion
-    extends UpdateCompanion<OutlineNodesTableData> {
-  final Value<String> id;
-  final Value<String> projectId;
-  final Value<String?> parentId;
-  final Value<int> orderIndex;
-  final Value<String> title;
-  final Value<String> nodeType;
-  final Value<String> summary;
-  final Value<String?> linkedChapterId;
-  final Value<String> status;
-  final Value<DateTime> createdAt;
-  final Value<DateTime> updatedAt;
-  final Value<int> schemaVersion;
-  final Value<int> rowid;
-  const OutlineNodesTableCompanion({
-    this.id = const Value.absent(),
-    this.projectId = const Value.absent(),
-    this.parentId = const Value.absent(),
-    this.orderIndex = const Value.absent(),
-    this.title = const Value.absent(),
-    this.nodeType = const Value.absent(),
-    this.summary = const Value.absent(),
-    this.linkedChapterId = const Value.absent(),
-    this.status = const Value.absent(),
-    this.createdAt = const Value.absent(),
-    this.updatedAt = const Value.absent(),
-    this.schemaVersion = const Value.absent(),
-    this.rowid = const Value.absent(),
-  });
-  OutlineNodesTableCompanion.insert({
-    required String id,
-    required String projectId,
-    this.parentId = const Value.absent(),
-    required int orderIndex,
-    required String title,
-    this.nodeType = const Value.absent(),
-    this.summary = const Value.absent(),
-    this.linkedChapterId = const Value.absent(),
-    this.status = const Value.absent(),
-    required DateTime createdAt,
-    required DateTime updatedAt,
-    this.schemaVersion = const Value.absent(),
-    this.rowid = const Value.absent(),
-  })  : id = Value(id),
-        projectId = Value(projectId),
-        orderIndex = Value(orderIndex),
-        title = Value(title),
-        createdAt = Value(createdAt),
-        updatedAt = Value(updatedAt);
-  static Insertable<OutlineNodesTableData> custom({
-    Expression<String>? id,
-    Expression<String>? projectId,
-    Expression<String>? parentId,
-    Expression<int>? orderIndex,
-    Expression<String>? title,
-    Expression<String>? nodeType,
-    Expression<String>? summary,
-    Expression<String>? linkedChapterId,
-    Expression<String>? status,
-    Expression<DateTime>? createdAt,
-    Expression<DateTime>? updatedAt,
-    Expression<int>? schemaVersion,
-    Expression<int>? rowid,
-  }) {
-    return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (projectId != null) 'project_id': projectId,
-      if (parentId != null) 'parent_id': parentId,
-      if (orderIndex != null) 'order_index': orderIndex,
-      if (title != null) 'title': title,
-      if (nodeType != null) 'node_type': nodeType,
-      if (summary != null) 'summary': summary,
-      if (linkedChapterId != null) 'linked_chapter_id': linkedChapterId,
-      if (status != null) 'status': status,
-      if (createdAt != null) 'created_at': createdAt,
-      if (updatedAt != null) 'updated_at': updatedAt,
-      if (schemaVersion != null) 'schema_version': schemaVersion,
-      if (rowid != null) 'rowid': rowid,
-    });
-  }
-
-  OutlineNodesTableCompanion copyWith(
-      {Value<String>? id,
-      Value<String>? projectId,
-      Value<String?>? parentId,
-      Value<int>? orderIndex,
-      Value<String>? title,
-      Value<String>? nodeType,
-      Value<String>? summary,
-      Value<String?>? linkedChapterId,
-      Value<String>? status,
-      Value<DateTime>? createdAt,
-      Value<DateTime>? updatedAt,
-      Value<int>? schemaVersion,
-      Value<int>? rowid}) {
-    return OutlineNodesTableCompanion(
-      id: id ?? this.id,
-      projectId: projectId ?? this.projectId,
-      parentId: parentId ?? this.parentId,
-      orderIndex: orderIndex ?? this.orderIndex,
-      title: title ?? this.title,
-      nodeType: nodeType ?? this.nodeType,
-      summary: summary ?? this.summary,
-      linkedChapterId: linkedChapterId ?? this.linkedChapterId,
-      status: status ?? this.status,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-      schemaVersion: schemaVersion ?? this.schemaVersion,
-      rowid: rowid ?? this.rowid,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<String>(id.value);
-    }
-    if (projectId.present) {
-      map['project_id'] = Variable<String>(projectId.value);
-    }
-    if (parentId.present) {
-      map['parent_id'] = Variable<String>(parentId.value);
-    }
-    if (orderIndex.present) {
-      map['order_index'] = Variable<int>(orderIndex.value);
-    }
-    if (title.present) {
-      map['title'] = Variable<String>(title.value);
-    }
-    if (nodeType.present) {
-      map['node_type'] = Variable<String>(nodeType.value);
-    }
-    if (summary.present) {
-      map['summary'] = Variable<String>(summary.value);
-    }
-    if (linkedChapterId.present) {
-      map['linked_chapter_id'] = Variable<String>(linkedChapterId.value);
-    }
-    if (status.present) {
-      map['status'] = Variable<String>(status.value);
-    }
-    if (createdAt.present) {
-      map['created_at'] = Variable<DateTime>(createdAt.value);
-    }
-    if (updatedAt.present) {
-      map['updated_at'] = Variable<DateTime>(updatedAt.value);
-    }
-    if (schemaVersion.present) {
-      map['schema_version'] = Variable<int>(schemaVersion.value);
-    }
-    if (rowid.present) {
-      map['rowid'] = Variable<int>(rowid.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('OutlineNodesTableCompanion(')
-          ..write('id: $id, ')
-          ..write('projectId: $projectId, ')
-          ..write('parentId: $parentId, ')
-          ..write('orderIndex: $orderIndex, ')
-          ..write('title: $title, ')
-          ..write('nodeType: $nodeType, ')
-          ..write('summary: $summary, ')
-          ..write('linkedChapterId: $linkedChapterId, ')
+          ..write('patchJson: $patchJson, ')
           ..write('status: $status, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -2589,12 +1302,12 @@ class OutlineNodesTableCompanion
   }
 }
 
-class $CharactersTableTable extends CharactersTable
-    with TableInfo<$CharactersTableTable, CharactersTableData> {
+class $CharactersTable extends Characters
+    with TableInfo<$CharactersTable, CharacterRow> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $CharactersTableTable(this.attachedDatabase, [this._alias]);
+  $CharactersTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -2611,21 +1324,6 @@ class $CharactersTableTable extends CharactersTable
   late final GeneratedColumn<String> name = GeneratedColumn<String>(
       'name', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _aliasesMeta =
-      const VerificationMeta('aliases');
-  @override
-  late final GeneratedColumn<String> aliases = GeneratedColumn<String>(
-      'aliases', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      defaultValue: const Constant('[]'));
-  static const VerificationMeta _roleMeta = const VerificationMeta('role');
-  @override
-  late final GeneratedColumn<String> role = GeneratedColumn<String>(
-      'role', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      defaultValue: const Constant('supporting'));
   static const VerificationMeta _descriptionMeta =
       const VerificationMeta('description');
   @override
@@ -2634,6 +1332,45 @@ class $CharactersTableTable extends CharactersTable
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant(''));
+  static const VerificationMeta _roleMeta = const VerificationMeta('role');
+  @override
+  late final GeneratedColumn<String> role = GeneratedColumn<String>(
+      'role', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('supporting'));
+  static const VerificationMeta _avatarUrlMeta =
+      const VerificationMeta('avatarUrl');
+  @override
+  late final GeneratedColumn<String> avatarUrl = GeneratedColumn<String>(
+      'avatar_url', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
+  static const VerificationMeta _traitsJsonMeta =
+      const VerificationMeta('traitsJson');
+  @override
+  late final GeneratedColumn<String> traitsJson = GeneratedColumn<String>(
+      'traits_json', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('{}'));
+  static const VerificationMeta _backgroundMeta =
+      const VerificationMeta('background');
+  @override
+  late final GeneratedColumn<String> background = GeneratedColumn<String>(
+      'background', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
+  static const VerificationMeta _aliasesJsonMeta =
+      const VerificationMeta('aliasesJson');
+  @override
+  late final GeneratedColumn<String> aliasesJson = GeneratedColumn<String>(
+      'aliases_json', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('[]'));
   static const VerificationMeta _appearanceMeta =
       const VerificationMeta('appearance');
   @override
@@ -2673,47 +1410,34 @@ class $CharactersTableTable extends CharactersTable
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant(''));
-  static const VerificationMeta _relationshipsMeta =
-      const VerificationMeta('relationships');
+  static const VerificationMeta _relationshipsJsonMeta =
+      const VerificationMeta('relationshipsJson');
   @override
-  late final GeneratedColumn<String> relationships = GeneratedColumn<String>(
-      'relationships', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      defaultValue: const Constant('[]'));
-  static const VerificationMeta _firstAppearanceChapterIdMeta =
-      const VerificationMeta('firstAppearanceChapterId');
+  late final GeneratedColumn<String> relationshipsJson =
+      GeneratedColumn<String>('relationships_json', aliasedName, false,
+          type: DriftSqlType.string,
+          requiredDuringInsert: false,
+          defaultValue: const Constant('[]'));
+  static const VerificationMeta _consistencyFactsJsonMeta =
+      const VerificationMeta('consistencyFactsJson');
   @override
-  late final GeneratedColumn<String> firstAppearanceChapterId =
-      GeneratedColumn<String>('first_appearance_chapter_id', aliasedName, true,
-          type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _tagsMeta = const VerificationMeta('tags');
-  @override
-  late final GeneratedColumn<String> tags = GeneratedColumn<String>(
-      'tags', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      defaultValue: const Constant('[]'));
-  static const VerificationMeta _consistencyFactsMeta =
-      const VerificationMeta('consistencyFacts');
-  @override
-  late final GeneratedColumn<String> consistencyFacts = GeneratedColumn<String>(
-      'consistency_facts', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      defaultValue: const Constant('[]'));
+  late final GeneratedColumn<String> consistencyFactsJson =
+      GeneratedColumn<String>('consistency_facts_json', aliasedName, false,
+          type: DriftSqlType.string,
+          requiredDuringInsert: false,
+          defaultValue: const Constant('[]'));
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
-  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
       'created_at', aliasedName, false,
-      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+      type: DriftSqlType.int, requiredDuringInsert: true);
   static const VerificationMeta _updatedAtMeta =
       const VerificationMeta('updatedAt');
   @override
-  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
       'updated_at', aliasedName, false,
-      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+      type: DriftSqlType.int, requiredDuringInsert: true);
   static const VerificationMeta _schemaVersionMeta =
       const VerificationMeta('schemaVersion');
   @override
@@ -2727,18 +1451,19 @@ class $CharactersTableTable extends CharactersTable
         id,
         projectId,
         name,
-        aliases,
-        role,
         description,
+        role,
+        avatarUrl,
+        traitsJson,
+        background,
+        aliasesJson,
         appearance,
         personality,
         goals,
         conflicts,
         secrets,
-        relationships,
-        firstAppearanceChapterId,
-        tags,
-        consistencyFacts,
+        relationshipsJson,
+        consistencyFactsJson,
         createdAt,
         updatedAt,
         schemaVersion
@@ -2747,10 +1472,9 @@ class $CharactersTableTable extends CharactersTable
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'characters_table';
+  static const String $name = 'characters';
   @override
-  VerificationContext validateIntegrity(
-      Insertable<CharactersTableData> instance,
+  VerificationContext validateIntegrity(Insertable<CharacterRow> instance,
       {bool isInserting = false}) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
@@ -2771,19 +1495,37 @@ class $CharactersTableTable extends CharactersTable
     } else if (isInserting) {
       context.missing(_nameMeta);
     }
-    if (data.containsKey('aliases')) {
-      context.handle(_aliasesMeta,
-          aliases.isAcceptableOrUnknown(data['aliases']!, _aliasesMeta));
-    }
-    if (data.containsKey('role')) {
-      context.handle(
-          _roleMeta, role.isAcceptableOrUnknown(data['role']!, _roleMeta));
-    }
     if (data.containsKey('description')) {
       context.handle(
           _descriptionMeta,
           description.isAcceptableOrUnknown(
               data['description']!, _descriptionMeta));
+    }
+    if (data.containsKey('role')) {
+      context.handle(
+          _roleMeta, role.isAcceptableOrUnknown(data['role']!, _roleMeta));
+    }
+    if (data.containsKey('avatar_url')) {
+      context.handle(_avatarUrlMeta,
+          avatarUrl.isAcceptableOrUnknown(data['avatar_url']!, _avatarUrlMeta));
+    }
+    if (data.containsKey('traits_json')) {
+      context.handle(
+          _traitsJsonMeta,
+          traitsJson.isAcceptableOrUnknown(
+              data['traits_json']!, _traitsJsonMeta));
+    }
+    if (data.containsKey('background')) {
+      context.handle(
+          _backgroundMeta,
+          background.isAcceptableOrUnknown(
+              data['background']!, _backgroundMeta));
+    }
+    if (data.containsKey('aliases_json')) {
+      context.handle(
+          _aliasesJsonMeta,
+          aliasesJson.isAcceptableOrUnknown(
+              data['aliases_json']!, _aliasesJsonMeta));
     }
     if (data.containsKey('appearance')) {
       context.handle(
@@ -2809,28 +1551,17 @@ class $CharactersTableTable extends CharactersTable
       context.handle(_secretsMeta,
           secrets.isAcceptableOrUnknown(data['secrets']!, _secretsMeta));
     }
-    if (data.containsKey('relationships')) {
+    if (data.containsKey('relationships_json')) {
       context.handle(
-          _relationshipsMeta,
-          relationships.isAcceptableOrUnknown(
-              data['relationships']!, _relationshipsMeta));
+          _relationshipsJsonMeta,
+          relationshipsJson.isAcceptableOrUnknown(
+              data['relationships_json']!, _relationshipsJsonMeta));
     }
-    if (data.containsKey('first_appearance_chapter_id')) {
+    if (data.containsKey('consistency_facts_json')) {
       context.handle(
-          _firstAppearanceChapterIdMeta,
-          firstAppearanceChapterId.isAcceptableOrUnknown(
-              data['first_appearance_chapter_id']!,
-              _firstAppearanceChapterIdMeta));
-    }
-    if (data.containsKey('tags')) {
-      context.handle(
-          _tagsMeta, tags.isAcceptableOrUnknown(data['tags']!, _tagsMeta));
-    }
-    if (data.containsKey('consistency_facts')) {
-      context.handle(
-          _consistencyFactsMeta,
-          consistencyFacts.isAcceptableOrUnknown(
-              data['consistency_facts']!, _consistencyFactsMeta));
+          _consistencyFactsJsonMeta,
+          consistencyFactsJson.isAcceptableOrUnknown(
+              data['consistency_facts_json']!, _consistencyFactsJsonMeta));
     }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
@@ -2856,21 +1587,27 @@ class $CharactersTableTable extends CharactersTable
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  CharactersTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
+  CharacterRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return CharactersTableData(
+    return CharacterRow(
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
       projectId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}project_id'])!,
       name: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
-      aliases: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}aliases'])!,
-      role: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}role'])!,
       description: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}description'])!,
+      role: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}role'])!,
+      avatarUrl: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}avatar_url'])!,
+      traitsJson: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}traits_json'])!,
+      background: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}background'])!,
+      aliasesJson: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}aliases_json'])!,
       appearance: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}appearance'])!,
       personality: attachedDatabase.typeMapping
@@ -2881,66 +1618,63 @@ class $CharactersTableTable extends CharactersTable
           .read(DriftSqlType.string, data['${effectivePrefix}conflicts'])!,
       secrets: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}secrets'])!,
-      relationships: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}relationships'])!,
-      firstAppearanceChapterId: attachedDatabase.typeMapping.read(
+      relationshipsJson: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}relationships_json'])!,
+      consistencyFactsJson: attachedDatabase.typeMapping.read(
           DriftSqlType.string,
-          data['${effectivePrefix}first_appearance_chapter_id']),
-      tags: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}tags'])!,
-      consistencyFacts: attachedDatabase.typeMapping.read(
-          DriftSqlType.string, data['${effectivePrefix}consistency_facts'])!,
+          data['${effectivePrefix}consistency_facts_json'])!,
       createdAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+          .read(DriftSqlType.int, data['${effectivePrefix}created_at'])!,
       updatedAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+          .read(DriftSqlType.int, data['${effectivePrefix}updated_at'])!,
       schemaVersion: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}schema_version'])!,
     );
   }
 
   @override
-  $CharactersTableTable createAlias(String alias) {
-    return $CharactersTableTable(attachedDatabase, alias);
+  $CharactersTable createAlias(String alias) {
+    return $CharactersTable(attachedDatabase, alias);
   }
 }
 
-class CharactersTableData extends DataClass
-    implements Insertable<CharactersTableData> {
+class CharacterRow extends DataClass implements Insertable<CharacterRow> {
   final String id;
   final String projectId;
   final String name;
-  final String aliases;
-  final String role;
   final String description;
+  final String role;
+  final String avatarUrl;
+  final String traitsJson;
+  final String background;
+  final String aliasesJson;
   final String appearance;
   final String personality;
   final String goals;
   final String conflicts;
   final String secrets;
-  final String relationships;
-  final String? firstAppearanceChapterId;
-  final String tags;
-  final String consistencyFacts;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final String relationshipsJson;
+  final String consistencyFactsJson;
+  final int createdAt;
+  final int updatedAt;
   final int schemaVersion;
-  const CharactersTableData(
+  const CharacterRow(
       {required this.id,
       required this.projectId,
       required this.name,
-      required this.aliases,
-      required this.role,
       required this.description,
+      required this.role,
+      required this.avatarUrl,
+      required this.traitsJson,
+      required this.background,
+      required this.aliasesJson,
       required this.appearance,
       required this.personality,
       required this.goals,
       required this.conflicts,
       required this.secrets,
-      required this.relationships,
-      this.firstAppearanceChapterId,
-      required this.tags,
-      required this.consistencyFacts,
+      required this.relationshipsJson,
+      required this.consistencyFactsJson,
       required this.createdAt,
       required this.updatedAt,
       required this.schemaVersion});
@@ -2950,74 +1684,72 @@ class CharactersTableData extends DataClass
     map['id'] = Variable<String>(id);
     map['project_id'] = Variable<String>(projectId);
     map['name'] = Variable<String>(name);
-    map['aliases'] = Variable<String>(aliases);
-    map['role'] = Variable<String>(role);
     map['description'] = Variable<String>(description);
+    map['role'] = Variable<String>(role);
+    map['avatar_url'] = Variable<String>(avatarUrl);
+    map['traits_json'] = Variable<String>(traitsJson);
+    map['background'] = Variable<String>(background);
+    map['aliases_json'] = Variable<String>(aliasesJson);
     map['appearance'] = Variable<String>(appearance);
     map['personality'] = Variable<String>(personality);
     map['goals'] = Variable<String>(goals);
     map['conflicts'] = Variable<String>(conflicts);
     map['secrets'] = Variable<String>(secrets);
-    map['relationships'] = Variable<String>(relationships);
-    if (!nullToAbsent || firstAppearanceChapterId != null) {
-      map['first_appearance_chapter_id'] =
-          Variable<String>(firstAppearanceChapterId);
-    }
-    map['tags'] = Variable<String>(tags);
-    map['consistency_facts'] = Variable<String>(consistencyFacts);
-    map['created_at'] = Variable<DateTime>(createdAt);
-    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['relationships_json'] = Variable<String>(relationshipsJson);
+    map['consistency_facts_json'] = Variable<String>(consistencyFactsJson);
+    map['created_at'] = Variable<int>(createdAt);
+    map['updated_at'] = Variable<int>(updatedAt);
     map['schema_version'] = Variable<int>(schemaVersion);
     return map;
   }
 
-  CharactersTableCompanion toCompanion(bool nullToAbsent) {
-    return CharactersTableCompanion(
+  CharactersCompanion toCompanion(bool nullToAbsent) {
+    return CharactersCompanion(
       id: Value(id),
       projectId: Value(projectId),
       name: Value(name),
-      aliases: Value(aliases),
-      role: Value(role),
       description: Value(description),
+      role: Value(role),
+      avatarUrl: Value(avatarUrl),
+      traitsJson: Value(traitsJson),
+      background: Value(background),
+      aliasesJson: Value(aliasesJson),
       appearance: Value(appearance),
       personality: Value(personality),
       goals: Value(goals),
       conflicts: Value(conflicts),
       secrets: Value(secrets),
-      relationships: Value(relationships),
-      firstAppearanceChapterId: firstAppearanceChapterId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(firstAppearanceChapterId),
-      tags: Value(tags),
-      consistencyFacts: Value(consistencyFacts),
+      relationshipsJson: Value(relationshipsJson),
+      consistencyFactsJson: Value(consistencyFactsJson),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       schemaVersion: Value(schemaVersion),
     );
   }
 
-  factory CharactersTableData.fromJson(Map<String, dynamic> json,
+  factory CharacterRow.fromJson(Map<String, dynamic> json,
       {ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return CharactersTableData(
+    return CharacterRow(
       id: serializer.fromJson<String>(json['id']),
       projectId: serializer.fromJson<String>(json['projectId']),
       name: serializer.fromJson<String>(json['name']),
-      aliases: serializer.fromJson<String>(json['aliases']),
-      role: serializer.fromJson<String>(json['role']),
       description: serializer.fromJson<String>(json['description']),
+      role: serializer.fromJson<String>(json['role']),
+      avatarUrl: serializer.fromJson<String>(json['avatarUrl']),
+      traitsJson: serializer.fromJson<String>(json['traitsJson']),
+      background: serializer.fromJson<String>(json['background']),
+      aliasesJson: serializer.fromJson<String>(json['aliasesJson']),
       appearance: serializer.fromJson<String>(json['appearance']),
       personality: serializer.fromJson<String>(json['personality']),
       goals: serializer.fromJson<String>(json['goals']),
       conflicts: serializer.fromJson<String>(json['conflicts']),
       secrets: serializer.fromJson<String>(json['secrets']),
-      relationships: serializer.fromJson<String>(json['relationships']),
-      firstAppearanceChapterId:
-          serializer.fromJson<String?>(json['firstAppearanceChapterId']),
-      tags: serializer.fromJson<String>(json['tags']),
-      consistencyFacts: serializer.fromJson<String>(json['consistencyFacts']),
-      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
-      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      relationshipsJson: serializer.fromJson<String>(json['relationshipsJson']),
+      consistencyFactsJson:
+          serializer.fromJson<String>(json['consistencyFactsJson']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      updatedAt: serializer.fromJson<int>(json['updatedAt']),
       schemaVersion: serializer.fromJson<int>(json['schemaVersion']),
     );
   }
@@ -3028,75 +1760,81 @@ class CharactersTableData extends DataClass
       'id': serializer.toJson<String>(id),
       'projectId': serializer.toJson<String>(projectId),
       'name': serializer.toJson<String>(name),
-      'aliases': serializer.toJson<String>(aliases),
-      'role': serializer.toJson<String>(role),
       'description': serializer.toJson<String>(description),
+      'role': serializer.toJson<String>(role),
+      'avatarUrl': serializer.toJson<String>(avatarUrl),
+      'traitsJson': serializer.toJson<String>(traitsJson),
+      'background': serializer.toJson<String>(background),
+      'aliasesJson': serializer.toJson<String>(aliasesJson),
       'appearance': serializer.toJson<String>(appearance),
       'personality': serializer.toJson<String>(personality),
       'goals': serializer.toJson<String>(goals),
       'conflicts': serializer.toJson<String>(conflicts),
       'secrets': serializer.toJson<String>(secrets),
-      'relationships': serializer.toJson<String>(relationships),
-      'firstAppearanceChapterId':
-          serializer.toJson<String?>(firstAppearanceChapterId),
-      'tags': serializer.toJson<String>(tags),
-      'consistencyFacts': serializer.toJson<String>(consistencyFacts),
-      'createdAt': serializer.toJson<DateTime>(createdAt),
-      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'relationshipsJson': serializer.toJson<String>(relationshipsJson),
+      'consistencyFactsJson': serializer.toJson<String>(consistencyFactsJson),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'updatedAt': serializer.toJson<int>(updatedAt),
       'schemaVersion': serializer.toJson<int>(schemaVersion),
     };
   }
 
-  CharactersTableData copyWith(
+  CharacterRow copyWith(
           {String? id,
           String? projectId,
           String? name,
-          String? aliases,
-          String? role,
           String? description,
+          String? role,
+          String? avatarUrl,
+          String? traitsJson,
+          String? background,
+          String? aliasesJson,
           String? appearance,
           String? personality,
           String? goals,
           String? conflicts,
           String? secrets,
-          String? relationships,
-          Value<String?> firstAppearanceChapterId = const Value.absent(),
-          String? tags,
-          String? consistencyFacts,
-          DateTime? createdAt,
-          DateTime? updatedAt,
+          String? relationshipsJson,
+          String? consistencyFactsJson,
+          int? createdAt,
+          int? updatedAt,
           int? schemaVersion}) =>
-      CharactersTableData(
+      CharacterRow(
         id: id ?? this.id,
         projectId: projectId ?? this.projectId,
         name: name ?? this.name,
-        aliases: aliases ?? this.aliases,
-        role: role ?? this.role,
         description: description ?? this.description,
+        role: role ?? this.role,
+        avatarUrl: avatarUrl ?? this.avatarUrl,
+        traitsJson: traitsJson ?? this.traitsJson,
+        background: background ?? this.background,
+        aliasesJson: aliasesJson ?? this.aliasesJson,
         appearance: appearance ?? this.appearance,
         personality: personality ?? this.personality,
         goals: goals ?? this.goals,
         conflicts: conflicts ?? this.conflicts,
         secrets: secrets ?? this.secrets,
-        relationships: relationships ?? this.relationships,
-        firstAppearanceChapterId: firstAppearanceChapterId.present
-            ? firstAppearanceChapterId.value
-            : this.firstAppearanceChapterId,
-        tags: tags ?? this.tags,
-        consistencyFacts: consistencyFacts ?? this.consistencyFacts,
+        relationshipsJson: relationshipsJson ?? this.relationshipsJson,
+        consistencyFactsJson: consistencyFactsJson ?? this.consistencyFactsJson,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
         schemaVersion: schemaVersion ?? this.schemaVersion,
       );
-  CharactersTableData copyWithCompanion(CharactersTableCompanion data) {
-    return CharactersTableData(
+  CharacterRow copyWithCompanion(CharactersCompanion data) {
+    return CharacterRow(
       id: data.id.present ? data.id.value : this.id,
       projectId: data.projectId.present ? data.projectId.value : this.projectId,
       name: data.name.present ? data.name.value : this.name,
-      aliases: data.aliases.present ? data.aliases.value : this.aliases,
-      role: data.role.present ? data.role.value : this.role,
       description:
           data.description.present ? data.description.value : this.description,
+      role: data.role.present ? data.role.value : this.role,
+      avatarUrl: data.avatarUrl.present ? data.avatarUrl.value : this.avatarUrl,
+      traitsJson:
+          data.traitsJson.present ? data.traitsJson.value : this.traitsJson,
+      background:
+          data.background.present ? data.background.value : this.background,
+      aliasesJson:
+          data.aliasesJson.present ? data.aliasesJson.value : this.aliasesJson,
       appearance:
           data.appearance.present ? data.appearance.value : this.appearance,
       personality:
@@ -3104,16 +1842,12 @@ class CharactersTableData extends DataClass
       goals: data.goals.present ? data.goals.value : this.goals,
       conflicts: data.conflicts.present ? data.conflicts.value : this.conflicts,
       secrets: data.secrets.present ? data.secrets.value : this.secrets,
-      relationships: data.relationships.present
-          ? data.relationships.value
-          : this.relationships,
-      firstAppearanceChapterId: data.firstAppearanceChapterId.present
-          ? data.firstAppearanceChapterId.value
-          : this.firstAppearanceChapterId,
-      tags: data.tags.present ? data.tags.value : this.tags,
-      consistencyFacts: data.consistencyFacts.present
-          ? data.consistencyFacts.value
-          : this.consistencyFacts,
+      relationshipsJson: data.relationshipsJson.present
+          ? data.relationshipsJson.value
+          : this.relationshipsJson,
+      consistencyFactsJson: data.consistencyFactsJson.present
+          ? data.consistencyFactsJson.value
+          : this.consistencyFactsJson,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       schemaVersion: data.schemaVersion.present
@@ -3124,22 +1858,23 @@ class CharactersTableData extends DataClass
 
   @override
   String toString() {
-    return (StringBuffer('CharactersTableData(')
+    return (StringBuffer('CharacterRow(')
           ..write('id: $id, ')
           ..write('projectId: $projectId, ')
           ..write('name: $name, ')
-          ..write('aliases: $aliases, ')
-          ..write('role: $role, ')
           ..write('description: $description, ')
+          ..write('role: $role, ')
+          ..write('avatarUrl: $avatarUrl, ')
+          ..write('traitsJson: $traitsJson, ')
+          ..write('background: $background, ')
+          ..write('aliasesJson: $aliasesJson, ')
           ..write('appearance: $appearance, ')
           ..write('personality: $personality, ')
           ..write('goals: $goals, ')
           ..write('conflicts: $conflicts, ')
           ..write('secrets: $secrets, ')
-          ..write('relationships: $relationships, ')
-          ..write('firstAppearanceChapterId: $firstAppearanceChapterId, ')
-          ..write('tags: $tags, ')
-          ..write('consistencyFacts: $consistencyFacts, ')
+          ..write('relationshipsJson: $relationshipsJson, ')
+          ..write('consistencyFactsJson: $consistencyFactsJson, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('schemaVersion: $schemaVersion')
@@ -3152,104 +1887,109 @@ class CharactersTableData extends DataClass
       id,
       projectId,
       name,
-      aliases,
-      role,
       description,
+      role,
+      avatarUrl,
+      traitsJson,
+      background,
+      aliasesJson,
       appearance,
       personality,
       goals,
       conflicts,
       secrets,
-      relationships,
-      firstAppearanceChapterId,
-      tags,
-      consistencyFacts,
+      relationshipsJson,
+      consistencyFactsJson,
       createdAt,
       updatedAt,
       schemaVersion);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is CharactersTableData &&
+      (other is CharacterRow &&
           other.id == this.id &&
           other.projectId == this.projectId &&
           other.name == this.name &&
-          other.aliases == this.aliases &&
-          other.role == this.role &&
           other.description == this.description &&
+          other.role == this.role &&
+          other.avatarUrl == this.avatarUrl &&
+          other.traitsJson == this.traitsJson &&
+          other.background == this.background &&
+          other.aliasesJson == this.aliasesJson &&
           other.appearance == this.appearance &&
           other.personality == this.personality &&
           other.goals == this.goals &&
           other.conflicts == this.conflicts &&
           other.secrets == this.secrets &&
-          other.relationships == this.relationships &&
-          other.firstAppearanceChapterId == this.firstAppearanceChapterId &&
-          other.tags == this.tags &&
-          other.consistencyFacts == this.consistencyFacts &&
+          other.relationshipsJson == this.relationshipsJson &&
+          other.consistencyFactsJson == this.consistencyFactsJson &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.schemaVersion == this.schemaVersion);
 }
 
-class CharactersTableCompanion extends UpdateCompanion<CharactersTableData> {
+class CharactersCompanion extends UpdateCompanion<CharacterRow> {
   final Value<String> id;
   final Value<String> projectId;
   final Value<String> name;
-  final Value<String> aliases;
-  final Value<String> role;
   final Value<String> description;
+  final Value<String> role;
+  final Value<String> avatarUrl;
+  final Value<String> traitsJson;
+  final Value<String> background;
+  final Value<String> aliasesJson;
   final Value<String> appearance;
   final Value<String> personality;
   final Value<String> goals;
   final Value<String> conflicts;
   final Value<String> secrets;
-  final Value<String> relationships;
-  final Value<String?> firstAppearanceChapterId;
-  final Value<String> tags;
-  final Value<String> consistencyFacts;
-  final Value<DateTime> createdAt;
-  final Value<DateTime> updatedAt;
+  final Value<String> relationshipsJson;
+  final Value<String> consistencyFactsJson;
+  final Value<int> createdAt;
+  final Value<int> updatedAt;
   final Value<int> schemaVersion;
   final Value<int> rowid;
-  const CharactersTableCompanion({
+  const CharactersCompanion({
     this.id = const Value.absent(),
     this.projectId = const Value.absent(),
     this.name = const Value.absent(),
-    this.aliases = const Value.absent(),
-    this.role = const Value.absent(),
     this.description = const Value.absent(),
+    this.role = const Value.absent(),
+    this.avatarUrl = const Value.absent(),
+    this.traitsJson = const Value.absent(),
+    this.background = const Value.absent(),
+    this.aliasesJson = const Value.absent(),
     this.appearance = const Value.absent(),
     this.personality = const Value.absent(),
     this.goals = const Value.absent(),
     this.conflicts = const Value.absent(),
     this.secrets = const Value.absent(),
-    this.relationships = const Value.absent(),
-    this.firstAppearanceChapterId = const Value.absent(),
-    this.tags = const Value.absent(),
-    this.consistencyFacts = const Value.absent(),
+    this.relationshipsJson = const Value.absent(),
+    this.consistencyFactsJson = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.schemaVersion = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-  CharactersTableCompanion.insert({
+  CharactersCompanion.insert({
     required String id,
     required String projectId,
     required String name,
-    this.aliases = const Value.absent(),
-    this.role = const Value.absent(),
     this.description = const Value.absent(),
+    this.role = const Value.absent(),
+    this.avatarUrl = const Value.absent(),
+    this.traitsJson = const Value.absent(),
+    this.background = const Value.absent(),
+    this.aliasesJson = const Value.absent(),
     this.appearance = const Value.absent(),
     this.personality = const Value.absent(),
     this.goals = const Value.absent(),
     this.conflicts = const Value.absent(),
     this.secrets = const Value.absent(),
-    this.relationships = const Value.absent(),
-    this.firstAppearanceChapterId = const Value.absent(),
-    this.tags = const Value.absent(),
-    this.consistencyFacts = const Value.absent(),
-    required DateTime createdAt,
-    required DateTime updatedAt,
+    this.relationshipsJson = const Value.absent(),
+    this.consistencyFactsJson = const Value.absent(),
+    required int createdAt,
+    required int updatedAt,
     this.schemaVersion = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
@@ -3257,24 +1997,25 @@ class CharactersTableCompanion extends UpdateCompanion<CharactersTableData> {
         name = Value(name),
         createdAt = Value(createdAt),
         updatedAt = Value(updatedAt);
-  static Insertable<CharactersTableData> custom({
+  static Insertable<CharacterRow> custom({
     Expression<String>? id,
     Expression<String>? projectId,
     Expression<String>? name,
-    Expression<String>? aliases,
-    Expression<String>? role,
     Expression<String>? description,
+    Expression<String>? role,
+    Expression<String>? avatarUrl,
+    Expression<String>? traitsJson,
+    Expression<String>? background,
+    Expression<String>? aliasesJson,
     Expression<String>? appearance,
     Expression<String>? personality,
     Expression<String>? goals,
     Expression<String>? conflicts,
     Expression<String>? secrets,
-    Expression<String>? relationships,
-    Expression<String>? firstAppearanceChapterId,
-    Expression<String>? tags,
-    Expression<String>? consistencyFacts,
-    Expression<DateTime>? createdAt,
-    Expression<DateTime>? updatedAt,
+    Expression<String>? relationshipsJson,
+    Expression<String>? consistencyFactsJson,
+    Expression<int>? createdAt,
+    Expression<int>? updatedAt,
     Expression<int>? schemaVersion,
     Expression<int>? rowid,
   }) {
@@ -3282,19 +2023,20 @@ class CharactersTableCompanion extends UpdateCompanion<CharactersTableData> {
       if (id != null) 'id': id,
       if (projectId != null) 'project_id': projectId,
       if (name != null) 'name': name,
-      if (aliases != null) 'aliases': aliases,
-      if (role != null) 'role': role,
       if (description != null) 'description': description,
+      if (role != null) 'role': role,
+      if (avatarUrl != null) 'avatar_url': avatarUrl,
+      if (traitsJson != null) 'traits_json': traitsJson,
+      if (background != null) 'background': background,
+      if (aliasesJson != null) 'aliases_json': aliasesJson,
       if (appearance != null) 'appearance': appearance,
       if (personality != null) 'personality': personality,
       if (goals != null) 'goals': goals,
       if (conflicts != null) 'conflicts': conflicts,
       if (secrets != null) 'secrets': secrets,
-      if (relationships != null) 'relationships': relationships,
-      if (firstAppearanceChapterId != null)
-        'first_appearance_chapter_id': firstAppearanceChapterId,
-      if (tags != null) 'tags': tags,
-      if (consistencyFacts != null) 'consistency_facts': consistencyFacts,
+      if (relationshipsJson != null) 'relationships_json': relationshipsJson,
+      if (consistencyFactsJson != null)
+        'consistency_facts_json': consistencyFactsJson,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (schemaVersion != null) 'schema_version': schemaVersion,
@@ -3302,43 +2044,44 @@ class CharactersTableCompanion extends UpdateCompanion<CharactersTableData> {
     });
   }
 
-  CharactersTableCompanion copyWith(
+  CharactersCompanion copyWith(
       {Value<String>? id,
       Value<String>? projectId,
       Value<String>? name,
-      Value<String>? aliases,
-      Value<String>? role,
       Value<String>? description,
+      Value<String>? role,
+      Value<String>? avatarUrl,
+      Value<String>? traitsJson,
+      Value<String>? background,
+      Value<String>? aliasesJson,
       Value<String>? appearance,
       Value<String>? personality,
       Value<String>? goals,
       Value<String>? conflicts,
       Value<String>? secrets,
-      Value<String>? relationships,
-      Value<String?>? firstAppearanceChapterId,
-      Value<String>? tags,
-      Value<String>? consistencyFacts,
-      Value<DateTime>? createdAt,
-      Value<DateTime>? updatedAt,
+      Value<String>? relationshipsJson,
+      Value<String>? consistencyFactsJson,
+      Value<int>? createdAt,
+      Value<int>? updatedAt,
       Value<int>? schemaVersion,
       Value<int>? rowid}) {
-    return CharactersTableCompanion(
+    return CharactersCompanion(
       id: id ?? this.id,
       projectId: projectId ?? this.projectId,
       name: name ?? this.name,
-      aliases: aliases ?? this.aliases,
-      role: role ?? this.role,
       description: description ?? this.description,
+      role: role ?? this.role,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      traitsJson: traitsJson ?? this.traitsJson,
+      background: background ?? this.background,
+      aliasesJson: aliasesJson ?? this.aliasesJson,
       appearance: appearance ?? this.appearance,
       personality: personality ?? this.personality,
       goals: goals ?? this.goals,
       conflicts: conflicts ?? this.conflicts,
       secrets: secrets ?? this.secrets,
-      relationships: relationships ?? this.relationships,
-      firstAppearanceChapterId:
-          firstAppearanceChapterId ?? this.firstAppearanceChapterId,
-      tags: tags ?? this.tags,
-      consistencyFacts: consistencyFacts ?? this.consistencyFacts,
+      relationshipsJson: relationshipsJson ?? this.relationshipsJson,
+      consistencyFactsJson: consistencyFactsJson ?? this.consistencyFactsJson,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       schemaVersion: schemaVersion ?? this.schemaVersion,
@@ -3358,14 +2101,23 @@ class CharactersTableCompanion extends UpdateCompanion<CharactersTableData> {
     if (name.present) {
       map['name'] = Variable<String>(name.value);
     }
-    if (aliases.present) {
-      map['aliases'] = Variable<String>(aliases.value);
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
     }
     if (role.present) {
       map['role'] = Variable<String>(role.value);
     }
-    if (description.present) {
-      map['description'] = Variable<String>(description.value);
+    if (avatarUrl.present) {
+      map['avatar_url'] = Variable<String>(avatarUrl.value);
+    }
+    if (traitsJson.present) {
+      map['traits_json'] = Variable<String>(traitsJson.value);
+    }
+    if (background.present) {
+      map['background'] = Variable<String>(background.value);
+    }
+    if (aliasesJson.present) {
+      map['aliases_json'] = Variable<String>(aliasesJson.value);
     }
     if (appearance.present) {
       map['appearance'] = Variable<String>(appearance.value);
@@ -3382,24 +2134,18 @@ class CharactersTableCompanion extends UpdateCompanion<CharactersTableData> {
     if (secrets.present) {
       map['secrets'] = Variable<String>(secrets.value);
     }
-    if (relationships.present) {
-      map['relationships'] = Variable<String>(relationships.value);
+    if (relationshipsJson.present) {
+      map['relationships_json'] = Variable<String>(relationshipsJson.value);
     }
-    if (firstAppearanceChapterId.present) {
-      map['first_appearance_chapter_id'] =
-          Variable<String>(firstAppearanceChapterId.value);
-    }
-    if (tags.present) {
-      map['tags'] = Variable<String>(tags.value);
-    }
-    if (consistencyFacts.present) {
-      map['consistency_facts'] = Variable<String>(consistencyFacts.value);
+    if (consistencyFactsJson.present) {
+      map['consistency_facts_json'] =
+          Variable<String>(consistencyFactsJson.value);
     }
     if (createdAt.present) {
-      map['created_at'] = Variable<DateTime>(createdAt.value);
+      map['created_at'] = Variable<int>(createdAt.value);
     }
     if (updatedAt.present) {
-      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+      map['updated_at'] = Variable<int>(updatedAt.value);
     }
     if (schemaVersion.present) {
       map['schema_version'] = Variable<int>(schemaVersion.value);
@@ -3412,22 +2158,23 @@ class CharactersTableCompanion extends UpdateCompanion<CharactersTableData> {
 
   @override
   String toString() {
-    return (StringBuffer('CharactersTableCompanion(')
+    return (StringBuffer('CharactersCompanion(')
           ..write('id: $id, ')
           ..write('projectId: $projectId, ')
           ..write('name: $name, ')
-          ..write('aliases: $aliases, ')
-          ..write('role: $role, ')
           ..write('description: $description, ')
+          ..write('role: $role, ')
+          ..write('avatarUrl: $avatarUrl, ')
+          ..write('traitsJson: $traitsJson, ')
+          ..write('background: $background, ')
+          ..write('aliasesJson: $aliasesJson, ')
           ..write('appearance: $appearance, ')
           ..write('personality: $personality, ')
           ..write('goals: $goals, ')
           ..write('conflicts: $conflicts, ')
           ..write('secrets: $secrets, ')
-          ..write('relationships: $relationships, ')
-          ..write('firstAppearanceChapterId: $firstAppearanceChapterId, ')
-          ..write('tags: $tags, ')
-          ..write('consistencyFacts: $consistencyFacts, ')
+          ..write('relationshipsJson: $relationshipsJson, ')
+          ..write('consistencyFactsJson: $consistencyFactsJson, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('schemaVersion: $schemaVersion, ')
@@ -3437,12 +2184,12 @@ class CharactersTableCompanion extends UpdateCompanion<CharactersTableData> {
   }
 }
 
-class $NotesTableTable extends NotesTable
-    with TableInfo<$NotesTableTable, NotesTableData> {
+class $SettingEntriesTable extends SettingEntries
+    with TableInfo<$SettingEntriesTable, SettingEntryRow> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $NotesTableTable(this.attachedDatabase, [this._alias]);
+  $SettingEntriesTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -3464,47 +2211,35 @@ class $NotesTableTable extends NotesTable
   @override
   late final GeneratedColumn<String> content = GeneratedColumn<String>(
       'content', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _categoryMeta =
+      const VerificationMeta('category');
+  @override
+  late final GeneratedColumn<String> category = GeneratedColumn<String>(
+      'category', aliasedName, false,
       type: DriftSqlType.string,
       requiredDuringInsert: false,
-      defaultValue: const Constant(''));
-  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+      defaultValue: const Constant('other'));
+  static const VerificationMeta _tagsJsonMeta =
+      const VerificationMeta('tagsJson');
   @override
-  late final GeneratedColumn<String> type = GeneratedColumn<String>(
-      'type', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      defaultValue: const Constant('idea'));
-  static const VerificationMeta _sourceUrlMeta =
-      const VerificationMeta('sourceUrl');
-  @override
-  late final GeneratedColumn<String> sourceUrl = GeneratedColumn<String>(
-      'source_url', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _agentTaskIdMeta =
-      const VerificationMeta('agentTaskId');
-  @override
-  late final GeneratedColumn<String> agentTaskId = GeneratedColumn<String>(
-      'agent_task_id', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _tagsMeta = const VerificationMeta('tags');
-  @override
-  late final GeneratedColumn<String> tags = GeneratedColumn<String>(
-      'tags', aliasedName, false,
+  late final GeneratedColumn<String> tagsJson = GeneratedColumn<String>(
+      'tags_json', aliasedName, false,
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant('[]'));
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
-  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
       'created_at', aliasedName, false,
-      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+      type: DriftSqlType.int, requiredDuringInsert: true);
   static const VerificationMeta _updatedAtMeta =
       const VerificationMeta('updatedAt');
   @override
-  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
       'updated_at', aliasedName, false,
-      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+      type: DriftSqlType.int, requiredDuringInsert: true);
   static const VerificationMeta _schemaVersionMeta =
       const VerificationMeta('schemaVersion');
   @override
@@ -3519,10 +2254,8 @@ class $NotesTableTable extends NotesTable
         projectId,
         title,
         content,
-        type,
-        sourceUrl,
-        agentTaskId,
-        tags,
+        category,
+        tagsJson,
         createdAt,
         updatedAt,
         schemaVersion
@@ -3531,9 +2264,9 @@ class $NotesTableTable extends NotesTable
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'notes_table';
+  static const String $name = 'setting_entries';
   @override
-  VerificationContext validateIntegrity(Insertable<NotesTableData> instance,
+  VerificationContext validateIntegrity(Insertable<SettingEntryRow> instance,
       {bool isInserting = false}) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
@@ -3557,24 +2290,16 @@ class $NotesTableTable extends NotesTable
     if (data.containsKey('content')) {
       context.handle(_contentMeta,
           content.isAcceptableOrUnknown(data['content']!, _contentMeta));
+    } else if (isInserting) {
+      context.missing(_contentMeta);
     }
-    if (data.containsKey('type')) {
-      context.handle(
-          _typeMeta, type.isAcceptableOrUnknown(data['type']!, _typeMeta));
+    if (data.containsKey('category')) {
+      context.handle(_categoryMeta,
+          category.isAcceptableOrUnknown(data['category']!, _categoryMeta));
     }
-    if (data.containsKey('source_url')) {
-      context.handle(_sourceUrlMeta,
-          sourceUrl.isAcceptableOrUnknown(data['source_url']!, _sourceUrlMeta));
-    }
-    if (data.containsKey('agent_task_id')) {
-      context.handle(
-          _agentTaskIdMeta,
-          agentTaskId.isAcceptableOrUnknown(
-              data['agent_task_id']!, _agentTaskIdMeta));
-    }
-    if (data.containsKey('tags')) {
-      context.handle(
-          _tagsMeta, tags.isAcceptableOrUnknown(data['tags']!, _tagsMeta));
+    if (data.containsKey('tags_json')) {
+      context.handle(_tagsJsonMeta,
+          tagsJson.isAcceptableOrUnknown(data['tags_json']!, _tagsJsonMeta));
     }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
@@ -3600,9 +2325,9 @@ class $NotesTableTable extends NotesTable
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  NotesTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
+  SettingEntryRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return NotesTableData(
+    return SettingEntryRow(
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
       projectId: attachedDatabase.typeMapping
@@ -3611,50 +2336,42 @@ class $NotesTableTable extends NotesTable
           .read(DriftSqlType.string, data['${effectivePrefix}title'])!,
       content: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}content'])!,
-      type: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}type'])!,
-      sourceUrl: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}source_url']),
-      agentTaskId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}agent_task_id']),
-      tags: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}tags'])!,
+      category: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}category'])!,
+      tagsJson: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}tags_json'])!,
       createdAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+          .read(DriftSqlType.int, data['${effectivePrefix}created_at'])!,
       updatedAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+          .read(DriftSqlType.int, data['${effectivePrefix}updated_at'])!,
       schemaVersion: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}schema_version'])!,
     );
   }
 
   @override
-  $NotesTableTable createAlias(String alias) {
-    return $NotesTableTable(attachedDatabase, alias);
+  $SettingEntriesTable createAlias(String alias) {
+    return $SettingEntriesTable(attachedDatabase, alias);
   }
 }
 
-class NotesTableData extends DataClass implements Insertable<NotesTableData> {
+class SettingEntryRow extends DataClass implements Insertable<SettingEntryRow> {
   final String id;
   final String projectId;
   final String title;
   final String content;
-  final String type;
-  final String? sourceUrl;
-  final String? agentTaskId;
-  final String tags;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final String category;
+  final String tagsJson;
+  final int createdAt;
+  final int updatedAt;
   final int schemaVersion;
-  const NotesTableData(
+  const SettingEntryRow(
       {required this.id,
       required this.projectId,
       required this.title,
       required this.content,
-      required this.type,
-      this.sourceUrl,
-      this.agentTaskId,
-      required this.tags,
+      required this.category,
+      required this.tagsJson,
       required this.createdAt,
       required this.updatedAt,
       required this.schemaVersion});
@@ -3665,54 +2382,40 @@ class NotesTableData extends DataClass implements Insertable<NotesTableData> {
     map['project_id'] = Variable<String>(projectId);
     map['title'] = Variable<String>(title);
     map['content'] = Variable<String>(content);
-    map['type'] = Variable<String>(type);
-    if (!nullToAbsent || sourceUrl != null) {
-      map['source_url'] = Variable<String>(sourceUrl);
-    }
-    if (!nullToAbsent || agentTaskId != null) {
-      map['agent_task_id'] = Variable<String>(agentTaskId);
-    }
-    map['tags'] = Variable<String>(tags);
-    map['created_at'] = Variable<DateTime>(createdAt);
-    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['category'] = Variable<String>(category);
+    map['tags_json'] = Variable<String>(tagsJson);
+    map['created_at'] = Variable<int>(createdAt);
+    map['updated_at'] = Variable<int>(updatedAt);
     map['schema_version'] = Variable<int>(schemaVersion);
     return map;
   }
 
-  NotesTableCompanion toCompanion(bool nullToAbsent) {
-    return NotesTableCompanion(
+  SettingEntriesCompanion toCompanion(bool nullToAbsent) {
+    return SettingEntriesCompanion(
       id: Value(id),
       projectId: Value(projectId),
       title: Value(title),
       content: Value(content),
-      type: Value(type),
-      sourceUrl: sourceUrl == null && nullToAbsent
-          ? const Value.absent()
-          : Value(sourceUrl),
-      agentTaskId: agentTaskId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(agentTaskId),
-      tags: Value(tags),
+      category: Value(category),
+      tagsJson: Value(tagsJson),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       schemaVersion: Value(schemaVersion),
     );
   }
 
-  factory NotesTableData.fromJson(Map<String, dynamic> json,
+  factory SettingEntryRow.fromJson(Map<String, dynamic> json,
       {ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return NotesTableData(
+    return SettingEntryRow(
       id: serializer.fromJson<String>(json['id']),
       projectId: serializer.fromJson<String>(json['projectId']),
       title: serializer.fromJson<String>(json['title']),
       content: serializer.fromJson<String>(json['content']),
-      type: serializer.fromJson<String>(json['type']),
-      sourceUrl: serializer.fromJson<String?>(json['sourceUrl']),
-      agentTaskId: serializer.fromJson<String?>(json['agentTaskId']),
-      tags: serializer.fromJson<String>(json['tags']),
-      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
-      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      category: serializer.fromJson<String>(json['category']),
+      tagsJson: serializer.fromJson<String>(json['tagsJson']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      updatedAt: serializer.fromJson<int>(json['updatedAt']),
       schemaVersion: serializer.fromJson<int>(json['schemaVersion']),
     );
   }
@@ -3724,52 +2427,43 @@ class NotesTableData extends DataClass implements Insertable<NotesTableData> {
       'projectId': serializer.toJson<String>(projectId),
       'title': serializer.toJson<String>(title),
       'content': serializer.toJson<String>(content),
-      'type': serializer.toJson<String>(type),
-      'sourceUrl': serializer.toJson<String?>(sourceUrl),
-      'agentTaskId': serializer.toJson<String?>(agentTaskId),
-      'tags': serializer.toJson<String>(tags),
-      'createdAt': serializer.toJson<DateTime>(createdAt),
-      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'category': serializer.toJson<String>(category),
+      'tagsJson': serializer.toJson<String>(tagsJson),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'updatedAt': serializer.toJson<int>(updatedAt),
       'schemaVersion': serializer.toJson<int>(schemaVersion),
     };
   }
 
-  NotesTableData copyWith(
+  SettingEntryRow copyWith(
           {String? id,
           String? projectId,
           String? title,
           String? content,
-          String? type,
-          Value<String?> sourceUrl = const Value.absent(),
-          Value<String?> agentTaskId = const Value.absent(),
-          String? tags,
-          DateTime? createdAt,
-          DateTime? updatedAt,
+          String? category,
+          String? tagsJson,
+          int? createdAt,
+          int? updatedAt,
           int? schemaVersion}) =>
-      NotesTableData(
+      SettingEntryRow(
         id: id ?? this.id,
         projectId: projectId ?? this.projectId,
         title: title ?? this.title,
         content: content ?? this.content,
-        type: type ?? this.type,
-        sourceUrl: sourceUrl.present ? sourceUrl.value : this.sourceUrl,
-        agentTaskId: agentTaskId.present ? agentTaskId.value : this.agentTaskId,
-        tags: tags ?? this.tags,
+        category: category ?? this.category,
+        tagsJson: tagsJson ?? this.tagsJson,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
         schemaVersion: schemaVersion ?? this.schemaVersion,
       );
-  NotesTableData copyWithCompanion(NotesTableCompanion data) {
-    return NotesTableData(
+  SettingEntryRow copyWithCompanion(SettingEntriesCompanion data) {
+    return SettingEntryRow(
       id: data.id.present ? data.id.value : this.id,
       projectId: data.projectId.present ? data.projectId.value : this.projectId,
       title: data.title.present ? data.title.value : this.title,
       content: data.content.present ? data.content.value : this.content,
-      type: data.type.present ? data.type.value : this.type,
-      sourceUrl: data.sourceUrl.present ? data.sourceUrl.value : this.sourceUrl,
-      agentTaskId:
-          data.agentTaskId.present ? data.agentTaskId.value : this.agentTaskId,
-      tags: data.tags.present ? data.tags.value : this.tags,
+      category: data.category.present ? data.category.value : this.category,
+      tagsJson: data.tagsJson.present ? data.tagsJson.value : this.tagsJson,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       schemaVersion: data.schemaVersion.present
@@ -3780,15 +2474,13 @@ class NotesTableData extends DataClass implements Insertable<NotesTableData> {
 
   @override
   String toString() {
-    return (StringBuffer('NotesTableData(')
+    return (StringBuffer('SettingEntryRow(')
           ..write('id: $id, ')
           ..write('projectId: $projectId, ')
           ..write('title: $title, ')
           ..write('content: $content, ')
-          ..write('type: $type, ')
-          ..write('sourceUrl: $sourceUrl, ')
-          ..write('agentTaskId: $agentTaskId, ')
-          ..write('tags: $tags, ')
+          ..write('category: $category, ')
+          ..write('tagsJson: $tagsJson, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('schemaVersion: $schemaVersion')
@@ -3797,81 +2489,72 @@ class NotesTableData extends DataClass implements Insertable<NotesTableData> {
   }
 
   @override
-  int get hashCode => Object.hash(id, projectId, title, content, type,
-      sourceUrl, agentTaskId, tags, createdAt, updatedAt, schemaVersion);
+  int get hashCode => Object.hash(id, projectId, title, content, category,
+      tagsJson, createdAt, updatedAt, schemaVersion);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is NotesTableData &&
+      (other is SettingEntryRow &&
           other.id == this.id &&
           other.projectId == this.projectId &&
           other.title == this.title &&
           other.content == this.content &&
-          other.type == this.type &&
-          other.sourceUrl == this.sourceUrl &&
-          other.agentTaskId == this.agentTaskId &&
-          other.tags == this.tags &&
+          other.category == this.category &&
+          other.tagsJson == this.tagsJson &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.schemaVersion == this.schemaVersion);
 }
 
-class NotesTableCompanion extends UpdateCompanion<NotesTableData> {
+class SettingEntriesCompanion extends UpdateCompanion<SettingEntryRow> {
   final Value<String> id;
   final Value<String> projectId;
   final Value<String> title;
   final Value<String> content;
-  final Value<String> type;
-  final Value<String?> sourceUrl;
-  final Value<String?> agentTaskId;
-  final Value<String> tags;
-  final Value<DateTime> createdAt;
-  final Value<DateTime> updatedAt;
+  final Value<String> category;
+  final Value<String> tagsJson;
+  final Value<int> createdAt;
+  final Value<int> updatedAt;
   final Value<int> schemaVersion;
   final Value<int> rowid;
-  const NotesTableCompanion({
+  const SettingEntriesCompanion({
     this.id = const Value.absent(),
     this.projectId = const Value.absent(),
     this.title = const Value.absent(),
     this.content = const Value.absent(),
-    this.type = const Value.absent(),
-    this.sourceUrl = const Value.absent(),
-    this.agentTaskId = const Value.absent(),
-    this.tags = const Value.absent(),
+    this.category = const Value.absent(),
+    this.tagsJson = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.schemaVersion = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-  NotesTableCompanion.insert({
+  SettingEntriesCompanion.insert({
     required String id,
     required String projectId,
     required String title,
-    this.content = const Value.absent(),
-    this.type = const Value.absent(),
-    this.sourceUrl = const Value.absent(),
-    this.agentTaskId = const Value.absent(),
-    this.tags = const Value.absent(),
-    required DateTime createdAt,
-    required DateTime updatedAt,
+    required String content,
+    this.category = const Value.absent(),
+    this.tagsJson = const Value.absent(),
+    required int createdAt,
+    required int updatedAt,
     this.schemaVersion = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         projectId = Value(projectId),
         title = Value(title),
+        content = Value(content),
         createdAt = Value(createdAt),
         updatedAt = Value(updatedAt);
-  static Insertable<NotesTableData> custom({
+  static Insertable<SettingEntryRow> custom({
     Expression<String>? id,
     Expression<String>? projectId,
     Expression<String>? title,
     Expression<String>? content,
-    Expression<String>? type,
-    Expression<String>? sourceUrl,
-    Expression<String>? agentTaskId,
-    Expression<String>? tags,
-    Expression<DateTime>? createdAt,
-    Expression<DateTime>? updatedAt,
+    Expression<String>? category,
+    Expression<String>? tagsJson,
+    Expression<int>? createdAt,
+    Expression<int>? updatedAt,
     Expression<int>? schemaVersion,
     Expression<int>? rowid,
   }) {
@@ -3880,10 +2563,8 @@ class NotesTableCompanion extends UpdateCompanion<NotesTableData> {
       if (projectId != null) 'project_id': projectId,
       if (title != null) 'title': title,
       if (content != null) 'content': content,
-      if (type != null) 'type': type,
-      if (sourceUrl != null) 'source_url': sourceUrl,
-      if (agentTaskId != null) 'agent_task_id': agentTaskId,
-      if (tags != null) 'tags': tags,
+      if (category != null) 'category': category,
+      if (tagsJson != null) 'tags_json': tagsJson,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (schemaVersion != null) 'schema_version': schemaVersion,
@@ -3891,28 +2572,24 @@ class NotesTableCompanion extends UpdateCompanion<NotesTableData> {
     });
   }
 
-  NotesTableCompanion copyWith(
+  SettingEntriesCompanion copyWith(
       {Value<String>? id,
       Value<String>? projectId,
       Value<String>? title,
       Value<String>? content,
-      Value<String>? type,
-      Value<String?>? sourceUrl,
-      Value<String?>? agentTaskId,
-      Value<String>? tags,
-      Value<DateTime>? createdAt,
-      Value<DateTime>? updatedAt,
+      Value<String>? category,
+      Value<String>? tagsJson,
+      Value<int>? createdAt,
+      Value<int>? updatedAt,
       Value<int>? schemaVersion,
       Value<int>? rowid}) {
-    return NotesTableCompanion(
+    return SettingEntriesCompanion(
       id: id ?? this.id,
       projectId: projectId ?? this.projectId,
       title: title ?? this.title,
       content: content ?? this.content,
-      type: type ?? this.type,
-      sourceUrl: sourceUrl ?? this.sourceUrl,
-      agentTaskId: agentTaskId ?? this.agentTaskId,
-      tags: tags ?? this.tags,
+      category: category ?? this.category,
+      tagsJson: tagsJson ?? this.tagsJson,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       schemaVersion: schemaVersion ?? this.schemaVersion,
@@ -3935,23 +2612,17 @@ class NotesTableCompanion extends UpdateCompanion<NotesTableData> {
     if (content.present) {
       map['content'] = Variable<String>(content.value);
     }
-    if (type.present) {
-      map['type'] = Variable<String>(type.value);
+    if (category.present) {
+      map['category'] = Variable<String>(category.value);
     }
-    if (sourceUrl.present) {
-      map['source_url'] = Variable<String>(sourceUrl.value);
-    }
-    if (agentTaskId.present) {
-      map['agent_task_id'] = Variable<String>(agentTaskId.value);
-    }
-    if (tags.present) {
-      map['tags'] = Variable<String>(tags.value);
+    if (tagsJson.present) {
+      map['tags_json'] = Variable<String>(tagsJson.value);
     }
     if (createdAt.present) {
-      map['created_at'] = Variable<DateTime>(createdAt.value);
+      map['created_at'] = Variable<int>(createdAt.value);
     }
     if (updatedAt.present) {
-      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+      map['updated_at'] = Variable<int>(updatedAt.value);
     }
     if (schemaVersion.present) {
       map['schema_version'] = Variable<int>(schemaVersion.value);
@@ -3964,15 +2635,13 @@ class NotesTableCompanion extends UpdateCompanion<NotesTableData> {
 
   @override
   String toString() {
-    return (StringBuffer('NotesTableCompanion(')
+    return (StringBuffer('SettingEntriesCompanion(')
           ..write('id: $id, ')
           ..write('projectId: $projectId, ')
           ..write('title: $title, ')
           ..write('content: $content, ')
-          ..write('type: $type, ')
-          ..write('sourceUrl: $sourceUrl, ')
-          ..write('agentTaskId: $agentTaskId, ')
-          ..write('tags: $tags, ')
+          ..write('category: $category, ')
+          ..write('tagsJson: $tagsJson, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('schemaVersion: $schemaVersion, ')
@@ -3982,12 +2651,11 @@ class NotesTableCompanion extends UpdateCompanion<NotesTableData> {
   }
 }
 
-class $SessionsTableTable extends SessionsTable
-    with TableInfo<$SessionsTableTable, SessionsTableData> {
+class $NotesTable extends Notes with TableInfo<$NotesTable, NoteRow> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $SessionsTableTable(this.attachedDatabase, [this._alias]);
+  $NotesTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -4004,61 +2672,40 @@ class $SessionsTableTable extends SessionsTable
   late final GeneratedColumn<String> title = GeneratedColumn<String>(
       'title', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _stageMeta = const VerificationMeta('stage');
+  static const VerificationMeta _contentMeta =
+      const VerificationMeta('content');
   @override
-  late final GeneratedColumn<String> stage = GeneratedColumn<String>(
-      'stage', aliasedName, false,
+  late final GeneratedColumn<String> content = GeneratedColumn<String>(
+      'content', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _categoryMeta =
+      const VerificationMeta('category');
+  @override
+  late final GeneratedColumn<String> category = GeneratedColumn<String>(
+      'category', aliasedName, false,
       type: DriftSqlType.string,
       requiredDuringInsert: false,
-      defaultValue: const Constant('writing'));
-  static const VerificationMeta _parentSessionIdMeta =
-      const VerificationMeta('parentSessionId');
+      defaultValue: const Constant('misc'));
+  static const VerificationMeta _tagsJsonMeta =
+      const VerificationMeta('tagsJson');
   @override
-  late final GeneratedColumn<String> parentSessionId = GeneratedColumn<String>(
-      'parent_session_id', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _branchNameMeta =
-      const VerificationMeta('branchName');
-  @override
-  late final GeneratedColumn<String> branchName = GeneratedColumn<String>(
-      'branch_name', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _messagesMeta =
-      const VerificationMeta('messages');
-  @override
-  late final GeneratedColumn<String> messages = GeneratedColumn<String>(
-      'messages', aliasedName, false,
+  late final GeneratedColumn<String> tagsJson = GeneratedColumn<String>(
+      'tags_json', aliasedName, false,
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant('[]'));
-  static const VerificationMeta _contextSnapshotIdMeta =
-      const VerificationMeta('contextSnapshotId');
-  @override
-  late final GeneratedColumn<String> contextSnapshotId =
-      GeneratedColumn<String>('context_snapshot_id', aliasedName, true,
-          type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _archivedMeta =
-      const VerificationMeta('archived');
-  @override
-  late final GeneratedColumn<bool> archived = GeneratedColumn<bool>(
-      'archived', aliasedName, false,
-      type: DriftSqlType.bool,
-      requiredDuringInsert: false,
-      defaultConstraints:
-          GeneratedColumn.constraintIsAlways('CHECK ("archived" IN (0, 1))'),
-      defaultValue: const Constant(false));
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
-  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
       'created_at', aliasedName, false,
-      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+      type: DriftSqlType.int, requiredDuringInsert: true);
   static const VerificationMeta _updatedAtMeta =
       const VerificationMeta('updatedAt');
   @override
-  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
       'updated_at', aliasedName, false,
-      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+      type: DriftSqlType.int, requiredDuringInsert: true);
   static const VerificationMeta _schemaVersionMeta =
       const VerificationMeta('schemaVersion');
   @override
@@ -4072,12 +2719,9 @@ class $SessionsTableTable extends SessionsTable
         id,
         projectId,
         title,
-        stage,
-        parentSessionId,
-        branchName,
-        messages,
-        contextSnapshotId,
-        archived,
+        content,
+        category,
+        tagsJson,
         createdAt,
         updatedAt,
         schemaVersion
@@ -4086,9 +2730,9 @@ class $SessionsTableTable extends SessionsTable
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'sessions_table';
+  static const String $name = 'notes';
   @override
-  VerificationContext validateIntegrity(Insertable<SessionsTableData> instance,
+  VerificationContext validateIntegrity(Insertable<NoteRow> instance,
       {bool isInserting = false}) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
@@ -4109,35 +2753,19 @@ class $SessionsTableTable extends SessionsTable
     } else if (isInserting) {
       context.missing(_titleMeta);
     }
-    if (data.containsKey('stage')) {
-      context.handle(
-          _stageMeta, stage.isAcceptableOrUnknown(data['stage']!, _stageMeta));
+    if (data.containsKey('content')) {
+      context.handle(_contentMeta,
+          content.isAcceptableOrUnknown(data['content']!, _contentMeta));
+    } else if (isInserting) {
+      context.missing(_contentMeta);
     }
-    if (data.containsKey('parent_session_id')) {
-      context.handle(
-          _parentSessionIdMeta,
-          parentSessionId.isAcceptableOrUnknown(
-              data['parent_session_id']!, _parentSessionIdMeta));
+    if (data.containsKey('category')) {
+      context.handle(_categoryMeta,
+          category.isAcceptableOrUnknown(data['category']!, _categoryMeta));
     }
-    if (data.containsKey('branch_name')) {
-      context.handle(
-          _branchNameMeta,
-          branchName.isAcceptableOrUnknown(
-              data['branch_name']!, _branchNameMeta));
-    }
-    if (data.containsKey('messages')) {
-      context.handle(_messagesMeta,
-          messages.isAcceptableOrUnknown(data['messages']!, _messagesMeta));
-    }
-    if (data.containsKey('context_snapshot_id')) {
-      context.handle(
-          _contextSnapshotIdMeta,
-          contextSnapshotId.isAcceptableOrUnknown(
-              data['context_snapshot_id']!, _contextSnapshotIdMeta));
-    }
-    if (data.containsKey('archived')) {
-      context.handle(_archivedMeta,
-          archived.isAcceptableOrUnknown(data['archived']!, _archivedMeta));
+    if (data.containsKey('tags_json')) {
+      context.handle(_tagsJsonMeta,
+          tagsJson.isAcceptableOrUnknown(data['tags_json']!, _tagsJsonMeta));
     }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
@@ -4163,66 +2791,53 @@ class $SessionsTableTable extends SessionsTable
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  SessionsTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
+  NoteRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return SessionsTableData(
+    return NoteRow(
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
       projectId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}project_id'])!,
       title: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}title'])!,
-      stage: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}stage'])!,
-      parentSessionId: attachedDatabase.typeMapping.read(
-          DriftSqlType.string, data['${effectivePrefix}parent_session_id']),
-      branchName: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}branch_name']),
-      messages: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}messages'])!,
-      contextSnapshotId: attachedDatabase.typeMapping.read(
-          DriftSqlType.string, data['${effectivePrefix}context_snapshot_id']),
-      archived: attachedDatabase.typeMapping
-          .read(DriftSqlType.bool, data['${effectivePrefix}archived'])!,
+      content: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}content'])!,
+      category: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}category'])!,
+      tagsJson: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}tags_json'])!,
       createdAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+          .read(DriftSqlType.int, data['${effectivePrefix}created_at'])!,
       updatedAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+          .read(DriftSqlType.int, data['${effectivePrefix}updated_at'])!,
       schemaVersion: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}schema_version'])!,
     );
   }
 
   @override
-  $SessionsTableTable createAlias(String alias) {
-    return $SessionsTableTable(attachedDatabase, alias);
+  $NotesTable createAlias(String alias) {
+    return $NotesTable(attachedDatabase, alias);
   }
 }
 
-class SessionsTableData extends DataClass
-    implements Insertable<SessionsTableData> {
+class NoteRow extends DataClass implements Insertable<NoteRow> {
   final String id;
   final String projectId;
   final String title;
-  final String stage;
-  final String? parentSessionId;
-  final String? branchName;
-  final String messages;
-  final String? contextSnapshotId;
-  final bool archived;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final String content;
+  final String category;
+  final String tagsJson;
+  final int createdAt;
+  final int updatedAt;
   final int schemaVersion;
-  const SessionsTableData(
+  const NoteRow(
       {required this.id,
       required this.projectId,
       required this.title,
-      required this.stage,
-      this.parentSessionId,
-      this.branchName,
-      required this.messages,
-      this.contextSnapshotId,
-      required this.archived,
+      required this.content,
+      required this.category,
+      required this.tagsJson,
       required this.createdAt,
       required this.updatedAt,
       required this.schemaVersion});
@@ -4232,63 +2847,41 @@ class SessionsTableData extends DataClass
     map['id'] = Variable<String>(id);
     map['project_id'] = Variable<String>(projectId);
     map['title'] = Variable<String>(title);
-    map['stage'] = Variable<String>(stage);
-    if (!nullToAbsent || parentSessionId != null) {
-      map['parent_session_id'] = Variable<String>(parentSessionId);
-    }
-    if (!nullToAbsent || branchName != null) {
-      map['branch_name'] = Variable<String>(branchName);
-    }
-    map['messages'] = Variable<String>(messages);
-    if (!nullToAbsent || contextSnapshotId != null) {
-      map['context_snapshot_id'] = Variable<String>(contextSnapshotId);
-    }
-    map['archived'] = Variable<bool>(archived);
-    map['created_at'] = Variable<DateTime>(createdAt);
-    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['content'] = Variable<String>(content);
+    map['category'] = Variable<String>(category);
+    map['tags_json'] = Variable<String>(tagsJson);
+    map['created_at'] = Variable<int>(createdAt);
+    map['updated_at'] = Variable<int>(updatedAt);
     map['schema_version'] = Variable<int>(schemaVersion);
     return map;
   }
 
-  SessionsTableCompanion toCompanion(bool nullToAbsent) {
-    return SessionsTableCompanion(
+  NotesCompanion toCompanion(bool nullToAbsent) {
+    return NotesCompanion(
       id: Value(id),
       projectId: Value(projectId),
       title: Value(title),
-      stage: Value(stage),
-      parentSessionId: parentSessionId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(parentSessionId),
-      branchName: branchName == null && nullToAbsent
-          ? const Value.absent()
-          : Value(branchName),
-      messages: Value(messages),
-      contextSnapshotId: contextSnapshotId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(contextSnapshotId),
-      archived: Value(archived),
+      content: Value(content),
+      category: Value(category),
+      tagsJson: Value(tagsJson),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       schemaVersion: Value(schemaVersion),
     );
   }
 
-  factory SessionsTableData.fromJson(Map<String, dynamic> json,
+  factory NoteRow.fromJson(Map<String, dynamic> json,
       {ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return SessionsTableData(
+    return NoteRow(
       id: serializer.fromJson<String>(json['id']),
       projectId: serializer.fromJson<String>(json['projectId']),
       title: serializer.fromJson<String>(json['title']),
-      stage: serializer.fromJson<String>(json['stage']),
-      parentSessionId: serializer.fromJson<String?>(json['parentSessionId']),
-      branchName: serializer.fromJson<String?>(json['branchName']),
-      messages: serializer.fromJson<String>(json['messages']),
-      contextSnapshotId:
-          serializer.fromJson<String?>(json['contextSnapshotId']),
-      archived: serializer.fromJson<bool>(json['archived']),
-      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
-      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      content: serializer.fromJson<String>(json['content']),
+      category: serializer.fromJson<String>(json['category']),
+      tagsJson: serializer.fromJson<String>(json['tagsJson']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      updatedAt: serializer.fromJson<int>(json['updatedAt']),
       schemaVersion: serializer.fromJson<int>(json['schemaVersion']),
     );
   }
@@ -4299,65 +2892,44 @@ class SessionsTableData extends DataClass
       'id': serializer.toJson<String>(id),
       'projectId': serializer.toJson<String>(projectId),
       'title': serializer.toJson<String>(title),
-      'stage': serializer.toJson<String>(stage),
-      'parentSessionId': serializer.toJson<String?>(parentSessionId),
-      'branchName': serializer.toJson<String?>(branchName),
-      'messages': serializer.toJson<String>(messages),
-      'contextSnapshotId': serializer.toJson<String?>(contextSnapshotId),
-      'archived': serializer.toJson<bool>(archived),
-      'createdAt': serializer.toJson<DateTime>(createdAt),
-      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'content': serializer.toJson<String>(content),
+      'category': serializer.toJson<String>(category),
+      'tagsJson': serializer.toJson<String>(tagsJson),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'updatedAt': serializer.toJson<int>(updatedAt),
       'schemaVersion': serializer.toJson<int>(schemaVersion),
     };
   }
 
-  SessionsTableData copyWith(
+  NoteRow copyWith(
           {String? id,
           String? projectId,
           String? title,
-          String? stage,
-          Value<String?> parentSessionId = const Value.absent(),
-          Value<String?> branchName = const Value.absent(),
-          String? messages,
-          Value<String?> contextSnapshotId = const Value.absent(),
-          bool? archived,
-          DateTime? createdAt,
-          DateTime? updatedAt,
+          String? content,
+          String? category,
+          String? tagsJson,
+          int? createdAt,
+          int? updatedAt,
           int? schemaVersion}) =>
-      SessionsTableData(
+      NoteRow(
         id: id ?? this.id,
         projectId: projectId ?? this.projectId,
         title: title ?? this.title,
-        stage: stage ?? this.stage,
-        parentSessionId: parentSessionId.present
-            ? parentSessionId.value
-            : this.parentSessionId,
-        branchName: branchName.present ? branchName.value : this.branchName,
-        messages: messages ?? this.messages,
-        contextSnapshotId: contextSnapshotId.present
-            ? contextSnapshotId.value
-            : this.contextSnapshotId,
-        archived: archived ?? this.archived,
+        content: content ?? this.content,
+        category: category ?? this.category,
+        tagsJson: tagsJson ?? this.tagsJson,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
         schemaVersion: schemaVersion ?? this.schemaVersion,
       );
-  SessionsTableData copyWithCompanion(SessionsTableCompanion data) {
-    return SessionsTableData(
+  NoteRow copyWithCompanion(NotesCompanion data) {
+    return NoteRow(
       id: data.id.present ? data.id.value : this.id,
       projectId: data.projectId.present ? data.projectId.value : this.projectId,
       title: data.title.present ? data.title.value : this.title,
-      stage: data.stage.present ? data.stage.value : this.stage,
-      parentSessionId: data.parentSessionId.present
-          ? data.parentSessionId.value
-          : this.parentSessionId,
-      branchName:
-          data.branchName.present ? data.branchName.value : this.branchName,
-      messages: data.messages.present ? data.messages.value : this.messages,
-      contextSnapshotId: data.contextSnapshotId.present
-          ? data.contextSnapshotId.value
-          : this.contextSnapshotId,
-      archived: data.archived.present ? data.archived.value : this.archived,
+      content: data.content.present ? data.content.value : this.content,
+      category: data.category.present ? data.category.value : this.category,
+      tagsJson: data.tagsJson.present ? data.tagsJson.value : this.tagsJson,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       schemaVersion: data.schemaVersion.present
@@ -4368,16 +2940,628 @@ class SessionsTableData extends DataClass
 
   @override
   String toString() {
-    return (StringBuffer('SessionsTableData(')
+    return (StringBuffer('NoteRow(')
           ..write('id: $id, ')
           ..write('projectId: $projectId, ')
           ..write('title: $title, ')
-          ..write('stage: $stage, ')
-          ..write('parentSessionId: $parentSessionId, ')
-          ..write('branchName: $branchName, ')
-          ..write('messages: $messages, ')
-          ..write('contextSnapshotId: $contextSnapshotId, ')
-          ..write('archived: $archived, ')
+          ..write('content: $content, ')
+          ..write('category: $category, ')
+          ..write('tagsJson: $tagsJson, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('schemaVersion: $schemaVersion')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, projectId, title, content, category,
+      tagsJson, createdAt, updatedAt, schemaVersion);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is NoteRow &&
+          other.id == this.id &&
+          other.projectId == this.projectId &&
+          other.title == this.title &&
+          other.content == this.content &&
+          other.category == this.category &&
+          other.tagsJson == this.tagsJson &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.schemaVersion == this.schemaVersion);
+}
+
+class NotesCompanion extends UpdateCompanion<NoteRow> {
+  final Value<String> id;
+  final Value<String> projectId;
+  final Value<String> title;
+  final Value<String> content;
+  final Value<String> category;
+  final Value<String> tagsJson;
+  final Value<int> createdAt;
+  final Value<int> updatedAt;
+  final Value<int> schemaVersion;
+  final Value<int> rowid;
+  const NotesCompanion({
+    this.id = const Value.absent(),
+    this.projectId = const Value.absent(),
+    this.title = const Value.absent(),
+    this.content = const Value.absent(),
+    this.category = const Value.absent(),
+    this.tagsJson = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.schemaVersion = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  NotesCompanion.insert({
+    required String id,
+    required String projectId,
+    required String title,
+    required String content,
+    this.category = const Value.absent(),
+    this.tagsJson = const Value.absent(),
+    required int createdAt,
+    required int updatedAt,
+    this.schemaVersion = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        projectId = Value(projectId),
+        title = Value(title),
+        content = Value(content),
+        createdAt = Value(createdAt),
+        updatedAt = Value(updatedAt);
+  static Insertable<NoteRow> custom({
+    Expression<String>? id,
+    Expression<String>? projectId,
+    Expression<String>? title,
+    Expression<String>? content,
+    Expression<String>? category,
+    Expression<String>? tagsJson,
+    Expression<int>? createdAt,
+    Expression<int>? updatedAt,
+    Expression<int>? schemaVersion,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (projectId != null) 'project_id': projectId,
+      if (title != null) 'title': title,
+      if (content != null) 'content': content,
+      if (category != null) 'category': category,
+      if (tagsJson != null) 'tags_json': tagsJson,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (schemaVersion != null) 'schema_version': schemaVersion,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  NotesCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? projectId,
+      Value<String>? title,
+      Value<String>? content,
+      Value<String>? category,
+      Value<String>? tagsJson,
+      Value<int>? createdAt,
+      Value<int>? updatedAt,
+      Value<int>? schemaVersion,
+      Value<int>? rowid}) {
+    return NotesCompanion(
+      id: id ?? this.id,
+      projectId: projectId ?? this.projectId,
+      title: title ?? this.title,
+      content: content ?? this.content,
+      category: category ?? this.category,
+      tagsJson: tagsJson ?? this.tagsJson,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      schemaVersion: schemaVersion ?? this.schemaVersion,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (projectId.present) {
+      map['project_id'] = Variable<String>(projectId.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
+    }
+    if (category.present) {
+      map['category'] = Variable<String>(category.value);
+    }
+    if (tagsJson.present) {
+      map['tags_json'] = Variable<String>(tagsJson.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
+    if (schemaVersion.present) {
+      map['schema_version'] = Variable<int>(schemaVersion.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('NotesCompanion(')
+          ..write('id: $id, ')
+          ..write('projectId: $projectId, ')
+          ..write('title: $title, ')
+          ..write('content: $content, ')
+          ..write('category: $category, ')
+          ..write('tagsJson: $tagsJson, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('schemaVersion: $schemaVersion, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LlmProvidersTable extends LlmProviders
+    with TableInfo<$LlmProvidersTable, LlmProviderRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LlmProvidersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _projectIdMeta =
+      const VerificationMeta('projectId');
+  @override
+  late final GeneratedColumn<String> projectId = GeneratedColumn<String>(
+      'project_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+      'name', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _baseUrlMeta =
+      const VerificationMeta('baseUrl');
+  @override
+  late final GeneratedColumn<String> baseUrl = GeneratedColumn<String>(
+      'base_url', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _secretKeyRefMeta =
+      const VerificationMeta('secretKeyRef');
+  @override
+  late final GeneratedColumn<String> secretKeyRef = GeneratedColumn<String>(
+      'secret_key_ref', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _cachedModelsJsonMeta =
+      const VerificationMeta('cachedModelsJson');
+  @override
+  late final GeneratedColumn<String> cachedModelsJson = GeneratedColumn<String>(
+      'cached_models_json', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('[]'));
+  static const VerificationMeta _selectedModelIdMeta =
+      const VerificationMeta('selectedModelId');
+  @override
+  late final GeneratedColumn<String> selectedModelId = GeneratedColumn<String>(
+      'selected_model_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+      'status', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _temperatureMeta =
+      const VerificationMeta('temperature');
+  @override
+  late final GeneratedColumn<double> temperature = GeneratedColumn<double>(
+      'temperature', aliasedName, false,
+      type: DriftSqlType.double,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0.7));
+  static const VerificationMeta _topPMeta = const VerificationMeta('topP');
+  @override
+  late final GeneratedColumn<double> topP = GeneratedColumn<double>(
+      'top_p', aliasedName, false,
+      type: DriftSqlType.double,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0.9));
+  static const VerificationMeta _streamingEnabledMeta =
+      const VerificationMeta('streamingEnabled');
+  @override
+  late final GeneratedColumn<bool> streamingEnabled = GeneratedColumn<bool>(
+      'streaming_enabled', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("streaming_enabled" IN (0, 1))'),
+      defaultValue: const Constant(true));
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _schemaVersionMeta =
+      const VerificationMeta('schemaVersion');
+  @override
+  late final GeneratedColumn<int> schemaVersion = GeneratedColumn<int>(
+      'schema_version', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(1));
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        projectId,
+        name,
+        baseUrl,
+        secretKeyRef,
+        cachedModelsJson,
+        selectedModelId,
+        status,
+        temperature,
+        topP,
+        streamingEnabled,
+        createdAt,
+        updatedAt,
+        schemaVersion
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'llm_providers';
+  @override
+  VerificationContext validateIntegrity(Insertable<LlmProviderRow> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('project_id')) {
+      context.handle(_projectIdMeta,
+          projectId.isAcceptableOrUnknown(data['project_id']!, _projectIdMeta));
+    } else if (isInserting) {
+      context.missing(_projectIdMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('base_url')) {
+      context.handle(_baseUrlMeta,
+          baseUrl.isAcceptableOrUnknown(data['base_url']!, _baseUrlMeta));
+    } else if (isInserting) {
+      context.missing(_baseUrlMeta);
+    }
+    if (data.containsKey('secret_key_ref')) {
+      context.handle(
+          _secretKeyRefMeta,
+          secretKeyRef.isAcceptableOrUnknown(
+              data['secret_key_ref']!, _secretKeyRefMeta));
+    } else if (isInserting) {
+      context.missing(_secretKeyRefMeta);
+    }
+    if (data.containsKey('cached_models_json')) {
+      context.handle(
+          _cachedModelsJsonMeta,
+          cachedModelsJson.isAcceptableOrUnknown(
+              data['cached_models_json']!, _cachedModelsJsonMeta));
+    }
+    if (data.containsKey('selected_model_id')) {
+      context.handle(
+          _selectedModelIdMeta,
+          selectedModelId.isAcceptableOrUnknown(
+              data['selected_model_id']!, _selectedModelIdMeta));
+    }
+    if (data.containsKey('status')) {
+      context.handle(_statusMeta,
+          status.isAcceptableOrUnknown(data['status']!, _statusMeta));
+    } else if (isInserting) {
+      context.missing(_statusMeta);
+    }
+    if (data.containsKey('temperature')) {
+      context.handle(
+          _temperatureMeta,
+          temperature.isAcceptableOrUnknown(
+              data['temperature']!, _temperatureMeta));
+    }
+    if (data.containsKey('top_p')) {
+      context.handle(
+          _topPMeta, topP.isAcceptableOrUnknown(data['top_p']!, _topPMeta));
+    }
+    if (data.containsKey('streaming_enabled')) {
+      context.handle(
+          _streamingEnabledMeta,
+          streamingEnabled.isAcceptableOrUnknown(
+              data['streaming_enabled']!, _streamingEnabledMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('schema_version')) {
+      context.handle(
+          _schemaVersionMeta,
+          schemaVersion.isAcceptableOrUnknown(
+              data['schema_version']!, _schemaVersionMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LlmProviderRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LlmProviderRow(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      projectId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}project_id'])!,
+      name: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      baseUrl: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}base_url'])!,
+      secretKeyRef: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}secret_key_ref'])!,
+      cachedModelsJson: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}cached_models_json'])!,
+      selectedModelId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}selected_model_id']),
+      status: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
+      temperature: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}temperature'])!,
+      topP: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}top_p'])!,
+      streamingEnabled: attachedDatabase.typeMapping.read(
+          DriftSqlType.bool, data['${effectivePrefix}streaming_enabled'])!,
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}created_at'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}updated_at'])!,
+      schemaVersion: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}schema_version'])!,
+    );
+  }
+
+  @override
+  $LlmProvidersTable createAlias(String alias) {
+    return $LlmProvidersTable(attachedDatabase, alias);
+  }
+}
+
+class LlmProviderRow extends DataClass implements Insertable<LlmProviderRow> {
+  final String id;
+  final String projectId;
+  final String name;
+  final String baseUrl;
+  final String secretKeyRef;
+  final String cachedModelsJson;
+  final String? selectedModelId;
+  final String status;
+  final double temperature;
+  final double topP;
+  final bool streamingEnabled;
+  final int createdAt;
+  final int updatedAt;
+  final int schemaVersion;
+  const LlmProviderRow(
+      {required this.id,
+      required this.projectId,
+      required this.name,
+      required this.baseUrl,
+      required this.secretKeyRef,
+      required this.cachedModelsJson,
+      this.selectedModelId,
+      required this.status,
+      required this.temperature,
+      required this.topP,
+      required this.streamingEnabled,
+      required this.createdAt,
+      required this.updatedAt,
+      required this.schemaVersion});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['project_id'] = Variable<String>(projectId);
+    map['name'] = Variable<String>(name);
+    map['base_url'] = Variable<String>(baseUrl);
+    map['secret_key_ref'] = Variable<String>(secretKeyRef);
+    map['cached_models_json'] = Variable<String>(cachedModelsJson);
+    if (!nullToAbsent || selectedModelId != null) {
+      map['selected_model_id'] = Variable<String>(selectedModelId);
+    }
+    map['status'] = Variable<String>(status);
+    map['temperature'] = Variable<double>(temperature);
+    map['top_p'] = Variable<double>(topP);
+    map['streaming_enabled'] = Variable<bool>(streamingEnabled);
+    map['created_at'] = Variable<int>(createdAt);
+    map['updated_at'] = Variable<int>(updatedAt);
+    map['schema_version'] = Variable<int>(schemaVersion);
+    return map;
+  }
+
+  LlmProvidersCompanion toCompanion(bool nullToAbsent) {
+    return LlmProvidersCompanion(
+      id: Value(id),
+      projectId: Value(projectId),
+      name: Value(name),
+      baseUrl: Value(baseUrl),
+      secretKeyRef: Value(secretKeyRef),
+      cachedModelsJson: Value(cachedModelsJson),
+      selectedModelId: selectedModelId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(selectedModelId),
+      status: Value(status),
+      temperature: Value(temperature),
+      topP: Value(topP),
+      streamingEnabled: Value(streamingEnabled),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      schemaVersion: Value(schemaVersion),
+    );
+  }
+
+  factory LlmProviderRow.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LlmProviderRow(
+      id: serializer.fromJson<String>(json['id']),
+      projectId: serializer.fromJson<String>(json['projectId']),
+      name: serializer.fromJson<String>(json['name']),
+      baseUrl: serializer.fromJson<String>(json['baseUrl']),
+      secretKeyRef: serializer.fromJson<String>(json['secretKeyRef']),
+      cachedModelsJson: serializer.fromJson<String>(json['cachedModelsJson']),
+      selectedModelId: serializer.fromJson<String?>(json['selectedModelId']),
+      status: serializer.fromJson<String>(json['status']),
+      temperature: serializer.fromJson<double>(json['temperature']),
+      topP: serializer.fromJson<double>(json['topP']),
+      streamingEnabled: serializer.fromJson<bool>(json['streamingEnabled']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      updatedAt: serializer.fromJson<int>(json['updatedAt']),
+      schemaVersion: serializer.fromJson<int>(json['schemaVersion']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'projectId': serializer.toJson<String>(projectId),
+      'name': serializer.toJson<String>(name),
+      'baseUrl': serializer.toJson<String>(baseUrl),
+      'secretKeyRef': serializer.toJson<String>(secretKeyRef),
+      'cachedModelsJson': serializer.toJson<String>(cachedModelsJson),
+      'selectedModelId': serializer.toJson<String?>(selectedModelId),
+      'status': serializer.toJson<String>(status),
+      'temperature': serializer.toJson<double>(temperature),
+      'topP': serializer.toJson<double>(topP),
+      'streamingEnabled': serializer.toJson<bool>(streamingEnabled),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'updatedAt': serializer.toJson<int>(updatedAt),
+      'schemaVersion': serializer.toJson<int>(schemaVersion),
+    };
+  }
+
+  LlmProviderRow copyWith(
+          {String? id,
+          String? projectId,
+          String? name,
+          String? baseUrl,
+          String? secretKeyRef,
+          String? cachedModelsJson,
+          Value<String?> selectedModelId = const Value.absent(),
+          String? status,
+          double? temperature,
+          double? topP,
+          bool? streamingEnabled,
+          int? createdAt,
+          int? updatedAt,
+          int? schemaVersion}) =>
+      LlmProviderRow(
+        id: id ?? this.id,
+        projectId: projectId ?? this.projectId,
+        name: name ?? this.name,
+        baseUrl: baseUrl ?? this.baseUrl,
+        secretKeyRef: secretKeyRef ?? this.secretKeyRef,
+        cachedModelsJson: cachedModelsJson ?? this.cachedModelsJson,
+        selectedModelId: selectedModelId.present
+            ? selectedModelId.value
+            : this.selectedModelId,
+        status: status ?? this.status,
+        temperature: temperature ?? this.temperature,
+        topP: topP ?? this.topP,
+        streamingEnabled: streamingEnabled ?? this.streamingEnabled,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+        schemaVersion: schemaVersion ?? this.schemaVersion,
+      );
+  LlmProviderRow copyWithCompanion(LlmProvidersCompanion data) {
+    return LlmProviderRow(
+      id: data.id.present ? data.id.value : this.id,
+      projectId: data.projectId.present ? data.projectId.value : this.projectId,
+      name: data.name.present ? data.name.value : this.name,
+      baseUrl: data.baseUrl.present ? data.baseUrl.value : this.baseUrl,
+      secretKeyRef: data.secretKeyRef.present
+          ? data.secretKeyRef.value
+          : this.secretKeyRef,
+      cachedModelsJson: data.cachedModelsJson.present
+          ? data.cachedModelsJson.value
+          : this.cachedModelsJson,
+      selectedModelId: data.selectedModelId.present
+          ? data.selectedModelId.value
+          : this.selectedModelId,
+      status: data.status.present ? data.status.value : this.status,
+      temperature:
+          data.temperature.present ? data.temperature.value : this.temperature,
+      topP: data.topP.present ? data.topP.value : this.topP,
+      streamingEnabled: data.streamingEnabled.present
+          ? data.streamingEnabled.value
+          : this.streamingEnabled,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      schemaVersion: data.schemaVersion.present
+          ? data.schemaVersion.value
+          : this.schemaVersion,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LlmProviderRow(')
+          ..write('id: $id, ')
+          ..write('projectId: $projectId, ')
+          ..write('name: $name, ')
+          ..write('baseUrl: $baseUrl, ')
+          ..write('secretKeyRef: $secretKeyRef, ')
+          ..write('cachedModelsJson: $cachedModelsJson, ')
+          ..write('selectedModelId: $selectedModelId, ')
+          ..write('status: $status, ')
+          ..write('temperature: $temperature, ')
+          ..write('topP: $topP, ')
+          ..write('streamingEnabled: $streamingEnabled, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('schemaVersion: $schemaVersion')
@@ -4389,107 +3573,124 @@ class SessionsTableData extends DataClass
   int get hashCode => Object.hash(
       id,
       projectId,
-      title,
-      stage,
-      parentSessionId,
-      branchName,
-      messages,
-      contextSnapshotId,
-      archived,
+      name,
+      baseUrl,
+      secretKeyRef,
+      cachedModelsJson,
+      selectedModelId,
+      status,
+      temperature,
+      topP,
+      streamingEnabled,
       createdAt,
       updatedAt,
       schemaVersion);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is SessionsTableData &&
+      (other is LlmProviderRow &&
           other.id == this.id &&
           other.projectId == this.projectId &&
-          other.title == this.title &&
-          other.stage == this.stage &&
-          other.parentSessionId == this.parentSessionId &&
-          other.branchName == this.branchName &&
-          other.messages == this.messages &&
-          other.contextSnapshotId == this.contextSnapshotId &&
-          other.archived == this.archived &&
+          other.name == this.name &&
+          other.baseUrl == this.baseUrl &&
+          other.secretKeyRef == this.secretKeyRef &&
+          other.cachedModelsJson == this.cachedModelsJson &&
+          other.selectedModelId == this.selectedModelId &&
+          other.status == this.status &&
+          other.temperature == this.temperature &&
+          other.topP == this.topP &&
+          other.streamingEnabled == this.streamingEnabled &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.schemaVersion == this.schemaVersion);
 }
 
-class SessionsTableCompanion extends UpdateCompanion<SessionsTableData> {
+class LlmProvidersCompanion extends UpdateCompanion<LlmProviderRow> {
   final Value<String> id;
   final Value<String> projectId;
-  final Value<String> title;
-  final Value<String> stage;
-  final Value<String?> parentSessionId;
-  final Value<String?> branchName;
-  final Value<String> messages;
-  final Value<String?> contextSnapshotId;
-  final Value<bool> archived;
-  final Value<DateTime> createdAt;
-  final Value<DateTime> updatedAt;
+  final Value<String> name;
+  final Value<String> baseUrl;
+  final Value<String> secretKeyRef;
+  final Value<String> cachedModelsJson;
+  final Value<String?> selectedModelId;
+  final Value<String> status;
+  final Value<double> temperature;
+  final Value<double> topP;
+  final Value<bool> streamingEnabled;
+  final Value<int> createdAt;
+  final Value<int> updatedAt;
   final Value<int> schemaVersion;
   final Value<int> rowid;
-  const SessionsTableCompanion({
+  const LlmProvidersCompanion({
     this.id = const Value.absent(),
     this.projectId = const Value.absent(),
-    this.title = const Value.absent(),
-    this.stage = const Value.absent(),
-    this.parentSessionId = const Value.absent(),
-    this.branchName = const Value.absent(),
-    this.messages = const Value.absent(),
-    this.contextSnapshotId = const Value.absent(),
-    this.archived = const Value.absent(),
+    this.name = const Value.absent(),
+    this.baseUrl = const Value.absent(),
+    this.secretKeyRef = const Value.absent(),
+    this.cachedModelsJson = const Value.absent(),
+    this.selectedModelId = const Value.absent(),
+    this.status = const Value.absent(),
+    this.temperature = const Value.absent(),
+    this.topP = const Value.absent(),
+    this.streamingEnabled = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.schemaVersion = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-  SessionsTableCompanion.insert({
+  LlmProvidersCompanion.insert({
     required String id,
     required String projectId,
-    required String title,
-    this.stage = const Value.absent(),
-    this.parentSessionId = const Value.absent(),
-    this.branchName = const Value.absent(),
-    this.messages = const Value.absent(),
-    this.contextSnapshotId = const Value.absent(),
-    this.archived = const Value.absent(),
-    required DateTime createdAt,
-    required DateTime updatedAt,
+    required String name,
+    required String baseUrl,
+    required String secretKeyRef,
+    this.cachedModelsJson = const Value.absent(),
+    this.selectedModelId = const Value.absent(),
+    required String status,
+    this.temperature = const Value.absent(),
+    this.topP = const Value.absent(),
+    this.streamingEnabled = const Value.absent(),
+    required int createdAt,
+    required int updatedAt,
     this.schemaVersion = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         projectId = Value(projectId),
-        title = Value(title),
+        name = Value(name),
+        baseUrl = Value(baseUrl),
+        secretKeyRef = Value(secretKeyRef),
+        status = Value(status),
         createdAt = Value(createdAt),
         updatedAt = Value(updatedAt);
-  static Insertable<SessionsTableData> custom({
+  static Insertable<LlmProviderRow> custom({
     Expression<String>? id,
     Expression<String>? projectId,
-    Expression<String>? title,
-    Expression<String>? stage,
-    Expression<String>? parentSessionId,
-    Expression<String>? branchName,
-    Expression<String>? messages,
-    Expression<String>? contextSnapshotId,
-    Expression<bool>? archived,
-    Expression<DateTime>? createdAt,
-    Expression<DateTime>? updatedAt,
+    Expression<String>? name,
+    Expression<String>? baseUrl,
+    Expression<String>? secretKeyRef,
+    Expression<String>? cachedModelsJson,
+    Expression<String>? selectedModelId,
+    Expression<String>? status,
+    Expression<double>? temperature,
+    Expression<double>? topP,
+    Expression<bool>? streamingEnabled,
+    Expression<int>? createdAt,
+    Expression<int>? updatedAt,
     Expression<int>? schemaVersion,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (projectId != null) 'project_id': projectId,
-      if (title != null) 'title': title,
-      if (stage != null) 'stage': stage,
-      if (parentSessionId != null) 'parent_session_id': parentSessionId,
-      if (branchName != null) 'branch_name': branchName,
-      if (messages != null) 'messages': messages,
-      if (contextSnapshotId != null) 'context_snapshot_id': contextSnapshotId,
-      if (archived != null) 'archived': archived,
+      if (name != null) 'name': name,
+      if (baseUrl != null) 'base_url': baseUrl,
+      if (secretKeyRef != null) 'secret_key_ref': secretKeyRef,
+      if (cachedModelsJson != null) 'cached_models_json': cachedModelsJson,
+      if (selectedModelId != null) 'selected_model_id': selectedModelId,
+      if (status != null) 'status': status,
+      if (temperature != null) 'temperature': temperature,
+      if (topP != null) 'top_p': topP,
+      if (streamingEnabled != null) 'streaming_enabled': streamingEnabled,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (schemaVersion != null) 'schema_version': schemaVersion,
@@ -4497,30 +3698,34 @@ class SessionsTableCompanion extends UpdateCompanion<SessionsTableData> {
     });
   }
 
-  SessionsTableCompanion copyWith(
+  LlmProvidersCompanion copyWith(
       {Value<String>? id,
       Value<String>? projectId,
-      Value<String>? title,
-      Value<String>? stage,
-      Value<String?>? parentSessionId,
-      Value<String?>? branchName,
-      Value<String>? messages,
-      Value<String?>? contextSnapshotId,
-      Value<bool>? archived,
-      Value<DateTime>? createdAt,
-      Value<DateTime>? updatedAt,
+      Value<String>? name,
+      Value<String>? baseUrl,
+      Value<String>? secretKeyRef,
+      Value<String>? cachedModelsJson,
+      Value<String?>? selectedModelId,
+      Value<String>? status,
+      Value<double>? temperature,
+      Value<double>? topP,
+      Value<bool>? streamingEnabled,
+      Value<int>? createdAt,
+      Value<int>? updatedAt,
       Value<int>? schemaVersion,
       Value<int>? rowid}) {
-    return SessionsTableCompanion(
+    return LlmProvidersCompanion(
       id: id ?? this.id,
       projectId: projectId ?? this.projectId,
-      title: title ?? this.title,
-      stage: stage ?? this.stage,
-      parentSessionId: parentSessionId ?? this.parentSessionId,
-      branchName: branchName ?? this.branchName,
-      messages: messages ?? this.messages,
-      contextSnapshotId: contextSnapshotId ?? this.contextSnapshotId,
-      archived: archived ?? this.archived,
+      name: name ?? this.name,
+      baseUrl: baseUrl ?? this.baseUrl,
+      secretKeyRef: secretKeyRef ?? this.secretKeyRef,
+      cachedModelsJson: cachedModelsJson ?? this.cachedModelsJson,
+      selectedModelId: selectedModelId ?? this.selectedModelId,
+      status: status ?? this.status,
+      temperature: temperature ?? this.temperature,
+      topP: topP ?? this.topP,
+      streamingEnabled: streamingEnabled ?? this.streamingEnabled,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       schemaVersion: schemaVersion ?? this.schemaVersion,
@@ -4537,32 +3742,38 @@ class SessionsTableCompanion extends UpdateCompanion<SessionsTableData> {
     if (projectId.present) {
       map['project_id'] = Variable<String>(projectId.value);
     }
-    if (title.present) {
-      map['title'] = Variable<String>(title.value);
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
     }
-    if (stage.present) {
-      map['stage'] = Variable<String>(stage.value);
+    if (baseUrl.present) {
+      map['base_url'] = Variable<String>(baseUrl.value);
     }
-    if (parentSessionId.present) {
-      map['parent_session_id'] = Variable<String>(parentSessionId.value);
+    if (secretKeyRef.present) {
+      map['secret_key_ref'] = Variable<String>(secretKeyRef.value);
     }
-    if (branchName.present) {
-      map['branch_name'] = Variable<String>(branchName.value);
+    if (cachedModelsJson.present) {
+      map['cached_models_json'] = Variable<String>(cachedModelsJson.value);
     }
-    if (messages.present) {
-      map['messages'] = Variable<String>(messages.value);
+    if (selectedModelId.present) {
+      map['selected_model_id'] = Variable<String>(selectedModelId.value);
     }
-    if (contextSnapshotId.present) {
-      map['context_snapshot_id'] = Variable<String>(contextSnapshotId.value);
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
     }
-    if (archived.present) {
-      map['archived'] = Variable<bool>(archived.value);
+    if (temperature.present) {
+      map['temperature'] = Variable<double>(temperature.value);
+    }
+    if (topP.present) {
+      map['top_p'] = Variable<double>(topP.value);
+    }
+    if (streamingEnabled.present) {
+      map['streaming_enabled'] = Variable<bool>(streamingEnabled.value);
     }
     if (createdAt.present) {
-      map['created_at'] = Variable<DateTime>(createdAt.value);
+      map['created_at'] = Variable<int>(createdAt.value);
     }
     if (updatedAt.present) {
-      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+      map['updated_at'] = Variable<int>(updatedAt.value);
     }
     if (schemaVersion.present) {
       map['schema_version'] = Variable<int>(schemaVersion.value);
@@ -4575,16 +3786,18 @@ class SessionsTableCompanion extends UpdateCompanion<SessionsTableData> {
 
   @override
   String toString() {
-    return (StringBuffer('SessionsTableCompanion(')
+    return (StringBuffer('LlmProvidersCompanion(')
           ..write('id: $id, ')
           ..write('projectId: $projectId, ')
-          ..write('title: $title, ')
-          ..write('stage: $stage, ')
-          ..write('parentSessionId: $parentSessionId, ')
-          ..write('branchName: $branchName, ')
-          ..write('messages: $messages, ')
-          ..write('contextSnapshotId: $contextSnapshotId, ')
-          ..write('archived: $archived, ')
+          ..write('name: $name, ')
+          ..write('baseUrl: $baseUrl, ')
+          ..write('secretKeyRef: $secretKeyRef, ')
+          ..write('cachedModelsJson: $cachedModelsJson, ')
+          ..write('selectedModelId: $selectedModelId, ')
+          ..write('status: $status, ')
+          ..write('temperature: $temperature, ')
+          ..write('topP: $topP, ')
+          ..write('streamingEnabled: $streamingEnabled, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('schemaVersion: $schemaVersion, ')
@@ -4594,12 +3807,658 @@ class SessionsTableCompanion extends UpdateCompanion<SessionsTableData> {
   }
 }
 
-class $SettingEntriesTableTable extends SettingEntriesTable
-    with TableInfo<$SettingEntriesTableTable, SettingEntriesTableData> {
+class $LlmDefaultSettingsTableTable extends LlmDefaultSettingsTable
+    with TableInfo<$LlmDefaultSettingsTableTable, LlmDefaultSettingsRow> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $SettingEntriesTableTable(this.attachedDatabase, [this._alias]);
+  $LlmDefaultSettingsTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      $customConstraints: 'NOT NULL CHECK (id = 1)');
+  static const VerificationMeta _writingProviderIdMeta =
+      const VerificationMeta('writingProviderId');
+  @override
+  late final GeneratedColumn<String> writingProviderId =
+      GeneratedColumn<String>('writing_provider_id', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _writingModelIdMeta =
+      const VerificationMeta('writingModelId');
+  @override
+  late final GeneratedColumn<String> writingModelId = GeneratedColumn<String>(
+      'writing_model_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _reasoningProviderIdMeta =
+      const VerificationMeta('reasoningProviderId');
+  @override
+  late final GeneratedColumn<String> reasoningProviderId =
+      GeneratedColumn<String>('reasoning_provider_id', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _reasoningModelIdMeta =
+      const VerificationMeta('reasoningModelId');
+  @override
+  late final GeneratedColumn<String> reasoningModelId = GeneratedColumn<String>(
+      'reasoning_model_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _embeddingProviderIdMeta =
+      const VerificationMeta('embeddingProviderId');
+  @override
+  late final GeneratedColumn<String> embeddingProviderId =
+      GeneratedColumn<String>('embedding_provider_id', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _embeddingModelIdMeta =
+      const VerificationMeta('embeddingModelId');
+  @override
+  late final GeneratedColumn<String> embeddingModelId = GeneratedColumn<String>(
+      'embedding_model_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _defaultTemperatureMeta =
+      const VerificationMeta('defaultTemperature');
+  @override
+  late final GeneratedColumn<double> defaultTemperature =
+      GeneratedColumn<double>('default_temperature', aliasedName, false,
+          type: DriftSqlType.double,
+          requiredDuringInsert: false,
+          defaultValue: const Constant(0.7));
+  static const VerificationMeta _defaultTopPMeta =
+      const VerificationMeta('defaultTopP');
+  @override
+  late final GeneratedColumn<double> defaultTopP = GeneratedColumn<double>(
+      'default_top_p', aliasedName, false,
+      type: DriftSqlType.double,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0.9));
+  static const VerificationMeta _streamingEnabledMeta =
+      const VerificationMeta('streamingEnabled');
+  @override
+  late final GeneratedColumn<bool> streamingEnabled = GeneratedColumn<bool>(
+      'streaming_enabled', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("streaming_enabled" IN (0, 1))'),
+      defaultValue: const Constant(true));
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _schemaVersionMeta =
+      const VerificationMeta('schemaVersion');
+  @override
+  late final GeneratedColumn<int> schemaVersion = GeneratedColumn<int>(
+      'schema_version', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(1));
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        writingProviderId,
+        writingModelId,
+        reasoningProviderId,
+        reasoningModelId,
+        embeddingProviderId,
+        embeddingModelId,
+        defaultTemperature,
+        defaultTopP,
+        streamingEnabled,
+        updatedAt,
+        schemaVersion
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'llm_default_settings';
+  @override
+  VerificationContext validateIntegrity(
+      Insertable<LlmDefaultSettingsRow> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('writing_provider_id')) {
+      context.handle(
+          _writingProviderIdMeta,
+          writingProviderId.isAcceptableOrUnknown(
+              data['writing_provider_id']!, _writingProviderIdMeta));
+    }
+    if (data.containsKey('writing_model_id')) {
+      context.handle(
+          _writingModelIdMeta,
+          writingModelId.isAcceptableOrUnknown(
+              data['writing_model_id']!, _writingModelIdMeta));
+    }
+    if (data.containsKey('reasoning_provider_id')) {
+      context.handle(
+          _reasoningProviderIdMeta,
+          reasoningProviderId.isAcceptableOrUnknown(
+              data['reasoning_provider_id']!, _reasoningProviderIdMeta));
+    }
+    if (data.containsKey('reasoning_model_id')) {
+      context.handle(
+          _reasoningModelIdMeta,
+          reasoningModelId.isAcceptableOrUnknown(
+              data['reasoning_model_id']!, _reasoningModelIdMeta));
+    }
+    if (data.containsKey('embedding_provider_id')) {
+      context.handle(
+          _embeddingProviderIdMeta,
+          embeddingProviderId.isAcceptableOrUnknown(
+              data['embedding_provider_id']!, _embeddingProviderIdMeta));
+    }
+    if (data.containsKey('embedding_model_id')) {
+      context.handle(
+          _embeddingModelIdMeta,
+          embeddingModelId.isAcceptableOrUnknown(
+              data['embedding_model_id']!, _embeddingModelIdMeta));
+    }
+    if (data.containsKey('default_temperature')) {
+      context.handle(
+          _defaultTemperatureMeta,
+          defaultTemperature.isAcceptableOrUnknown(
+              data['default_temperature']!, _defaultTemperatureMeta));
+    }
+    if (data.containsKey('default_top_p')) {
+      context.handle(
+          _defaultTopPMeta,
+          defaultTopP.isAcceptableOrUnknown(
+              data['default_top_p']!, _defaultTopPMeta));
+    }
+    if (data.containsKey('streaming_enabled')) {
+      context.handle(
+          _streamingEnabledMeta,
+          streamingEnabled.isAcceptableOrUnknown(
+              data['streaming_enabled']!, _streamingEnabledMeta));
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('schema_version')) {
+      context.handle(
+          _schemaVersionMeta,
+          schemaVersion.isAcceptableOrUnknown(
+              data['schema_version']!, _schemaVersionMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LlmDefaultSettingsRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LlmDefaultSettingsRow(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      writingProviderId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}writing_provider_id']),
+      writingModelId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}writing_model_id']),
+      reasoningProviderId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}reasoning_provider_id']),
+      reasoningModelId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}reasoning_model_id']),
+      embeddingProviderId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}embedding_provider_id']),
+      embeddingModelId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}embedding_model_id']),
+      defaultTemperature: attachedDatabase.typeMapping.read(
+          DriftSqlType.double, data['${effectivePrefix}default_temperature'])!,
+      defaultTopP: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}default_top_p'])!,
+      streamingEnabled: attachedDatabase.typeMapping.read(
+          DriftSqlType.bool, data['${effectivePrefix}streaming_enabled'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}updated_at'])!,
+      schemaVersion: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}schema_version'])!,
+    );
+  }
+
+  @override
+  $LlmDefaultSettingsTableTable createAlias(String alias) {
+    return $LlmDefaultSettingsTableTable(attachedDatabase, alias);
+  }
+}
+
+class LlmDefaultSettingsRow extends DataClass
+    implements Insertable<LlmDefaultSettingsRow> {
+  final int id;
+  final String? writingProviderId;
+  final String? writingModelId;
+  final String? reasoningProviderId;
+  final String? reasoningModelId;
+  final String? embeddingProviderId;
+  final String? embeddingModelId;
+  final double defaultTemperature;
+  final double defaultTopP;
+  final bool streamingEnabled;
+  final int updatedAt;
+  final int schemaVersion;
+  const LlmDefaultSettingsRow(
+      {required this.id,
+      this.writingProviderId,
+      this.writingModelId,
+      this.reasoningProviderId,
+      this.reasoningModelId,
+      this.embeddingProviderId,
+      this.embeddingModelId,
+      required this.defaultTemperature,
+      required this.defaultTopP,
+      required this.streamingEnabled,
+      required this.updatedAt,
+      required this.schemaVersion});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    if (!nullToAbsent || writingProviderId != null) {
+      map['writing_provider_id'] = Variable<String>(writingProviderId);
+    }
+    if (!nullToAbsent || writingModelId != null) {
+      map['writing_model_id'] = Variable<String>(writingModelId);
+    }
+    if (!nullToAbsent || reasoningProviderId != null) {
+      map['reasoning_provider_id'] = Variable<String>(reasoningProviderId);
+    }
+    if (!nullToAbsent || reasoningModelId != null) {
+      map['reasoning_model_id'] = Variable<String>(reasoningModelId);
+    }
+    if (!nullToAbsent || embeddingProviderId != null) {
+      map['embedding_provider_id'] = Variable<String>(embeddingProviderId);
+    }
+    if (!nullToAbsent || embeddingModelId != null) {
+      map['embedding_model_id'] = Variable<String>(embeddingModelId);
+    }
+    map['default_temperature'] = Variable<double>(defaultTemperature);
+    map['default_top_p'] = Variable<double>(defaultTopP);
+    map['streaming_enabled'] = Variable<bool>(streamingEnabled);
+    map['updated_at'] = Variable<int>(updatedAt);
+    map['schema_version'] = Variable<int>(schemaVersion);
+    return map;
+  }
+
+  LlmDefaultSettingsTableCompanion toCompanion(bool nullToAbsent) {
+    return LlmDefaultSettingsTableCompanion(
+      id: Value(id),
+      writingProviderId: writingProviderId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(writingProviderId),
+      writingModelId: writingModelId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(writingModelId),
+      reasoningProviderId: reasoningProviderId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(reasoningProviderId),
+      reasoningModelId: reasoningModelId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(reasoningModelId),
+      embeddingProviderId: embeddingProviderId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(embeddingProviderId),
+      embeddingModelId: embeddingModelId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(embeddingModelId),
+      defaultTemperature: Value(defaultTemperature),
+      defaultTopP: Value(defaultTopP),
+      streamingEnabled: Value(streamingEnabled),
+      updatedAt: Value(updatedAt),
+      schemaVersion: Value(schemaVersion),
+    );
+  }
+
+  factory LlmDefaultSettingsRow.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LlmDefaultSettingsRow(
+      id: serializer.fromJson<int>(json['id']),
+      writingProviderId:
+          serializer.fromJson<String?>(json['writingProviderId']),
+      writingModelId: serializer.fromJson<String?>(json['writingModelId']),
+      reasoningProviderId:
+          serializer.fromJson<String?>(json['reasoningProviderId']),
+      reasoningModelId: serializer.fromJson<String?>(json['reasoningModelId']),
+      embeddingProviderId:
+          serializer.fromJson<String?>(json['embeddingProviderId']),
+      embeddingModelId: serializer.fromJson<String?>(json['embeddingModelId']),
+      defaultTemperature:
+          serializer.fromJson<double>(json['defaultTemperature']),
+      defaultTopP: serializer.fromJson<double>(json['defaultTopP']),
+      streamingEnabled: serializer.fromJson<bool>(json['streamingEnabled']),
+      updatedAt: serializer.fromJson<int>(json['updatedAt']),
+      schemaVersion: serializer.fromJson<int>(json['schemaVersion']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'writingProviderId': serializer.toJson<String?>(writingProviderId),
+      'writingModelId': serializer.toJson<String?>(writingModelId),
+      'reasoningProviderId': serializer.toJson<String?>(reasoningProviderId),
+      'reasoningModelId': serializer.toJson<String?>(reasoningModelId),
+      'embeddingProviderId': serializer.toJson<String?>(embeddingProviderId),
+      'embeddingModelId': serializer.toJson<String?>(embeddingModelId),
+      'defaultTemperature': serializer.toJson<double>(defaultTemperature),
+      'defaultTopP': serializer.toJson<double>(defaultTopP),
+      'streamingEnabled': serializer.toJson<bool>(streamingEnabled),
+      'updatedAt': serializer.toJson<int>(updatedAt),
+      'schemaVersion': serializer.toJson<int>(schemaVersion),
+    };
+  }
+
+  LlmDefaultSettingsRow copyWith(
+          {int? id,
+          Value<String?> writingProviderId = const Value.absent(),
+          Value<String?> writingModelId = const Value.absent(),
+          Value<String?> reasoningProviderId = const Value.absent(),
+          Value<String?> reasoningModelId = const Value.absent(),
+          Value<String?> embeddingProviderId = const Value.absent(),
+          Value<String?> embeddingModelId = const Value.absent(),
+          double? defaultTemperature,
+          double? defaultTopP,
+          bool? streamingEnabled,
+          int? updatedAt,
+          int? schemaVersion}) =>
+      LlmDefaultSettingsRow(
+        id: id ?? this.id,
+        writingProviderId: writingProviderId.present
+            ? writingProviderId.value
+            : this.writingProviderId,
+        writingModelId:
+            writingModelId.present ? writingModelId.value : this.writingModelId,
+        reasoningProviderId: reasoningProviderId.present
+            ? reasoningProviderId.value
+            : this.reasoningProviderId,
+        reasoningModelId: reasoningModelId.present
+            ? reasoningModelId.value
+            : this.reasoningModelId,
+        embeddingProviderId: embeddingProviderId.present
+            ? embeddingProviderId.value
+            : this.embeddingProviderId,
+        embeddingModelId: embeddingModelId.present
+            ? embeddingModelId.value
+            : this.embeddingModelId,
+        defaultTemperature: defaultTemperature ?? this.defaultTemperature,
+        defaultTopP: defaultTopP ?? this.defaultTopP,
+        streamingEnabled: streamingEnabled ?? this.streamingEnabled,
+        updatedAt: updatedAt ?? this.updatedAt,
+        schemaVersion: schemaVersion ?? this.schemaVersion,
+      );
+  LlmDefaultSettingsRow copyWithCompanion(
+      LlmDefaultSettingsTableCompanion data) {
+    return LlmDefaultSettingsRow(
+      id: data.id.present ? data.id.value : this.id,
+      writingProviderId: data.writingProviderId.present
+          ? data.writingProviderId.value
+          : this.writingProviderId,
+      writingModelId: data.writingModelId.present
+          ? data.writingModelId.value
+          : this.writingModelId,
+      reasoningProviderId: data.reasoningProviderId.present
+          ? data.reasoningProviderId.value
+          : this.reasoningProviderId,
+      reasoningModelId: data.reasoningModelId.present
+          ? data.reasoningModelId.value
+          : this.reasoningModelId,
+      embeddingProviderId: data.embeddingProviderId.present
+          ? data.embeddingProviderId.value
+          : this.embeddingProviderId,
+      embeddingModelId: data.embeddingModelId.present
+          ? data.embeddingModelId.value
+          : this.embeddingModelId,
+      defaultTemperature: data.defaultTemperature.present
+          ? data.defaultTemperature.value
+          : this.defaultTemperature,
+      defaultTopP:
+          data.defaultTopP.present ? data.defaultTopP.value : this.defaultTopP,
+      streamingEnabled: data.streamingEnabled.present
+          ? data.streamingEnabled.value
+          : this.streamingEnabled,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      schemaVersion: data.schemaVersion.present
+          ? data.schemaVersion.value
+          : this.schemaVersion,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LlmDefaultSettingsRow(')
+          ..write('id: $id, ')
+          ..write('writingProviderId: $writingProviderId, ')
+          ..write('writingModelId: $writingModelId, ')
+          ..write('reasoningProviderId: $reasoningProviderId, ')
+          ..write('reasoningModelId: $reasoningModelId, ')
+          ..write('embeddingProviderId: $embeddingProviderId, ')
+          ..write('embeddingModelId: $embeddingModelId, ')
+          ..write('defaultTemperature: $defaultTemperature, ')
+          ..write('defaultTopP: $defaultTopP, ')
+          ..write('streamingEnabled: $streamingEnabled, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('schemaVersion: $schemaVersion')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      id,
+      writingProviderId,
+      writingModelId,
+      reasoningProviderId,
+      reasoningModelId,
+      embeddingProviderId,
+      embeddingModelId,
+      defaultTemperature,
+      defaultTopP,
+      streamingEnabled,
+      updatedAt,
+      schemaVersion);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LlmDefaultSettingsRow &&
+          other.id == this.id &&
+          other.writingProviderId == this.writingProviderId &&
+          other.writingModelId == this.writingModelId &&
+          other.reasoningProviderId == this.reasoningProviderId &&
+          other.reasoningModelId == this.reasoningModelId &&
+          other.embeddingProviderId == this.embeddingProviderId &&
+          other.embeddingModelId == this.embeddingModelId &&
+          other.defaultTemperature == this.defaultTemperature &&
+          other.defaultTopP == this.defaultTopP &&
+          other.streamingEnabled == this.streamingEnabled &&
+          other.updatedAt == this.updatedAt &&
+          other.schemaVersion == this.schemaVersion);
+}
+
+class LlmDefaultSettingsTableCompanion
+    extends UpdateCompanion<LlmDefaultSettingsRow> {
+  final Value<int> id;
+  final Value<String?> writingProviderId;
+  final Value<String?> writingModelId;
+  final Value<String?> reasoningProviderId;
+  final Value<String?> reasoningModelId;
+  final Value<String?> embeddingProviderId;
+  final Value<String?> embeddingModelId;
+  final Value<double> defaultTemperature;
+  final Value<double> defaultTopP;
+  final Value<bool> streamingEnabled;
+  final Value<int> updatedAt;
+  final Value<int> schemaVersion;
+  const LlmDefaultSettingsTableCompanion({
+    this.id = const Value.absent(),
+    this.writingProviderId = const Value.absent(),
+    this.writingModelId = const Value.absent(),
+    this.reasoningProviderId = const Value.absent(),
+    this.reasoningModelId = const Value.absent(),
+    this.embeddingProviderId = const Value.absent(),
+    this.embeddingModelId = const Value.absent(),
+    this.defaultTemperature = const Value.absent(),
+    this.defaultTopP = const Value.absent(),
+    this.streamingEnabled = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.schemaVersion = const Value.absent(),
+  });
+  LlmDefaultSettingsTableCompanion.insert({
+    this.id = const Value.absent(),
+    this.writingProviderId = const Value.absent(),
+    this.writingModelId = const Value.absent(),
+    this.reasoningProviderId = const Value.absent(),
+    this.reasoningModelId = const Value.absent(),
+    this.embeddingProviderId = const Value.absent(),
+    this.embeddingModelId = const Value.absent(),
+    this.defaultTemperature = const Value.absent(),
+    this.defaultTopP = const Value.absent(),
+    this.streamingEnabled = const Value.absent(),
+    required int updatedAt,
+    this.schemaVersion = const Value.absent(),
+  }) : updatedAt = Value(updatedAt);
+  static Insertable<LlmDefaultSettingsRow> custom({
+    Expression<int>? id,
+    Expression<String>? writingProviderId,
+    Expression<String>? writingModelId,
+    Expression<String>? reasoningProviderId,
+    Expression<String>? reasoningModelId,
+    Expression<String>? embeddingProviderId,
+    Expression<String>? embeddingModelId,
+    Expression<double>? defaultTemperature,
+    Expression<double>? defaultTopP,
+    Expression<bool>? streamingEnabled,
+    Expression<int>? updatedAt,
+    Expression<int>? schemaVersion,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (writingProviderId != null) 'writing_provider_id': writingProviderId,
+      if (writingModelId != null) 'writing_model_id': writingModelId,
+      if (reasoningProviderId != null)
+        'reasoning_provider_id': reasoningProviderId,
+      if (reasoningModelId != null) 'reasoning_model_id': reasoningModelId,
+      if (embeddingProviderId != null)
+        'embedding_provider_id': embeddingProviderId,
+      if (embeddingModelId != null) 'embedding_model_id': embeddingModelId,
+      if (defaultTemperature != null) 'default_temperature': defaultTemperature,
+      if (defaultTopP != null) 'default_top_p': defaultTopP,
+      if (streamingEnabled != null) 'streaming_enabled': streamingEnabled,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (schemaVersion != null) 'schema_version': schemaVersion,
+    });
+  }
+
+  LlmDefaultSettingsTableCompanion copyWith(
+      {Value<int>? id,
+      Value<String?>? writingProviderId,
+      Value<String?>? writingModelId,
+      Value<String?>? reasoningProviderId,
+      Value<String?>? reasoningModelId,
+      Value<String?>? embeddingProviderId,
+      Value<String?>? embeddingModelId,
+      Value<double>? defaultTemperature,
+      Value<double>? defaultTopP,
+      Value<bool>? streamingEnabled,
+      Value<int>? updatedAt,
+      Value<int>? schemaVersion}) {
+    return LlmDefaultSettingsTableCompanion(
+      id: id ?? this.id,
+      writingProviderId: writingProviderId ?? this.writingProviderId,
+      writingModelId: writingModelId ?? this.writingModelId,
+      reasoningProviderId: reasoningProviderId ?? this.reasoningProviderId,
+      reasoningModelId: reasoningModelId ?? this.reasoningModelId,
+      embeddingProviderId: embeddingProviderId ?? this.embeddingProviderId,
+      embeddingModelId: embeddingModelId ?? this.embeddingModelId,
+      defaultTemperature: defaultTemperature ?? this.defaultTemperature,
+      defaultTopP: defaultTopP ?? this.defaultTopP,
+      streamingEnabled: streamingEnabled ?? this.streamingEnabled,
+      updatedAt: updatedAt ?? this.updatedAt,
+      schemaVersion: schemaVersion ?? this.schemaVersion,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (writingProviderId.present) {
+      map['writing_provider_id'] = Variable<String>(writingProviderId.value);
+    }
+    if (writingModelId.present) {
+      map['writing_model_id'] = Variable<String>(writingModelId.value);
+    }
+    if (reasoningProviderId.present) {
+      map['reasoning_provider_id'] =
+          Variable<String>(reasoningProviderId.value);
+    }
+    if (reasoningModelId.present) {
+      map['reasoning_model_id'] = Variable<String>(reasoningModelId.value);
+    }
+    if (embeddingProviderId.present) {
+      map['embedding_provider_id'] =
+          Variable<String>(embeddingProviderId.value);
+    }
+    if (embeddingModelId.present) {
+      map['embedding_model_id'] = Variable<String>(embeddingModelId.value);
+    }
+    if (defaultTemperature.present) {
+      map['default_temperature'] = Variable<double>(defaultTemperature.value);
+    }
+    if (defaultTopP.present) {
+      map['default_top_p'] = Variable<double>(defaultTopP.value);
+    }
+    if (streamingEnabled.present) {
+      map['streaming_enabled'] = Variable<bool>(streamingEnabled.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
+    if (schemaVersion.present) {
+      map['schema_version'] = Variable<int>(schemaVersion.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LlmDefaultSettingsTableCompanion(')
+          ..write('id: $id, ')
+          ..write('writingProviderId: $writingProviderId, ')
+          ..write('writingModelId: $writingModelId, ')
+          ..write('reasoningProviderId: $reasoningProviderId, ')
+          ..write('reasoningModelId: $reasoningModelId, ')
+          ..write('embeddingProviderId: $embeddingProviderId, ')
+          ..write('embeddingModelId: $embeddingModelId, ')
+          ..write('defaultTemperature: $defaultTemperature, ')
+          ..write('defaultTopP: $defaultTopP, ')
+          ..write('streamingEnabled: $streamingEnabled, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('schemaVersion: $schemaVersion')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $OutlineNodesTable extends OutlineNodes
+    with TableInfo<$OutlineNodesTable, OutlineNodeRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $OutlineNodesTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -4611,44 +4470,63 @@ class $SettingEntriesTableTable extends SettingEntriesTable
   late final GeneratedColumn<String> projectId = GeneratedColumn<String>(
       'project_id', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _categoryMeta =
-      const VerificationMeta('category');
-  @override
-  late final GeneratedColumn<String> category = GeneratedColumn<String>(
-      'category', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _titleMeta = const VerificationMeta('title');
   @override
   late final GeneratedColumn<String> title = GeneratedColumn<String>(
       'title', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _contentMeta =
-      const VerificationMeta('content');
+  static const VerificationMeta _summaryMeta =
+      const VerificationMeta('summary');
   @override
-  late final GeneratedColumn<String> content = GeneratedColumn<String>(
-      'content', aliasedName, false,
+  late final GeneratedColumn<String> summary = GeneratedColumn<String>(
+      'summary', aliasedName, false,
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant(''));
-  static const VerificationMeta _tagsMeta = const VerificationMeta('tags');
+  static const VerificationMeta _chapterIdMeta =
+      const VerificationMeta('chapterId');
   @override
-  late final GeneratedColumn<String> tags = GeneratedColumn<String>(
-      'tags', aliasedName, false,
+  late final GeneratedColumn<String> chapterId = GeneratedColumn<String>(
+      'chapter_id', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
+  static const VerificationMeta _parentIdMeta =
+      const VerificationMeta('parentId');
+  @override
+  late final GeneratedColumn<String> parentId = GeneratedColumn<String>(
+      'parent_id', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
+  static const VerificationMeta _sortOrderMeta =
+      const VerificationMeta('sortOrder');
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+      'sort_order', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _tagsJsonMeta =
+      const VerificationMeta('tagsJson');
+  @override
+  late final GeneratedColumn<String> tagsJson = GeneratedColumn<String>(
+      'tags_json', aliasedName, false,
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant('[]'));
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
-  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
       'created_at', aliasedName, false,
-      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+      type: DriftSqlType.int, requiredDuringInsert: true);
   static const VerificationMeta _updatedAtMeta =
       const VerificationMeta('updatedAt');
   @override
-  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
       'updated_at', aliasedName, false,
-      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+      type: DriftSqlType.int, requiredDuringInsert: true);
   static const VerificationMeta _schemaVersionMeta =
       const VerificationMeta('schemaVersion');
   @override
@@ -4661,10 +4539,12 @@ class $SettingEntriesTableTable extends SettingEntriesTable
   List<GeneratedColumn> get $columns => [
         id,
         projectId,
-        category,
         title,
-        content,
-        tags,
+        summary,
+        chapterId,
+        parentId,
+        sortOrder,
+        tagsJson,
         createdAt,
         updatedAt,
         schemaVersion
@@ -4673,10 +4553,9 @@ class $SettingEntriesTableTable extends SettingEntriesTable
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'setting_entries_table';
+  static const String $name = 'outline_nodes';
   @override
-  VerificationContext validateIntegrity(
-      Insertable<SettingEntriesTableData> instance,
+  VerificationContext validateIntegrity(Insertable<OutlineNodeRow> instance,
       {bool isInserting = false}) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
@@ -4691,25 +4570,31 @@ class $SettingEntriesTableTable extends SettingEntriesTable
     } else if (isInserting) {
       context.missing(_projectIdMeta);
     }
-    if (data.containsKey('category')) {
-      context.handle(_categoryMeta,
-          category.isAcceptableOrUnknown(data['category']!, _categoryMeta));
-    } else if (isInserting) {
-      context.missing(_categoryMeta);
-    }
     if (data.containsKey('title')) {
       context.handle(
           _titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta));
     } else if (isInserting) {
       context.missing(_titleMeta);
     }
-    if (data.containsKey('content')) {
-      context.handle(_contentMeta,
-          content.isAcceptableOrUnknown(data['content']!, _contentMeta));
+    if (data.containsKey('summary')) {
+      context.handle(_summaryMeta,
+          summary.isAcceptableOrUnknown(data['summary']!, _summaryMeta));
     }
-    if (data.containsKey('tags')) {
-      context.handle(
-          _tagsMeta, tags.isAcceptableOrUnknown(data['tags']!, _tagsMeta));
+    if (data.containsKey('chapter_id')) {
+      context.handle(_chapterIdMeta,
+          chapterId.isAcceptableOrUnknown(data['chapter_id']!, _chapterIdMeta));
+    }
+    if (data.containsKey('parent_id')) {
+      context.handle(_parentIdMeta,
+          parentId.isAcceptableOrUnknown(data['parent_id']!, _parentIdMeta));
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(_sortOrderMeta,
+          sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta));
+    }
+    if (data.containsKey('tags_json')) {
+      context.handle(_tagsJsonMeta,
+          tagsJson.isAcceptableOrUnknown(data['tags_json']!, _tagsJsonMeta));
     }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
@@ -4735,55 +4620,61 @@ class $SettingEntriesTableTable extends SettingEntriesTable
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  SettingEntriesTableData map(Map<String, dynamic> data,
-      {String? tablePrefix}) {
+  OutlineNodeRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return SettingEntriesTableData(
+    return OutlineNodeRow(
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
       projectId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}project_id'])!,
-      category: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}category'])!,
       title: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}title'])!,
-      content: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}content'])!,
-      tags: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}tags'])!,
+      summary: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}summary'])!,
+      chapterId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}chapter_id'])!,
+      parentId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}parent_id'])!,
+      sortOrder: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}sort_order'])!,
+      tagsJson: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}tags_json'])!,
       createdAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+          .read(DriftSqlType.int, data['${effectivePrefix}created_at'])!,
       updatedAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+          .read(DriftSqlType.int, data['${effectivePrefix}updated_at'])!,
       schemaVersion: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}schema_version'])!,
     );
   }
 
   @override
-  $SettingEntriesTableTable createAlias(String alias) {
-    return $SettingEntriesTableTable(attachedDatabase, alias);
+  $OutlineNodesTable createAlias(String alias) {
+    return $OutlineNodesTable(attachedDatabase, alias);
   }
 }
 
-class SettingEntriesTableData extends DataClass
-    implements Insertable<SettingEntriesTableData> {
+class OutlineNodeRow extends DataClass implements Insertable<OutlineNodeRow> {
   final String id;
   final String projectId;
-  final String category;
   final String title;
-  final String content;
-  final String tags;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final String summary;
+  final String chapterId;
+  final String parentId;
+  final int sortOrder;
+  final String tagsJson;
+  final int createdAt;
+  final int updatedAt;
   final int schemaVersion;
-  const SettingEntriesTableData(
+  const OutlineNodeRow(
       {required this.id,
       required this.projectId,
-      required this.category,
       required this.title,
-      required this.content,
-      required this.tags,
+      required this.summary,
+      required this.chapterId,
+      required this.parentId,
+      required this.sortOrder,
+      required this.tagsJson,
       required this.createdAt,
       required this.updatedAt,
       required this.schemaVersion});
@@ -4792,42 +4683,48 @@ class SettingEntriesTableData extends DataClass
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['project_id'] = Variable<String>(projectId);
-    map['category'] = Variable<String>(category);
     map['title'] = Variable<String>(title);
-    map['content'] = Variable<String>(content);
-    map['tags'] = Variable<String>(tags);
-    map['created_at'] = Variable<DateTime>(createdAt);
-    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['summary'] = Variable<String>(summary);
+    map['chapter_id'] = Variable<String>(chapterId);
+    map['parent_id'] = Variable<String>(parentId);
+    map['sort_order'] = Variable<int>(sortOrder);
+    map['tags_json'] = Variable<String>(tagsJson);
+    map['created_at'] = Variable<int>(createdAt);
+    map['updated_at'] = Variable<int>(updatedAt);
     map['schema_version'] = Variable<int>(schemaVersion);
     return map;
   }
 
-  SettingEntriesTableCompanion toCompanion(bool nullToAbsent) {
-    return SettingEntriesTableCompanion(
+  OutlineNodesCompanion toCompanion(bool nullToAbsent) {
+    return OutlineNodesCompanion(
       id: Value(id),
       projectId: Value(projectId),
-      category: Value(category),
       title: Value(title),
-      content: Value(content),
-      tags: Value(tags),
+      summary: Value(summary),
+      chapterId: Value(chapterId),
+      parentId: Value(parentId),
+      sortOrder: Value(sortOrder),
+      tagsJson: Value(tagsJson),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       schemaVersion: Value(schemaVersion),
     );
   }
 
-  factory SettingEntriesTableData.fromJson(Map<String, dynamic> json,
+  factory OutlineNodeRow.fromJson(Map<String, dynamic> json,
       {ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return SettingEntriesTableData(
+    return OutlineNodeRow(
       id: serializer.fromJson<String>(json['id']),
       projectId: serializer.fromJson<String>(json['projectId']),
-      category: serializer.fromJson<String>(json['category']),
       title: serializer.fromJson<String>(json['title']),
-      content: serializer.fromJson<String>(json['content']),
-      tags: serializer.fromJson<String>(json['tags']),
-      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
-      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      summary: serializer.fromJson<String>(json['summary']),
+      chapterId: serializer.fromJson<String>(json['chapterId']),
+      parentId: serializer.fromJson<String>(json['parentId']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      tagsJson: serializer.fromJson<String>(json['tagsJson']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      updatedAt: serializer.fromJson<int>(json['updatedAt']),
       schemaVersion: serializer.fromJson<int>(json['schemaVersion']),
     );
   }
@@ -4837,45 +4734,53 @@ class SettingEntriesTableData extends DataClass
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'projectId': serializer.toJson<String>(projectId),
-      'category': serializer.toJson<String>(category),
       'title': serializer.toJson<String>(title),
-      'content': serializer.toJson<String>(content),
-      'tags': serializer.toJson<String>(tags),
-      'createdAt': serializer.toJson<DateTime>(createdAt),
-      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'summary': serializer.toJson<String>(summary),
+      'chapterId': serializer.toJson<String>(chapterId),
+      'parentId': serializer.toJson<String>(parentId),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+      'tagsJson': serializer.toJson<String>(tagsJson),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'updatedAt': serializer.toJson<int>(updatedAt),
       'schemaVersion': serializer.toJson<int>(schemaVersion),
     };
   }
 
-  SettingEntriesTableData copyWith(
+  OutlineNodeRow copyWith(
           {String? id,
           String? projectId,
-          String? category,
           String? title,
-          String? content,
-          String? tags,
-          DateTime? createdAt,
-          DateTime? updatedAt,
+          String? summary,
+          String? chapterId,
+          String? parentId,
+          int? sortOrder,
+          String? tagsJson,
+          int? createdAt,
+          int? updatedAt,
           int? schemaVersion}) =>
-      SettingEntriesTableData(
+      OutlineNodeRow(
         id: id ?? this.id,
         projectId: projectId ?? this.projectId,
-        category: category ?? this.category,
         title: title ?? this.title,
-        content: content ?? this.content,
-        tags: tags ?? this.tags,
+        summary: summary ?? this.summary,
+        chapterId: chapterId ?? this.chapterId,
+        parentId: parentId ?? this.parentId,
+        sortOrder: sortOrder ?? this.sortOrder,
+        tagsJson: tagsJson ?? this.tagsJson,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
         schemaVersion: schemaVersion ?? this.schemaVersion,
       );
-  SettingEntriesTableData copyWithCompanion(SettingEntriesTableCompanion data) {
-    return SettingEntriesTableData(
+  OutlineNodeRow copyWithCompanion(OutlineNodesCompanion data) {
+    return OutlineNodeRow(
       id: data.id.present ? data.id.value : this.id,
       projectId: data.projectId.present ? data.projectId.value : this.projectId,
-      category: data.category.present ? data.category.value : this.category,
       title: data.title.present ? data.title.value : this.title,
-      content: data.content.present ? data.content.value : this.content,
-      tags: data.tags.present ? data.tags.value : this.tags,
+      summary: data.summary.present ? data.summary.value : this.summary,
+      chapterId: data.chapterId.present ? data.chapterId.value : this.chapterId,
+      parentId: data.parentId.present ? data.parentId.value : this.parentId,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      tagsJson: data.tagsJson.present ? data.tagsJson.value : this.tagsJson,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       schemaVersion: data.schemaVersion.present
@@ -4886,13 +4791,15 @@ class SettingEntriesTableData extends DataClass
 
   @override
   String toString() {
-    return (StringBuffer('SettingEntriesTableData(')
+    return (StringBuffer('OutlineNodeRow(')
           ..write('id: $id, ')
           ..write('projectId: $projectId, ')
-          ..write('category: $category, ')
           ..write('title: $title, ')
-          ..write('content: $content, ')
-          ..write('tags: $tags, ')
+          ..write('summary: $summary, ')
+          ..write('chapterId: $chapterId, ')
+          ..write('parentId: $parentId, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('tagsJson: $tagsJson, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('schemaVersion: $schemaVersion')
@@ -4901,83 +4808,93 @@ class SettingEntriesTableData extends DataClass
   }
 
   @override
-  int get hashCode => Object.hash(id, projectId, category, title, content, tags,
-      createdAt, updatedAt, schemaVersion);
+  int get hashCode => Object.hash(id, projectId, title, summary, chapterId,
+      parentId, sortOrder, tagsJson, createdAt, updatedAt, schemaVersion);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is SettingEntriesTableData &&
+      (other is OutlineNodeRow &&
           other.id == this.id &&
           other.projectId == this.projectId &&
-          other.category == this.category &&
           other.title == this.title &&
-          other.content == this.content &&
-          other.tags == this.tags &&
+          other.summary == this.summary &&
+          other.chapterId == this.chapterId &&
+          other.parentId == this.parentId &&
+          other.sortOrder == this.sortOrder &&
+          other.tagsJson == this.tagsJson &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.schemaVersion == this.schemaVersion);
 }
 
-class SettingEntriesTableCompanion
-    extends UpdateCompanion<SettingEntriesTableData> {
+class OutlineNodesCompanion extends UpdateCompanion<OutlineNodeRow> {
   final Value<String> id;
   final Value<String> projectId;
-  final Value<String> category;
   final Value<String> title;
-  final Value<String> content;
-  final Value<String> tags;
-  final Value<DateTime> createdAt;
-  final Value<DateTime> updatedAt;
+  final Value<String> summary;
+  final Value<String> chapterId;
+  final Value<String> parentId;
+  final Value<int> sortOrder;
+  final Value<String> tagsJson;
+  final Value<int> createdAt;
+  final Value<int> updatedAt;
   final Value<int> schemaVersion;
   final Value<int> rowid;
-  const SettingEntriesTableCompanion({
+  const OutlineNodesCompanion({
     this.id = const Value.absent(),
     this.projectId = const Value.absent(),
-    this.category = const Value.absent(),
     this.title = const Value.absent(),
-    this.content = const Value.absent(),
-    this.tags = const Value.absent(),
+    this.summary = const Value.absent(),
+    this.chapterId = const Value.absent(),
+    this.parentId = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.tagsJson = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.schemaVersion = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-  SettingEntriesTableCompanion.insert({
+  OutlineNodesCompanion.insert({
     required String id,
     required String projectId,
-    required String category,
     required String title,
-    this.content = const Value.absent(),
-    this.tags = const Value.absent(),
-    required DateTime createdAt,
-    required DateTime updatedAt,
+    this.summary = const Value.absent(),
+    this.chapterId = const Value.absent(),
+    this.parentId = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.tagsJson = const Value.absent(),
+    required int createdAt,
+    required int updatedAt,
     this.schemaVersion = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         projectId = Value(projectId),
-        category = Value(category),
         title = Value(title),
         createdAt = Value(createdAt),
         updatedAt = Value(updatedAt);
-  static Insertable<SettingEntriesTableData> custom({
+  static Insertable<OutlineNodeRow> custom({
     Expression<String>? id,
     Expression<String>? projectId,
-    Expression<String>? category,
     Expression<String>? title,
-    Expression<String>? content,
-    Expression<String>? tags,
-    Expression<DateTime>? createdAt,
-    Expression<DateTime>? updatedAt,
+    Expression<String>? summary,
+    Expression<String>? chapterId,
+    Expression<String>? parentId,
+    Expression<int>? sortOrder,
+    Expression<String>? tagsJson,
+    Expression<int>? createdAt,
+    Expression<int>? updatedAt,
     Expression<int>? schemaVersion,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (projectId != null) 'project_id': projectId,
-      if (category != null) 'category': category,
       if (title != null) 'title': title,
-      if (content != null) 'content': content,
-      if (tags != null) 'tags': tags,
+      if (summary != null) 'summary': summary,
+      if (chapterId != null) 'chapter_id': chapterId,
+      if (parentId != null) 'parent_id': parentId,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (tagsJson != null) 'tags_json': tagsJson,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (schemaVersion != null) 'schema_version': schemaVersion,
@@ -4985,24 +4902,28 @@ class SettingEntriesTableCompanion
     });
   }
 
-  SettingEntriesTableCompanion copyWith(
+  OutlineNodesCompanion copyWith(
       {Value<String>? id,
       Value<String>? projectId,
-      Value<String>? category,
       Value<String>? title,
-      Value<String>? content,
-      Value<String>? tags,
-      Value<DateTime>? createdAt,
-      Value<DateTime>? updatedAt,
+      Value<String>? summary,
+      Value<String>? chapterId,
+      Value<String>? parentId,
+      Value<int>? sortOrder,
+      Value<String>? tagsJson,
+      Value<int>? createdAt,
+      Value<int>? updatedAt,
       Value<int>? schemaVersion,
       Value<int>? rowid}) {
-    return SettingEntriesTableCompanion(
+    return OutlineNodesCompanion(
       id: id ?? this.id,
       projectId: projectId ?? this.projectId,
-      category: category ?? this.category,
       title: title ?? this.title,
-      content: content ?? this.content,
-      tags: tags ?? this.tags,
+      summary: summary ?? this.summary,
+      chapterId: chapterId ?? this.chapterId,
+      parentId: parentId ?? this.parentId,
+      sortOrder: sortOrder ?? this.sortOrder,
+      tagsJson: tagsJson ?? this.tagsJson,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       schemaVersion: schemaVersion ?? this.schemaVersion,
@@ -5019,23 +4940,29 @@ class SettingEntriesTableCompanion
     if (projectId.present) {
       map['project_id'] = Variable<String>(projectId.value);
     }
-    if (category.present) {
-      map['category'] = Variable<String>(category.value);
-    }
     if (title.present) {
       map['title'] = Variable<String>(title.value);
     }
-    if (content.present) {
-      map['content'] = Variable<String>(content.value);
+    if (summary.present) {
+      map['summary'] = Variable<String>(summary.value);
     }
-    if (tags.present) {
-      map['tags'] = Variable<String>(tags.value);
+    if (chapterId.present) {
+      map['chapter_id'] = Variable<String>(chapterId.value);
+    }
+    if (parentId.present) {
+      map['parent_id'] = Variable<String>(parentId.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (tagsJson.present) {
+      map['tags_json'] = Variable<String>(tagsJson.value);
     }
     if (createdAt.present) {
-      map['created_at'] = Variable<DateTime>(createdAt.value);
+      map['created_at'] = Variable<int>(createdAt.value);
     }
     if (updatedAt.present) {
-      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+      map['updated_at'] = Variable<int>(updatedAt.value);
     }
     if (schemaVersion.present) {
       map['schema_version'] = Variable<int>(schemaVersion.value);
@@ -5048,13 +4975,15 @@ class SettingEntriesTableCompanion
 
   @override
   String toString() {
-    return (StringBuffer('SettingEntriesTableCompanion(')
+    return (StringBuffer('OutlineNodesCompanion(')
           ..write('id: $id, ')
           ..write('projectId: $projectId, ')
-          ..write('category: $category, ')
           ..write('title: $title, ')
-          ..write('content: $content, ')
-          ..write('tags: $tags, ')
+          ..write('summary: $summary, ')
+          ..write('chapterId: $chapterId, ')
+          ..write('parentId: $parentId, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('tagsJson: $tagsJson, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('schemaVersion: $schemaVersion, ')
@@ -5064,12 +4993,12 @@ class SettingEntriesTableCompanion
   }
 }
 
-class $AgentTasksTableTable extends AgentTasksTable
-    with TableInfo<$AgentTasksTableTable, AgentTasksTableData> {
+class $AgentTasksTable extends AgentTasks
+    with TableInfo<$AgentTasksTable, AgentTaskRow> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $AgentTasksTableTable(this.attachedDatabase, [this._alias]);
+  $AgentTasksTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -5080,7 +5009,10 @@ class $AgentTasksTableTable extends AgentTasksTable
   @override
   late final GeneratedColumn<String> projectId = GeneratedColumn<String>(
       'project_id', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES projects (id) ON DELETE CASCADE'));
   static const VerificationMeta _taskTypeMeta =
       const VerificationMeta('taskType');
   @override
@@ -5091,73 +5023,19 @@ class $AgentTasksTableTable extends AgentTasksTable
   @override
   late final GeneratedColumn<String> status = GeneratedColumn<String>(
       'status', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      defaultValue: const Constant('created'));
-  static const VerificationMeta _inputJsonMeta =
-      const VerificationMeta('inputJson');
-  @override
-  late final GeneratedColumn<String> inputJson = GeneratedColumn<String>(
-      'input_json', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      defaultValue: const Constant(''));
-  static const VerificationMeta _outputJsonMeta =
-      const VerificationMeta('outputJson');
-  @override
-  late final GeneratedColumn<String> outputJson = GeneratedColumn<String>(
-      'output_json', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      defaultValue: const Constant(''));
-  static const VerificationMeta _modelMeta = const VerificationMeta('model');
-  @override
-  late final GeneratedColumn<String> model = GeneratedColumn<String>(
-      'model', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _tokenUsageMeta =
-      const VerificationMeta('tokenUsage');
-  @override
-  late final GeneratedColumn<String> tokenUsage = GeneratedColumn<String>(
-      'token_usage', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _errorMeta = const VerificationMeta('error');
-  @override
-  late final GeneratedColumn<String> error = GeneratedColumn<String>(
-      'error', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _sideEffectsMeta =
-      const VerificationMeta('sideEffects');
-  @override
-  late final GeneratedColumn<String> sideEffects = GeneratedColumn<String>(
-      'side_effects', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      defaultValue: const Constant('[]'));
-  static const VerificationMeta _startedAtMeta =
-      const VerificationMeta('startedAt');
-  @override
-  late final GeneratedColumn<DateTime> startedAt = GeneratedColumn<DateTime>(
-      'started_at', aliasedName, true,
-      type: DriftSqlType.dateTime, requiredDuringInsert: false);
-  static const VerificationMeta _completedAtMeta =
-      const VerificationMeta('completedAt');
-  @override
-  late final GeneratedColumn<DateTime> completedAt = GeneratedColumn<DateTime>(
-      'completed_at', aliasedName, true,
-      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+      type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
-  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
       'created_at', aliasedName, false,
-      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+      type: DriftSqlType.int, requiredDuringInsert: true);
   static const VerificationMeta _updatedAtMeta =
       const VerificationMeta('updatedAt');
   @override
-  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
       'updated_at', aliasedName, false,
-      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+      type: DriftSqlType.int, requiredDuringInsert: true);
   static const VerificationMeta _schemaVersionMeta =
       const VerificationMeta('schemaVersion');
   @override
@@ -5166,32 +5044,50 @@ class $AgentTasksTableTable extends AgentTasksTable
       type: DriftSqlType.int,
       requiredDuringInsert: false,
       defaultValue: const Constant(1));
+  static const VerificationMeta _chapterIdMeta =
+      const VerificationMeta('chapterId');
+  @override
+  late final GeneratedColumn<String> chapterId = GeneratedColumn<String>(
+      'chapter_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _instructionMeta =
+      const VerificationMeta('instruction');
+  @override
+  late final GeneratedColumn<String> instruction = GeneratedColumn<String>(
+      'instruction', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _resultMeta = const VerificationMeta('result');
+  @override
+  late final GeneratedColumn<String> result = GeneratedColumn<String>(
+      'result', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _errorMessageMeta =
+      const VerificationMeta('errorMessage');
+  @override
+  late final GeneratedColumn<String> errorMessage = GeneratedColumn<String>(
+      'error_message', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
         projectId,
         taskType,
         status,
-        inputJson,
-        outputJson,
-        model,
-        tokenUsage,
-        error,
-        sideEffects,
-        startedAt,
-        completedAt,
         createdAt,
         updatedAt,
-        schemaVersion
+        schemaVersion,
+        chapterId,
+        instruction,
+        result,
+        errorMessage
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'agent_tasks_table';
+  static const String $name = 'agent_tasks';
   @override
-  VerificationContext validateIntegrity(
-      Insertable<AgentTasksTableData> instance,
+  VerificationContext validateIntegrity(Insertable<AgentTaskRow> instance,
       {bool isInserting = false}) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
@@ -5215,46 +5111,8 @@ class $AgentTasksTableTable extends AgentTasksTable
     if (data.containsKey('status')) {
       context.handle(_statusMeta,
           status.isAcceptableOrUnknown(data['status']!, _statusMeta));
-    }
-    if (data.containsKey('input_json')) {
-      context.handle(_inputJsonMeta,
-          inputJson.isAcceptableOrUnknown(data['input_json']!, _inputJsonMeta));
-    }
-    if (data.containsKey('output_json')) {
-      context.handle(
-          _outputJsonMeta,
-          outputJson.isAcceptableOrUnknown(
-              data['output_json']!, _outputJsonMeta));
-    }
-    if (data.containsKey('model')) {
-      context.handle(
-          _modelMeta, model.isAcceptableOrUnknown(data['model']!, _modelMeta));
-    }
-    if (data.containsKey('token_usage')) {
-      context.handle(
-          _tokenUsageMeta,
-          tokenUsage.isAcceptableOrUnknown(
-              data['token_usage']!, _tokenUsageMeta));
-    }
-    if (data.containsKey('error')) {
-      context.handle(
-          _errorMeta, error.isAcceptableOrUnknown(data['error']!, _errorMeta));
-    }
-    if (data.containsKey('side_effects')) {
-      context.handle(
-          _sideEffectsMeta,
-          sideEffects.isAcceptableOrUnknown(
-              data['side_effects']!, _sideEffectsMeta));
-    }
-    if (data.containsKey('started_at')) {
-      context.handle(_startedAtMeta,
-          startedAt.isAcceptableOrUnknown(data['started_at']!, _startedAtMeta));
-    }
-    if (data.containsKey('completed_at')) {
-      context.handle(
-          _completedAtMeta,
-          completedAt.isAcceptableOrUnknown(
-              data['completed_at']!, _completedAtMeta));
+    } else if (isInserting) {
+      context.missing(_statusMeta);
     }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
@@ -5274,15 +5132,35 @@ class $AgentTasksTableTable extends AgentTasksTable
           schemaVersion.isAcceptableOrUnknown(
               data['schema_version']!, _schemaVersionMeta));
     }
+    if (data.containsKey('chapter_id')) {
+      context.handle(_chapterIdMeta,
+          chapterId.isAcceptableOrUnknown(data['chapter_id']!, _chapterIdMeta));
+    }
+    if (data.containsKey('instruction')) {
+      context.handle(
+          _instructionMeta,
+          instruction.isAcceptableOrUnknown(
+              data['instruction']!, _instructionMeta));
+    }
+    if (data.containsKey('result')) {
+      context.handle(_resultMeta,
+          result.isAcceptableOrUnknown(data['result']!, _resultMeta));
+    }
+    if (data.containsKey('error_message')) {
+      context.handle(
+          _errorMessageMeta,
+          errorMessage.isAcceptableOrUnknown(
+              data['error_message']!, _errorMessageMeta));
+    }
     return context;
   }
 
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  AgentTasksTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
+  AgentTaskRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return AgentTasksTableData(
+    return AgentTaskRow(
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
       projectId: attachedDatabase.typeMapping
@@ -5291,70 +5169,53 @@ class $AgentTasksTableTable extends AgentTasksTable
           .read(DriftSqlType.string, data['${effectivePrefix}task_type'])!,
       status: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
-      inputJson: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}input_json'])!,
-      outputJson: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}output_json'])!,
-      model: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}model']),
-      tokenUsage: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}token_usage']),
-      error: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}error']),
-      sideEffects: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}side_effects'])!,
-      startedAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}started_at']),
-      completedAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}completed_at']),
       createdAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+          .read(DriftSqlType.int, data['${effectivePrefix}created_at'])!,
       updatedAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+          .read(DriftSqlType.int, data['${effectivePrefix}updated_at'])!,
       schemaVersion: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}schema_version'])!,
+      chapterId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}chapter_id']),
+      instruction: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}instruction']),
+      result: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}result']),
+      errorMessage: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}error_message']),
     );
   }
 
   @override
-  $AgentTasksTableTable createAlias(String alias) {
-    return $AgentTasksTableTable(attachedDatabase, alias);
+  $AgentTasksTable createAlias(String alias) {
+    return $AgentTasksTable(attachedDatabase, alias);
   }
 }
 
-class AgentTasksTableData extends DataClass
-    implements Insertable<AgentTasksTableData> {
+class AgentTaskRow extends DataClass implements Insertable<AgentTaskRow> {
   final String id;
   final String projectId;
   final String taskType;
   final String status;
-  final String inputJson;
-  final String outputJson;
-  final String? model;
-  final String? tokenUsage;
-  final String? error;
-  final String sideEffects;
-  final DateTime? startedAt;
-  final DateTime? completedAt;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final int createdAt;
+  final int updatedAt;
   final int schemaVersion;
-  const AgentTasksTableData(
+  final String? chapterId;
+  final String? instruction;
+  final String? result;
+  final String? errorMessage;
+  const AgentTaskRow(
       {required this.id,
       required this.projectId,
       required this.taskType,
       required this.status,
-      required this.inputJson,
-      required this.outputJson,
-      this.model,
-      this.tokenUsage,
-      this.error,
-      required this.sideEffects,
-      this.startedAt,
-      this.completedAt,
       required this.createdAt,
       required this.updatedAt,
-      required this.schemaVersion});
+      required this.schemaVersion,
+      this.chapterId,
+      this.instruction,
+      this.result,
+      this.errorMessage});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -5362,77 +5223,62 @@ class AgentTasksTableData extends DataClass
     map['project_id'] = Variable<String>(projectId);
     map['task_type'] = Variable<String>(taskType);
     map['status'] = Variable<String>(status);
-    map['input_json'] = Variable<String>(inputJson);
-    map['output_json'] = Variable<String>(outputJson);
-    if (!nullToAbsent || model != null) {
-      map['model'] = Variable<String>(model);
-    }
-    if (!nullToAbsent || tokenUsage != null) {
-      map['token_usage'] = Variable<String>(tokenUsage);
-    }
-    if (!nullToAbsent || error != null) {
-      map['error'] = Variable<String>(error);
-    }
-    map['side_effects'] = Variable<String>(sideEffects);
-    if (!nullToAbsent || startedAt != null) {
-      map['started_at'] = Variable<DateTime>(startedAt);
-    }
-    if (!nullToAbsent || completedAt != null) {
-      map['completed_at'] = Variable<DateTime>(completedAt);
-    }
-    map['created_at'] = Variable<DateTime>(createdAt);
-    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['created_at'] = Variable<int>(createdAt);
+    map['updated_at'] = Variable<int>(updatedAt);
     map['schema_version'] = Variable<int>(schemaVersion);
+    if (!nullToAbsent || chapterId != null) {
+      map['chapter_id'] = Variable<String>(chapterId);
+    }
+    if (!nullToAbsent || instruction != null) {
+      map['instruction'] = Variable<String>(instruction);
+    }
+    if (!nullToAbsent || result != null) {
+      map['result'] = Variable<String>(result);
+    }
+    if (!nullToAbsent || errorMessage != null) {
+      map['error_message'] = Variable<String>(errorMessage);
+    }
     return map;
   }
 
-  AgentTasksTableCompanion toCompanion(bool nullToAbsent) {
-    return AgentTasksTableCompanion(
+  AgentTasksCompanion toCompanion(bool nullToAbsent) {
+    return AgentTasksCompanion(
       id: Value(id),
       projectId: Value(projectId),
       taskType: Value(taskType),
       status: Value(status),
-      inputJson: Value(inputJson),
-      outputJson: Value(outputJson),
-      model:
-          model == null && nullToAbsent ? const Value.absent() : Value(model),
-      tokenUsage: tokenUsage == null && nullToAbsent
-          ? const Value.absent()
-          : Value(tokenUsage),
-      error:
-          error == null && nullToAbsent ? const Value.absent() : Value(error),
-      sideEffects: Value(sideEffects),
-      startedAt: startedAt == null && nullToAbsent
-          ? const Value.absent()
-          : Value(startedAt),
-      completedAt: completedAt == null && nullToAbsent
-          ? const Value.absent()
-          : Value(completedAt),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       schemaVersion: Value(schemaVersion),
+      chapterId: chapterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(chapterId),
+      instruction: instruction == null && nullToAbsent
+          ? const Value.absent()
+          : Value(instruction),
+      result:
+          result == null && nullToAbsent ? const Value.absent() : Value(result),
+      errorMessage: errorMessage == null && nullToAbsent
+          ? const Value.absent()
+          : Value(errorMessage),
     );
   }
 
-  factory AgentTasksTableData.fromJson(Map<String, dynamic> json,
+  factory AgentTaskRow.fromJson(Map<String, dynamic> json,
       {ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return AgentTasksTableData(
+    return AgentTaskRow(
       id: serializer.fromJson<String>(json['id']),
       projectId: serializer.fromJson<String>(json['projectId']),
       taskType: serializer.fromJson<String>(json['taskType']),
       status: serializer.fromJson<String>(json['status']),
-      inputJson: serializer.fromJson<String>(json['inputJson']),
-      outputJson: serializer.fromJson<String>(json['outputJson']),
-      model: serializer.fromJson<String?>(json['model']),
-      tokenUsage: serializer.fromJson<String?>(json['tokenUsage']),
-      error: serializer.fromJson<String?>(json['error']),
-      sideEffects: serializer.fromJson<String>(json['sideEffects']),
-      startedAt: serializer.fromJson<DateTime?>(json['startedAt']),
-      completedAt: serializer.fromJson<DateTime?>(json['completedAt']),
-      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
-      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      updatedAt: serializer.fromJson<int>(json['updatedAt']),
       schemaVersion: serializer.fromJson<int>(json['schemaVersion']),
+      chapterId: serializer.fromJson<String?>(json['chapterId']),
+      instruction: serializer.fromJson<String?>(json['instruction']),
+      result: serializer.fromJson<String?>(json['result']),
+      errorMessage: serializer.fromJson<String?>(json['errorMessage']),
     );
   }
   @override
@@ -5443,212 +5289,159 @@ class AgentTasksTableData extends DataClass
       'projectId': serializer.toJson<String>(projectId),
       'taskType': serializer.toJson<String>(taskType),
       'status': serializer.toJson<String>(status),
-      'inputJson': serializer.toJson<String>(inputJson),
-      'outputJson': serializer.toJson<String>(outputJson),
-      'model': serializer.toJson<String?>(model),
-      'tokenUsage': serializer.toJson<String?>(tokenUsage),
-      'error': serializer.toJson<String?>(error),
-      'sideEffects': serializer.toJson<String>(sideEffects),
-      'startedAt': serializer.toJson<DateTime?>(startedAt),
-      'completedAt': serializer.toJson<DateTime?>(completedAt),
-      'createdAt': serializer.toJson<DateTime>(createdAt),
-      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'updatedAt': serializer.toJson<int>(updatedAt),
       'schemaVersion': serializer.toJson<int>(schemaVersion),
+      'chapterId': serializer.toJson<String?>(chapterId),
+      'instruction': serializer.toJson<String?>(instruction),
+      'result': serializer.toJson<String?>(result),
+      'errorMessage': serializer.toJson<String?>(errorMessage),
     };
   }
 
-  AgentTasksTableData copyWith(
+  AgentTaskRow copyWith(
           {String? id,
           String? projectId,
           String? taskType,
           String? status,
-          String? inputJson,
-          String? outputJson,
-          Value<String?> model = const Value.absent(),
-          Value<String?> tokenUsage = const Value.absent(),
-          Value<String?> error = const Value.absent(),
-          String? sideEffects,
-          Value<DateTime?> startedAt = const Value.absent(),
-          Value<DateTime?> completedAt = const Value.absent(),
-          DateTime? createdAt,
-          DateTime? updatedAt,
-          int? schemaVersion}) =>
-      AgentTasksTableData(
+          int? createdAt,
+          int? updatedAt,
+          int? schemaVersion,
+          Value<String?> chapterId = const Value.absent(),
+          Value<String?> instruction = const Value.absent(),
+          Value<String?> result = const Value.absent(),
+          Value<String?> errorMessage = const Value.absent()}) =>
+      AgentTaskRow(
         id: id ?? this.id,
         projectId: projectId ?? this.projectId,
         taskType: taskType ?? this.taskType,
         status: status ?? this.status,
-        inputJson: inputJson ?? this.inputJson,
-        outputJson: outputJson ?? this.outputJson,
-        model: model.present ? model.value : this.model,
-        tokenUsage: tokenUsage.present ? tokenUsage.value : this.tokenUsage,
-        error: error.present ? error.value : this.error,
-        sideEffects: sideEffects ?? this.sideEffects,
-        startedAt: startedAt.present ? startedAt.value : this.startedAt,
-        completedAt: completedAt.present ? completedAt.value : this.completedAt,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
         schemaVersion: schemaVersion ?? this.schemaVersion,
+        chapterId: chapterId.present ? chapterId.value : this.chapterId,
+        instruction: instruction.present ? instruction.value : this.instruction,
+        result: result.present ? result.value : this.result,
+        errorMessage:
+            errorMessage.present ? errorMessage.value : this.errorMessage,
       );
-  AgentTasksTableData copyWithCompanion(AgentTasksTableCompanion data) {
-    return AgentTasksTableData(
+  AgentTaskRow copyWithCompanion(AgentTasksCompanion data) {
+    return AgentTaskRow(
       id: data.id.present ? data.id.value : this.id,
       projectId: data.projectId.present ? data.projectId.value : this.projectId,
       taskType: data.taskType.present ? data.taskType.value : this.taskType,
       status: data.status.present ? data.status.value : this.status,
-      inputJson: data.inputJson.present ? data.inputJson.value : this.inputJson,
-      outputJson:
-          data.outputJson.present ? data.outputJson.value : this.outputJson,
-      model: data.model.present ? data.model.value : this.model,
-      tokenUsage:
-          data.tokenUsage.present ? data.tokenUsage.value : this.tokenUsage,
-      error: data.error.present ? data.error.value : this.error,
-      sideEffects:
-          data.sideEffects.present ? data.sideEffects.value : this.sideEffects,
-      startedAt: data.startedAt.present ? data.startedAt.value : this.startedAt,
-      completedAt:
-          data.completedAt.present ? data.completedAt.value : this.completedAt,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       schemaVersion: data.schemaVersion.present
           ? data.schemaVersion.value
           : this.schemaVersion,
+      chapterId: data.chapterId.present ? data.chapterId.value : this.chapterId,
+      instruction:
+          data.instruction.present ? data.instruction.value : this.instruction,
+      result: data.result.present ? data.result.value : this.result,
+      errorMessage: data.errorMessage.present
+          ? data.errorMessage.value
+          : this.errorMessage,
     );
   }
 
   @override
   String toString() {
-    return (StringBuffer('AgentTasksTableData(')
+    return (StringBuffer('AgentTaskRow(')
           ..write('id: $id, ')
           ..write('projectId: $projectId, ')
           ..write('taskType: $taskType, ')
           ..write('status: $status, ')
-          ..write('inputJson: $inputJson, ')
-          ..write('outputJson: $outputJson, ')
-          ..write('model: $model, ')
-          ..write('tokenUsage: $tokenUsage, ')
-          ..write('error: $error, ')
-          ..write('sideEffects: $sideEffects, ')
-          ..write('startedAt: $startedAt, ')
-          ..write('completedAt: $completedAt, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('schemaVersion: $schemaVersion')
+          ..write('schemaVersion: $schemaVersion, ')
+          ..write('chapterId: $chapterId, ')
+          ..write('instruction: $instruction, ')
+          ..write('result: $result, ')
+          ..write('errorMessage: $errorMessage')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
-      id,
-      projectId,
-      taskType,
-      status,
-      inputJson,
-      outputJson,
-      model,
-      tokenUsage,
-      error,
-      sideEffects,
-      startedAt,
-      completedAt,
-      createdAt,
-      updatedAt,
-      schemaVersion);
+  int get hashCode => Object.hash(id, projectId, taskType, status, createdAt,
+      updatedAt, schemaVersion, chapterId, instruction, result, errorMessage);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is AgentTasksTableData &&
+      (other is AgentTaskRow &&
           other.id == this.id &&
           other.projectId == this.projectId &&
           other.taskType == this.taskType &&
           other.status == this.status &&
-          other.inputJson == this.inputJson &&
-          other.outputJson == this.outputJson &&
-          other.model == this.model &&
-          other.tokenUsage == this.tokenUsage &&
-          other.error == this.error &&
-          other.sideEffects == this.sideEffects &&
-          other.startedAt == this.startedAt &&
-          other.completedAt == this.completedAt &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
-          other.schemaVersion == this.schemaVersion);
+          other.schemaVersion == this.schemaVersion &&
+          other.chapterId == this.chapterId &&
+          other.instruction == this.instruction &&
+          other.result == this.result &&
+          other.errorMessage == this.errorMessage);
 }
 
-class AgentTasksTableCompanion extends UpdateCompanion<AgentTasksTableData> {
+class AgentTasksCompanion extends UpdateCompanion<AgentTaskRow> {
   final Value<String> id;
   final Value<String> projectId;
   final Value<String> taskType;
   final Value<String> status;
-  final Value<String> inputJson;
-  final Value<String> outputJson;
-  final Value<String?> model;
-  final Value<String?> tokenUsage;
-  final Value<String?> error;
-  final Value<String> sideEffects;
-  final Value<DateTime?> startedAt;
-  final Value<DateTime?> completedAt;
-  final Value<DateTime> createdAt;
-  final Value<DateTime> updatedAt;
+  final Value<int> createdAt;
+  final Value<int> updatedAt;
   final Value<int> schemaVersion;
+  final Value<String?> chapterId;
+  final Value<String?> instruction;
+  final Value<String?> result;
+  final Value<String?> errorMessage;
   final Value<int> rowid;
-  const AgentTasksTableCompanion({
+  const AgentTasksCompanion({
     this.id = const Value.absent(),
     this.projectId = const Value.absent(),
     this.taskType = const Value.absent(),
     this.status = const Value.absent(),
-    this.inputJson = const Value.absent(),
-    this.outputJson = const Value.absent(),
-    this.model = const Value.absent(),
-    this.tokenUsage = const Value.absent(),
-    this.error = const Value.absent(),
-    this.sideEffects = const Value.absent(),
-    this.startedAt = const Value.absent(),
-    this.completedAt = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.schemaVersion = const Value.absent(),
+    this.chapterId = const Value.absent(),
+    this.instruction = const Value.absent(),
+    this.result = const Value.absent(),
+    this.errorMessage = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-  AgentTasksTableCompanion.insert({
+  AgentTasksCompanion.insert({
     required String id,
     required String projectId,
     required String taskType,
-    this.status = const Value.absent(),
-    this.inputJson = const Value.absent(),
-    this.outputJson = const Value.absent(),
-    this.model = const Value.absent(),
-    this.tokenUsage = const Value.absent(),
-    this.error = const Value.absent(),
-    this.sideEffects = const Value.absent(),
-    this.startedAt = const Value.absent(),
-    this.completedAt = const Value.absent(),
-    required DateTime createdAt,
-    required DateTime updatedAt,
+    required String status,
+    required int createdAt,
+    required int updatedAt,
     this.schemaVersion = const Value.absent(),
+    this.chapterId = const Value.absent(),
+    this.instruction = const Value.absent(),
+    this.result = const Value.absent(),
+    this.errorMessage = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         projectId = Value(projectId),
         taskType = Value(taskType),
+        status = Value(status),
         createdAt = Value(createdAt),
         updatedAt = Value(updatedAt);
-  static Insertable<AgentTasksTableData> custom({
+  static Insertable<AgentTaskRow> custom({
     Expression<String>? id,
     Expression<String>? projectId,
     Expression<String>? taskType,
     Expression<String>? status,
-    Expression<String>? inputJson,
-    Expression<String>? outputJson,
-    Expression<String>? model,
-    Expression<String>? tokenUsage,
-    Expression<String>? error,
-    Expression<String>? sideEffects,
-    Expression<DateTime>? startedAt,
-    Expression<DateTime>? completedAt,
-    Expression<DateTime>? createdAt,
-    Expression<DateTime>? updatedAt,
+    Expression<int>? createdAt,
+    Expression<int>? updatedAt,
     Expression<int>? schemaVersion,
+    Expression<String>? chapterId,
+    Expression<String>? instruction,
+    Expression<String>? result,
+    Expression<String>? errorMessage,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -5656,54 +5449,42 @@ class AgentTasksTableCompanion extends UpdateCompanion<AgentTasksTableData> {
       if (projectId != null) 'project_id': projectId,
       if (taskType != null) 'task_type': taskType,
       if (status != null) 'status': status,
-      if (inputJson != null) 'input_json': inputJson,
-      if (outputJson != null) 'output_json': outputJson,
-      if (model != null) 'model': model,
-      if (tokenUsage != null) 'token_usage': tokenUsage,
-      if (error != null) 'error': error,
-      if (sideEffects != null) 'side_effects': sideEffects,
-      if (startedAt != null) 'started_at': startedAt,
-      if (completedAt != null) 'completed_at': completedAt,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (schemaVersion != null) 'schema_version': schemaVersion,
+      if (chapterId != null) 'chapter_id': chapterId,
+      if (instruction != null) 'instruction': instruction,
+      if (result != null) 'result': result,
+      if (errorMessage != null) 'error_message': errorMessage,
       if (rowid != null) 'rowid': rowid,
     });
   }
 
-  AgentTasksTableCompanion copyWith(
+  AgentTasksCompanion copyWith(
       {Value<String>? id,
       Value<String>? projectId,
       Value<String>? taskType,
       Value<String>? status,
-      Value<String>? inputJson,
-      Value<String>? outputJson,
-      Value<String?>? model,
-      Value<String?>? tokenUsage,
-      Value<String?>? error,
-      Value<String>? sideEffects,
-      Value<DateTime?>? startedAt,
-      Value<DateTime?>? completedAt,
-      Value<DateTime>? createdAt,
-      Value<DateTime>? updatedAt,
+      Value<int>? createdAt,
+      Value<int>? updatedAt,
       Value<int>? schemaVersion,
+      Value<String?>? chapterId,
+      Value<String?>? instruction,
+      Value<String?>? result,
+      Value<String?>? errorMessage,
       Value<int>? rowid}) {
-    return AgentTasksTableCompanion(
+    return AgentTasksCompanion(
       id: id ?? this.id,
       projectId: projectId ?? this.projectId,
       taskType: taskType ?? this.taskType,
       status: status ?? this.status,
-      inputJson: inputJson ?? this.inputJson,
-      outputJson: outputJson ?? this.outputJson,
-      model: model ?? this.model,
-      tokenUsage: tokenUsage ?? this.tokenUsage,
-      error: error ?? this.error,
-      sideEffects: sideEffects ?? this.sideEffects,
-      startedAt: startedAt ?? this.startedAt,
-      completedAt: completedAt ?? this.completedAt,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       schemaVersion: schemaVersion ?? this.schemaVersion,
+      chapterId: chapterId ?? this.chapterId,
+      instruction: instruction ?? this.instruction,
+      result: result ?? this.result,
+      errorMessage: errorMessage ?? this.errorMessage,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -5723,38 +5504,26 @@ class AgentTasksTableCompanion extends UpdateCompanion<AgentTasksTableData> {
     if (status.present) {
       map['status'] = Variable<String>(status.value);
     }
-    if (inputJson.present) {
-      map['input_json'] = Variable<String>(inputJson.value);
-    }
-    if (outputJson.present) {
-      map['output_json'] = Variable<String>(outputJson.value);
-    }
-    if (model.present) {
-      map['model'] = Variable<String>(model.value);
-    }
-    if (tokenUsage.present) {
-      map['token_usage'] = Variable<String>(tokenUsage.value);
-    }
-    if (error.present) {
-      map['error'] = Variable<String>(error.value);
-    }
-    if (sideEffects.present) {
-      map['side_effects'] = Variable<String>(sideEffects.value);
-    }
-    if (startedAt.present) {
-      map['started_at'] = Variable<DateTime>(startedAt.value);
-    }
-    if (completedAt.present) {
-      map['completed_at'] = Variable<DateTime>(completedAt.value);
-    }
     if (createdAt.present) {
-      map['created_at'] = Variable<DateTime>(createdAt.value);
+      map['created_at'] = Variable<int>(createdAt.value);
     }
     if (updatedAt.present) {
-      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+      map['updated_at'] = Variable<int>(updatedAt.value);
     }
     if (schemaVersion.present) {
       map['schema_version'] = Variable<int>(schemaVersion.value);
+    }
+    if (chapterId.present) {
+      map['chapter_id'] = Variable<String>(chapterId.value);
+    }
+    if (instruction.present) {
+      map['instruction'] = Variable<String>(instruction.value);
+    }
+    if (result.present) {
+      map['result'] = Variable<String>(result.value);
+    }
+    if (errorMessage.present) {
+      map['error_message'] = Variable<String>(errorMessage.value);
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -5764,34 +5533,30 @@ class AgentTasksTableCompanion extends UpdateCompanion<AgentTasksTableData> {
 
   @override
   String toString() {
-    return (StringBuffer('AgentTasksTableCompanion(')
+    return (StringBuffer('AgentTasksCompanion(')
           ..write('id: $id, ')
           ..write('projectId: $projectId, ')
           ..write('taskType: $taskType, ')
           ..write('status: $status, ')
-          ..write('inputJson: $inputJson, ')
-          ..write('outputJson: $outputJson, ')
-          ..write('model: $model, ')
-          ..write('tokenUsage: $tokenUsage, ')
-          ..write('error: $error, ')
-          ..write('sideEffects: $sideEffects, ')
-          ..write('startedAt: $startedAt, ')
-          ..write('completedAt: $completedAt, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('schemaVersion: $schemaVersion, ')
+          ..write('chapterId: $chapterId, ')
+          ..write('instruction: $instruction, ')
+          ..write('result: $result, ')
+          ..write('errorMessage: $errorMessage, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
 }
 
-class $SnapshotsTableTable extends SnapshotsTable
-    with TableInfo<$SnapshotsTableTable, SnapshotsTableData> {
+class $TimelineEventsTable extends TimelineEvents
+    with TableInfo<$TimelineEventsTable, TimelineEventRow> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $SnapshotsTableTable(this.attachedDatabase, [this._alias]);
+  $TimelineEventsTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -5803,34 +5568,60 @@ class $SnapshotsTableTable extends SnapshotsTable
   late final GeneratedColumn<String> projectId = GeneratedColumn<String>(
       'project_id', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _characterIdMeta =
+      const VerificationMeta('characterId');
+  @override
+  late final GeneratedColumn<String> characterId = GeneratedColumn<String>(
+      'character_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _chapterIdMeta =
+      const VerificationMeta('chapterId');
+  @override
+  late final GeneratedColumn<String> chapterId = GeneratedColumn<String>(
+      'chapter_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _descriptionMeta =
       const VerificationMeta('description');
   @override
   late final GeneratedColumn<String> description = GeneratedColumn<String>(
       'description', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _triggerMeta =
-      const VerificationMeta('trigger');
+  static const VerificationMeta _chapterOrderMeta =
+      const VerificationMeta('chapterOrder');
   @override
-  late final GeneratedColumn<String> trigger = GeneratedColumn<String>(
-      'trigger', aliasedName, false,
-      type: DriftSqlType.string,
+  late final GeneratedColumn<int> chapterOrder = GeneratedColumn<int>(
+      'chapter_order', aliasedName, false,
+      type: DriftSqlType.int,
       requiredDuringInsert: false,
-      defaultValue: const Constant('manual'));
-  static const VerificationMeta _dataSnapshotMeta =
-      const VerificationMeta('dataSnapshot');
+      defaultValue: const Constant(0));
+  static const VerificationMeta _eventTypeMeta =
+      const VerificationMeta('eventType');
   @override
-  late final GeneratedColumn<String> dataSnapshot = GeneratedColumn<String>(
-      'data_snapshot', aliasedName, false,
+  late final GeneratedColumn<String> eventType = GeneratedColumn<String>(
+      'event_type', aliasedName, false,
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant(''));
+  static const VerificationMeta _relatedCharacterIdsJsonMeta =
+      const VerificationMeta('relatedCharacterIdsJson');
+  @override
+  late final GeneratedColumn<String> relatedCharacterIdsJson =
+      GeneratedColumn<String>('related_character_ids_json', aliasedName, false,
+          type: DriftSqlType.string,
+          requiredDuringInsert: false,
+          defaultValue: const Constant('[]'));
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
-  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
       'created_at', aliasedName, false,
-      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
   static const VerificationMeta _schemaVersionMeta =
       const VerificationMeta('schemaVersion');
   @override
@@ -5843,19 +5634,23 @@ class $SnapshotsTableTable extends SnapshotsTable
   List<GeneratedColumn> get $columns => [
         id,
         projectId,
+        characterId,
+        chapterId,
         description,
-        trigger,
-        dataSnapshot,
+        chapterOrder,
+        eventType,
+        relatedCharacterIdsJson,
         createdAt,
+        updatedAt,
         schemaVersion
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'snapshots_table';
+  static const String $name = 'timeline_events';
   @override
-  VerificationContext validateIntegrity(Insertable<SnapshotsTableData> instance,
+  VerificationContext validateIntegrity(Insertable<TimelineEventRow> instance,
       {bool isInserting = false}) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
@@ -5870,6 +5665,20 @@ class $SnapshotsTableTable extends SnapshotsTable
     } else if (isInserting) {
       context.missing(_projectIdMeta);
     }
+    if (data.containsKey('character_id')) {
+      context.handle(
+          _characterIdMeta,
+          characterId.isAcceptableOrUnknown(
+              data['character_id']!, _characterIdMeta));
+    } else if (isInserting) {
+      context.missing(_characterIdMeta);
+    }
+    if (data.containsKey('chapter_id')) {
+      context.handle(_chapterIdMeta,
+          chapterId.isAcceptableOrUnknown(data['chapter_id']!, _chapterIdMeta));
+    } else if (isInserting) {
+      context.missing(_chapterIdMeta);
+    }
     if (data.containsKey('description')) {
       context.handle(
           _descriptionMeta,
@@ -5878,21 +5687,34 @@ class $SnapshotsTableTable extends SnapshotsTable
     } else if (isInserting) {
       context.missing(_descriptionMeta);
     }
-    if (data.containsKey('trigger')) {
-      context.handle(_triggerMeta,
-          trigger.isAcceptableOrUnknown(data['trigger']!, _triggerMeta));
-    }
-    if (data.containsKey('data_snapshot')) {
+    if (data.containsKey('chapter_order')) {
       context.handle(
-          _dataSnapshotMeta,
-          dataSnapshot.isAcceptableOrUnknown(
-              data['data_snapshot']!, _dataSnapshotMeta));
+          _chapterOrderMeta,
+          chapterOrder.isAcceptableOrUnknown(
+              data['chapter_order']!, _chapterOrderMeta));
+    }
+    if (data.containsKey('event_type')) {
+      context.handle(_eventTypeMeta,
+          eventType.isAcceptableOrUnknown(data['event_type']!, _eventTypeMeta));
+    }
+    if (data.containsKey('related_character_ids_json')) {
+      context.handle(
+          _relatedCharacterIdsJsonMeta,
+          relatedCharacterIdsJson.isAcceptableOrUnknown(
+              data['related_character_ids_json']!,
+              _relatedCharacterIdsJsonMeta));
     }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
           createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
     } else if (isInserting) {
       context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
     }
     if (data.containsKey('schema_version')) {
       context.handle(
@@ -5906,84 +5728,115 @@ class $SnapshotsTableTable extends SnapshotsTable
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  SnapshotsTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
+  TimelineEventRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return SnapshotsTableData(
+    return TimelineEventRow(
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
       projectId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}project_id'])!,
+      characterId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}character_id'])!,
+      chapterId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}chapter_id'])!,
       description: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}description'])!,
-      trigger: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}trigger'])!,
-      dataSnapshot: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}data_snapshot'])!,
+      chapterOrder: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}chapter_order'])!,
+      eventType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}event_type'])!,
+      relatedCharacterIdsJson: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}related_character_ids_json'])!,
       createdAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+          .read(DriftSqlType.int, data['${effectivePrefix}created_at'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}updated_at'])!,
       schemaVersion: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}schema_version'])!,
     );
   }
 
   @override
-  $SnapshotsTableTable createAlias(String alias) {
-    return $SnapshotsTableTable(attachedDatabase, alias);
+  $TimelineEventsTable createAlias(String alias) {
+    return $TimelineEventsTable(attachedDatabase, alias);
   }
 }
 
-class SnapshotsTableData extends DataClass
-    implements Insertable<SnapshotsTableData> {
+class TimelineEventRow extends DataClass
+    implements Insertable<TimelineEventRow> {
   final String id;
   final String projectId;
+  final String characterId;
+  final String chapterId;
   final String description;
-  final String trigger;
-  final String dataSnapshot;
-  final DateTime createdAt;
+  final int chapterOrder;
+  final String eventType;
+  final String relatedCharacterIdsJson;
+  final int createdAt;
+  final int updatedAt;
   final int schemaVersion;
-  const SnapshotsTableData(
+  const TimelineEventRow(
       {required this.id,
       required this.projectId,
+      required this.characterId,
+      required this.chapterId,
       required this.description,
-      required this.trigger,
-      required this.dataSnapshot,
+      required this.chapterOrder,
+      required this.eventType,
+      required this.relatedCharacterIdsJson,
       required this.createdAt,
+      required this.updatedAt,
       required this.schemaVersion});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['project_id'] = Variable<String>(projectId);
+    map['character_id'] = Variable<String>(characterId);
+    map['chapter_id'] = Variable<String>(chapterId);
     map['description'] = Variable<String>(description);
-    map['trigger'] = Variable<String>(trigger);
-    map['data_snapshot'] = Variable<String>(dataSnapshot);
-    map['created_at'] = Variable<DateTime>(createdAt);
+    map['chapter_order'] = Variable<int>(chapterOrder);
+    map['event_type'] = Variable<String>(eventType);
+    map['related_character_ids_json'] =
+        Variable<String>(relatedCharacterIdsJson);
+    map['created_at'] = Variable<int>(createdAt);
+    map['updated_at'] = Variable<int>(updatedAt);
     map['schema_version'] = Variable<int>(schemaVersion);
     return map;
   }
 
-  SnapshotsTableCompanion toCompanion(bool nullToAbsent) {
-    return SnapshotsTableCompanion(
+  TimelineEventsCompanion toCompanion(bool nullToAbsent) {
+    return TimelineEventsCompanion(
       id: Value(id),
       projectId: Value(projectId),
+      characterId: Value(characterId),
+      chapterId: Value(chapterId),
       description: Value(description),
-      trigger: Value(trigger),
-      dataSnapshot: Value(dataSnapshot),
+      chapterOrder: Value(chapterOrder),
+      eventType: Value(eventType),
+      relatedCharacterIdsJson: Value(relatedCharacterIdsJson),
       createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
       schemaVersion: Value(schemaVersion),
     );
   }
 
-  factory SnapshotsTableData.fromJson(Map<String, dynamic> json,
+  factory TimelineEventRow.fromJson(Map<String, dynamic> json,
       {ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return SnapshotsTableData(
+    return TimelineEventRow(
       id: serializer.fromJson<String>(json['id']),
       projectId: serializer.fromJson<String>(json['projectId']),
+      characterId: serializer.fromJson<String>(json['characterId']),
+      chapterId: serializer.fromJson<String>(json['chapterId']),
       description: serializer.fromJson<String>(json['description']),
-      trigger: serializer.fromJson<String>(json['trigger']),
-      dataSnapshot: serializer.fromJson<String>(json['dataSnapshot']),
-      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      chapterOrder: serializer.fromJson<int>(json['chapterOrder']),
+      eventType: serializer.fromJson<String>(json['eventType']),
+      relatedCharacterIdsJson:
+          serializer.fromJson<String>(json['relatedCharacterIdsJson']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      updatedAt: serializer.fromJson<int>(json['updatedAt']),
       schemaVersion: serializer.fromJson<int>(json['schemaVersion']),
     );
   }
@@ -5993,42 +5846,63 @@ class SnapshotsTableData extends DataClass
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'projectId': serializer.toJson<String>(projectId),
+      'characterId': serializer.toJson<String>(characterId),
+      'chapterId': serializer.toJson<String>(chapterId),
       'description': serializer.toJson<String>(description),
-      'trigger': serializer.toJson<String>(trigger),
-      'dataSnapshot': serializer.toJson<String>(dataSnapshot),
-      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'chapterOrder': serializer.toJson<int>(chapterOrder),
+      'eventType': serializer.toJson<String>(eventType),
+      'relatedCharacterIdsJson':
+          serializer.toJson<String>(relatedCharacterIdsJson),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'updatedAt': serializer.toJson<int>(updatedAt),
       'schemaVersion': serializer.toJson<int>(schemaVersion),
     };
   }
 
-  SnapshotsTableData copyWith(
+  TimelineEventRow copyWith(
           {String? id,
           String? projectId,
+          String? characterId,
+          String? chapterId,
           String? description,
-          String? trigger,
-          String? dataSnapshot,
-          DateTime? createdAt,
+          int? chapterOrder,
+          String? eventType,
+          String? relatedCharacterIdsJson,
+          int? createdAt,
+          int? updatedAt,
           int? schemaVersion}) =>
-      SnapshotsTableData(
+      TimelineEventRow(
         id: id ?? this.id,
         projectId: projectId ?? this.projectId,
+        characterId: characterId ?? this.characterId,
+        chapterId: chapterId ?? this.chapterId,
         description: description ?? this.description,
-        trigger: trigger ?? this.trigger,
-        dataSnapshot: dataSnapshot ?? this.dataSnapshot,
+        chapterOrder: chapterOrder ?? this.chapterOrder,
+        eventType: eventType ?? this.eventType,
+        relatedCharacterIdsJson:
+            relatedCharacterIdsJson ?? this.relatedCharacterIdsJson,
         createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
         schemaVersion: schemaVersion ?? this.schemaVersion,
       );
-  SnapshotsTableData copyWithCompanion(SnapshotsTableCompanion data) {
-    return SnapshotsTableData(
+  TimelineEventRow copyWithCompanion(TimelineEventsCompanion data) {
+    return TimelineEventRow(
       id: data.id.present ? data.id.value : this.id,
       projectId: data.projectId.present ? data.projectId.value : this.projectId,
+      characterId:
+          data.characterId.present ? data.characterId.value : this.characterId,
+      chapterId: data.chapterId.present ? data.chapterId.value : this.chapterId,
       description:
           data.description.present ? data.description.value : this.description,
-      trigger: data.trigger.present ? data.trigger.value : this.trigger,
-      dataSnapshot: data.dataSnapshot.present
-          ? data.dataSnapshot.value
-          : this.dataSnapshot,
+      chapterOrder: data.chapterOrder.present
+          ? data.chapterOrder.value
+          : this.chapterOrder,
+      eventType: data.eventType.present ? data.eventType.value : this.eventType,
+      relatedCharacterIdsJson: data.relatedCharacterIdsJson.present
+          ? data.relatedCharacterIdsJson.value
+          : this.relatedCharacterIdsJson,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       schemaVersion: data.schemaVersion.present
           ? data.schemaVersion.value
           : this.schemaVersion,
@@ -6037,104 +5911,155 @@ class SnapshotsTableData extends DataClass
 
   @override
   String toString() {
-    return (StringBuffer('SnapshotsTableData(')
+    return (StringBuffer('TimelineEventRow(')
           ..write('id: $id, ')
           ..write('projectId: $projectId, ')
+          ..write('characterId: $characterId, ')
+          ..write('chapterId: $chapterId, ')
           ..write('description: $description, ')
-          ..write('trigger: $trigger, ')
-          ..write('dataSnapshot: $dataSnapshot, ')
+          ..write('chapterOrder: $chapterOrder, ')
+          ..write('eventType: $eventType, ')
+          ..write('relatedCharacterIdsJson: $relatedCharacterIdsJson, ')
           ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
           ..write('schemaVersion: $schemaVersion')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, projectId, description, trigger,
-      dataSnapshot, createdAt, schemaVersion);
+  int get hashCode => Object.hash(
+      id,
+      projectId,
+      characterId,
+      chapterId,
+      description,
+      chapterOrder,
+      eventType,
+      relatedCharacterIdsJson,
+      createdAt,
+      updatedAt,
+      schemaVersion);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is SnapshotsTableData &&
+      (other is TimelineEventRow &&
           other.id == this.id &&
           other.projectId == this.projectId &&
+          other.characterId == this.characterId &&
+          other.chapterId == this.chapterId &&
           other.description == this.description &&
-          other.trigger == this.trigger &&
-          other.dataSnapshot == this.dataSnapshot &&
+          other.chapterOrder == this.chapterOrder &&
+          other.eventType == this.eventType &&
+          other.relatedCharacterIdsJson == this.relatedCharacterIdsJson &&
           other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
           other.schemaVersion == this.schemaVersion);
 }
 
-class SnapshotsTableCompanion extends UpdateCompanion<SnapshotsTableData> {
+class TimelineEventsCompanion extends UpdateCompanion<TimelineEventRow> {
   final Value<String> id;
   final Value<String> projectId;
+  final Value<String> characterId;
+  final Value<String> chapterId;
   final Value<String> description;
-  final Value<String> trigger;
-  final Value<String> dataSnapshot;
-  final Value<DateTime> createdAt;
+  final Value<int> chapterOrder;
+  final Value<String> eventType;
+  final Value<String> relatedCharacterIdsJson;
+  final Value<int> createdAt;
+  final Value<int> updatedAt;
   final Value<int> schemaVersion;
   final Value<int> rowid;
-  const SnapshotsTableCompanion({
+  const TimelineEventsCompanion({
     this.id = const Value.absent(),
     this.projectId = const Value.absent(),
+    this.characterId = const Value.absent(),
+    this.chapterId = const Value.absent(),
     this.description = const Value.absent(),
-    this.trigger = const Value.absent(),
-    this.dataSnapshot = const Value.absent(),
+    this.chapterOrder = const Value.absent(),
+    this.eventType = const Value.absent(),
+    this.relatedCharacterIdsJson = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
     this.schemaVersion = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-  SnapshotsTableCompanion.insert({
+  TimelineEventsCompanion.insert({
     required String id,
     required String projectId,
+    required String characterId,
+    required String chapterId,
     required String description,
-    this.trigger = const Value.absent(),
-    this.dataSnapshot = const Value.absent(),
-    required DateTime createdAt,
+    this.chapterOrder = const Value.absent(),
+    this.eventType = const Value.absent(),
+    this.relatedCharacterIdsJson = const Value.absent(),
+    required int createdAt,
+    required int updatedAt,
     this.schemaVersion = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         projectId = Value(projectId),
+        characterId = Value(characterId),
+        chapterId = Value(chapterId),
         description = Value(description),
-        createdAt = Value(createdAt);
-  static Insertable<SnapshotsTableData> custom({
+        createdAt = Value(createdAt),
+        updatedAt = Value(updatedAt);
+  static Insertable<TimelineEventRow> custom({
     Expression<String>? id,
     Expression<String>? projectId,
+    Expression<String>? characterId,
+    Expression<String>? chapterId,
     Expression<String>? description,
-    Expression<String>? trigger,
-    Expression<String>? dataSnapshot,
-    Expression<DateTime>? createdAt,
+    Expression<int>? chapterOrder,
+    Expression<String>? eventType,
+    Expression<String>? relatedCharacterIdsJson,
+    Expression<int>? createdAt,
+    Expression<int>? updatedAt,
     Expression<int>? schemaVersion,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (projectId != null) 'project_id': projectId,
+      if (characterId != null) 'character_id': characterId,
+      if (chapterId != null) 'chapter_id': chapterId,
       if (description != null) 'description': description,
-      if (trigger != null) 'trigger': trigger,
-      if (dataSnapshot != null) 'data_snapshot': dataSnapshot,
+      if (chapterOrder != null) 'chapter_order': chapterOrder,
+      if (eventType != null) 'event_type': eventType,
+      if (relatedCharacterIdsJson != null)
+        'related_character_ids_json': relatedCharacterIdsJson,
       if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
       if (schemaVersion != null) 'schema_version': schemaVersion,
       if (rowid != null) 'rowid': rowid,
     });
   }
 
-  SnapshotsTableCompanion copyWith(
+  TimelineEventsCompanion copyWith(
       {Value<String>? id,
       Value<String>? projectId,
+      Value<String>? characterId,
+      Value<String>? chapterId,
       Value<String>? description,
-      Value<String>? trigger,
-      Value<String>? dataSnapshot,
-      Value<DateTime>? createdAt,
+      Value<int>? chapterOrder,
+      Value<String>? eventType,
+      Value<String>? relatedCharacterIdsJson,
+      Value<int>? createdAt,
+      Value<int>? updatedAt,
       Value<int>? schemaVersion,
       Value<int>? rowid}) {
-    return SnapshotsTableCompanion(
+    return TimelineEventsCompanion(
       id: id ?? this.id,
       projectId: projectId ?? this.projectId,
+      characterId: characterId ?? this.characterId,
+      chapterId: chapterId ?? this.chapterId,
       description: description ?? this.description,
-      trigger: trigger ?? this.trigger,
-      dataSnapshot: dataSnapshot ?? this.dataSnapshot,
+      chapterOrder: chapterOrder ?? this.chapterOrder,
+      eventType: eventType ?? this.eventType,
+      relatedCharacterIdsJson:
+          relatedCharacterIdsJson ?? this.relatedCharacterIdsJson,
       createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
       schemaVersion: schemaVersion ?? this.schemaVersion,
       rowid: rowid ?? this.rowid,
     );
@@ -6149,17 +6074,30 @@ class SnapshotsTableCompanion extends UpdateCompanion<SnapshotsTableData> {
     if (projectId.present) {
       map['project_id'] = Variable<String>(projectId.value);
     }
+    if (characterId.present) {
+      map['character_id'] = Variable<String>(characterId.value);
+    }
+    if (chapterId.present) {
+      map['chapter_id'] = Variable<String>(chapterId.value);
+    }
     if (description.present) {
       map['description'] = Variable<String>(description.value);
     }
-    if (trigger.present) {
-      map['trigger'] = Variable<String>(trigger.value);
+    if (chapterOrder.present) {
+      map['chapter_order'] = Variable<int>(chapterOrder.value);
     }
-    if (dataSnapshot.present) {
-      map['data_snapshot'] = Variable<String>(dataSnapshot.value);
+    if (eventType.present) {
+      map['event_type'] = Variable<String>(eventType.value);
+    }
+    if (relatedCharacterIdsJson.present) {
+      map['related_character_ids_json'] =
+          Variable<String>(relatedCharacterIdsJson.value);
     }
     if (createdAt.present) {
-      map['created_at'] = Variable<DateTime>(createdAt.value);
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
     }
     if (schemaVersion.present) {
       map['schema_version'] = Variable<int>(schemaVersion.value);
@@ -6172,13 +6110,17 @@ class SnapshotsTableCompanion extends UpdateCompanion<SnapshotsTableData> {
 
   @override
   String toString() {
-    return (StringBuffer('SnapshotsTableCompanion(')
+    return (StringBuffer('TimelineEventsCompanion(')
           ..write('id: $id, ')
           ..write('projectId: $projectId, ')
+          ..write('characterId: $characterId, ')
+          ..write('chapterId: $chapterId, ')
           ..write('description: $description, ')
-          ..write('trigger: $trigger, ')
-          ..write('dataSnapshot: $dataSnapshot, ')
+          ..write('chapterOrder: $chapterOrder, ')
+          ..write('eventType: $eventType, ')
+          ..write('relatedCharacterIdsJson: $relatedCharacterIdsJson, ')
           ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
           ..write('schemaVersion: $schemaVersion, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -6186,95 +6128,108 @@ class SnapshotsTableCompanion extends UpdateCompanion<SnapshotsTableData> {
   }
 }
 
-class $LlmProvidersTableTable extends LlmProvidersTable
-    with TableInfo<$LlmProvidersTableTable, LlmProvidersTableData> {
+class $SessionsTable extends Sessions
+    with TableInfo<$SessionsTable, SessionRow> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $LlmProvidersTableTable(this.attachedDatabase, [this._alias]);
+  $SessionsTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
       'id', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _displayNameMeta =
-      const VerificationMeta('displayName');
+  static const VerificationMeta _projectIdMeta =
+      const VerificationMeta('projectId');
   @override
-  late final GeneratedColumn<String> displayName = GeneratedColumn<String>(
-      'display_name', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _baseUrlMeta =
-      const VerificationMeta('baseUrl');
-  @override
-  late final GeneratedColumn<String> baseUrl = GeneratedColumn<String>(
-      'base_url', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _defaultModelMeta =
-      const VerificationMeta('defaultModel');
-  @override
-  late final GeneratedColumn<String> defaultModel = GeneratedColumn<String>(
-      'default_model', aliasedName, false,
+  late final GeneratedColumn<String> projectId = GeneratedColumn<String>(
+      'project_id', aliasedName, false,
       type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      defaultValue: const Constant('gpt-4o-mini'));
-  static const VerificationMeta _temperatureMeta =
-      const VerificationMeta('temperature');
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES projects (id) ON DELETE CASCADE'));
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
   @override
-  late final GeneratedColumn<double> temperature = GeneratedColumn<double>(
-      'temperature', aliasedName, false,
-      type: DriftSqlType.double,
-      requiredDuringInsert: false,
-      defaultValue: const Constant(0.7));
-  static const VerificationMeta _maxTokensMeta =
-      const VerificationMeta('maxTokens');
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+      'title', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
   @override
-  late final GeneratedColumn<int> maxTokens = GeneratedColumn<int>(
-      'max_tokens', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      defaultValue: const Constant(2048));
-  static const VerificationMeta _enabledMeta =
-      const VerificationMeta('enabled');
-  @override
-  late final GeneratedColumn<bool> enabled = GeneratedColumn<bool>(
-      'enabled', aliasedName, false,
-      type: DriftSqlType.bool,
-      requiredDuringInsert: false,
-      defaultConstraints:
-          GeneratedColumn.constraintIsAlways('CHECK ("enabled" IN (0, 1))'),
-      defaultValue: const Constant(true));
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+      'status', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
-  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
       'created_at', aliasedName, false,
-      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+      type: DriftSqlType.int, requiredDuringInsert: true);
   static const VerificationMeta _updatedAtMeta =
       const VerificationMeta('updatedAt');
   @override
-  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
       'updated_at', aliasedName, false,
-      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _schemaVersionMeta =
+      const VerificationMeta('schemaVersion');
+  @override
+  late final GeneratedColumn<int> schemaVersion = GeneratedColumn<int>(
+      'schema_version', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(1));
+  static const VerificationMeta _chapterIdMeta =
+      const VerificationMeta('chapterId');
+  @override
+  late final GeneratedColumn<String> chapterId = GeneratedColumn<String>(
+      'chapter_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _agentModeMeta =
+      const VerificationMeta('agentMode');
+  @override
+  late final GeneratedColumn<String> agentMode = GeneratedColumn<String>(
+      'agent_mode', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _summaryMeta =
+      const VerificationMeta('summary');
+  @override
+  late final GeneratedColumn<String> summary = GeneratedColumn<String>(
+      'summary', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _startedAtMeta =
+      const VerificationMeta('startedAt');
+  @override
+  late final GeneratedColumn<int> startedAt = GeneratedColumn<int>(
+      'started_at', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _endedAtMeta =
+      const VerificationMeta('endedAt');
+  @override
+  late final GeneratedColumn<int> endedAt = GeneratedColumn<int>(
+      'ended_at', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
-        displayName,
-        baseUrl,
-        defaultModel,
-        temperature,
-        maxTokens,
-        enabled,
+        projectId,
+        title,
+        status,
         createdAt,
-        updatedAt
+        updatedAt,
+        schemaVersion,
+        chapterId,
+        agentMode,
+        summary,
+        startedAt,
+        endedAt
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'llm_providers_table';
+  static const String $name = 'sessions';
   @override
-  VerificationContext validateIntegrity(
-      Insertable<LlmProvidersTableData> instance,
+  VerificationContext validateIntegrity(Insertable<SessionRow> instance,
       {bool isInserting = false}) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
@@ -6283,39 +6238,23 @@ class $LlmProvidersTableTable extends LlmProvidersTable
     } else if (isInserting) {
       context.missing(_idMeta);
     }
-    if (data.containsKey('display_name')) {
-      context.handle(
-          _displayNameMeta,
-          displayName.isAcceptableOrUnknown(
-              data['display_name']!, _displayNameMeta));
+    if (data.containsKey('project_id')) {
+      context.handle(_projectIdMeta,
+          projectId.isAcceptableOrUnknown(data['project_id']!, _projectIdMeta));
     } else if (isInserting) {
-      context.missing(_displayNameMeta);
+      context.missing(_projectIdMeta);
     }
-    if (data.containsKey('base_url')) {
-      context.handle(_baseUrlMeta,
-          baseUrl.isAcceptableOrUnknown(data['base_url']!, _baseUrlMeta));
+    if (data.containsKey('title')) {
+      context.handle(
+          _titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta));
     } else if (isInserting) {
-      context.missing(_baseUrlMeta);
+      context.missing(_titleMeta);
     }
-    if (data.containsKey('default_model')) {
-      context.handle(
-          _defaultModelMeta,
-          defaultModel.isAcceptableOrUnknown(
-              data['default_model']!, _defaultModelMeta));
-    }
-    if (data.containsKey('temperature')) {
-      context.handle(
-          _temperatureMeta,
-          temperature.isAcceptableOrUnknown(
-              data['temperature']!, _temperatureMeta));
-    }
-    if (data.containsKey('max_tokens')) {
-      context.handle(_maxTokensMeta,
-          maxTokens.isAcceptableOrUnknown(data['max_tokens']!, _maxTokensMeta));
-    }
-    if (data.containsKey('enabled')) {
-      context.handle(_enabledMeta,
-          enabled.isAcceptableOrUnknown(data['enabled']!, _enabledMeta));
+    if (data.containsKey('status')) {
+      context.handle(_statusMeta,
+          status.isAcceptableOrUnknown(data['status']!, _statusMeta));
+    } else if (isInserting) {
+      context.missing(_statusMeta);
     }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
@@ -6329,105 +6268,171 @@ class $LlmProvidersTableTable extends LlmProvidersTable
     } else if (isInserting) {
       context.missing(_updatedAtMeta);
     }
+    if (data.containsKey('schema_version')) {
+      context.handle(
+          _schemaVersionMeta,
+          schemaVersion.isAcceptableOrUnknown(
+              data['schema_version']!, _schemaVersionMeta));
+    }
+    if (data.containsKey('chapter_id')) {
+      context.handle(_chapterIdMeta,
+          chapterId.isAcceptableOrUnknown(data['chapter_id']!, _chapterIdMeta));
+    }
+    if (data.containsKey('agent_mode')) {
+      context.handle(_agentModeMeta,
+          agentMode.isAcceptableOrUnknown(data['agent_mode']!, _agentModeMeta));
+    }
+    if (data.containsKey('summary')) {
+      context.handle(_summaryMeta,
+          summary.isAcceptableOrUnknown(data['summary']!, _summaryMeta));
+    }
+    if (data.containsKey('started_at')) {
+      context.handle(_startedAtMeta,
+          startedAt.isAcceptableOrUnknown(data['started_at']!, _startedAtMeta));
+    }
+    if (data.containsKey('ended_at')) {
+      context.handle(_endedAtMeta,
+          endedAt.isAcceptableOrUnknown(data['ended_at']!, _endedAtMeta));
+    }
     return context;
   }
 
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  LlmProvidersTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
+  SessionRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return LlmProvidersTableData(
+    return SessionRow(
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
-      displayName: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}display_name'])!,
-      baseUrl: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}base_url'])!,
-      defaultModel: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}default_model'])!,
-      temperature: attachedDatabase.typeMapping
-          .read(DriftSqlType.double, data['${effectivePrefix}temperature'])!,
-      maxTokens: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}max_tokens'])!,
-      enabled: attachedDatabase.typeMapping
-          .read(DriftSqlType.bool, data['${effectivePrefix}enabled'])!,
+      projectId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}project_id'])!,
+      title: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}title'])!,
+      status: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
       createdAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+          .read(DriftSqlType.int, data['${effectivePrefix}created_at'])!,
       updatedAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+          .read(DriftSqlType.int, data['${effectivePrefix}updated_at'])!,
+      schemaVersion: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}schema_version'])!,
+      chapterId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}chapter_id']),
+      agentMode: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}agent_mode']),
+      summary: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}summary']),
+      startedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}started_at']),
+      endedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}ended_at']),
     );
   }
 
   @override
-  $LlmProvidersTableTable createAlias(String alias) {
-    return $LlmProvidersTableTable(attachedDatabase, alias);
+  $SessionsTable createAlias(String alias) {
+    return $SessionsTable(attachedDatabase, alias);
   }
 }
 
-class LlmProvidersTableData extends DataClass
-    implements Insertable<LlmProvidersTableData> {
+class SessionRow extends DataClass implements Insertable<SessionRow> {
   final String id;
-  final String displayName;
-  final String baseUrl;
-  final String defaultModel;
-  final double temperature;
-  final int maxTokens;
-  final bool enabled;
-  final DateTime createdAt;
-  final DateTime updatedAt;
-  const LlmProvidersTableData(
+  final String projectId;
+  final String title;
+  final String status;
+  final int createdAt;
+  final int updatedAt;
+  final int schemaVersion;
+  final String? chapterId;
+  final String? agentMode;
+  final String? summary;
+  final int? startedAt;
+  final int? endedAt;
+  const SessionRow(
       {required this.id,
-      required this.displayName,
-      required this.baseUrl,
-      required this.defaultModel,
-      required this.temperature,
-      required this.maxTokens,
-      required this.enabled,
+      required this.projectId,
+      required this.title,
+      required this.status,
       required this.createdAt,
-      required this.updatedAt});
+      required this.updatedAt,
+      required this.schemaVersion,
+      this.chapterId,
+      this.agentMode,
+      this.summary,
+      this.startedAt,
+      this.endedAt});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
-    map['display_name'] = Variable<String>(displayName);
-    map['base_url'] = Variable<String>(baseUrl);
-    map['default_model'] = Variable<String>(defaultModel);
-    map['temperature'] = Variable<double>(temperature);
-    map['max_tokens'] = Variable<int>(maxTokens);
-    map['enabled'] = Variable<bool>(enabled);
-    map['created_at'] = Variable<DateTime>(createdAt);
-    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['project_id'] = Variable<String>(projectId);
+    map['title'] = Variable<String>(title);
+    map['status'] = Variable<String>(status);
+    map['created_at'] = Variable<int>(createdAt);
+    map['updated_at'] = Variable<int>(updatedAt);
+    map['schema_version'] = Variable<int>(schemaVersion);
+    if (!nullToAbsent || chapterId != null) {
+      map['chapter_id'] = Variable<String>(chapterId);
+    }
+    if (!nullToAbsent || agentMode != null) {
+      map['agent_mode'] = Variable<String>(agentMode);
+    }
+    if (!nullToAbsent || summary != null) {
+      map['summary'] = Variable<String>(summary);
+    }
+    if (!nullToAbsent || startedAt != null) {
+      map['started_at'] = Variable<int>(startedAt);
+    }
+    if (!nullToAbsent || endedAt != null) {
+      map['ended_at'] = Variable<int>(endedAt);
+    }
     return map;
   }
 
-  LlmProvidersTableCompanion toCompanion(bool nullToAbsent) {
-    return LlmProvidersTableCompanion(
+  SessionsCompanion toCompanion(bool nullToAbsent) {
+    return SessionsCompanion(
       id: Value(id),
-      displayName: Value(displayName),
-      baseUrl: Value(baseUrl),
-      defaultModel: Value(defaultModel),
-      temperature: Value(temperature),
-      maxTokens: Value(maxTokens),
-      enabled: Value(enabled),
+      projectId: Value(projectId),
+      title: Value(title),
+      status: Value(status),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
+      schemaVersion: Value(schemaVersion),
+      chapterId: chapterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(chapterId),
+      agentMode: agentMode == null && nullToAbsent
+          ? const Value.absent()
+          : Value(agentMode),
+      summary: summary == null && nullToAbsent
+          ? const Value.absent()
+          : Value(summary),
+      startedAt: startedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(startedAt),
+      endedAt: endedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(endedAt),
     );
   }
 
-  factory LlmProvidersTableData.fromJson(Map<String, dynamic> json,
+  factory SessionRow.fromJson(Map<String, dynamic> json,
       {ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return LlmProvidersTableData(
+    return SessionRow(
       id: serializer.fromJson<String>(json['id']),
-      displayName: serializer.fromJson<String>(json['displayName']),
-      baseUrl: serializer.fromJson<String>(json['baseUrl']),
-      defaultModel: serializer.fromJson<String>(json['defaultModel']),
-      temperature: serializer.fromJson<double>(json['temperature']),
-      maxTokens: serializer.fromJson<int>(json['maxTokens']),
-      enabled: serializer.fromJson<bool>(json['enabled']),
-      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
-      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      projectId: serializer.fromJson<String>(json['projectId']),
+      title: serializer.fromJson<String>(json['title']),
+      status: serializer.fromJson<String>(json['status']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      updatedAt: serializer.fromJson<int>(json['updatedAt']),
+      schemaVersion: serializer.fromJson<int>(json['schemaVersion']),
+      chapterId: serializer.fromJson<String?>(json['chapterId']),
+      agentMode: serializer.fromJson<String?>(json['agentMode']),
+      summary: serializer.fromJson<String?>(json['summary']),
+      startedAt: serializer.fromJson<int?>(json['startedAt']),
+      endedAt: serializer.fromJson<int?>(json['endedAt']),
     );
   }
   @override
@@ -6435,177 +6440,225 @@ class LlmProvidersTableData extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
-      'displayName': serializer.toJson<String>(displayName),
-      'baseUrl': serializer.toJson<String>(baseUrl),
-      'defaultModel': serializer.toJson<String>(defaultModel),
-      'temperature': serializer.toJson<double>(temperature),
-      'maxTokens': serializer.toJson<int>(maxTokens),
-      'enabled': serializer.toJson<bool>(enabled),
-      'createdAt': serializer.toJson<DateTime>(createdAt),
-      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'projectId': serializer.toJson<String>(projectId),
+      'title': serializer.toJson<String>(title),
+      'status': serializer.toJson<String>(status),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'updatedAt': serializer.toJson<int>(updatedAt),
+      'schemaVersion': serializer.toJson<int>(schemaVersion),
+      'chapterId': serializer.toJson<String?>(chapterId),
+      'agentMode': serializer.toJson<String?>(agentMode),
+      'summary': serializer.toJson<String?>(summary),
+      'startedAt': serializer.toJson<int?>(startedAt),
+      'endedAt': serializer.toJson<int?>(endedAt),
     };
   }
 
-  LlmProvidersTableData copyWith(
+  SessionRow copyWith(
           {String? id,
-          String? displayName,
-          String? baseUrl,
-          String? defaultModel,
-          double? temperature,
-          int? maxTokens,
-          bool? enabled,
-          DateTime? createdAt,
-          DateTime? updatedAt}) =>
-      LlmProvidersTableData(
+          String? projectId,
+          String? title,
+          String? status,
+          int? createdAt,
+          int? updatedAt,
+          int? schemaVersion,
+          Value<String?> chapterId = const Value.absent(),
+          Value<String?> agentMode = const Value.absent(),
+          Value<String?> summary = const Value.absent(),
+          Value<int?> startedAt = const Value.absent(),
+          Value<int?> endedAt = const Value.absent()}) =>
+      SessionRow(
         id: id ?? this.id,
-        displayName: displayName ?? this.displayName,
-        baseUrl: baseUrl ?? this.baseUrl,
-        defaultModel: defaultModel ?? this.defaultModel,
-        temperature: temperature ?? this.temperature,
-        maxTokens: maxTokens ?? this.maxTokens,
-        enabled: enabled ?? this.enabled,
+        projectId: projectId ?? this.projectId,
+        title: title ?? this.title,
+        status: status ?? this.status,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
+        schemaVersion: schemaVersion ?? this.schemaVersion,
+        chapterId: chapterId.present ? chapterId.value : this.chapterId,
+        agentMode: agentMode.present ? agentMode.value : this.agentMode,
+        summary: summary.present ? summary.value : this.summary,
+        startedAt: startedAt.present ? startedAt.value : this.startedAt,
+        endedAt: endedAt.present ? endedAt.value : this.endedAt,
       );
-  LlmProvidersTableData copyWithCompanion(LlmProvidersTableCompanion data) {
-    return LlmProvidersTableData(
+  SessionRow copyWithCompanion(SessionsCompanion data) {
+    return SessionRow(
       id: data.id.present ? data.id.value : this.id,
-      displayName:
-          data.displayName.present ? data.displayName.value : this.displayName,
-      baseUrl: data.baseUrl.present ? data.baseUrl.value : this.baseUrl,
-      defaultModel: data.defaultModel.present
-          ? data.defaultModel.value
-          : this.defaultModel,
-      temperature:
-          data.temperature.present ? data.temperature.value : this.temperature,
-      maxTokens: data.maxTokens.present ? data.maxTokens.value : this.maxTokens,
-      enabled: data.enabled.present ? data.enabled.value : this.enabled,
+      projectId: data.projectId.present ? data.projectId.value : this.projectId,
+      title: data.title.present ? data.title.value : this.title,
+      status: data.status.present ? data.status.value : this.status,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      schemaVersion: data.schemaVersion.present
+          ? data.schemaVersion.value
+          : this.schemaVersion,
+      chapterId: data.chapterId.present ? data.chapterId.value : this.chapterId,
+      agentMode: data.agentMode.present ? data.agentMode.value : this.agentMode,
+      summary: data.summary.present ? data.summary.value : this.summary,
+      startedAt: data.startedAt.present ? data.startedAt.value : this.startedAt,
+      endedAt: data.endedAt.present ? data.endedAt.value : this.endedAt,
     );
   }
 
   @override
   String toString() {
-    return (StringBuffer('LlmProvidersTableData(')
+    return (StringBuffer('SessionRow(')
           ..write('id: $id, ')
-          ..write('displayName: $displayName, ')
-          ..write('baseUrl: $baseUrl, ')
-          ..write('defaultModel: $defaultModel, ')
-          ..write('temperature: $temperature, ')
-          ..write('maxTokens: $maxTokens, ')
-          ..write('enabled: $enabled, ')
+          ..write('projectId: $projectId, ')
+          ..write('title: $title, ')
+          ..write('status: $status, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('schemaVersion: $schemaVersion, ')
+          ..write('chapterId: $chapterId, ')
+          ..write('agentMode: $agentMode, ')
+          ..write('summary: $summary, ')
+          ..write('startedAt: $startedAt, ')
+          ..write('endedAt: $endedAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, displayName, baseUrl, defaultModel,
-      temperature, maxTokens, enabled, createdAt, updatedAt);
+  int get hashCode => Object.hash(
+      id,
+      projectId,
+      title,
+      status,
+      createdAt,
+      updatedAt,
+      schemaVersion,
+      chapterId,
+      agentMode,
+      summary,
+      startedAt,
+      endedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is LlmProvidersTableData &&
+      (other is SessionRow &&
           other.id == this.id &&
-          other.displayName == this.displayName &&
-          other.baseUrl == this.baseUrl &&
-          other.defaultModel == this.defaultModel &&
-          other.temperature == this.temperature &&
-          other.maxTokens == this.maxTokens &&
-          other.enabled == this.enabled &&
+          other.projectId == this.projectId &&
+          other.title == this.title &&
+          other.status == this.status &&
           other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt);
+          other.updatedAt == this.updatedAt &&
+          other.schemaVersion == this.schemaVersion &&
+          other.chapterId == this.chapterId &&
+          other.agentMode == this.agentMode &&
+          other.summary == this.summary &&
+          other.startedAt == this.startedAt &&
+          other.endedAt == this.endedAt);
 }
 
-class LlmProvidersTableCompanion
-    extends UpdateCompanion<LlmProvidersTableData> {
+class SessionsCompanion extends UpdateCompanion<SessionRow> {
   final Value<String> id;
-  final Value<String> displayName;
-  final Value<String> baseUrl;
-  final Value<String> defaultModel;
-  final Value<double> temperature;
-  final Value<int> maxTokens;
-  final Value<bool> enabled;
-  final Value<DateTime> createdAt;
-  final Value<DateTime> updatedAt;
+  final Value<String> projectId;
+  final Value<String> title;
+  final Value<String> status;
+  final Value<int> createdAt;
+  final Value<int> updatedAt;
+  final Value<int> schemaVersion;
+  final Value<String?> chapterId;
+  final Value<String?> agentMode;
+  final Value<String?> summary;
+  final Value<int?> startedAt;
+  final Value<int?> endedAt;
   final Value<int> rowid;
-  const LlmProvidersTableCompanion({
+  const SessionsCompanion({
     this.id = const Value.absent(),
-    this.displayName = const Value.absent(),
-    this.baseUrl = const Value.absent(),
-    this.defaultModel = const Value.absent(),
-    this.temperature = const Value.absent(),
-    this.maxTokens = const Value.absent(),
-    this.enabled = const Value.absent(),
+    this.projectId = const Value.absent(),
+    this.title = const Value.absent(),
+    this.status = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.schemaVersion = const Value.absent(),
+    this.chapterId = const Value.absent(),
+    this.agentMode = const Value.absent(),
+    this.summary = const Value.absent(),
+    this.startedAt = const Value.absent(),
+    this.endedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-  LlmProvidersTableCompanion.insert({
+  SessionsCompanion.insert({
     required String id,
-    required String displayName,
-    required String baseUrl,
-    this.defaultModel = const Value.absent(),
-    this.temperature = const Value.absent(),
-    this.maxTokens = const Value.absent(),
-    this.enabled = const Value.absent(),
-    required DateTime createdAt,
-    required DateTime updatedAt,
+    required String projectId,
+    required String title,
+    required String status,
+    required int createdAt,
+    required int updatedAt,
+    this.schemaVersion = const Value.absent(),
+    this.chapterId = const Value.absent(),
+    this.agentMode = const Value.absent(),
+    this.summary = const Value.absent(),
+    this.startedAt = const Value.absent(),
+    this.endedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
-        displayName = Value(displayName),
-        baseUrl = Value(baseUrl),
+        projectId = Value(projectId),
+        title = Value(title),
+        status = Value(status),
         createdAt = Value(createdAt),
         updatedAt = Value(updatedAt);
-  static Insertable<LlmProvidersTableData> custom({
+  static Insertable<SessionRow> custom({
     Expression<String>? id,
-    Expression<String>? displayName,
-    Expression<String>? baseUrl,
-    Expression<String>? defaultModel,
-    Expression<double>? temperature,
-    Expression<int>? maxTokens,
-    Expression<bool>? enabled,
-    Expression<DateTime>? createdAt,
-    Expression<DateTime>? updatedAt,
+    Expression<String>? projectId,
+    Expression<String>? title,
+    Expression<String>? status,
+    Expression<int>? createdAt,
+    Expression<int>? updatedAt,
+    Expression<int>? schemaVersion,
+    Expression<String>? chapterId,
+    Expression<String>? agentMode,
+    Expression<String>? summary,
+    Expression<int>? startedAt,
+    Expression<int>? endedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
-      if (displayName != null) 'display_name': displayName,
-      if (baseUrl != null) 'base_url': baseUrl,
-      if (defaultModel != null) 'default_model': defaultModel,
-      if (temperature != null) 'temperature': temperature,
-      if (maxTokens != null) 'max_tokens': maxTokens,
-      if (enabled != null) 'enabled': enabled,
+      if (projectId != null) 'project_id': projectId,
+      if (title != null) 'title': title,
+      if (status != null) 'status': status,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (schemaVersion != null) 'schema_version': schemaVersion,
+      if (chapterId != null) 'chapter_id': chapterId,
+      if (agentMode != null) 'agent_mode': agentMode,
+      if (summary != null) 'summary': summary,
+      if (startedAt != null) 'started_at': startedAt,
+      if (endedAt != null) 'ended_at': endedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
 
-  LlmProvidersTableCompanion copyWith(
+  SessionsCompanion copyWith(
       {Value<String>? id,
-      Value<String>? displayName,
-      Value<String>? baseUrl,
-      Value<String>? defaultModel,
-      Value<double>? temperature,
-      Value<int>? maxTokens,
-      Value<bool>? enabled,
-      Value<DateTime>? createdAt,
-      Value<DateTime>? updatedAt,
+      Value<String>? projectId,
+      Value<String>? title,
+      Value<String>? status,
+      Value<int>? createdAt,
+      Value<int>? updatedAt,
+      Value<int>? schemaVersion,
+      Value<String?>? chapterId,
+      Value<String?>? agentMode,
+      Value<String?>? summary,
+      Value<int?>? startedAt,
+      Value<int?>? endedAt,
       Value<int>? rowid}) {
-    return LlmProvidersTableCompanion(
+    return SessionsCompanion(
       id: id ?? this.id,
-      displayName: displayName ?? this.displayName,
-      baseUrl: baseUrl ?? this.baseUrl,
-      defaultModel: defaultModel ?? this.defaultModel,
-      temperature: temperature ?? this.temperature,
-      maxTokens: maxTokens ?? this.maxTokens,
-      enabled: enabled ?? this.enabled,
+      projectId: projectId ?? this.projectId,
+      title: title ?? this.title,
+      status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      schemaVersion: schemaVersion ?? this.schemaVersion,
+      chapterId: chapterId ?? this.chapterId,
+      agentMode: agentMode ?? this.agentMode,
+      summary: summary ?? this.summary,
+      startedAt: startedAt ?? this.startedAt,
+      endedAt: endedAt ?? this.endedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -6616,29 +6669,38 @@ class LlmProvidersTableCompanion
     if (id.present) {
       map['id'] = Variable<String>(id.value);
     }
-    if (displayName.present) {
-      map['display_name'] = Variable<String>(displayName.value);
+    if (projectId.present) {
+      map['project_id'] = Variable<String>(projectId.value);
     }
-    if (baseUrl.present) {
-      map['base_url'] = Variable<String>(baseUrl.value);
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
     }
-    if (defaultModel.present) {
-      map['default_model'] = Variable<String>(defaultModel.value);
-    }
-    if (temperature.present) {
-      map['temperature'] = Variable<double>(temperature.value);
-    }
-    if (maxTokens.present) {
-      map['max_tokens'] = Variable<int>(maxTokens.value);
-    }
-    if (enabled.present) {
-      map['enabled'] = Variable<bool>(enabled.value);
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
     }
     if (createdAt.present) {
-      map['created_at'] = Variable<DateTime>(createdAt.value);
+      map['created_at'] = Variable<int>(createdAt.value);
     }
     if (updatedAt.present) {
-      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
+    if (schemaVersion.present) {
+      map['schema_version'] = Variable<int>(schemaVersion.value);
+    }
+    if (chapterId.present) {
+      map['chapter_id'] = Variable<String>(chapterId.value);
+    }
+    if (agentMode.present) {
+      map['agent_mode'] = Variable<String>(agentMode.value);
+    }
+    if (summary.present) {
+      map['summary'] = Variable<String>(summary.value);
+    }
+    if (startedAt.present) {
+      map['started_at'] = Variable<int>(startedAt.value);
+    }
+    if (endedAt.present) {
+      map['ended_at'] = Variable<int>(endedAt.value);
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -6648,16 +6710,588 @@ class LlmProvidersTableCompanion
 
   @override
   String toString() {
-    return (StringBuffer('LlmProvidersTableCompanion(')
+    return (StringBuffer('SessionsCompanion(')
           ..write('id: $id, ')
-          ..write('displayName: $displayName, ')
-          ..write('baseUrl: $baseUrl, ')
-          ..write('defaultModel: $defaultModel, ')
-          ..write('temperature: $temperature, ')
-          ..write('maxTokens: $maxTokens, ')
-          ..write('enabled: $enabled, ')
+          ..write('projectId: $projectId, ')
+          ..write('title: $title, ')
+          ..write('status: $status, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
+          ..write('schemaVersion: $schemaVersion, ')
+          ..write('chapterId: $chapterId, ')
+          ..write('agentMode: $agentMode, ')
+          ..write('summary: $summary, ')
+          ..write('startedAt: $startedAt, ')
+          ..write('endedAt: $endedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SnapshotsTable extends Snapshots
+    with TableInfo<$SnapshotsTable, SnapshotRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SnapshotsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _projectIdMeta =
+      const VerificationMeta('projectId');
+  @override
+  late final GeneratedColumn<String> projectId = GeneratedColumn<String>(
+      'project_id', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES projects (id) ON DELETE CASCADE'));
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+      'name', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+      'type', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _contentHashMeta =
+      const VerificationMeta('contentHash');
+  @override
+  late final GeneratedColumn<String> contentHash = GeneratedColumn<String>(
+      'content_hash', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _contentSnapshotMeta =
+      const VerificationMeta('contentSnapshot');
+  @override
+  late final GeneratedColumn<String> contentSnapshot = GeneratedColumn<String>(
+      'content_snapshot', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _schemaVersionMeta =
+      const VerificationMeta('schemaVersion');
+  @override
+  late final GeneratedColumn<int> schemaVersion = GeneratedColumn<int>(
+      'schema_version', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(1));
+  static const VerificationMeta _chapterIdMeta =
+      const VerificationMeta('chapterId');
+  @override
+  late final GeneratedColumn<String> chapterId = GeneratedColumn<String>(
+      'chapter_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _descriptionMeta =
+      const VerificationMeta('description');
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+      'description', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        projectId,
+        name,
+        type,
+        contentHash,
+        contentSnapshot,
+        createdAt,
+        updatedAt,
+        schemaVersion,
+        chapterId,
+        description
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'snapshots';
+  @override
+  VerificationContext validateIntegrity(Insertable<SnapshotRow> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('project_id')) {
+      context.handle(_projectIdMeta,
+          projectId.isAcceptableOrUnknown(data['project_id']!, _projectIdMeta));
+    } else if (isInserting) {
+      context.missing(_projectIdMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+          _typeMeta, type.isAcceptableOrUnknown(data['type']!, _typeMeta));
+    } else if (isInserting) {
+      context.missing(_typeMeta);
+    }
+    if (data.containsKey('content_hash')) {
+      context.handle(
+          _contentHashMeta,
+          contentHash.isAcceptableOrUnknown(
+              data['content_hash']!, _contentHashMeta));
+    } else if (isInserting) {
+      context.missing(_contentHashMeta);
+    }
+    if (data.containsKey('content_snapshot')) {
+      context.handle(
+          _contentSnapshotMeta,
+          contentSnapshot.isAcceptableOrUnknown(
+              data['content_snapshot']!, _contentSnapshotMeta));
+    } else if (isInserting) {
+      context.missing(_contentSnapshotMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('schema_version')) {
+      context.handle(
+          _schemaVersionMeta,
+          schemaVersion.isAcceptableOrUnknown(
+              data['schema_version']!, _schemaVersionMeta));
+    }
+    if (data.containsKey('chapter_id')) {
+      context.handle(_chapterIdMeta,
+          chapterId.isAcceptableOrUnknown(data['chapter_id']!, _chapterIdMeta));
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+          _descriptionMeta,
+          description.isAcceptableOrUnknown(
+              data['description']!, _descriptionMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SnapshotRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SnapshotRow(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      projectId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}project_id'])!,
+      name: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      type: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}type'])!,
+      contentHash: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}content_hash'])!,
+      contentSnapshot: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}content_snapshot'])!,
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}created_at'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}updated_at'])!,
+      schemaVersion: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}schema_version'])!,
+      chapterId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}chapter_id']),
+      description: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}description']),
+    );
+  }
+
+  @override
+  $SnapshotsTable createAlias(String alias) {
+    return $SnapshotsTable(attachedDatabase, alias);
+  }
+}
+
+class SnapshotRow extends DataClass implements Insertable<SnapshotRow> {
+  final String id;
+  final String projectId;
+  final String name;
+  final String type;
+  final String contentHash;
+  final String contentSnapshot;
+  final int createdAt;
+  final int updatedAt;
+  final int schemaVersion;
+  final String? chapterId;
+  final String? description;
+  const SnapshotRow(
+      {required this.id,
+      required this.projectId,
+      required this.name,
+      required this.type,
+      required this.contentHash,
+      required this.contentSnapshot,
+      required this.createdAt,
+      required this.updatedAt,
+      required this.schemaVersion,
+      this.chapterId,
+      this.description});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['project_id'] = Variable<String>(projectId);
+    map['name'] = Variable<String>(name);
+    map['type'] = Variable<String>(type);
+    map['content_hash'] = Variable<String>(contentHash);
+    map['content_snapshot'] = Variable<String>(contentSnapshot);
+    map['created_at'] = Variable<int>(createdAt);
+    map['updated_at'] = Variable<int>(updatedAt);
+    map['schema_version'] = Variable<int>(schemaVersion);
+    if (!nullToAbsent || chapterId != null) {
+      map['chapter_id'] = Variable<String>(chapterId);
+    }
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
+    return map;
+  }
+
+  SnapshotsCompanion toCompanion(bool nullToAbsent) {
+    return SnapshotsCompanion(
+      id: Value(id),
+      projectId: Value(projectId),
+      name: Value(name),
+      type: Value(type),
+      contentHash: Value(contentHash),
+      contentSnapshot: Value(contentSnapshot),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      schemaVersion: Value(schemaVersion),
+      chapterId: chapterId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(chapterId),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
+    );
+  }
+
+  factory SnapshotRow.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SnapshotRow(
+      id: serializer.fromJson<String>(json['id']),
+      projectId: serializer.fromJson<String>(json['projectId']),
+      name: serializer.fromJson<String>(json['name']),
+      type: serializer.fromJson<String>(json['type']),
+      contentHash: serializer.fromJson<String>(json['contentHash']),
+      contentSnapshot: serializer.fromJson<String>(json['contentSnapshot']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      updatedAt: serializer.fromJson<int>(json['updatedAt']),
+      schemaVersion: serializer.fromJson<int>(json['schemaVersion']),
+      chapterId: serializer.fromJson<String?>(json['chapterId']),
+      description: serializer.fromJson<String?>(json['description']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'projectId': serializer.toJson<String>(projectId),
+      'name': serializer.toJson<String>(name),
+      'type': serializer.toJson<String>(type),
+      'contentHash': serializer.toJson<String>(contentHash),
+      'contentSnapshot': serializer.toJson<String>(contentSnapshot),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'updatedAt': serializer.toJson<int>(updatedAt),
+      'schemaVersion': serializer.toJson<int>(schemaVersion),
+      'chapterId': serializer.toJson<String?>(chapterId),
+      'description': serializer.toJson<String?>(description),
+    };
+  }
+
+  SnapshotRow copyWith(
+          {String? id,
+          String? projectId,
+          String? name,
+          String? type,
+          String? contentHash,
+          String? contentSnapshot,
+          int? createdAt,
+          int? updatedAt,
+          int? schemaVersion,
+          Value<String?> chapterId = const Value.absent(),
+          Value<String?> description = const Value.absent()}) =>
+      SnapshotRow(
+        id: id ?? this.id,
+        projectId: projectId ?? this.projectId,
+        name: name ?? this.name,
+        type: type ?? this.type,
+        contentHash: contentHash ?? this.contentHash,
+        contentSnapshot: contentSnapshot ?? this.contentSnapshot,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+        schemaVersion: schemaVersion ?? this.schemaVersion,
+        chapterId: chapterId.present ? chapterId.value : this.chapterId,
+        description: description.present ? description.value : this.description,
+      );
+  SnapshotRow copyWithCompanion(SnapshotsCompanion data) {
+    return SnapshotRow(
+      id: data.id.present ? data.id.value : this.id,
+      projectId: data.projectId.present ? data.projectId.value : this.projectId,
+      name: data.name.present ? data.name.value : this.name,
+      type: data.type.present ? data.type.value : this.type,
+      contentHash:
+          data.contentHash.present ? data.contentHash.value : this.contentHash,
+      contentSnapshot: data.contentSnapshot.present
+          ? data.contentSnapshot.value
+          : this.contentSnapshot,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      schemaVersion: data.schemaVersion.present
+          ? data.schemaVersion.value
+          : this.schemaVersion,
+      chapterId: data.chapterId.present ? data.chapterId.value : this.chapterId,
+      description:
+          data.description.present ? data.description.value : this.description,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SnapshotRow(')
+          ..write('id: $id, ')
+          ..write('projectId: $projectId, ')
+          ..write('name: $name, ')
+          ..write('type: $type, ')
+          ..write('contentHash: $contentHash, ')
+          ..write('contentSnapshot: $contentSnapshot, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('schemaVersion: $schemaVersion, ')
+          ..write('chapterId: $chapterId, ')
+          ..write('description: $description')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      id,
+      projectId,
+      name,
+      type,
+      contentHash,
+      contentSnapshot,
+      createdAt,
+      updatedAt,
+      schemaVersion,
+      chapterId,
+      description);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SnapshotRow &&
+          other.id == this.id &&
+          other.projectId == this.projectId &&
+          other.name == this.name &&
+          other.type == this.type &&
+          other.contentHash == this.contentHash &&
+          other.contentSnapshot == this.contentSnapshot &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.schemaVersion == this.schemaVersion &&
+          other.chapterId == this.chapterId &&
+          other.description == this.description);
+}
+
+class SnapshotsCompanion extends UpdateCompanion<SnapshotRow> {
+  final Value<String> id;
+  final Value<String> projectId;
+  final Value<String> name;
+  final Value<String> type;
+  final Value<String> contentHash;
+  final Value<String> contentSnapshot;
+  final Value<int> createdAt;
+  final Value<int> updatedAt;
+  final Value<int> schemaVersion;
+  final Value<String?> chapterId;
+  final Value<String?> description;
+  final Value<int> rowid;
+  const SnapshotsCompanion({
+    this.id = const Value.absent(),
+    this.projectId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.type = const Value.absent(),
+    this.contentHash = const Value.absent(),
+    this.contentSnapshot = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.schemaVersion = const Value.absent(),
+    this.chapterId = const Value.absent(),
+    this.description = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SnapshotsCompanion.insert({
+    required String id,
+    required String projectId,
+    required String name,
+    required String type,
+    required String contentHash,
+    required String contentSnapshot,
+    required int createdAt,
+    required int updatedAt,
+    this.schemaVersion = const Value.absent(),
+    this.chapterId = const Value.absent(),
+    this.description = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        projectId = Value(projectId),
+        name = Value(name),
+        type = Value(type),
+        contentHash = Value(contentHash),
+        contentSnapshot = Value(contentSnapshot),
+        createdAt = Value(createdAt),
+        updatedAt = Value(updatedAt);
+  static Insertable<SnapshotRow> custom({
+    Expression<String>? id,
+    Expression<String>? projectId,
+    Expression<String>? name,
+    Expression<String>? type,
+    Expression<String>? contentHash,
+    Expression<String>? contentSnapshot,
+    Expression<int>? createdAt,
+    Expression<int>? updatedAt,
+    Expression<int>? schemaVersion,
+    Expression<String>? chapterId,
+    Expression<String>? description,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (projectId != null) 'project_id': projectId,
+      if (name != null) 'name': name,
+      if (type != null) 'type': type,
+      if (contentHash != null) 'content_hash': contentHash,
+      if (contentSnapshot != null) 'content_snapshot': contentSnapshot,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (schemaVersion != null) 'schema_version': schemaVersion,
+      if (chapterId != null) 'chapter_id': chapterId,
+      if (description != null) 'description': description,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SnapshotsCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? projectId,
+      Value<String>? name,
+      Value<String>? type,
+      Value<String>? contentHash,
+      Value<String>? contentSnapshot,
+      Value<int>? createdAt,
+      Value<int>? updatedAt,
+      Value<int>? schemaVersion,
+      Value<String?>? chapterId,
+      Value<String?>? description,
+      Value<int>? rowid}) {
+    return SnapshotsCompanion(
+      id: id ?? this.id,
+      projectId: projectId ?? this.projectId,
+      name: name ?? this.name,
+      type: type ?? this.type,
+      contentHash: contentHash ?? this.contentHash,
+      contentSnapshot: contentSnapshot ?? this.contentSnapshot,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      schemaVersion: schemaVersion ?? this.schemaVersion,
+      chapterId: chapterId ?? this.chapterId,
+      description: description ?? this.description,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (projectId.present) {
+      map['project_id'] = Variable<String>(projectId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
+    }
+    if (contentHash.present) {
+      map['content_hash'] = Variable<String>(contentHash.value);
+    }
+    if (contentSnapshot.present) {
+      map['content_snapshot'] = Variable<String>(contentSnapshot.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
+    if (schemaVersion.present) {
+      map['schema_version'] = Variable<int>(schemaVersion.value);
+    }
+    if (chapterId.present) {
+      map['chapter_id'] = Variable<String>(chapterId.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SnapshotsCompanion(')
+          ..write('id: $id, ')
+          ..write('projectId: $projectId, ')
+          ..write('name: $name, ')
+          ..write('type: $type, ')
+          ..write('contentHash: $contentHash, ')
+          ..write('contentSnapshot: $contentSnapshot, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('schemaVersion: $schemaVersion, ')
+          ..write('chapterId: $chapterId, ')
+          ..write('description: $description, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -6667,79 +7301,168 @@ class LlmProvidersTableCompanion
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
-  late final $ProjectsTableTable projectsTable = $ProjectsTableTable(this);
-  late final $ChaptersTableTable chaptersTable = $ChaptersTableTable(this);
-  late final $RevisionsTableTable revisionsTable = $RevisionsTableTable(this);
-  late final $OutlineNodesTableTable outlineNodesTable =
-      $OutlineNodesTableTable(this);
-  late final $CharactersTableTable charactersTable =
-      $CharactersTableTable(this);
-  late final $NotesTableTable notesTable = $NotesTableTable(this);
-  late final $SessionsTableTable sessionsTable = $SessionsTableTable(this);
-  late final $SettingEntriesTableTable settingEntriesTable =
-      $SettingEntriesTableTable(this);
-  late final $AgentTasksTableTable agentTasksTable =
-      $AgentTasksTableTable(this);
-  late final $SnapshotsTableTable snapshotsTable = $SnapshotsTableTable(this);
-  late final $LlmProvidersTableTable llmProvidersTable =
-      $LlmProvidersTableTable(this);
+  late final $ProjectsTable projects = $ProjectsTable(this);
+  late final $ChaptersTable chapters = $ChaptersTable(this);
+  late final $RevisionsTable revisions = $RevisionsTable(this);
+  late final $CharactersTable characters = $CharactersTable(this);
+  late final $SettingEntriesTable settingEntries = $SettingEntriesTable(this);
+  late final $NotesTable notes = $NotesTable(this);
+  late final $LlmProvidersTable llmProviders = $LlmProvidersTable(this);
+  late final $LlmDefaultSettingsTableTable llmDefaultSettingsTable =
+      $LlmDefaultSettingsTableTable(this);
+  late final $OutlineNodesTable outlineNodes = $OutlineNodesTable(this);
+  late final $AgentTasksTable agentTasks = $AgentTasksTable(this);
+  late final $TimelineEventsTable timelineEvents = $TimelineEventsTable(this);
+  late final $SessionsTable sessions = $SessionsTable(this);
+  late final $SnapshotsTable snapshots = $SnapshotsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
-        projectsTable,
-        chaptersTable,
-        revisionsTable,
-        outlineNodesTable,
-        charactersTable,
-        notesTable,
-        sessionsTable,
-        settingEntriesTable,
-        agentTasksTable,
-        snapshotsTable,
-        llmProvidersTable
+        projects,
+        chapters,
+        revisions,
+        characters,
+        settingEntries,
+        notes,
+        llmProviders,
+        llmDefaultSettingsTable,
+        outlineNodes,
+        agentTasks,
+        timelineEvents,
+        sessions,
+        snapshots
       ];
+  @override
+  StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules(
+        [
+          WritePropagation(
+            on: TableUpdateQuery.onTableName('projects',
+                limitUpdateKind: UpdateKind.delete),
+            result: [
+              TableUpdate('chapters', kind: UpdateKind.delete),
+            ],
+          ),
+          WritePropagation(
+            on: TableUpdateQuery.onTableName('chapters',
+                limitUpdateKind: UpdateKind.delete),
+            result: [
+              TableUpdate('revisions', kind: UpdateKind.delete),
+            ],
+          ),
+          WritePropagation(
+            on: TableUpdateQuery.onTableName('projects',
+                limitUpdateKind: UpdateKind.delete),
+            result: [
+              TableUpdate('agent_tasks', kind: UpdateKind.delete),
+            ],
+          ),
+          WritePropagation(
+            on: TableUpdateQuery.onTableName('projects',
+                limitUpdateKind: UpdateKind.delete),
+            result: [
+              TableUpdate('sessions', kind: UpdateKind.delete),
+            ],
+          ),
+          WritePropagation(
+            on: TableUpdateQuery.onTableName('projects',
+                limitUpdateKind: UpdateKind.delete),
+            result: [
+              TableUpdate('snapshots', kind: UpdateKind.delete),
+            ],
+          ),
+        ],
+      );
 }
 
-typedef $$ProjectsTableTableCreateCompanionBuilder = ProjectsTableCompanion
-    Function({
+typedef $$ProjectsTableCreateCompanionBuilder = ProjectsCompanion Function({
   required String id,
-  required String title,
-  Value<String> author,
+  required String name,
   Value<String> description,
-  Value<String> language,
-  Value<String> genre,
-  Value<String> tags,
-  Value<String?> defaultStyleProfileId,
-  Value<String?> activeChapterId,
-  Value<bool> localEncryptionEnabled,
-  required DateTime createdAt,
-  required DateTime updatedAt,
+  required int createdAt,
+  required int updatedAt,
   Value<int> schemaVersion,
   Value<int> rowid,
 });
-typedef $$ProjectsTableTableUpdateCompanionBuilder = ProjectsTableCompanion
-    Function({
+typedef $$ProjectsTableUpdateCompanionBuilder = ProjectsCompanion Function({
   Value<String> id,
-  Value<String> title,
-  Value<String> author,
+  Value<String> name,
   Value<String> description,
-  Value<String> language,
-  Value<String> genre,
-  Value<String> tags,
-  Value<String?> defaultStyleProfileId,
-  Value<String?> activeChapterId,
-  Value<bool> localEncryptionEnabled,
-  Value<DateTime> createdAt,
-  Value<DateTime> updatedAt,
+  Value<int> createdAt,
+  Value<int> updatedAt,
   Value<int> schemaVersion,
   Value<int> rowid,
 });
 
-class $$ProjectsTableTableFilterComposer
-    extends Composer<_$AppDatabase, $ProjectsTableTable> {
-  $$ProjectsTableTableFilterComposer({
+final class $$ProjectsTableReferences
+    extends BaseReferences<_$AppDatabase, $ProjectsTable, ProjectRow> {
+  $$ProjectsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$ChaptersTable, List<ChapterRow>>
+      _chaptersRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.chapters,
+              aliasName:
+                  $_aliasNameGenerator(db.projects.id, db.chapters.projectId));
+
+  $$ChaptersTableProcessedTableManager get chaptersRefs {
+    final manager = $$ChaptersTableTableManager($_db, $_db.chapters)
+        .filter((f) => f.projectId.id($_item.id));
+
+    final cache = $_typedResult.readTableOrNull(_chaptersRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$AgentTasksTable, List<AgentTaskRow>>
+      _agentTasksRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+          db.agentTasks,
+          aliasName:
+              $_aliasNameGenerator(db.projects.id, db.agentTasks.projectId));
+
+  $$AgentTasksTableProcessedTableManager get agentTasksRefs {
+    final manager = $$AgentTasksTableTableManager($_db, $_db.agentTasks)
+        .filter((f) => f.projectId.id($_item.id));
+
+    final cache = $_typedResult.readTableOrNull(_agentTasksRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$SessionsTable, List<SessionRow>>
+      _sessionsRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.sessions,
+              aliasName:
+                  $_aliasNameGenerator(db.projects.id, db.sessions.projectId));
+
+  $$SessionsTableProcessedTableManager get sessionsRefs {
+    final manager = $$SessionsTableTableManager($_db, $_db.sessions)
+        .filter((f) => f.projectId.id($_item.id));
+
+    final cache = $_typedResult.readTableOrNull(_sessionsRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$SnapshotsTable, List<SnapshotRow>>
+      _snapshotsRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.snapshots,
+              aliasName:
+                  $_aliasNameGenerator(db.projects.id, db.snapshots.projectId));
+
+  $$SnapshotsTableProcessedTableManager get snapshotsRefs {
+    final manager = $$SnapshotsTableTableManager($_db, $_db.snapshots)
+        .filter((f) => f.projectId.id($_item.id));
+
+    final cache = $_typedResult.readTableOrNull(_snapshotsRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+}
+
+class $$ProjectsTableFilterComposer
+    extends Composer<_$AppDatabase, $ProjectsTable> {
+  $$ProjectsTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -6749,49 +7472,109 @@ class $$ProjectsTableTableFilterComposer
   ColumnFilters<String> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get title => $composableBuilder(
-      column: $table.title, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get author => $composableBuilder(
-      column: $table.author, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get description => $composableBuilder(
       column: $table.description, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get language => $composableBuilder(
-      column: $table.language, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get genre => $composableBuilder(
-      column: $table.genre, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get tags => $composableBuilder(
-      column: $table.tags, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get defaultStyleProfileId => $composableBuilder(
-      column: $table.defaultStyleProfileId,
-      builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get activeChapterId => $composableBuilder(
-      column: $table.activeChapterId,
-      builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<bool> get localEncryptionEnabled => $composableBuilder(
-      column: $table.localEncryptionEnabled,
-      builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+  ColumnFilters<int> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+  ColumnFilters<int> get updatedAt => $composableBuilder(
       column: $table.updatedAt, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<int> get schemaVersion => $composableBuilder(
       column: $table.schemaVersion, builder: (column) => ColumnFilters(column));
+
+  Expression<bool> chaptersRefs(
+      Expression<bool> Function($$ChaptersTableFilterComposer f) f) {
+    final $$ChaptersTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.chapters,
+        getReferencedColumn: (t) => t.projectId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ChaptersTableFilterComposer(
+              $db: $db,
+              $table: $db.chapters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> agentTasksRefs(
+      Expression<bool> Function($$AgentTasksTableFilterComposer f) f) {
+    final $$AgentTasksTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.agentTasks,
+        getReferencedColumn: (t) => t.projectId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$AgentTasksTableFilterComposer(
+              $db: $db,
+              $table: $db.agentTasks,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> sessionsRefs(
+      Expression<bool> Function($$SessionsTableFilterComposer f) f) {
+    final $$SessionsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.sessions,
+        getReferencedColumn: (t) => t.projectId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$SessionsTableFilterComposer(
+              $db: $db,
+              $table: $db.sessions,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> snapshotsRefs(
+      Expression<bool> Function($$SnapshotsTableFilterComposer f) f) {
+    final $$SnapshotsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.snapshots,
+        getReferencedColumn: (t) => t.projectId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$SnapshotsTableFilterComposer(
+              $db: $db,
+              $table: $db.snapshots,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
 }
 
-class $$ProjectsTableTableOrderingComposer
-    extends Composer<_$AppDatabase, $ProjectsTableTable> {
-  $$ProjectsTableTableOrderingComposer({
+class $$ProjectsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ProjectsTable> {
+  $$ProjectsTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -6801,40 +7584,16 @@ class $$ProjectsTableTableOrderingComposer
   ColumnOrderings<String> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get title => $composableBuilder(
-      column: $table.title, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get author => $composableBuilder(
-      column: $table.author, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get description => $composableBuilder(
       column: $table.description, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get language => $composableBuilder(
-      column: $table.language, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get genre => $composableBuilder(
-      column: $table.genre, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get tags => $composableBuilder(
-      column: $table.tags, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get defaultStyleProfileId => $composableBuilder(
-      column: $table.defaultStyleProfileId,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get activeChapterId => $composableBuilder(
-      column: $table.activeChapterId,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<bool> get localEncryptionEnabled => $composableBuilder(
-      column: $table.localEncryptionEnabled,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+  ColumnOrderings<int> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
       column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<int> get schemaVersion => $composableBuilder(
@@ -6842,9 +7601,9 @@ class $$ProjectsTableTableOrderingComposer
       builder: (column) => ColumnOrderings(column));
 }
 
-class $$ProjectsTableTableAnnotationComposer
-    extends Composer<_$AppDatabase, $ProjectsTableTable> {
-  $$ProjectsTableTableAnnotationComposer({
+class $$ProjectsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ProjectsTable> {
+  $$ProjectsTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -6854,95 +7613,145 @@ class $$ProjectsTableTableAnnotationComposer
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<String> get title =>
-      $composableBuilder(column: $table.title, builder: (column) => column);
-
-  GeneratedColumn<String> get author =>
-      $composableBuilder(column: $table.author, builder: (column) => column);
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
 
   GeneratedColumn<String> get description => $composableBuilder(
       column: $table.description, builder: (column) => column);
 
-  GeneratedColumn<String> get language =>
-      $composableBuilder(column: $table.language, builder: (column) => column);
-
-  GeneratedColumn<String> get genre =>
-      $composableBuilder(column: $table.genre, builder: (column) => column);
-
-  GeneratedColumn<String> get tags =>
-      $composableBuilder(column: $table.tags, builder: (column) => column);
-
-  GeneratedColumn<String> get defaultStyleProfileId => $composableBuilder(
-      column: $table.defaultStyleProfileId, builder: (column) => column);
-
-  GeneratedColumn<String> get activeChapterId => $composableBuilder(
-      column: $table.activeChapterId, builder: (column) => column);
-
-  GeneratedColumn<bool> get localEncryptionEnabled => $composableBuilder(
-      column: $table.localEncryptionEnabled, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get createdAt =>
+  GeneratedColumn<int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get updatedAt =>
+  GeneratedColumn<int> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
   GeneratedColumn<int> get schemaVersion => $composableBuilder(
       column: $table.schemaVersion, builder: (column) => column);
+
+  Expression<T> chaptersRefs<T extends Object>(
+      Expression<T> Function($$ChaptersTableAnnotationComposer a) f) {
+    final $$ChaptersTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.chapters,
+        getReferencedColumn: (t) => t.projectId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ChaptersTableAnnotationComposer(
+              $db: $db,
+              $table: $db.chapters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<T> agentTasksRefs<T extends Object>(
+      Expression<T> Function($$AgentTasksTableAnnotationComposer a) f) {
+    final $$AgentTasksTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.agentTasks,
+        getReferencedColumn: (t) => t.projectId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$AgentTasksTableAnnotationComposer(
+              $db: $db,
+              $table: $db.agentTasks,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<T> sessionsRefs<T extends Object>(
+      Expression<T> Function($$SessionsTableAnnotationComposer a) f) {
+    final $$SessionsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.sessions,
+        getReferencedColumn: (t) => t.projectId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$SessionsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.sessions,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<T> snapshotsRefs<T extends Object>(
+      Expression<T> Function($$SnapshotsTableAnnotationComposer a) f) {
+    final $$SnapshotsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.snapshots,
+        getReferencedColumn: (t) => t.projectId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$SnapshotsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.snapshots,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
 }
 
-class $$ProjectsTableTableTableManager extends RootTableManager<
+class $$ProjectsTableTableManager extends RootTableManager<
     _$AppDatabase,
-    $ProjectsTableTable,
-    ProjectsTableData,
-    $$ProjectsTableTableFilterComposer,
-    $$ProjectsTableTableOrderingComposer,
-    $$ProjectsTableTableAnnotationComposer,
-    $$ProjectsTableTableCreateCompanionBuilder,
-    $$ProjectsTableTableUpdateCompanionBuilder,
-    (
-      ProjectsTableData,
-      BaseReferences<_$AppDatabase, $ProjectsTableTable, ProjectsTableData>
-    ),
-    ProjectsTableData,
-    PrefetchHooks Function()> {
-  $$ProjectsTableTableTableManager(_$AppDatabase db, $ProjectsTableTable table)
+    $ProjectsTable,
+    ProjectRow,
+    $$ProjectsTableFilterComposer,
+    $$ProjectsTableOrderingComposer,
+    $$ProjectsTableAnnotationComposer,
+    $$ProjectsTableCreateCompanionBuilder,
+    $$ProjectsTableUpdateCompanionBuilder,
+    (ProjectRow, $$ProjectsTableReferences),
+    ProjectRow,
+    PrefetchHooks Function(
+        {bool chaptersRefs,
+        bool agentTasksRefs,
+        bool sessionsRefs,
+        bool snapshotsRefs})> {
+  $$ProjectsTableTableManager(_$AppDatabase db, $ProjectsTable table)
       : super(TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$ProjectsTableTableFilterComposer($db: db, $table: table),
+              $$ProjectsTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$ProjectsTableTableOrderingComposer($db: db, $table: table),
+              $$ProjectsTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$ProjectsTableTableAnnotationComposer($db: db, $table: table),
+              $$ProjectsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback: ({
             Value<String> id = const Value.absent(),
-            Value<String> title = const Value.absent(),
-            Value<String> author = const Value.absent(),
+            Value<String> name = const Value.absent(),
             Value<String> description = const Value.absent(),
-            Value<String> language = const Value.absent(),
-            Value<String> genre = const Value.absent(),
-            Value<String> tags = const Value.absent(),
-            Value<String?> defaultStyleProfileId = const Value.absent(),
-            Value<String?> activeChapterId = const Value.absent(),
-            Value<bool> localEncryptionEnabled = const Value.absent(),
-            Value<DateTime> createdAt = const Value.absent(),
-            Value<DateTime> updatedAt = const Value.absent(),
+            Value<int> createdAt = const Value.absent(),
+            Value<int> updatedAt = const Value.absent(),
             Value<int> schemaVersion = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
-              ProjectsTableCompanion(
+              ProjectsCompanion(
             id: id,
-            title: title,
-            author: author,
+            name: name,
             description: description,
-            language: language,
-            genre: genre,
-            tags: tags,
-            defaultStyleProfileId: defaultStyleProfileId,
-            activeChapterId: activeChapterId,
-            localEncryptionEnabled: localEncryptionEnabled,
             createdAt: createdAt,
             updatedAt: updatedAt,
             schemaVersion: schemaVersion,
@@ -6950,96 +7759,175 @@ class $$ProjectsTableTableTableManager extends RootTableManager<
           ),
           createCompanionCallback: ({
             required String id,
-            required String title,
-            Value<String> author = const Value.absent(),
+            required String name,
             Value<String> description = const Value.absent(),
-            Value<String> language = const Value.absent(),
-            Value<String> genre = const Value.absent(),
-            Value<String> tags = const Value.absent(),
-            Value<String?> defaultStyleProfileId = const Value.absent(),
-            Value<String?> activeChapterId = const Value.absent(),
-            Value<bool> localEncryptionEnabled = const Value.absent(),
-            required DateTime createdAt,
-            required DateTime updatedAt,
+            required int createdAt,
+            required int updatedAt,
             Value<int> schemaVersion = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
-              ProjectsTableCompanion.insert(
+              ProjectsCompanion.insert(
             id: id,
-            title: title,
-            author: author,
+            name: name,
             description: description,
-            language: language,
-            genre: genre,
-            tags: tags,
-            defaultStyleProfileId: defaultStyleProfileId,
-            activeChapterId: activeChapterId,
-            localEncryptionEnabled: localEncryptionEnabled,
             createdAt: createdAt,
             updatedAt: updatedAt,
             schemaVersion: schemaVersion,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map((e) =>
+                  (e.readTable(table), $$ProjectsTableReferences(db, table, e)))
               .toList(),
-          prefetchHooksCallback: null,
+          prefetchHooksCallback: (
+              {chaptersRefs = false,
+              agentTasksRefs = false,
+              sessionsRefs = false,
+              snapshotsRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (chaptersRefs) db.chapters,
+                if (agentTasksRefs) db.agentTasks,
+                if (sessionsRefs) db.sessions,
+                if (snapshotsRefs) db.snapshots
+              ],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (chaptersRefs)
+                    await $_getPrefetchedData(
+                        currentTable: table,
+                        referencedTable:
+                            $$ProjectsTableReferences._chaptersRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$ProjectsTableReferences(db, table, p0)
+                                .chaptersRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems
+                                .where((e) => e.projectId == item.id),
+                        typedResults: items),
+                  if (agentTasksRefs)
+                    await $_getPrefetchedData(
+                        currentTable: table,
+                        referencedTable:
+                            $$ProjectsTableReferences._agentTasksRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$ProjectsTableReferences(db, table, p0)
+                                .agentTasksRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems
+                                .where((e) => e.projectId == item.id),
+                        typedResults: items),
+                  if (sessionsRefs)
+                    await $_getPrefetchedData(
+                        currentTable: table,
+                        referencedTable:
+                            $$ProjectsTableReferences._sessionsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$ProjectsTableReferences(db, table, p0)
+                                .sessionsRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems
+                                .where((e) => e.projectId == item.id),
+                        typedResults: items),
+                  if (snapshotsRefs)
+                    await $_getPrefetchedData(
+                        currentTable: table,
+                        referencedTable:
+                            $$ProjectsTableReferences._snapshotsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$ProjectsTableReferences(db, table, p0)
+                                .snapshotsRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems
+                                .where((e) => e.projectId == item.id),
+                        typedResults: items)
+                ];
+              },
+            );
+          },
         ));
 }
 
-typedef $$ProjectsTableTableProcessedTableManager = ProcessedTableManager<
+typedef $$ProjectsTableProcessedTableManager = ProcessedTableManager<
     _$AppDatabase,
-    $ProjectsTableTable,
-    ProjectsTableData,
-    $$ProjectsTableTableFilterComposer,
-    $$ProjectsTableTableOrderingComposer,
-    $$ProjectsTableTableAnnotationComposer,
-    $$ProjectsTableTableCreateCompanionBuilder,
-    $$ProjectsTableTableUpdateCompanionBuilder,
-    (
-      ProjectsTableData,
-      BaseReferences<_$AppDatabase, $ProjectsTableTable, ProjectsTableData>
-    ),
-    ProjectsTableData,
-    PrefetchHooks Function()>;
-typedef $$ChaptersTableTableCreateCompanionBuilder = ChaptersTableCompanion
-    Function({
+    $ProjectsTable,
+    ProjectRow,
+    $$ProjectsTableFilterComposer,
+    $$ProjectsTableOrderingComposer,
+    $$ProjectsTableAnnotationComposer,
+    $$ProjectsTableCreateCompanionBuilder,
+    $$ProjectsTableUpdateCompanionBuilder,
+    (ProjectRow, $$ProjectsTableReferences),
+    ProjectRow,
+    PrefetchHooks Function(
+        {bool chaptersRefs,
+        bool agentTasksRefs,
+        bool sessionsRefs,
+        bool snapshotsRefs})>;
+typedef $$ChaptersTableCreateCompanionBuilder = ChaptersCompanion Function({
   required String id,
   required String projectId,
-  Value<String?> outlineNodeId,
   required String title,
-  required int orderIndex,
-  Value<String> contentFormat,
-  Value<String> content,
+  Value<String> markdownContent,
   Value<String> plainTextCache,
   Value<int> wordCount,
-  Value<String> status,
-  required DateTime createdAt,
-  required DateTime updatedAt,
+  required String status,
+  required int createdAt,
+  required int updatedAt,
   Value<int> schemaVersion,
   Value<int> rowid,
 });
-typedef $$ChaptersTableTableUpdateCompanionBuilder = ChaptersTableCompanion
-    Function({
+typedef $$ChaptersTableUpdateCompanionBuilder = ChaptersCompanion Function({
   Value<String> id,
   Value<String> projectId,
-  Value<String?> outlineNodeId,
   Value<String> title,
-  Value<int> orderIndex,
-  Value<String> contentFormat,
-  Value<String> content,
+  Value<String> markdownContent,
   Value<String> plainTextCache,
   Value<int> wordCount,
   Value<String> status,
-  Value<DateTime> createdAt,
-  Value<DateTime> updatedAt,
+  Value<int> createdAt,
+  Value<int> updatedAt,
   Value<int> schemaVersion,
   Value<int> rowid,
 });
 
-class $$ChaptersTableTableFilterComposer
-    extends Composer<_$AppDatabase, $ChaptersTableTable> {
-  $$ChaptersTableTableFilterComposer({
+final class $$ChaptersTableReferences
+    extends BaseReferences<_$AppDatabase, $ChaptersTable, ChapterRow> {
+  $$ChaptersTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $ProjectsTable _projectIdTable(_$AppDatabase db) => db.projects
+      .createAlias($_aliasNameGenerator(db.chapters.projectId, db.projects.id));
+
+  $$ProjectsTableProcessedTableManager get projectId {
+    final manager = $$ProjectsTableTableManager($_db, $_db.projects)
+        .filter((f) => f.id($_item.projectId));
+    final item = $_typedResult.readTableOrNull(_projectIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+
+  static MultiTypedResultKey<$RevisionsTable, List<RevisionRow>>
+      _revisionsRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.revisions,
+              aliasName:
+                  $_aliasNameGenerator(db.chapters.id, db.revisions.chapterId));
+
+  $$RevisionsTableProcessedTableManager get revisionsRefs {
+    final manager = $$RevisionsTableTableManager($_db, $_db.revisions)
+        .filter((f) => f.chapterId.id($_item.id));
+
+    final cache = $_typedResult.readTableOrNull(_revisionsRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+}
+
+class $$ChaptersTableFilterComposer
+    extends Composer<_$AppDatabase, $ChaptersTable> {
+  $$ChaptersTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -7049,23 +7937,12 @@ class $$ChaptersTableTableFilterComposer
   ColumnFilters<String> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get projectId => $composableBuilder(
-      column: $table.projectId, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get outlineNodeId => $composableBuilder(
-      column: $table.outlineNodeId, builder: (column) => ColumnFilters(column));
-
   ColumnFilters<String> get title => $composableBuilder(
       column: $table.title, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<int> get orderIndex => $composableBuilder(
-      column: $table.orderIndex, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get contentFormat => $composableBuilder(
-      column: $table.contentFormat, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get content => $composableBuilder(
-      column: $table.content, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get markdownContent => $composableBuilder(
+      column: $table.markdownContent,
+      builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get plainTextCache => $composableBuilder(
       column: $table.plainTextCache,
@@ -7077,19 +7954,60 @@ class $$ChaptersTableTableFilterComposer
   ColumnFilters<String> get status => $composableBuilder(
       column: $table.status, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+  ColumnFilters<int> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+  ColumnFilters<int> get updatedAt => $composableBuilder(
       column: $table.updatedAt, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<int> get schemaVersion => $composableBuilder(
       column: $table.schemaVersion, builder: (column) => ColumnFilters(column));
+
+  $$ProjectsTableFilterComposer get projectId {
+    final $$ProjectsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.projectId,
+        referencedTable: $db.projects,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProjectsTableFilterComposer(
+              $db: $db,
+              $table: $db.projects,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  Expression<bool> revisionsRefs(
+      Expression<bool> Function($$RevisionsTableFilterComposer f) f) {
+    final $$RevisionsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.revisions,
+        getReferencedColumn: (t) => t.chapterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$RevisionsTableFilterComposer(
+              $db: $db,
+              $table: $db.revisions,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
 }
 
-class $$ChaptersTableTableOrderingComposer
-    extends Composer<_$AppDatabase, $ChaptersTableTable> {
-  $$ChaptersTableTableOrderingComposer({
+class $$ChaptersTableOrderingComposer
+    extends Composer<_$AppDatabase, $ChaptersTable> {
+  $$ChaptersTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -7099,25 +8017,12 @@ class $$ChaptersTableTableOrderingComposer
   ColumnOrderings<String> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get projectId => $composableBuilder(
-      column: $table.projectId, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get outlineNodeId => $composableBuilder(
-      column: $table.outlineNodeId,
-      builder: (column) => ColumnOrderings(column));
-
   ColumnOrderings<String> get title => $composableBuilder(
       column: $table.title, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<int> get orderIndex => $composableBuilder(
-      column: $table.orderIndex, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get contentFormat => $composableBuilder(
-      column: $table.contentFormat,
+  ColumnOrderings<String> get markdownContent => $composableBuilder(
+      column: $table.markdownContent,
       builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get content => $composableBuilder(
-      column: $table.content, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get plainTextCache => $composableBuilder(
       column: $table.plainTextCache,
@@ -7129,20 +8034,40 @@ class $$ChaptersTableTableOrderingComposer
   ColumnOrderings<String> get status => $composableBuilder(
       column: $table.status, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+  ColumnOrderings<int> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
       column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<int> get schemaVersion => $composableBuilder(
       column: $table.schemaVersion,
       builder: (column) => ColumnOrderings(column));
+
+  $$ProjectsTableOrderingComposer get projectId {
+    final $$ProjectsTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.projectId,
+        referencedTable: $db.projects,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProjectsTableOrderingComposer(
+              $db: $db,
+              $table: $db.projects,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
 }
 
-class $$ChaptersTableTableAnnotationComposer
-    extends Composer<_$AppDatabase, $ChaptersTableTable> {
-  $$ChaptersTableTableAnnotationComposer({
+class $$ChaptersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ChaptersTable> {
+  $$ChaptersTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -7152,23 +8077,11 @@ class $$ChaptersTableTableAnnotationComposer
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<String> get projectId =>
-      $composableBuilder(column: $table.projectId, builder: (column) => column);
-
-  GeneratedColumn<String> get outlineNodeId => $composableBuilder(
-      column: $table.outlineNodeId, builder: (column) => column);
-
   GeneratedColumn<String> get title =>
       $composableBuilder(column: $table.title, builder: (column) => column);
 
-  GeneratedColumn<int> get orderIndex => $composableBuilder(
-      column: $table.orderIndex, builder: (column) => column);
-
-  GeneratedColumn<String> get contentFormat => $composableBuilder(
-      column: $table.contentFormat, builder: (column) => column);
-
-  GeneratedColumn<String> get content =>
-      $composableBuilder(column: $table.content, builder: (column) => column);
+  GeneratedColumn<String> get markdownContent => $composableBuilder(
+      column: $table.markdownContent, builder: (column) => column);
 
   GeneratedColumn<String> get plainTextCache => $composableBuilder(
       column: $table.plainTextCache, builder: (column) => column);
@@ -7179,65 +8092,97 @@ class $$ChaptersTableTableAnnotationComposer
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get createdAt =>
+  GeneratedColumn<int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get updatedAt =>
+  GeneratedColumn<int> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
   GeneratedColumn<int> get schemaVersion => $composableBuilder(
       column: $table.schemaVersion, builder: (column) => column);
+
+  $$ProjectsTableAnnotationComposer get projectId {
+    final $$ProjectsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.projectId,
+        referencedTable: $db.projects,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProjectsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.projects,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  Expression<T> revisionsRefs<T extends Object>(
+      Expression<T> Function($$RevisionsTableAnnotationComposer a) f) {
+    final $$RevisionsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.revisions,
+        getReferencedColumn: (t) => t.chapterId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$RevisionsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.revisions,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
 }
 
-class $$ChaptersTableTableTableManager extends RootTableManager<
+class $$ChaptersTableTableManager extends RootTableManager<
     _$AppDatabase,
-    $ChaptersTableTable,
-    ChaptersTableData,
-    $$ChaptersTableTableFilterComposer,
-    $$ChaptersTableTableOrderingComposer,
-    $$ChaptersTableTableAnnotationComposer,
-    $$ChaptersTableTableCreateCompanionBuilder,
-    $$ChaptersTableTableUpdateCompanionBuilder,
-    (
-      ChaptersTableData,
-      BaseReferences<_$AppDatabase, $ChaptersTableTable, ChaptersTableData>
-    ),
-    ChaptersTableData,
-    PrefetchHooks Function()> {
-  $$ChaptersTableTableTableManager(_$AppDatabase db, $ChaptersTableTable table)
+    $ChaptersTable,
+    ChapterRow,
+    $$ChaptersTableFilterComposer,
+    $$ChaptersTableOrderingComposer,
+    $$ChaptersTableAnnotationComposer,
+    $$ChaptersTableCreateCompanionBuilder,
+    $$ChaptersTableUpdateCompanionBuilder,
+    (ChapterRow, $$ChaptersTableReferences),
+    ChapterRow,
+    PrefetchHooks Function({bool projectId, bool revisionsRefs})> {
+  $$ChaptersTableTableManager(_$AppDatabase db, $ChaptersTable table)
       : super(TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$ChaptersTableTableFilterComposer($db: db, $table: table),
+              $$ChaptersTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$ChaptersTableTableOrderingComposer($db: db, $table: table),
+              $$ChaptersTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$ChaptersTableTableAnnotationComposer($db: db, $table: table),
+              $$ChaptersTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback: ({
             Value<String> id = const Value.absent(),
             Value<String> projectId = const Value.absent(),
-            Value<String?> outlineNodeId = const Value.absent(),
             Value<String> title = const Value.absent(),
-            Value<int> orderIndex = const Value.absent(),
-            Value<String> contentFormat = const Value.absent(),
-            Value<String> content = const Value.absent(),
+            Value<String> markdownContent = const Value.absent(),
             Value<String> plainTextCache = const Value.absent(),
             Value<int> wordCount = const Value.absent(),
             Value<String> status = const Value.absent(),
-            Value<DateTime> createdAt = const Value.absent(),
-            Value<DateTime> updatedAt = const Value.absent(),
+            Value<int> createdAt = const Value.absent(),
+            Value<int> updatedAt = const Value.absent(),
             Value<int> schemaVersion = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
-              ChaptersTableCompanion(
+              ChaptersCompanion(
             id: id,
             projectId: projectId,
-            outlineNodeId: outlineNodeId,
             title: title,
-            orderIndex: orderIndex,
-            contentFormat: contentFormat,
-            content: content,
+            markdownContent: markdownContent,
             plainTextCache: plainTextCache,
             wordCount: wordCount,
             status: status,
@@ -7249,27 +8194,21 @@ class $$ChaptersTableTableTableManager extends RootTableManager<
           createCompanionCallback: ({
             required String id,
             required String projectId,
-            Value<String?> outlineNodeId = const Value.absent(),
             required String title,
-            required int orderIndex,
-            Value<String> contentFormat = const Value.absent(),
-            Value<String> content = const Value.absent(),
+            Value<String> markdownContent = const Value.absent(),
             Value<String> plainTextCache = const Value.absent(),
             Value<int> wordCount = const Value.absent(),
-            Value<String> status = const Value.absent(),
-            required DateTime createdAt,
-            required DateTime updatedAt,
+            required String status,
+            required int createdAt,
+            required int updatedAt,
             Value<int> schemaVersion = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
-              ChaptersTableCompanion.insert(
+              ChaptersCompanion.insert(
             id: id,
             projectId: projectId,
-            outlineNodeId: outlineNodeId,
             title: title,
-            orderIndex: orderIndex,
-            contentFormat: contentFormat,
-            content: content,
+            markdownContent: markdownContent,
             plainTextCache: plainTextCache,
             wordCount: wordCount,
             status: status,
@@ -7279,67 +8218,116 @@ class $$ChaptersTableTableTableManager extends RootTableManager<
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map((e) =>
+                  (e.readTable(table), $$ChaptersTableReferences(db, table, e)))
               .toList(),
-          prefetchHooksCallback: null,
+          prefetchHooksCallback: ({projectId = false, revisionsRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [if (revisionsRefs) db.revisions],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (projectId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.projectId,
+                    referencedTable:
+                        $$ChaptersTableReferences._projectIdTable(db),
+                    referencedColumn:
+                        $$ChaptersTableReferences._projectIdTable(db).id,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (revisionsRefs)
+                    await $_getPrefetchedData(
+                        currentTable: table,
+                        referencedTable:
+                            $$ChaptersTableReferences._revisionsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$ChaptersTableReferences(db, table, p0)
+                                .revisionsRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems
+                                .where((e) => e.chapterId == item.id),
+                        typedResults: items)
+                ];
+              },
+            );
+          },
         ));
 }
 
-typedef $$ChaptersTableTableProcessedTableManager = ProcessedTableManager<
+typedef $$ChaptersTableProcessedTableManager = ProcessedTableManager<
     _$AppDatabase,
-    $ChaptersTableTable,
-    ChaptersTableData,
-    $$ChaptersTableTableFilterComposer,
-    $$ChaptersTableTableOrderingComposer,
-    $$ChaptersTableTableAnnotationComposer,
-    $$ChaptersTableTableCreateCompanionBuilder,
-    $$ChaptersTableTableUpdateCompanionBuilder,
-    (
-      ChaptersTableData,
-      BaseReferences<_$AppDatabase, $ChaptersTableTable, ChaptersTableData>
-    ),
-    ChaptersTableData,
-    PrefetchHooks Function()>;
-typedef $$RevisionsTableTableCreateCompanionBuilder = RevisionsTableCompanion
-    Function({
+    $ChaptersTable,
+    ChapterRow,
+    $$ChaptersTableFilterComposer,
+    $$ChaptersTableOrderingComposer,
+    $$ChaptersTableAnnotationComposer,
+    $$ChaptersTableCreateCompanionBuilder,
+    $$ChaptersTableUpdateCompanionBuilder,
+    (ChapterRow, $$ChaptersTableReferences),
+    ChapterRow,
+    PrefetchHooks Function({bool projectId, bool revisionsRefs})>;
+typedef $$RevisionsTableCreateCompanionBuilder = RevisionsCompanion Function({
   required String id,
   required String projectId,
   required String chapterId,
-  required String operation,
-  required String anchor,
-  required String beforeText,
-  required String afterText,
-  Value<String> source,
-  Value<String> status,
-  Value<String?> metadata,
-  Value<DateTime?> resolvedAt,
-  required DateTime createdAt,
-  required DateTime updatedAt,
+  required String patchJson,
+  required String status,
+  required int createdAt,
+  required int updatedAt,
   Value<int> schemaVersion,
   Value<int> rowid,
 });
-typedef $$RevisionsTableTableUpdateCompanionBuilder = RevisionsTableCompanion
-    Function({
+typedef $$RevisionsTableUpdateCompanionBuilder = RevisionsCompanion Function({
   Value<String> id,
   Value<String> projectId,
   Value<String> chapterId,
-  Value<String> operation,
-  Value<String> anchor,
-  Value<String> beforeText,
-  Value<String> afterText,
-  Value<String> source,
+  Value<String> patchJson,
   Value<String> status,
-  Value<String?> metadata,
-  Value<DateTime?> resolvedAt,
-  Value<DateTime> createdAt,
-  Value<DateTime> updatedAt,
+  Value<int> createdAt,
+  Value<int> updatedAt,
   Value<int> schemaVersion,
   Value<int> rowid,
 });
 
-class $$RevisionsTableTableFilterComposer
-    extends Composer<_$AppDatabase, $RevisionsTableTable> {
-  $$RevisionsTableTableFilterComposer({
+final class $$RevisionsTableReferences
+    extends BaseReferences<_$AppDatabase, $RevisionsTable, RevisionRow> {
+  $$RevisionsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $ChaptersTable _chapterIdTable(_$AppDatabase db) =>
+      db.chapters.createAlias(
+          $_aliasNameGenerator(db.revisions.chapterId, db.chapters.id));
+
+  $$ChaptersTableProcessedTableManager get chapterId {
+    final manager = $$ChaptersTableTableManager($_db, $_db.chapters)
+        .filter((f) => f.id($_item.chapterId));
+    final item = $_typedResult.readTableOrNull(_chapterIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$RevisionsTableFilterComposer
+    extends Composer<_$AppDatabase, $RevisionsTable> {
+  $$RevisionsTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -7352,46 +8340,45 @@ class $$RevisionsTableTableFilterComposer
   ColumnFilters<String> get projectId => $composableBuilder(
       column: $table.projectId, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get chapterId => $composableBuilder(
-      column: $table.chapterId, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get operation => $composableBuilder(
-      column: $table.operation, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get anchor => $composableBuilder(
-      column: $table.anchor, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get beforeText => $composableBuilder(
-      column: $table.beforeText, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get afterText => $composableBuilder(
-      column: $table.afterText, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get source => $composableBuilder(
-      column: $table.source, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get patchJson => $composableBuilder(
+      column: $table.patchJson, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get status => $composableBuilder(
       column: $table.status, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get metadata => $composableBuilder(
-      column: $table.metadata, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<DateTime> get resolvedAt => $composableBuilder(
-      column: $table.resolvedAt, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+  ColumnFilters<int> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+  ColumnFilters<int> get updatedAt => $composableBuilder(
       column: $table.updatedAt, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<int> get schemaVersion => $composableBuilder(
       column: $table.schemaVersion, builder: (column) => ColumnFilters(column));
+
+  $$ChaptersTableFilterComposer get chapterId {
+    final $$ChaptersTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.chapterId,
+        referencedTable: $db.chapters,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ChaptersTableFilterComposer(
+              $db: $db,
+              $table: $db.chapters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
 }
 
-class $$RevisionsTableTableOrderingComposer
-    extends Composer<_$AppDatabase, $RevisionsTableTable> {
-  $$RevisionsTableTableOrderingComposer({
+class $$RevisionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $RevisionsTable> {
+  $$RevisionsTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -7404,47 +8391,46 @@ class $$RevisionsTableTableOrderingComposer
   ColumnOrderings<String> get projectId => $composableBuilder(
       column: $table.projectId, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get chapterId => $composableBuilder(
-      column: $table.chapterId, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get operation => $composableBuilder(
-      column: $table.operation, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get anchor => $composableBuilder(
-      column: $table.anchor, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get beforeText => $composableBuilder(
-      column: $table.beforeText, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get afterText => $composableBuilder(
-      column: $table.afterText, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get source => $composableBuilder(
-      column: $table.source, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<String> get patchJson => $composableBuilder(
+      column: $table.patchJson, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get status => $composableBuilder(
       column: $table.status, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get metadata => $composableBuilder(
-      column: $table.metadata, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<DateTime> get resolvedAt => $composableBuilder(
-      column: $table.resolvedAt, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+  ColumnOrderings<int> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
       column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<int> get schemaVersion => $composableBuilder(
       column: $table.schemaVersion,
       builder: (column) => ColumnOrderings(column));
+
+  $$ChaptersTableOrderingComposer get chapterId {
+    final $$ChaptersTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.chapterId,
+        referencedTable: $db.chapters,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ChaptersTableOrderingComposer(
+              $db: $db,
+              $table: $db.chapters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
 }
 
-class $$RevisionsTableTableAnnotationComposer
-    extends Composer<_$AppDatabase, $RevisionsTableTable> {
-  $$RevisionsTableTableAnnotationComposer({
+class $$RevisionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $RevisionsTable> {
+  $$RevisionsTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -7457,98 +8443,81 @@ class $$RevisionsTableTableAnnotationComposer
   GeneratedColumn<String> get projectId =>
       $composableBuilder(column: $table.projectId, builder: (column) => column);
 
-  GeneratedColumn<String> get chapterId =>
-      $composableBuilder(column: $table.chapterId, builder: (column) => column);
-
-  GeneratedColumn<String> get operation =>
-      $composableBuilder(column: $table.operation, builder: (column) => column);
-
-  GeneratedColumn<String> get anchor =>
-      $composableBuilder(column: $table.anchor, builder: (column) => column);
-
-  GeneratedColumn<String> get beforeText => $composableBuilder(
-      column: $table.beforeText, builder: (column) => column);
-
-  GeneratedColumn<String> get afterText =>
-      $composableBuilder(column: $table.afterText, builder: (column) => column);
-
-  GeneratedColumn<String> get source =>
-      $composableBuilder(column: $table.source, builder: (column) => column);
+  GeneratedColumn<String> get patchJson =>
+      $composableBuilder(column: $table.patchJson, builder: (column) => column);
 
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
 
-  GeneratedColumn<String> get metadata =>
-      $composableBuilder(column: $table.metadata, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get resolvedAt => $composableBuilder(
-      column: $table.resolvedAt, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get createdAt =>
+  GeneratedColumn<int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get updatedAt =>
+  GeneratedColumn<int> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
   GeneratedColumn<int> get schemaVersion => $composableBuilder(
       column: $table.schemaVersion, builder: (column) => column);
+
+  $$ChaptersTableAnnotationComposer get chapterId {
+    final $$ChaptersTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.chapterId,
+        referencedTable: $db.chapters,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ChaptersTableAnnotationComposer(
+              $db: $db,
+              $table: $db.chapters,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
 }
 
-class $$RevisionsTableTableTableManager extends RootTableManager<
+class $$RevisionsTableTableManager extends RootTableManager<
     _$AppDatabase,
-    $RevisionsTableTable,
-    RevisionsTableData,
-    $$RevisionsTableTableFilterComposer,
-    $$RevisionsTableTableOrderingComposer,
-    $$RevisionsTableTableAnnotationComposer,
-    $$RevisionsTableTableCreateCompanionBuilder,
-    $$RevisionsTableTableUpdateCompanionBuilder,
-    (
-      RevisionsTableData,
-      BaseReferences<_$AppDatabase, $RevisionsTableTable, RevisionsTableData>
-    ),
-    RevisionsTableData,
-    PrefetchHooks Function()> {
-  $$RevisionsTableTableTableManager(
-      _$AppDatabase db, $RevisionsTableTable table)
+    $RevisionsTable,
+    RevisionRow,
+    $$RevisionsTableFilterComposer,
+    $$RevisionsTableOrderingComposer,
+    $$RevisionsTableAnnotationComposer,
+    $$RevisionsTableCreateCompanionBuilder,
+    $$RevisionsTableUpdateCompanionBuilder,
+    (RevisionRow, $$RevisionsTableReferences),
+    RevisionRow,
+    PrefetchHooks Function({bool chapterId})> {
+  $$RevisionsTableTableManager(_$AppDatabase db, $RevisionsTable table)
       : super(TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$RevisionsTableTableFilterComposer($db: db, $table: table),
+              $$RevisionsTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$RevisionsTableTableOrderingComposer($db: db, $table: table),
+              $$RevisionsTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$RevisionsTableTableAnnotationComposer($db: db, $table: table),
+              $$RevisionsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback: ({
             Value<String> id = const Value.absent(),
             Value<String> projectId = const Value.absent(),
             Value<String> chapterId = const Value.absent(),
-            Value<String> operation = const Value.absent(),
-            Value<String> anchor = const Value.absent(),
-            Value<String> beforeText = const Value.absent(),
-            Value<String> afterText = const Value.absent(),
-            Value<String> source = const Value.absent(),
+            Value<String> patchJson = const Value.absent(),
             Value<String> status = const Value.absent(),
-            Value<String?> metadata = const Value.absent(),
-            Value<DateTime?> resolvedAt = const Value.absent(),
-            Value<DateTime> createdAt = const Value.absent(),
-            Value<DateTime> updatedAt = const Value.absent(),
+            Value<int> createdAt = const Value.absent(),
+            Value<int> updatedAt = const Value.absent(),
             Value<int> schemaVersion = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
-              RevisionsTableCompanion(
+              RevisionsCompanion(
             id: id,
             projectId: projectId,
             chapterId: chapterId,
-            operation: operation,
-            anchor: anchor,
-            beforeText: beforeText,
-            afterText: afterText,
-            source: source,
+            patchJson: patchJson,
             status: status,
-            metadata: metadata,
-            resolvedAt: resolvedAt,
             createdAt: createdAt,
             updatedAt: updatedAt,
             schemaVersion: schemaVersion,
@@ -7558,314 +8527,18 @@ class $$RevisionsTableTableTableManager extends RootTableManager<
             required String id,
             required String projectId,
             required String chapterId,
-            required String operation,
-            required String anchor,
-            required String beforeText,
-            required String afterText,
-            Value<String> source = const Value.absent(),
-            Value<String> status = const Value.absent(),
-            Value<String?> metadata = const Value.absent(),
-            Value<DateTime?> resolvedAt = const Value.absent(),
-            required DateTime createdAt,
-            required DateTime updatedAt,
+            required String patchJson,
+            required String status,
+            required int createdAt,
+            required int updatedAt,
             Value<int> schemaVersion = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
-              RevisionsTableCompanion.insert(
+              RevisionsCompanion.insert(
             id: id,
             projectId: projectId,
             chapterId: chapterId,
-            operation: operation,
-            anchor: anchor,
-            beforeText: beforeText,
-            afterText: afterText,
-            source: source,
-            status: status,
-            metadata: metadata,
-            resolvedAt: resolvedAt,
-            createdAt: createdAt,
-            updatedAt: updatedAt,
-            schemaVersion: schemaVersion,
-            rowid: rowid,
-          ),
-          withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
-              .toList(),
-          prefetchHooksCallback: null,
-        ));
-}
-
-typedef $$RevisionsTableTableProcessedTableManager = ProcessedTableManager<
-    _$AppDatabase,
-    $RevisionsTableTable,
-    RevisionsTableData,
-    $$RevisionsTableTableFilterComposer,
-    $$RevisionsTableTableOrderingComposer,
-    $$RevisionsTableTableAnnotationComposer,
-    $$RevisionsTableTableCreateCompanionBuilder,
-    $$RevisionsTableTableUpdateCompanionBuilder,
-    (
-      RevisionsTableData,
-      BaseReferences<_$AppDatabase, $RevisionsTableTable, RevisionsTableData>
-    ),
-    RevisionsTableData,
-    PrefetchHooks Function()>;
-typedef $$OutlineNodesTableTableCreateCompanionBuilder
-    = OutlineNodesTableCompanion Function({
-  required String id,
-  required String projectId,
-  Value<String?> parentId,
-  required int orderIndex,
-  required String title,
-  Value<String> nodeType,
-  Value<String> summary,
-  Value<String?> linkedChapterId,
-  Value<String> status,
-  required DateTime createdAt,
-  required DateTime updatedAt,
-  Value<int> schemaVersion,
-  Value<int> rowid,
-});
-typedef $$OutlineNodesTableTableUpdateCompanionBuilder
-    = OutlineNodesTableCompanion Function({
-  Value<String> id,
-  Value<String> projectId,
-  Value<String?> parentId,
-  Value<int> orderIndex,
-  Value<String> title,
-  Value<String> nodeType,
-  Value<String> summary,
-  Value<String?> linkedChapterId,
-  Value<String> status,
-  Value<DateTime> createdAt,
-  Value<DateTime> updatedAt,
-  Value<int> schemaVersion,
-  Value<int> rowid,
-});
-
-class $$OutlineNodesTableTableFilterComposer
-    extends Composer<_$AppDatabase, $OutlineNodesTableTable> {
-  $$OutlineNodesTableTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<String> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get projectId => $composableBuilder(
-      column: $table.projectId, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get parentId => $composableBuilder(
-      column: $table.parentId, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get orderIndex => $composableBuilder(
-      column: $table.orderIndex, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get title => $composableBuilder(
-      column: $table.title, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get nodeType => $composableBuilder(
-      column: $table.nodeType, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get summary => $composableBuilder(
-      column: $table.summary, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get linkedChapterId => $composableBuilder(
-      column: $table.linkedChapterId,
-      builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get status => $composableBuilder(
-      column: $table.status, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<DateTime> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
-      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get schemaVersion => $composableBuilder(
-      column: $table.schemaVersion, builder: (column) => ColumnFilters(column));
-}
-
-class $$OutlineNodesTableTableOrderingComposer
-    extends Composer<_$AppDatabase, $OutlineNodesTableTable> {
-  $$OutlineNodesTableTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<String> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get projectId => $composableBuilder(
-      column: $table.projectId, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get parentId => $composableBuilder(
-      column: $table.parentId, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<int> get orderIndex => $composableBuilder(
-      column: $table.orderIndex, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get title => $composableBuilder(
-      column: $table.title, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get nodeType => $composableBuilder(
-      column: $table.nodeType, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get summary => $composableBuilder(
-      column: $table.summary, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get linkedChapterId => $composableBuilder(
-      column: $table.linkedChapterId,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get status => $composableBuilder(
-      column: $table.status, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
-      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<int> get schemaVersion => $composableBuilder(
-      column: $table.schemaVersion,
-      builder: (column) => ColumnOrderings(column));
-}
-
-class $$OutlineNodesTableTableAnnotationComposer
-    extends Composer<_$AppDatabase, $OutlineNodesTableTable> {
-  $$OutlineNodesTableTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<String> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get projectId =>
-      $composableBuilder(column: $table.projectId, builder: (column) => column);
-
-  GeneratedColumn<String> get parentId =>
-      $composableBuilder(column: $table.parentId, builder: (column) => column);
-
-  GeneratedColumn<int> get orderIndex => $composableBuilder(
-      column: $table.orderIndex, builder: (column) => column);
-
-  GeneratedColumn<String> get title =>
-      $composableBuilder(column: $table.title, builder: (column) => column);
-
-  GeneratedColumn<String> get nodeType =>
-      $composableBuilder(column: $table.nodeType, builder: (column) => column);
-
-  GeneratedColumn<String> get summary =>
-      $composableBuilder(column: $table.summary, builder: (column) => column);
-
-  GeneratedColumn<String> get linkedChapterId => $composableBuilder(
-      column: $table.linkedChapterId, builder: (column) => column);
-
-  GeneratedColumn<String> get status =>
-      $composableBuilder(column: $table.status, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get createdAt =>
-      $composableBuilder(column: $table.createdAt, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get updatedAt =>
-      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
-
-  GeneratedColumn<int> get schemaVersion => $composableBuilder(
-      column: $table.schemaVersion, builder: (column) => column);
-}
-
-class $$OutlineNodesTableTableTableManager extends RootTableManager<
-    _$AppDatabase,
-    $OutlineNodesTableTable,
-    OutlineNodesTableData,
-    $$OutlineNodesTableTableFilterComposer,
-    $$OutlineNodesTableTableOrderingComposer,
-    $$OutlineNodesTableTableAnnotationComposer,
-    $$OutlineNodesTableTableCreateCompanionBuilder,
-    $$OutlineNodesTableTableUpdateCompanionBuilder,
-    (
-      OutlineNodesTableData,
-      BaseReferences<_$AppDatabase, $OutlineNodesTableTable,
-          OutlineNodesTableData>
-    ),
-    OutlineNodesTableData,
-    PrefetchHooks Function()> {
-  $$OutlineNodesTableTableTableManager(
-      _$AppDatabase db, $OutlineNodesTableTable table)
-      : super(TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$OutlineNodesTableTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$OutlineNodesTableTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$OutlineNodesTableTableAnnotationComposer(
-                  $db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<String> id = const Value.absent(),
-            Value<String> projectId = const Value.absent(),
-            Value<String?> parentId = const Value.absent(),
-            Value<int> orderIndex = const Value.absent(),
-            Value<String> title = const Value.absent(),
-            Value<String> nodeType = const Value.absent(),
-            Value<String> summary = const Value.absent(),
-            Value<String?> linkedChapterId = const Value.absent(),
-            Value<String> status = const Value.absent(),
-            Value<DateTime> createdAt = const Value.absent(),
-            Value<DateTime> updatedAt = const Value.absent(),
-            Value<int> schemaVersion = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              OutlineNodesTableCompanion(
-            id: id,
-            projectId: projectId,
-            parentId: parentId,
-            orderIndex: orderIndex,
-            title: title,
-            nodeType: nodeType,
-            summary: summary,
-            linkedChapterId: linkedChapterId,
-            status: status,
-            createdAt: createdAt,
-            updatedAt: updatedAt,
-            schemaVersion: schemaVersion,
-            rowid: rowid,
-          ),
-          createCompanionCallback: ({
-            required String id,
-            required String projectId,
-            Value<String?> parentId = const Value.absent(),
-            required int orderIndex,
-            required String title,
-            Value<String> nodeType = const Value.absent(),
-            Value<String> summary = const Value.absent(),
-            Value<String?> linkedChapterId = const Value.absent(),
-            Value<String> status = const Value.absent(),
-            required DateTime createdAt,
-            required DateTime updatedAt,
-            Value<int> schemaVersion = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              OutlineNodesTableCompanion.insert(
-            id: id,
-            projectId: projectId,
-            parentId: parentId,
-            orderIndex: orderIndex,
-            title: title,
-            nodeType: nodeType,
-            summary: summary,
-            linkedChapterId: linkedChapterId,
+            patchJson: patchJson,
             status: status,
             createdAt: createdAt,
             updatedAt: updatedAt,
@@ -7873,76 +8546,109 @@ class $$OutlineNodesTableTableTableManager extends RootTableManager<
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map((e) => (
+                    e.readTable(table),
+                    $$RevisionsTableReferences(db, table, e)
+                  ))
               .toList(),
-          prefetchHooksCallback: null,
+          prefetchHooksCallback: ({chapterId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (chapterId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.chapterId,
+                    referencedTable:
+                        $$RevisionsTableReferences._chapterIdTable(db),
+                    referencedColumn:
+                        $$RevisionsTableReferences._chapterIdTable(db).id,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
         ));
 }
 
-typedef $$OutlineNodesTableTableProcessedTableManager = ProcessedTableManager<
+typedef $$RevisionsTableProcessedTableManager = ProcessedTableManager<
     _$AppDatabase,
-    $OutlineNodesTableTable,
-    OutlineNodesTableData,
-    $$OutlineNodesTableTableFilterComposer,
-    $$OutlineNodesTableTableOrderingComposer,
-    $$OutlineNodesTableTableAnnotationComposer,
-    $$OutlineNodesTableTableCreateCompanionBuilder,
-    $$OutlineNodesTableTableUpdateCompanionBuilder,
-    (
-      OutlineNodesTableData,
-      BaseReferences<_$AppDatabase, $OutlineNodesTableTable,
-          OutlineNodesTableData>
-    ),
-    OutlineNodesTableData,
-    PrefetchHooks Function()>;
-typedef $$CharactersTableTableCreateCompanionBuilder = CharactersTableCompanion
-    Function({
+    $RevisionsTable,
+    RevisionRow,
+    $$RevisionsTableFilterComposer,
+    $$RevisionsTableOrderingComposer,
+    $$RevisionsTableAnnotationComposer,
+    $$RevisionsTableCreateCompanionBuilder,
+    $$RevisionsTableUpdateCompanionBuilder,
+    (RevisionRow, $$RevisionsTableReferences),
+    RevisionRow,
+    PrefetchHooks Function({bool chapterId})>;
+typedef $$CharactersTableCreateCompanionBuilder = CharactersCompanion Function({
   required String id,
   required String projectId,
   required String name,
-  Value<String> aliases,
-  Value<String> role,
   Value<String> description,
+  Value<String> role,
+  Value<String> avatarUrl,
+  Value<String> traitsJson,
+  Value<String> background,
+  Value<String> aliasesJson,
   Value<String> appearance,
   Value<String> personality,
   Value<String> goals,
   Value<String> conflicts,
   Value<String> secrets,
-  Value<String> relationships,
-  Value<String?> firstAppearanceChapterId,
-  Value<String> tags,
-  Value<String> consistencyFacts,
-  required DateTime createdAt,
-  required DateTime updatedAt,
+  Value<String> relationshipsJson,
+  Value<String> consistencyFactsJson,
+  required int createdAt,
+  required int updatedAt,
   Value<int> schemaVersion,
   Value<int> rowid,
 });
-typedef $$CharactersTableTableUpdateCompanionBuilder = CharactersTableCompanion
-    Function({
+typedef $$CharactersTableUpdateCompanionBuilder = CharactersCompanion Function({
   Value<String> id,
   Value<String> projectId,
   Value<String> name,
-  Value<String> aliases,
-  Value<String> role,
   Value<String> description,
+  Value<String> role,
+  Value<String> avatarUrl,
+  Value<String> traitsJson,
+  Value<String> background,
+  Value<String> aliasesJson,
   Value<String> appearance,
   Value<String> personality,
   Value<String> goals,
   Value<String> conflicts,
   Value<String> secrets,
-  Value<String> relationships,
-  Value<String?> firstAppearanceChapterId,
-  Value<String> tags,
-  Value<String> consistencyFacts,
-  Value<DateTime> createdAt,
-  Value<DateTime> updatedAt,
+  Value<String> relationshipsJson,
+  Value<String> consistencyFactsJson,
+  Value<int> createdAt,
+  Value<int> updatedAt,
   Value<int> schemaVersion,
   Value<int> rowid,
 });
 
-class $$CharactersTableTableFilterComposer
-    extends Composer<_$AppDatabase, $CharactersTableTable> {
-  $$CharactersTableTableFilterComposer({
+class $$CharactersTableFilterComposer
+    extends Composer<_$AppDatabase, $CharactersTable> {
+  $$CharactersTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -7958,14 +8664,23 @@ class $$CharactersTableTableFilterComposer
   ColumnFilters<String> get name => $composableBuilder(
       column: $table.name, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get aliases => $composableBuilder(
-      column: $table.aliases, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get description => $composableBuilder(
+      column: $table.description, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get role => $composableBuilder(
       column: $table.role, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get description => $composableBuilder(
-      column: $table.description, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get avatarUrl => $composableBuilder(
+      column: $table.avatarUrl, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get traitsJson => $composableBuilder(
+      column: $table.traitsJson, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get background => $composableBuilder(
+      column: $table.background, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get aliasesJson => $composableBuilder(
+      column: $table.aliasesJson, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get appearance => $composableBuilder(
       column: $table.appearance, builder: (column) => ColumnFilters(column));
@@ -7982,33 +8697,27 @@ class $$CharactersTableTableFilterComposer
   ColumnFilters<String> get secrets => $composableBuilder(
       column: $table.secrets, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get relationships => $composableBuilder(
-      column: $table.relationships, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get firstAppearanceChapterId => $composableBuilder(
-      column: $table.firstAppearanceChapterId,
+  ColumnFilters<String> get relationshipsJson => $composableBuilder(
+      column: $table.relationshipsJson,
       builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get tags => $composableBuilder(
-      column: $table.tags, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get consistencyFacts => $composableBuilder(
-      column: $table.consistencyFacts,
+  ColumnFilters<String> get consistencyFactsJson => $composableBuilder(
+      column: $table.consistencyFactsJson,
       builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+  ColumnFilters<int> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+  ColumnFilters<int> get updatedAt => $composableBuilder(
       column: $table.updatedAt, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<int> get schemaVersion => $composableBuilder(
       column: $table.schemaVersion, builder: (column) => ColumnFilters(column));
 }
 
-class $$CharactersTableTableOrderingComposer
-    extends Composer<_$AppDatabase, $CharactersTableTable> {
-  $$CharactersTableTableOrderingComposer({
+class $$CharactersTableOrderingComposer
+    extends Composer<_$AppDatabase, $CharactersTable> {
+  $$CharactersTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -8024,14 +8733,23 @@ class $$CharactersTableTableOrderingComposer
   ColumnOrderings<String> get name => $composableBuilder(
       column: $table.name, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get aliases => $composableBuilder(
-      column: $table.aliases, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<String> get description => $composableBuilder(
+      column: $table.description, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get role => $composableBuilder(
       column: $table.role, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get description => $composableBuilder(
-      column: $table.description, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<String> get avatarUrl => $composableBuilder(
+      column: $table.avatarUrl, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get traitsJson => $composableBuilder(
+      column: $table.traitsJson, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get background => $composableBuilder(
+      column: $table.background, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get aliasesJson => $composableBuilder(
+      column: $table.aliasesJson, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get appearance => $composableBuilder(
       column: $table.appearance, builder: (column) => ColumnOrderings(column));
@@ -8048,25 +8766,18 @@ class $$CharactersTableTableOrderingComposer
   ColumnOrderings<String> get secrets => $composableBuilder(
       column: $table.secrets, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get relationships => $composableBuilder(
-      column: $table.relationships,
+  ColumnOrderings<String> get relationshipsJson => $composableBuilder(
+      column: $table.relationshipsJson,
       builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get firstAppearanceChapterId => $composableBuilder(
-      column: $table.firstAppearanceChapterId,
+  ColumnOrderings<String> get consistencyFactsJson => $composableBuilder(
+      column: $table.consistencyFactsJson,
       builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get tags => $composableBuilder(
-      column: $table.tags, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get consistencyFacts => $composableBuilder(
-      column: $table.consistencyFacts,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+  ColumnOrderings<int> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
       column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<int> get schemaVersion => $composableBuilder(
@@ -8074,9 +8785,9 @@ class $$CharactersTableTableOrderingComposer
       builder: (column) => ColumnOrderings(column));
 }
 
-class $$CharactersTableTableAnnotationComposer
-    extends Composer<_$AppDatabase, $CharactersTableTable> {
-  $$CharactersTableTableAnnotationComposer({
+class $$CharactersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CharactersTable> {
+  $$CharactersTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -8092,14 +8803,23 @@ class $$CharactersTableTableAnnotationComposer
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
 
-  GeneratedColumn<String> get aliases =>
-      $composableBuilder(column: $table.aliases, builder: (column) => column);
+  GeneratedColumn<String> get description => $composableBuilder(
+      column: $table.description, builder: (column) => column);
 
   GeneratedColumn<String> get role =>
       $composableBuilder(column: $table.role, builder: (column) => column);
 
-  GeneratedColumn<String> get description => $composableBuilder(
-      column: $table.description, builder: (column) => column);
+  GeneratedColumn<String> get avatarUrl =>
+      $composableBuilder(column: $table.avatarUrl, builder: (column) => column);
+
+  GeneratedColumn<String> get traitsJson => $composableBuilder(
+      column: $table.traitsJson, builder: (column) => column);
+
+  GeneratedColumn<String> get background => $composableBuilder(
+      column: $table.background, builder: (column) => column);
+
+  GeneratedColumn<String> get aliasesJson => $composableBuilder(
+      column: $table.aliasesJson, builder: (column) => column);
 
   GeneratedColumn<String> get appearance => $composableBuilder(
       column: $table.appearance, builder: (column) => column);
@@ -8116,91 +8836,86 @@ class $$CharactersTableTableAnnotationComposer
   GeneratedColumn<String> get secrets =>
       $composableBuilder(column: $table.secrets, builder: (column) => column);
 
-  GeneratedColumn<String> get relationships => $composableBuilder(
-      column: $table.relationships, builder: (column) => column);
+  GeneratedColumn<String> get relationshipsJson => $composableBuilder(
+      column: $table.relationshipsJson, builder: (column) => column);
 
-  GeneratedColumn<String> get firstAppearanceChapterId => $composableBuilder(
-      column: $table.firstAppearanceChapterId, builder: (column) => column);
+  GeneratedColumn<String> get consistencyFactsJson => $composableBuilder(
+      column: $table.consistencyFactsJson, builder: (column) => column);
 
-  GeneratedColumn<String> get tags =>
-      $composableBuilder(column: $table.tags, builder: (column) => column);
-
-  GeneratedColumn<String> get consistencyFacts => $composableBuilder(
-      column: $table.consistencyFacts, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get createdAt =>
+  GeneratedColumn<int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get updatedAt =>
+  GeneratedColumn<int> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
   GeneratedColumn<int> get schemaVersion => $composableBuilder(
       column: $table.schemaVersion, builder: (column) => column);
 }
 
-class $$CharactersTableTableTableManager extends RootTableManager<
+class $$CharactersTableTableManager extends RootTableManager<
     _$AppDatabase,
-    $CharactersTableTable,
-    CharactersTableData,
-    $$CharactersTableTableFilterComposer,
-    $$CharactersTableTableOrderingComposer,
-    $$CharactersTableTableAnnotationComposer,
-    $$CharactersTableTableCreateCompanionBuilder,
-    $$CharactersTableTableUpdateCompanionBuilder,
+    $CharactersTable,
+    CharacterRow,
+    $$CharactersTableFilterComposer,
+    $$CharactersTableOrderingComposer,
+    $$CharactersTableAnnotationComposer,
+    $$CharactersTableCreateCompanionBuilder,
+    $$CharactersTableUpdateCompanionBuilder,
     (
-      CharactersTableData,
-      BaseReferences<_$AppDatabase, $CharactersTableTable, CharactersTableData>
+      CharacterRow,
+      BaseReferences<_$AppDatabase, $CharactersTable, CharacterRow>
     ),
-    CharactersTableData,
+    CharacterRow,
     PrefetchHooks Function()> {
-  $$CharactersTableTableTableManager(
-      _$AppDatabase db, $CharactersTableTable table)
+  $$CharactersTableTableManager(_$AppDatabase db, $CharactersTable table)
       : super(TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$CharactersTableTableFilterComposer($db: db, $table: table),
+              $$CharactersTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$CharactersTableTableOrderingComposer($db: db, $table: table),
+              $$CharactersTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$CharactersTableTableAnnotationComposer($db: db, $table: table),
+              $$CharactersTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback: ({
             Value<String> id = const Value.absent(),
             Value<String> projectId = const Value.absent(),
             Value<String> name = const Value.absent(),
-            Value<String> aliases = const Value.absent(),
-            Value<String> role = const Value.absent(),
             Value<String> description = const Value.absent(),
+            Value<String> role = const Value.absent(),
+            Value<String> avatarUrl = const Value.absent(),
+            Value<String> traitsJson = const Value.absent(),
+            Value<String> background = const Value.absent(),
+            Value<String> aliasesJson = const Value.absent(),
             Value<String> appearance = const Value.absent(),
             Value<String> personality = const Value.absent(),
             Value<String> goals = const Value.absent(),
             Value<String> conflicts = const Value.absent(),
             Value<String> secrets = const Value.absent(),
-            Value<String> relationships = const Value.absent(),
-            Value<String?> firstAppearanceChapterId = const Value.absent(),
-            Value<String> tags = const Value.absent(),
-            Value<String> consistencyFacts = const Value.absent(),
-            Value<DateTime> createdAt = const Value.absent(),
-            Value<DateTime> updatedAt = const Value.absent(),
+            Value<String> relationshipsJson = const Value.absent(),
+            Value<String> consistencyFactsJson = const Value.absent(),
+            Value<int> createdAt = const Value.absent(),
+            Value<int> updatedAt = const Value.absent(),
             Value<int> schemaVersion = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
-              CharactersTableCompanion(
+              CharactersCompanion(
             id: id,
             projectId: projectId,
             name: name,
-            aliases: aliases,
-            role: role,
             description: description,
+            role: role,
+            avatarUrl: avatarUrl,
+            traitsJson: traitsJson,
+            background: background,
+            aliasesJson: aliasesJson,
             appearance: appearance,
             personality: personality,
             goals: goals,
             conflicts: conflicts,
             secrets: secrets,
-            relationships: relationships,
-            firstAppearanceChapterId: firstAppearanceChapterId,
-            tags: tags,
-            consistencyFacts: consistencyFacts,
+            relationshipsJson: relationshipsJson,
+            consistencyFactsJson: consistencyFactsJson,
             createdAt: createdAt,
             updatedAt: updatedAt,
             schemaVersion: schemaVersion,
@@ -8210,39 +8925,41 @@ class $$CharactersTableTableTableManager extends RootTableManager<
             required String id,
             required String projectId,
             required String name,
-            Value<String> aliases = const Value.absent(),
-            Value<String> role = const Value.absent(),
             Value<String> description = const Value.absent(),
+            Value<String> role = const Value.absent(),
+            Value<String> avatarUrl = const Value.absent(),
+            Value<String> traitsJson = const Value.absent(),
+            Value<String> background = const Value.absent(),
+            Value<String> aliasesJson = const Value.absent(),
             Value<String> appearance = const Value.absent(),
             Value<String> personality = const Value.absent(),
             Value<String> goals = const Value.absent(),
             Value<String> conflicts = const Value.absent(),
             Value<String> secrets = const Value.absent(),
-            Value<String> relationships = const Value.absent(),
-            Value<String?> firstAppearanceChapterId = const Value.absent(),
-            Value<String> tags = const Value.absent(),
-            Value<String> consistencyFacts = const Value.absent(),
-            required DateTime createdAt,
-            required DateTime updatedAt,
+            Value<String> relationshipsJson = const Value.absent(),
+            Value<String> consistencyFactsJson = const Value.absent(),
+            required int createdAt,
+            required int updatedAt,
             Value<int> schemaVersion = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
-              CharactersTableCompanion.insert(
+              CharactersCompanion.insert(
             id: id,
             projectId: projectId,
             name: name,
-            aliases: aliases,
-            role: role,
             description: description,
+            role: role,
+            avatarUrl: avatarUrl,
+            traitsJson: traitsJson,
+            background: background,
+            aliasesJson: aliasesJson,
             appearance: appearance,
             personality: personality,
             goals: goals,
             conflicts: conflicts,
             secrets: secrets,
-            relationships: relationships,
-            firstAppearanceChapterId: firstAppearanceChapterId,
-            tags: tags,
-            consistencyFacts: consistencyFacts,
+            relationshipsJson: relationshipsJson,
+            consistencyFactsJson: consistencyFactsJson,
             createdAt: createdAt,
             updatedAt: updatedAt,
             schemaVersion: schemaVersion,
@@ -8255,53 +8972,51 @@ class $$CharactersTableTableTableManager extends RootTableManager<
         ));
 }
 
-typedef $$CharactersTableTableProcessedTableManager = ProcessedTableManager<
+typedef $$CharactersTableProcessedTableManager = ProcessedTableManager<
     _$AppDatabase,
-    $CharactersTableTable,
-    CharactersTableData,
-    $$CharactersTableTableFilterComposer,
-    $$CharactersTableTableOrderingComposer,
-    $$CharactersTableTableAnnotationComposer,
-    $$CharactersTableTableCreateCompanionBuilder,
-    $$CharactersTableTableUpdateCompanionBuilder,
+    $CharactersTable,
+    CharacterRow,
+    $$CharactersTableFilterComposer,
+    $$CharactersTableOrderingComposer,
+    $$CharactersTableAnnotationComposer,
+    $$CharactersTableCreateCompanionBuilder,
+    $$CharactersTableUpdateCompanionBuilder,
     (
-      CharactersTableData,
-      BaseReferences<_$AppDatabase, $CharactersTableTable, CharactersTableData>
+      CharacterRow,
+      BaseReferences<_$AppDatabase, $CharactersTable, CharacterRow>
     ),
-    CharactersTableData,
+    CharacterRow,
     PrefetchHooks Function()>;
-typedef $$NotesTableTableCreateCompanionBuilder = NotesTableCompanion Function({
+typedef $$SettingEntriesTableCreateCompanionBuilder = SettingEntriesCompanion
+    Function({
   required String id,
   required String projectId,
   required String title,
-  Value<String> content,
-  Value<String> type,
-  Value<String?> sourceUrl,
-  Value<String?> agentTaskId,
-  Value<String> tags,
-  required DateTime createdAt,
-  required DateTime updatedAt,
+  required String content,
+  Value<String> category,
+  Value<String> tagsJson,
+  required int createdAt,
+  required int updatedAt,
   Value<int> schemaVersion,
   Value<int> rowid,
 });
-typedef $$NotesTableTableUpdateCompanionBuilder = NotesTableCompanion Function({
+typedef $$SettingEntriesTableUpdateCompanionBuilder = SettingEntriesCompanion
+    Function({
   Value<String> id,
   Value<String> projectId,
   Value<String> title,
   Value<String> content,
-  Value<String> type,
-  Value<String?> sourceUrl,
-  Value<String?> agentTaskId,
-  Value<String> tags,
-  Value<DateTime> createdAt,
-  Value<DateTime> updatedAt,
+  Value<String> category,
+  Value<String> tagsJson,
+  Value<int> createdAt,
+  Value<int> updatedAt,
   Value<int> schemaVersion,
   Value<int> rowid,
 });
 
-class $$NotesTableTableFilterComposer
-    extends Composer<_$AppDatabase, $NotesTableTable> {
-  $$NotesTableTableFilterComposer({
+class $$SettingEntriesTableFilterComposer
+    extends Composer<_$AppDatabase, $SettingEntriesTable> {
+  $$SettingEntriesTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -8319,569 +9034,26 @@ class $$NotesTableTableFilterComposer
 
   ColumnFilters<String> get content => $composableBuilder(
       column: $table.content, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get type => $composableBuilder(
-      column: $table.type, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get sourceUrl => $composableBuilder(
-      column: $table.sourceUrl, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get agentTaskId => $composableBuilder(
-      column: $table.agentTaskId, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get tags => $composableBuilder(
-      column: $table.tags, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<DateTime> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
-      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get schemaVersion => $composableBuilder(
-      column: $table.schemaVersion, builder: (column) => ColumnFilters(column));
-}
-
-class $$NotesTableTableOrderingComposer
-    extends Composer<_$AppDatabase, $NotesTableTable> {
-  $$NotesTableTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<String> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get projectId => $composableBuilder(
-      column: $table.projectId, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get title => $composableBuilder(
-      column: $table.title, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get content => $composableBuilder(
-      column: $table.content, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get type => $composableBuilder(
-      column: $table.type, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get sourceUrl => $composableBuilder(
-      column: $table.sourceUrl, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get agentTaskId => $composableBuilder(
-      column: $table.agentTaskId, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get tags => $composableBuilder(
-      column: $table.tags, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
-      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<int> get schemaVersion => $composableBuilder(
-      column: $table.schemaVersion,
-      builder: (column) => ColumnOrderings(column));
-}
-
-class $$NotesTableTableAnnotationComposer
-    extends Composer<_$AppDatabase, $NotesTableTable> {
-  $$NotesTableTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<String> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get projectId =>
-      $composableBuilder(column: $table.projectId, builder: (column) => column);
-
-  GeneratedColumn<String> get title =>
-      $composableBuilder(column: $table.title, builder: (column) => column);
-
-  GeneratedColumn<String> get content =>
-      $composableBuilder(column: $table.content, builder: (column) => column);
-
-  GeneratedColumn<String> get type =>
-      $composableBuilder(column: $table.type, builder: (column) => column);
-
-  GeneratedColumn<String> get sourceUrl =>
-      $composableBuilder(column: $table.sourceUrl, builder: (column) => column);
-
-  GeneratedColumn<String> get agentTaskId => $composableBuilder(
-      column: $table.agentTaskId, builder: (column) => column);
-
-  GeneratedColumn<String> get tags =>
-      $composableBuilder(column: $table.tags, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get createdAt =>
-      $composableBuilder(column: $table.createdAt, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get updatedAt =>
-      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
-
-  GeneratedColumn<int> get schemaVersion => $composableBuilder(
-      column: $table.schemaVersion, builder: (column) => column);
-}
-
-class $$NotesTableTableTableManager extends RootTableManager<
-    _$AppDatabase,
-    $NotesTableTable,
-    NotesTableData,
-    $$NotesTableTableFilterComposer,
-    $$NotesTableTableOrderingComposer,
-    $$NotesTableTableAnnotationComposer,
-    $$NotesTableTableCreateCompanionBuilder,
-    $$NotesTableTableUpdateCompanionBuilder,
-    (
-      NotesTableData,
-      BaseReferences<_$AppDatabase, $NotesTableTable, NotesTableData>
-    ),
-    NotesTableData,
-    PrefetchHooks Function()> {
-  $$NotesTableTableTableManager(_$AppDatabase db, $NotesTableTable table)
-      : super(TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$NotesTableTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$NotesTableTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$NotesTableTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<String> id = const Value.absent(),
-            Value<String> projectId = const Value.absent(),
-            Value<String> title = const Value.absent(),
-            Value<String> content = const Value.absent(),
-            Value<String> type = const Value.absent(),
-            Value<String?> sourceUrl = const Value.absent(),
-            Value<String?> agentTaskId = const Value.absent(),
-            Value<String> tags = const Value.absent(),
-            Value<DateTime> createdAt = const Value.absent(),
-            Value<DateTime> updatedAt = const Value.absent(),
-            Value<int> schemaVersion = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              NotesTableCompanion(
-            id: id,
-            projectId: projectId,
-            title: title,
-            content: content,
-            type: type,
-            sourceUrl: sourceUrl,
-            agentTaskId: agentTaskId,
-            tags: tags,
-            createdAt: createdAt,
-            updatedAt: updatedAt,
-            schemaVersion: schemaVersion,
-            rowid: rowid,
-          ),
-          createCompanionCallback: ({
-            required String id,
-            required String projectId,
-            required String title,
-            Value<String> content = const Value.absent(),
-            Value<String> type = const Value.absent(),
-            Value<String?> sourceUrl = const Value.absent(),
-            Value<String?> agentTaskId = const Value.absent(),
-            Value<String> tags = const Value.absent(),
-            required DateTime createdAt,
-            required DateTime updatedAt,
-            Value<int> schemaVersion = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              NotesTableCompanion.insert(
-            id: id,
-            projectId: projectId,
-            title: title,
-            content: content,
-            type: type,
-            sourceUrl: sourceUrl,
-            agentTaskId: agentTaskId,
-            tags: tags,
-            createdAt: createdAt,
-            updatedAt: updatedAt,
-            schemaVersion: schemaVersion,
-            rowid: rowid,
-          ),
-          withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
-              .toList(),
-          prefetchHooksCallback: null,
-        ));
-}
-
-typedef $$NotesTableTableProcessedTableManager = ProcessedTableManager<
-    _$AppDatabase,
-    $NotesTableTable,
-    NotesTableData,
-    $$NotesTableTableFilterComposer,
-    $$NotesTableTableOrderingComposer,
-    $$NotesTableTableAnnotationComposer,
-    $$NotesTableTableCreateCompanionBuilder,
-    $$NotesTableTableUpdateCompanionBuilder,
-    (
-      NotesTableData,
-      BaseReferences<_$AppDatabase, $NotesTableTable, NotesTableData>
-    ),
-    NotesTableData,
-    PrefetchHooks Function()>;
-typedef $$SessionsTableTableCreateCompanionBuilder = SessionsTableCompanion
-    Function({
-  required String id,
-  required String projectId,
-  required String title,
-  Value<String> stage,
-  Value<String?> parentSessionId,
-  Value<String?> branchName,
-  Value<String> messages,
-  Value<String?> contextSnapshotId,
-  Value<bool> archived,
-  required DateTime createdAt,
-  required DateTime updatedAt,
-  Value<int> schemaVersion,
-  Value<int> rowid,
-});
-typedef $$SessionsTableTableUpdateCompanionBuilder = SessionsTableCompanion
-    Function({
-  Value<String> id,
-  Value<String> projectId,
-  Value<String> title,
-  Value<String> stage,
-  Value<String?> parentSessionId,
-  Value<String?> branchName,
-  Value<String> messages,
-  Value<String?> contextSnapshotId,
-  Value<bool> archived,
-  Value<DateTime> createdAt,
-  Value<DateTime> updatedAt,
-  Value<int> schemaVersion,
-  Value<int> rowid,
-});
-
-class $$SessionsTableTableFilterComposer
-    extends Composer<_$AppDatabase, $SessionsTableTable> {
-  $$SessionsTableTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<String> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get projectId => $composableBuilder(
-      column: $table.projectId, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get title => $composableBuilder(
-      column: $table.title, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get stage => $composableBuilder(
-      column: $table.stage, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get parentSessionId => $composableBuilder(
-      column: $table.parentSessionId,
-      builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get branchName => $composableBuilder(
-      column: $table.branchName, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get messages => $composableBuilder(
-      column: $table.messages, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get contextSnapshotId => $composableBuilder(
-      column: $table.contextSnapshotId,
-      builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<bool> get archived => $composableBuilder(
-      column: $table.archived, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<DateTime> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
-      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get schemaVersion => $composableBuilder(
-      column: $table.schemaVersion, builder: (column) => ColumnFilters(column));
-}
-
-class $$SessionsTableTableOrderingComposer
-    extends Composer<_$AppDatabase, $SessionsTableTable> {
-  $$SessionsTableTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<String> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get projectId => $composableBuilder(
-      column: $table.projectId, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get title => $composableBuilder(
-      column: $table.title, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get stage => $composableBuilder(
-      column: $table.stage, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get parentSessionId => $composableBuilder(
-      column: $table.parentSessionId,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get branchName => $composableBuilder(
-      column: $table.branchName, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get messages => $composableBuilder(
-      column: $table.messages, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get contextSnapshotId => $composableBuilder(
-      column: $table.contextSnapshotId,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<bool> get archived => $composableBuilder(
-      column: $table.archived, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
-      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
-      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<int> get schemaVersion => $composableBuilder(
-      column: $table.schemaVersion,
-      builder: (column) => ColumnOrderings(column));
-}
-
-class $$SessionsTableTableAnnotationComposer
-    extends Composer<_$AppDatabase, $SessionsTableTable> {
-  $$SessionsTableTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<String> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get projectId =>
-      $composableBuilder(column: $table.projectId, builder: (column) => column);
-
-  GeneratedColumn<String> get title =>
-      $composableBuilder(column: $table.title, builder: (column) => column);
-
-  GeneratedColumn<String> get stage =>
-      $composableBuilder(column: $table.stage, builder: (column) => column);
-
-  GeneratedColumn<String> get parentSessionId => $composableBuilder(
-      column: $table.parentSessionId, builder: (column) => column);
-
-  GeneratedColumn<String> get branchName => $composableBuilder(
-      column: $table.branchName, builder: (column) => column);
-
-  GeneratedColumn<String> get messages =>
-      $composableBuilder(column: $table.messages, builder: (column) => column);
-
-  GeneratedColumn<String> get contextSnapshotId => $composableBuilder(
-      column: $table.contextSnapshotId, builder: (column) => column);
-
-  GeneratedColumn<bool> get archived =>
-      $composableBuilder(column: $table.archived, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get createdAt =>
-      $composableBuilder(column: $table.createdAt, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get updatedAt =>
-      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
-
-  GeneratedColumn<int> get schemaVersion => $composableBuilder(
-      column: $table.schemaVersion, builder: (column) => column);
-}
-
-class $$SessionsTableTableTableManager extends RootTableManager<
-    _$AppDatabase,
-    $SessionsTableTable,
-    SessionsTableData,
-    $$SessionsTableTableFilterComposer,
-    $$SessionsTableTableOrderingComposer,
-    $$SessionsTableTableAnnotationComposer,
-    $$SessionsTableTableCreateCompanionBuilder,
-    $$SessionsTableTableUpdateCompanionBuilder,
-    (
-      SessionsTableData,
-      BaseReferences<_$AppDatabase, $SessionsTableTable, SessionsTableData>
-    ),
-    SessionsTableData,
-    PrefetchHooks Function()> {
-  $$SessionsTableTableTableManager(_$AppDatabase db, $SessionsTableTable table)
-      : super(TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$SessionsTableTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$SessionsTableTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$SessionsTableTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<String> id = const Value.absent(),
-            Value<String> projectId = const Value.absent(),
-            Value<String> title = const Value.absent(),
-            Value<String> stage = const Value.absent(),
-            Value<String?> parentSessionId = const Value.absent(),
-            Value<String?> branchName = const Value.absent(),
-            Value<String> messages = const Value.absent(),
-            Value<String?> contextSnapshotId = const Value.absent(),
-            Value<bool> archived = const Value.absent(),
-            Value<DateTime> createdAt = const Value.absent(),
-            Value<DateTime> updatedAt = const Value.absent(),
-            Value<int> schemaVersion = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              SessionsTableCompanion(
-            id: id,
-            projectId: projectId,
-            title: title,
-            stage: stage,
-            parentSessionId: parentSessionId,
-            branchName: branchName,
-            messages: messages,
-            contextSnapshotId: contextSnapshotId,
-            archived: archived,
-            createdAt: createdAt,
-            updatedAt: updatedAt,
-            schemaVersion: schemaVersion,
-            rowid: rowid,
-          ),
-          createCompanionCallback: ({
-            required String id,
-            required String projectId,
-            required String title,
-            Value<String> stage = const Value.absent(),
-            Value<String?> parentSessionId = const Value.absent(),
-            Value<String?> branchName = const Value.absent(),
-            Value<String> messages = const Value.absent(),
-            Value<String?> contextSnapshotId = const Value.absent(),
-            Value<bool> archived = const Value.absent(),
-            required DateTime createdAt,
-            required DateTime updatedAt,
-            Value<int> schemaVersion = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              SessionsTableCompanion.insert(
-            id: id,
-            projectId: projectId,
-            title: title,
-            stage: stage,
-            parentSessionId: parentSessionId,
-            branchName: branchName,
-            messages: messages,
-            contextSnapshotId: contextSnapshotId,
-            archived: archived,
-            createdAt: createdAt,
-            updatedAt: updatedAt,
-            schemaVersion: schemaVersion,
-            rowid: rowid,
-          ),
-          withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
-              .toList(),
-          prefetchHooksCallback: null,
-        ));
-}
-
-typedef $$SessionsTableTableProcessedTableManager = ProcessedTableManager<
-    _$AppDatabase,
-    $SessionsTableTable,
-    SessionsTableData,
-    $$SessionsTableTableFilterComposer,
-    $$SessionsTableTableOrderingComposer,
-    $$SessionsTableTableAnnotationComposer,
-    $$SessionsTableTableCreateCompanionBuilder,
-    $$SessionsTableTableUpdateCompanionBuilder,
-    (
-      SessionsTableData,
-      BaseReferences<_$AppDatabase, $SessionsTableTable, SessionsTableData>
-    ),
-    SessionsTableData,
-    PrefetchHooks Function()>;
-typedef $$SettingEntriesTableTableCreateCompanionBuilder
-    = SettingEntriesTableCompanion Function({
-  required String id,
-  required String projectId,
-  required String category,
-  required String title,
-  Value<String> content,
-  Value<String> tags,
-  required DateTime createdAt,
-  required DateTime updatedAt,
-  Value<int> schemaVersion,
-  Value<int> rowid,
-});
-typedef $$SettingEntriesTableTableUpdateCompanionBuilder
-    = SettingEntriesTableCompanion Function({
-  Value<String> id,
-  Value<String> projectId,
-  Value<String> category,
-  Value<String> title,
-  Value<String> content,
-  Value<String> tags,
-  Value<DateTime> createdAt,
-  Value<DateTime> updatedAt,
-  Value<int> schemaVersion,
-  Value<int> rowid,
-});
-
-class $$SettingEntriesTableTableFilterComposer
-    extends Composer<_$AppDatabase, $SettingEntriesTableTable> {
-  $$SettingEntriesTableTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<String> get id => $composableBuilder(
-      column: $table.id, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get projectId => $composableBuilder(
-      column: $table.projectId, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get category => $composableBuilder(
       column: $table.category, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get title => $composableBuilder(
-      column: $table.title, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get tagsJson => $composableBuilder(
+      column: $table.tagsJson, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get content => $composableBuilder(
-      column: $table.content, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get tags => $composableBuilder(
-      column: $table.tags, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+  ColumnFilters<int> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+  ColumnFilters<int> get updatedAt => $composableBuilder(
       column: $table.updatedAt, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<int> get schemaVersion => $composableBuilder(
       column: $table.schemaVersion, builder: (column) => ColumnFilters(column));
 }
 
-class $$SettingEntriesTableTableOrderingComposer
-    extends Composer<_$AppDatabase, $SettingEntriesTableTable> {
-  $$SettingEntriesTableTableOrderingComposer({
+class $$SettingEntriesTableOrderingComposer
+    extends Composer<_$AppDatabase, $SettingEntriesTable> {
+  $$SettingEntriesTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -8894,22 +9066,22 @@ class $$SettingEntriesTableTableOrderingComposer
   ColumnOrderings<String> get projectId => $composableBuilder(
       column: $table.projectId, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get category => $composableBuilder(
-      column: $table.category, builder: (column) => ColumnOrderings(column));
-
   ColumnOrderings<String> get title => $composableBuilder(
       column: $table.title, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get content => $composableBuilder(
       column: $table.content, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get tags => $composableBuilder(
-      column: $table.tags, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<String> get category => $composableBuilder(
+      column: $table.category, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+  ColumnOrderings<String> get tagsJson => $composableBuilder(
+      column: $table.tagsJson, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
       column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<int> get schemaVersion => $composableBuilder(
@@ -8917,9 +9089,9 @@ class $$SettingEntriesTableTableOrderingComposer
       builder: (column) => ColumnOrderings(column));
 }
 
-class $$SettingEntriesTableTableAnnotationComposer
-    extends Composer<_$AppDatabase, $SettingEntriesTableTable> {
-  $$SettingEntriesTableTableAnnotationComposer({
+class $$SettingEntriesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SettingEntriesTable> {
+  $$SettingEntriesTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -8932,76 +9104,73 @@ class $$SettingEntriesTableTableAnnotationComposer
   GeneratedColumn<String> get projectId =>
       $composableBuilder(column: $table.projectId, builder: (column) => column);
 
-  GeneratedColumn<String> get category =>
-      $composableBuilder(column: $table.category, builder: (column) => column);
-
   GeneratedColumn<String> get title =>
       $composableBuilder(column: $table.title, builder: (column) => column);
 
   GeneratedColumn<String> get content =>
       $composableBuilder(column: $table.content, builder: (column) => column);
 
-  GeneratedColumn<String> get tags =>
-      $composableBuilder(column: $table.tags, builder: (column) => column);
+  GeneratedColumn<String> get category =>
+      $composableBuilder(column: $table.category, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get createdAt =>
+  GeneratedColumn<String> get tagsJson =>
+      $composableBuilder(column: $table.tagsJson, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get updatedAt =>
+  GeneratedColumn<int> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
   GeneratedColumn<int> get schemaVersion => $composableBuilder(
       column: $table.schemaVersion, builder: (column) => column);
 }
 
-class $$SettingEntriesTableTableTableManager extends RootTableManager<
+class $$SettingEntriesTableTableManager extends RootTableManager<
     _$AppDatabase,
-    $SettingEntriesTableTable,
-    SettingEntriesTableData,
-    $$SettingEntriesTableTableFilterComposer,
-    $$SettingEntriesTableTableOrderingComposer,
-    $$SettingEntriesTableTableAnnotationComposer,
-    $$SettingEntriesTableTableCreateCompanionBuilder,
-    $$SettingEntriesTableTableUpdateCompanionBuilder,
+    $SettingEntriesTable,
+    SettingEntryRow,
+    $$SettingEntriesTableFilterComposer,
+    $$SettingEntriesTableOrderingComposer,
+    $$SettingEntriesTableAnnotationComposer,
+    $$SettingEntriesTableCreateCompanionBuilder,
+    $$SettingEntriesTableUpdateCompanionBuilder,
     (
-      SettingEntriesTableData,
-      BaseReferences<_$AppDatabase, $SettingEntriesTableTable,
-          SettingEntriesTableData>
+      SettingEntryRow,
+      BaseReferences<_$AppDatabase, $SettingEntriesTable, SettingEntryRow>
     ),
-    SettingEntriesTableData,
+    SettingEntryRow,
     PrefetchHooks Function()> {
-  $$SettingEntriesTableTableTableManager(
-      _$AppDatabase db, $SettingEntriesTableTable table)
+  $$SettingEntriesTableTableManager(
+      _$AppDatabase db, $SettingEntriesTable table)
       : super(TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$SettingEntriesTableTableFilterComposer($db: db, $table: table),
+              $$SettingEntriesTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$SettingEntriesTableTableOrderingComposer(
-                  $db: db, $table: table),
+              $$SettingEntriesTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$SettingEntriesTableTableAnnotationComposer(
-                  $db: db, $table: table),
+              $$SettingEntriesTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback: ({
             Value<String> id = const Value.absent(),
             Value<String> projectId = const Value.absent(),
-            Value<String> category = const Value.absent(),
             Value<String> title = const Value.absent(),
             Value<String> content = const Value.absent(),
-            Value<String> tags = const Value.absent(),
-            Value<DateTime> createdAt = const Value.absent(),
-            Value<DateTime> updatedAt = const Value.absent(),
+            Value<String> category = const Value.absent(),
+            Value<String> tagsJson = const Value.absent(),
+            Value<int> createdAt = const Value.absent(),
+            Value<int> updatedAt = const Value.absent(),
             Value<int> schemaVersion = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
-              SettingEntriesTableCompanion(
+              SettingEntriesCompanion(
             id: id,
             projectId: projectId,
-            category: category,
             title: title,
             content: content,
-            tags: tags,
+            category: category,
+            tagsJson: tagsJson,
             createdAt: createdAt,
             updatedAt: updatedAt,
             schemaVersion: schemaVersion,
@@ -9010,22 +9179,22 @@ class $$SettingEntriesTableTableTableManager extends RootTableManager<
           createCompanionCallback: ({
             required String id,
             required String projectId,
-            required String category,
             required String title,
-            Value<String> content = const Value.absent(),
-            Value<String> tags = const Value.absent(),
-            required DateTime createdAt,
-            required DateTime updatedAt,
+            required String content,
+            Value<String> category = const Value.absent(),
+            Value<String> tagsJson = const Value.absent(),
+            required int createdAt,
+            required int updatedAt,
             Value<int> schemaVersion = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
-              SettingEntriesTableCompanion.insert(
+              SettingEntriesCompanion.insert(
             id: id,
             projectId: projectId,
-            category: category,
             title: title,
             content: content,
-            tags: tags,
+            category: category,
+            tagsJson: tagsJson,
             createdAt: createdAt,
             updatedAt: updatedAt,
             schemaVersion: schemaVersion,
@@ -9038,64 +9207,48 @@ class $$SettingEntriesTableTableTableManager extends RootTableManager<
         ));
 }
 
-typedef $$SettingEntriesTableTableProcessedTableManager = ProcessedTableManager<
+typedef $$SettingEntriesTableProcessedTableManager = ProcessedTableManager<
     _$AppDatabase,
-    $SettingEntriesTableTable,
-    SettingEntriesTableData,
-    $$SettingEntriesTableTableFilterComposer,
-    $$SettingEntriesTableTableOrderingComposer,
-    $$SettingEntriesTableTableAnnotationComposer,
-    $$SettingEntriesTableTableCreateCompanionBuilder,
-    $$SettingEntriesTableTableUpdateCompanionBuilder,
+    $SettingEntriesTable,
+    SettingEntryRow,
+    $$SettingEntriesTableFilterComposer,
+    $$SettingEntriesTableOrderingComposer,
+    $$SettingEntriesTableAnnotationComposer,
+    $$SettingEntriesTableCreateCompanionBuilder,
+    $$SettingEntriesTableUpdateCompanionBuilder,
     (
-      SettingEntriesTableData,
-      BaseReferences<_$AppDatabase, $SettingEntriesTableTable,
-          SettingEntriesTableData>
+      SettingEntryRow,
+      BaseReferences<_$AppDatabase, $SettingEntriesTable, SettingEntryRow>
     ),
-    SettingEntriesTableData,
+    SettingEntryRow,
     PrefetchHooks Function()>;
-typedef $$AgentTasksTableTableCreateCompanionBuilder = AgentTasksTableCompanion
-    Function({
+typedef $$NotesTableCreateCompanionBuilder = NotesCompanion Function({
   required String id,
   required String projectId,
-  required String taskType,
-  Value<String> status,
-  Value<String> inputJson,
-  Value<String> outputJson,
-  Value<String?> model,
-  Value<String?> tokenUsage,
-  Value<String?> error,
-  Value<String> sideEffects,
-  Value<DateTime?> startedAt,
-  Value<DateTime?> completedAt,
-  required DateTime createdAt,
-  required DateTime updatedAt,
+  required String title,
+  required String content,
+  Value<String> category,
+  Value<String> tagsJson,
+  required int createdAt,
+  required int updatedAt,
   Value<int> schemaVersion,
   Value<int> rowid,
 });
-typedef $$AgentTasksTableTableUpdateCompanionBuilder = AgentTasksTableCompanion
-    Function({
+typedef $$NotesTableUpdateCompanionBuilder = NotesCompanion Function({
   Value<String> id,
   Value<String> projectId,
-  Value<String> taskType,
-  Value<String> status,
-  Value<String> inputJson,
-  Value<String> outputJson,
-  Value<String?> model,
-  Value<String?> tokenUsage,
-  Value<String?> error,
-  Value<String> sideEffects,
-  Value<DateTime?> startedAt,
-  Value<DateTime?> completedAt,
-  Value<DateTime> createdAt,
-  Value<DateTime> updatedAt,
+  Value<String> title,
+  Value<String> content,
+  Value<String> category,
+  Value<String> tagsJson,
+  Value<int> createdAt,
+  Value<int> updatedAt,
   Value<int> schemaVersion,
   Value<int> rowid,
 });
 
-class $$AgentTasksTableTableFilterComposer
-    extends Composer<_$AppDatabase, $AgentTasksTableTable> {
-  $$AgentTasksTableTableFilterComposer({
+class $$NotesTableFilterComposer extends Composer<_$AppDatabase, $NotesTable> {
+  $$NotesTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -9107,6 +9260,1127 @@ class $$AgentTasksTableTableFilterComposer
 
   ColumnFilters<String> get projectId => $composableBuilder(
       column: $table.projectId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get content => $composableBuilder(
+      column: $table.content, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get category => $composableBuilder(
+      column: $table.category, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get tagsJson => $composableBuilder(
+      column: $table.tagsJson, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get schemaVersion => $composableBuilder(
+      column: $table.schemaVersion, builder: (column) => ColumnFilters(column));
+}
+
+class $$NotesTableOrderingComposer
+    extends Composer<_$AppDatabase, $NotesTable> {
+  $$NotesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get projectId => $composableBuilder(
+      column: $table.projectId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get content => $composableBuilder(
+      column: $table.content, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get category => $composableBuilder(
+      column: $table.category, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get tagsJson => $composableBuilder(
+      column: $table.tagsJson, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get schemaVersion => $composableBuilder(
+      column: $table.schemaVersion,
+      builder: (column) => ColumnOrderings(column));
+}
+
+class $$NotesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $NotesTable> {
+  $$NotesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get projectId =>
+      $composableBuilder(column: $table.projectId, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => column);
+
+  GeneratedColumn<String> get category =>
+      $composableBuilder(column: $table.category, builder: (column) => column);
+
+  GeneratedColumn<String> get tagsJson =>
+      $composableBuilder(column: $table.tagsJson, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get schemaVersion => $composableBuilder(
+      column: $table.schemaVersion, builder: (column) => column);
+}
+
+class $$NotesTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $NotesTable,
+    NoteRow,
+    $$NotesTableFilterComposer,
+    $$NotesTableOrderingComposer,
+    $$NotesTableAnnotationComposer,
+    $$NotesTableCreateCompanionBuilder,
+    $$NotesTableUpdateCompanionBuilder,
+    (NoteRow, BaseReferences<_$AppDatabase, $NotesTable, NoteRow>),
+    NoteRow,
+    PrefetchHooks Function()> {
+  $$NotesTableTableManager(_$AppDatabase db, $NotesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$NotesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$NotesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$NotesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> projectId = const Value.absent(),
+            Value<String> title = const Value.absent(),
+            Value<String> content = const Value.absent(),
+            Value<String> category = const Value.absent(),
+            Value<String> tagsJson = const Value.absent(),
+            Value<int> createdAt = const Value.absent(),
+            Value<int> updatedAt = const Value.absent(),
+            Value<int> schemaVersion = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              NotesCompanion(
+            id: id,
+            projectId: projectId,
+            title: title,
+            content: content,
+            category: category,
+            tagsJson: tagsJson,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            schemaVersion: schemaVersion,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String projectId,
+            required String title,
+            required String content,
+            Value<String> category = const Value.absent(),
+            Value<String> tagsJson = const Value.absent(),
+            required int createdAt,
+            required int updatedAt,
+            Value<int> schemaVersion = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              NotesCompanion.insert(
+            id: id,
+            projectId: projectId,
+            title: title,
+            content: content,
+            category: category,
+            tagsJson: tagsJson,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            schemaVersion: schemaVersion,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$NotesTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $NotesTable,
+    NoteRow,
+    $$NotesTableFilterComposer,
+    $$NotesTableOrderingComposer,
+    $$NotesTableAnnotationComposer,
+    $$NotesTableCreateCompanionBuilder,
+    $$NotesTableUpdateCompanionBuilder,
+    (NoteRow, BaseReferences<_$AppDatabase, $NotesTable, NoteRow>),
+    NoteRow,
+    PrefetchHooks Function()>;
+typedef $$LlmProvidersTableCreateCompanionBuilder = LlmProvidersCompanion
+    Function({
+  required String id,
+  required String projectId,
+  required String name,
+  required String baseUrl,
+  required String secretKeyRef,
+  Value<String> cachedModelsJson,
+  Value<String?> selectedModelId,
+  required String status,
+  Value<double> temperature,
+  Value<double> topP,
+  Value<bool> streamingEnabled,
+  required int createdAt,
+  required int updatedAt,
+  Value<int> schemaVersion,
+  Value<int> rowid,
+});
+typedef $$LlmProvidersTableUpdateCompanionBuilder = LlmProvidersCompanion
+    Function({
+  Value<String> id,
+  Value<String> projectId,
+  Value<String> name,
+  Value<String> baseUrl,
+  Value<String> secretKeyRef,
+  Value<String> cachedModelsJson,
+  Value<String?> selectedModelId,
+  Value<String> status,
+  Value<double> temperature,
+  Value<double> topP,
+  Value<bool> streamingEnabled,
+  Value<int> createdAt,
+  Value<int> updatedAt,
+  Value<int> schemaVersion,
+  Value<int> rowid,
+});
+
+class $$LlmProvidersTableFilterComposer
+    extends Composer<_$AppDatabase, $LlmProvidersTable> {
+  $$LlmProvidersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get projectId => $composableBuilder(
+      column: $table.projectId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get baseUrl => $composableBuilder(
+      column: $table.baseUrl, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get secretKeyRef => $composableBuilder(
+      column: $table.secretKeyRef, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get cachedModelsJson => $composableBuilder(
+      column: $table.cachedModelsJson,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get selectedModelId => $composableBuilder(
+      column: $table.selectedModelId,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get status => $composableBuilder(
+      column: $table.status, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get temperature => $composableBuilder(
+      column: $table.temperature, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get topP => $composableBuilder(
+      column: $table.topP, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get streamingEnabled => $composableBuilder(
+      column: $table.streamingEnabled,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get schemaVersion => $composableBuilder(
+      column: $table.schemaVersion, builder: (column) => ColumnFilters(column));
+}
+
+class $$LlmProvidersTableOrderingComposer
+    extends Composer<_$AppDatabase, $LlmProvidersTable> {
+  $$LlmProvidersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get projectId => $composableBuilder(
+      column: $table.projectId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get baseUrl => $composableBuilder(
+      column: $table.baseUrl, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get secretKeyRef => $composableBuilder(
+      column: $table.secretKeyRef,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get cachedModelsJson => $composableBuilder(
+      column: $table.cachedModelsJson,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get selectedModelId => $composableBuilder(
+      column: $table.selectedModelId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get status => $composableBuilder(
+      column: $table.status, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get temperature => $composableBuilder(
+      column: $table.temperature, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get topP => $composableBuilder(
+      column: $table.topP, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get streamingEnabled => $composableBuilder(
+      column: $table.streamingEnabled,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get schemaVersion => $composableBuilder(
+      column: $table.schemaVersion,
+      builder: (column) => ColumnOrderings(column));
+}
+
+class $$LlmProvidersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LlmProvidersTable> {
+  $$LlmProvidersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get projectId =>
+      $composableBuilder(column: $table.projectId, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get baseUrl =>
+      $composableBuilder(column: $table.baseUrl, builder: (column) => column);
+
+  GeneratedColumn<String> get secretKeyRef => $composableBuilder(
+      column: $table.secretKeyRef, builder: (column) => column);
+
+  GeneratedColumn<String> get cachedModelsJson => $composableBuilder(
+      column: $table.cachedModelsJson, builder: (column) => column);
+
+  GeneratedColumn<String> get selectedModelId => $composableBuilder(
+      column: $table.selectedModelId, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<double> get temperature => $composableBuilder(
+      column: $table.temperature, builder: (column) => column);
+
+  GeneratedColumn<double> get topP =>
+      $composableBuilder(column: $table.topP, builder: (column) => column);
+
+  GeneratedColumn<bool> get streamingEnabled => $composableBuilder(
+      column: $table.streamingEnabled, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get schemaVersion => $composableBuilder(
+      column: $table.schemaVersion, builder: (column) => column);
+}
+
+class $$LlmProvidersTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $LlmProvidersTable,
+    LlmProviderRow,
+    $$LlmProvidersTableFilterComposer,
+    $$LlmProvidersTableOrderingComposer,
+    $$LlmProvidersTableAnnotationComposer,
+    $$LlmProvidersTableCreateCompanionBuilder,
+    $$LlmProvidersTableUpdateCompanionBuilder,
+    (
+      LlmProviderRow,
+      BaseReferences<_$AppDatabase, $LlmProvidersTable, LlmProviderRow>
+    ),
+    LlmProviderRow,
+    PrefetchHooks Function()> {
+  $$LlmProvidersTableTableManager(_$AppDatabase db, $LlmProvidersTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LlmProvidersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LlmProvidersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LlmProvidersTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> projectId = const Value.absent(),
+            Value<String> name = const Value.absent(),
+            Value<String> baseUrl = const Value.absent(),
+            Value<String> secretKeyRef = const Value.absent(),
+            Value<String> cachedModelsJson = const Value.absent(),
+            Value<String?> selectedModelId = const Value.absent(),
+            Value<String> status = const Value.absent(),
+            Value<double> temperature = const Value.absent(),
+            Value<double> topP = const Value.absent(),
+            Value<bool> streamingEnabled = const Value.absent(),
+            Value<int> createdAt = const Value.absent(),
+            Value<int> updatedAt = const Value.absent(),
+            Value<int> schemaVersion = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              LlmProvidersCompanion(
+            id: id,
+            projectId: projectId,
+            name: name,
+            baseUrl: baseUrl,
+            secretKeyRef: secretKeyRef,
+            cachedModelsJson: cachedModelsJson,
+            selectedModelId: selectedModelId,
+            status: status,
+            temperature: temperature,
+            topP: topP,
+            streamingEnabled: streamingEnabled,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            schemaVersion: schemaVersion,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String projectId,
+            required String name,
+            required String baseUrl,
+            required String secretKeyRef,
+            Value<String> cachedModelsJson = const Value.absent(),
+            Value<String?> selectedModelId = const Value.absent(),
+            required String status,
+            Value<double> temperature = const Value.absent(),
+            Value<double> topP = const Value.absent(),
+            Value<bool> streamingEnabled = const Value.absent(),
+            required int createdAt,
+            required int updatedAt,
+            Value<int> schemaVersion = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              LlmProvidersCompanion.insert(
+            id: id,
+            projectId: projectId,
+            name: name,
+            baseUrl: baseUrl,
+            secretKeyRef: secretKeyRef,
+            cachedModelsJson: cachedModelsJson,
+            selectedModelId: selectedModelId,
+            status: status,
+            temperature: temperature,
+            topP: topP,
+            streamingEnabled: streamingEnabled,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            schemaVersion: schemaVersion,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$LlmProvidersTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $LlmProvidersTable,
+    LlmProviderRow,
+    $$LlmProvidersTableFilterComposer,
+    $$LlmProvidersTableOrderingComposer,
+    $$LlmProvidersTableAnnotationComposer,
+    $$LlmProvidersTableCreateCompanionBuilder,
+    $$LlmProvidersTableUpdateCompanionBuilder,
+    (
+      LlmProviderRow,
+      BaseReferences<_$AppDatabase, $LlmProvidersTable, LlmProviderRow>
+    ),
+    LlmProviderRow,
+    PrefetchHooks Function()>;
+typedef $$LlmDefaultSettingsTableTableCreateCompanionBuilder
+    = LlmDefaultSettingsTableCompanion Function({
+  Value<int> id,
+  Value<String?> writingProviderId,
+  Value<String?> writingModelId,
+  Value<String?> reasoningProviderId,
+  Value<String?> reasoningModelId,
+  Value<String?> embeddingProviderId,
+  Value<String?> embeddingModelId,
+  Value<double> defaultTemperature,
+  Value<double> defaultTopP,
+  Value<bool> streamingEnabled,
+  required int updatedAt,
+  Value<int> schemaVersion,
+});
+typedef $$LlmDefaultSettingsTableTableUpdateCompanionBuilder
+    = LlmDefaultSettingsTableCompanion Function({
+  Value<int> id,
+  Value<String?> writingProviderId,
+  Value<String?> writingModelId,
+  Value<String?> reasoningProviderId,
+  Value<String?> reasoningModelId,
+  Value<String?> embeddingProviderId,
+  Value<String?> embeddingModelId,
+  Value<double> defaultTemperature,
+  Value<double> defaultTopP,
+  Value<bool> streamingEnabled,
+  Value<int> updatedAt,
+  Value<int> schemaVersion,
+});
+
+class $$LlmDefaultSettingsTableTableFilterComposer
+    extends Composer<_$AppDatabase, $LlmDefaultSettingsTableTable> {
+  $$LlmDefaultSettingsTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get writingProviderId => $composableBuilder(
+      column: $table.writingProviderId,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get writingModelId => $composableBuilder(
+      column: $table.writingModelId,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get reasoningProviderId => $composableBuilder(
+      column: $table.reasoningProviderId,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get reasoningModelId => $composableBuilder(
+      column: $table.reasoningModelId,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get embeddingProviderId => $composableBuilder(
+      column: $table.embeddingProviderId,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get embeddingModelId => $composableBuilder(
+      column: $table.embeddingModelId,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get defaultTemperature => $composableBuilder(
+      column: $table.defaultTemperature,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get defaultTopP => $composableBuilder(
+      column: $table.defaultTopP, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get streamingEnabled => $composableBuilder(
+      column: $table.streamingEnabled,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get schemaVersion => $composableBuilder(
+      column: $table.schemaVersion, builder: (column) => ColumnFilters(column));
+}
+
+class $$LlmDefaultSettingsTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $LlmDefaultSettingsTableTable> {
+  $$LlmDefaultSettingsTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get writingProviderId => $composableBuilder(
+      column: $table.writingProviderId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get writingModelId => $composableBuilder(
+      column: $table.writingModelId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get reasoningProviderId => $composableBuilder(
+      column: $table.reasoningProviderId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get reasoningModelId => $composableBuilder(
+      column: $table.reasoningModelId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get embeddingProviderId => $composableBuilder(
+      column: $table.embeddingProviderId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get embeddingModelId => $composableBuilder(
+      column: $table.embeddingModelId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get defaultTemperature => $composableBuilder(
+      column: $table.defaultTemperature,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get defaultTopP => $composableBuilder(
+      column: $table.defaultTopP, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get streamingEnabled => $composableBuilder(
+      column: $table.streamingEnabled,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get schemaVersion => $composableBuilder(
+      column: $table.schemaVersion,
+      builder: (column) => ColumnOrderings(column));
+}
+
+class $$LlmDefaultSettingsTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LlmDefaultSettingsTableTable> {
+  $$LlmDefaultSettingsTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get writingProviderId => $composableBuilder(
+      column: $table.writingProviderId, builder: (column) => column);
+
+  GeneratedColumn<String> get writingModelId => $composableBuilder(
+      column: $table.writingModelId, builder: (column) => column);
+
+  GeneratedColumn<String> get reasoningProviderId => $composableBuilder(
+      column: $table.reasoningProviderId, builder: (column) => column);
+
+  GeneratedColumn<String> get reasoningModelId => $composableBuilder(
+      column: $table.reasoningModelId, builder: (column) => column);
+
+  GeneratedColumn<String> get embeddingProviderId => $composableBuilder(
+      column: $table.embeddingProviderId, builder: (column) => column);
+
+  GeneratedColumn<String> get embeddingModelId => $composableBuilder(
+      column: $table.embeddingModelId, builder: (column) => column);
+
+  GeneratedColumn<double> get defaultTemperature => $composableBuilder(
+      column: $table.defaultTemperature, builder: (column) => column);
+
+  GeneratedColumn<double> get defaultTopP => $composableBuilder(
+      column: $table.defaultTopP, builder: (column) => column);
+
+  GeneratedColumn<bool> get streamingEnabled => $composableBuilder(
+      column: $table.streamingEnabled, builder: (column) => column);
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get schemaVersion => $composableBuilder(
+      column: $table.schemaVersion, builder: (column) => column);
+}
+
+class $$LlmDefaultSettingsTableTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $LlmDefaultSettingsTableTable,
+    LlmDefaultSettingsRow,
+    $$LlmDefaultSettingsTableTableFilterComposer,
+    $$LlmDefaultSettingsTableTableOrderingComposer,
+    $$LlmDefaultSettingsTableTableAnnotationComposer,
+    $$LlmDefaultSettingsTableTableCreateCompanionBuilder,
+    $$LlmDefaultSettingsTableTableUpdateCompanionBuilder,
+    (
+      LlmDefaultSettingsRow,
+      BaseReferences<_$AppDatabase, $LlmDefaultSettingsTableTable,
+          LlmDefaultSettingsRow>
+    ),
+    LlmDefaultSettingsRow,
+    PrefetchHooks Function()> {
+  $$LlmDefaultSettingsTableTableTableManager(
+      _$AppDatabase db, $LlmDefaultSettingsTableTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LlmDefaultSettingsTableTableFilterComposer(
+                  $db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LlmDefaultSettingsTableTableOrderingComposer(
+                  $db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LlmDefaultSettingsTableTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String?> writingProviderId = const Value.absent(),
+            Value<String?> writingModelId = const Value.absent(),
+            Value<String?> reasoningProviderId = const Value.absent(),
+            Value<String?> reasoningModelId = const Value.absent(),
+            Value<String?> embeddingProviderId = const Value.absent(),
+            Value<String?> embeddingModelId = const Value.absent(),
+            Value<double> defaultTemperature = const Value.absent(),
+            Value<double> defaultTopP = const Value.absent(),
+            Value<bool> streamingEnabled = const Value.absent(),
+            Value<int> updatedAt = const Value.absent(),
+            Value<int> schemaVersion = const Value.absent(),
+          }) =>
+              LlmDefaultSettingsTableCompanion(
+            id: id,
+            writingProviderId: writingProviderId,
+            writingModelId: writingModelId,
+            reasoningProviderId: reasoningProviderId,
+            reasoningModelId: reasoningModelId,
+            embeddingProviderId: embeddingProviderId,
+            embeddingModelId: embeddingModelId,
+            defaultTemperature: defaultTemperature,
+            defaultTopP: defaultTopP,
+            streamingEnabled: streamingEnabled,
+            updatedAt: updatedAt,
+            schemaVersion: schemaVersion,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String?> writingProviderId = const Value.absent(),
+            Value<String?> writingModelId = const Value.absent(),
+            Value<String?> reasoningProviderId = const Value.absent(),
+            Value<String?> reasoningModelId = const Value.absent(),
+            Value<String?> embeddingProviderId = const Value.absent(),
+            Value<String?> embeddingModelId = const Value.absent(),
+            Value<double> defaultTemperature = const Value.absent(),
+            Value<double> defaultTopP = const Value.absent(),
+            Value<bool> streamingEnabled = const Value.absent(),
+            required int updatedAt,
+            Value<int> schemaVersion = const Value.absent(),
+          }) =>
+              LlmDefaultSettingsTableCompanion.insert(
+            id: id,
+            writingProviderId: writingProviderId,
+            writingModelId: writingModelId,
+            reasoningProviderId: reasoningProviderId,
+            reasoningModelId: reasoningModelId,
+            embeddingProviderId: embeddingProviderId,
+            embeddingModelId: embeddingModelId,
+            defaultTemperature: defaultTemperature,
+            defaultTopP: defaultTopP,
+            streamingEnabled: streamingEnabled,
+            updatedAt: updatedAt,
+            schemaVersion: schemaVersion,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$LlmDefaultSettingsTableTableProcessedTableManager
+    = ProcessedTableManager<
+        _$AppDatabase,
+        $LlmDefaultSettingsTableTable,
+        LlmDefaultSettingsRow,
+        $$LlmDefaultSettingsTableTableFilterComposer,
+        $$LlmDefaultSettingsTableTableOrderingComposer,
+        $$LlmDefaultSettingsTableTableAnnotationComposer,
+        $$LlmDefaultSettingsTableTableCreateCompanionBuilder,
+        $$LlmDefaultSettingsTableTableUpdateCompanionBuilder,
+        (
+          LlmDefaultSettingsRow,
+          BaseReferences<_$AppDatabase, $LlmDefaultSettingsTableTable,
+              LlmDefaultSettingsRow>
+        ),
+        LlmDefaultSettingsRow,
+        PrefetchHooks Function()>;
+typedef $$OutlineNodesTableCreateCompanionBuilder = OutlineNodesCompanion
+    Function({
+  required String id,
+  required String projectId,
+  required String title,
+  Value<String> summary,
+  Value<String> chapterId,
+  Value<String> parentId,
+  Value<int> sortOrder,
+  Value<String> tagsJson,
+  required int createdAt,
+  required int updatedAt,
+  Value<int> schemaVersion,
+  Value<int> rowid,
+});
+typedef $$OutlineNodesTableUpdateCompanionBuilder = OutlineNodesCompanion
+    Function({
+  Value<String> id,
+  Value<String> projectId,
+  Value<String> title,
+  Value<String> summary,
+  Value<String> chapterId,
+  Value<String> parentId,
+  Value<int> sortOrder,
+  Value<String> tagsJson,
+  Value<int> createdAt,
+  Value<int> updatedAt,
+  Value<int> schemaVersion,
+  Value<int> rowid,
+});
+
+class $$OutlineNodesTableFilterComposer
+    extends Composer<_$AppDatabase, $OutlineNodesTable> {
+  $$OutlineNodesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get projectId => $composableBuilder(
+      column: $table.projectId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get summary => $composableBuilder(
+      column: $table.summary, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get chapterId => $composableBuilder(
+      column: $table.chapterId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get parentId => $composableBuilder(
+      column: $table.parentId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+      column: $table.sortOrder, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get tagsJson => $composableBuilder(
+      column: $table.tagsJson, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get schemaVersion => $composableBuilder(
+      column: $table.schemaVersion, builder: (column) => ColumnFilters(column));
+}
+
+class $$OutlineNodesTableOrderingComposer
+    extends Composer<_$AppDatabase, $OutlineNodesTable> {
+  $$OutlineNodesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get projectId => $composableBuilder(
+      column: $table.projectId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get summary => $composableBuilder(
+      column: $table.summary, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get chapterId => $composableBuilder(
+      column: $table.chapterId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get parentId => $composableBuilder(
+      column: $table.parentId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+      column: $table.sortOrder, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get tagsJson => $composableBuilder(
+      column: $table.tagsJson, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get schemaVersion => $composableBuilder(
+      column: $table.schemaVersion,
+      builder: (column) => ColumnOrderings(column));
+}
+
+class $$OutlineNodesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $OutlineNodesTable> {
+  $$OutlineNodesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get projectId =>
+      $composableBuilder(column: $table.projectId, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get summary =>
+      $composableBuilder(column: $table.summary, builder: (column) => column);
+
+  GeneratedColumn<String> get chapterId =>
+      $composableBuilder(column: $table.chapterId, builder: (column) => column);
+
+  GeneratedColumn<String> get parentId =>
+      $composableBuilder(column: $table.parentId, builder: (column) => column);
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<String> get tagsJson =>
+      $composableBuilder(column: $table.tagsJson, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get schemaVersion => $composableBuilder(
+      column: $table.schemaVersion, builder: (column) => column);
+}
+
+class $$OutlineNodesTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $OutlineNodesTable,
+    OutlineNodeRow,
+    $$OutlineNodesTableFilterComposer,
+    $$OutlineNodesTableOrderingComposer,
+    $$OutlineNodesTableAnnotationComposer,
+    $$OutlineNodesTableCreateCompanionBuilder,
+    $$OutlineNodesTableUpdateCompanionBuilder,
+    (
+      OutlineNodeRow,
+      BaseReferences<_$AppDatabase, $OutlineNodesTable, OutlineNodeRow>
+    ),
+    OutlineNodeRow,
+    PrefetchHooks Function()> {
+  $$OutlineNodesTableTableManager(_$AppDatabase db, $OutlineNodesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$OutlineNodesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$OutlineNodesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$OutlineNodesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> projectId = const Value.absent(),
+            Value<String> title = const Value.absent(),
+            Value<String> summary = const Value.absent(),
+            Value<String> chapterId = const Value.absent(),
+            Value<String> parentId = const Value.absent(),
+            Value<int> sortOrder = const Value.absent(),
+            Value<String> tagsJson = const Value.absent(),
+            Value<int> createdAt = const Value.absent(),
+            Value<int> updatedAt = const Value.absent(),
+            Value<int> schemaVersion = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              OutlineNodesCompanion(
+            id: id,
+            projectId: projectId,
+            title: title,
+            summary: summary,
+            chapterId: chapterId,
+            parentId: parentId,
+            sortOrder: sortOrder,
+            tagsJson: tagsJson,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            schemaVersion: schemaVersion,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String projectId,
+            required String title,
+            Value<String> summary = const Value.absent(),
+            Value<String> chapterId = const Value.absent(),
+            Value<String> parentId = const Value.absent(),
+            Value<int> sortOrder = const Value.absent(),
+            Value<String> tagsJson = const Value.absent(),
+            required int createdAt,
+            required int updatedAt,
+            Value<int> schemaVersion = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              OutlineNodesCompanion.insert(
+            id: id,
+            projectId: projectId,
+            title: title,
+            summary: summary,
+            chapterId: chapterId,
+            parentId: parentId,
+            sortOrder: sortOrder,
+            tagsJson: tagsJson,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            schemaVersion: schemaVersion,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$OutlineNodesTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $OutlineNodesTable,
+    OutlineNodeRow,
+    $$OutlineNodesTableFilterComposer,
+    $$OutlineNodesTableOrderingComposer,
+    $$OutlineNodesTableAnnotationComposer,
+    $$OutlineNodesTableCreateCompanionBuilder,
+    $$OutlineNodesTableUpdateCompanionBuilder,
+    (
+      OutlineNodeRow,
+      BaseReferences<_$AppDatabase, $OutlineNodesTable, OutlineNodeRow>
+    ),
+    OutlineNodeRow,
+    PrefetchHooks Function()>;
+typedef $$AgentTasksTableCreateCompanionBuilder = AgentTasksCompanion Function({
+  required String id,
+  required String projectId,
+  required String taskType,
+  required String status,
+  required int createdAt,
+  required int updatedAt,
+  Value<int> schemaVersion,
+  Value<String?> chapterId,
+  Value<String?> instruction,
+  Value<String?> result,
+  Value<String?> errorMessage,
+  Value<int> rowid,
+});
+typedef $$AgentTasksTableUpdateCompanionBuilder = AgentTasksCompanion Function({
+  Value<String> id,
+  Value<String> projectId,
+  Value<String> taskType,
+  Value<String> status,
+  Value<int> createdAt,
+  Value<int> updatedAt,
+  Value<int> schemaVersion,
+  Value<String?> chapterId,
+  Value<String?> instruction,
+  Value<String?> result,
+  Value<String?> errorMessage,
+  Value<int> rowid,
+});
+
+final class $$AgentTasksTableReferences
+    extends BaseReferences<_$AppDatabase, $AgentTasksTable, AgentTaskRow> {
+  $$AgentTasksTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $ProjectsTable _projectIdTable(_$AppDatabase db) =>
+      db.projects.createAlias(
+          $_aliasNameGenerator(db.agentTasks.projectId, db.projects.id));
+
+  $$ProjectsTableProcessedTableManager get projectId {
+    final manager = $$ProjectsTableTableManager($_db, $_db.projects)
+        .filter((f) => f.id($_item.projectId));
+    final item = $_typedResult.readTableOrNull(_projectIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$AgentTasksTableFilterComposer
+    extends Composer<_$AppDatabase, $AgentTasksTable> {
+  $$AgentTasksTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get taskType => $composableBuilder(
       column: $table.taskType, builder: (column) => ColumnFilters(column));
@@ -9114,43 +10388,51 @@ class $$AgentTasksTableTableFilterComposer
   ColumnFilters<String> get status => $composableBuilder(
       column: $table.status, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get inputJson => $composableBuilder(
-      column: $table.inputJson, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get outputJson => $composableBuilder(
-      column: $table.outputJson, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get model => $composableBuilder(
-      column: $table.model, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get tokenUsage => $composableBuilder(
-      column: $table.tokenUsage, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get error => $composableBuilder(
-      column: $table.error, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get sideEffects => $composableBuilder(
-      column: $table.sideEffects, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<DateTime> get startedAt => $composableBuilder(
-      column: $table.startedAt, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<DateTime> get completedAt => $composableBuilder(
-      column: $table.completedAt, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+  ColumnFilters<int> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+  ColumnFilters<int> get updatedAt => $composableBuilder(
       column: $table.updatedAt, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<int> get schemaVersion => $composableBuilder(
       column: $table.schemaVersion, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get chapterId => $composableBuilder(
+      column: $table.chapterId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get instruction => $composableBuilder(
+      column: $table.instruction, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get result => $composableBuilder(
+      column: $table.result, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get errorMessage => $composableBuilder(
+      column: $table.errorMessage, builder: (column) => ColumnFilters(column));
+
+  $$ProjectsTableFilterComposer get projectId {
+    final $$ProjectsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.projectId,
+        referencedTable: $db.projects,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProjectsTableFilterComposer(
+              $db: $db,
+              $table: $db.projects,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
 }
 
-class $$AgentTasksTableTableOrderingComposer
-    extends Composer<_$AppDatabase, $AgentTasksTableTable> {
-  $$AgentTasksTableTableOrderingComposer({
+class $$AgentTasksTableOrderingComposer
+    extends Composer<_$AppDatabase, $AgentTasksTable> {
+  $$AgentTasksTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -9160,53 +10442,59 @@ class $$AgentTasksTableTableOrderingComposer
   ColumnOrderings<String> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get projectId => $composableBuilder(
-      column: $table.projectId, builder: (column) => ColumnOrderings(column));
-
   ColumnOrderings<String> get taskType => $composableBuilder(
       column: $table.taskType, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get status => $composableBuilder(
       column: $table.status, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get inputJson => $composableBuilder(
-      column: $table.inputJson, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get outputJson => $composableBuilder(
-      column: $table.outputJson, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get model => $composableBuilder(
-      column: $table.model, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get tokenUsage => $composableBuilder(
-      column: $table.tokenUsage, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get error => $composableBuilder(
-      column: $table.error, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get sideEffects => $composableBuilder(
-      column: $table.sideEffects, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<DateTime> get startedAt => $composableBuilder(
-      column: $table.startedAt, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<DateTime> get completedAt => $composableBuilder(
-      column: $table.completedAt, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+  ColumnOrderings<int> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
       column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<int> get schemaVersion => $composableBuilder(
       column: $table.schemaVersion,
       builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get chapterId => $composableBuilder(
+      column: $table.chapterId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get instruction => $composableBuilder(
+      column: $table.instruction, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get result => $composableBuilder(
+      column: $table.result, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get errorMessage => $composableBuilder(
+      column: $table.errorMessage,
+      builder: (column) => ColumnOrderings(column));
+
+  $$ProjectsTableOrderingComposer get projectId {
+    final $$ProjectsTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.projectId,
+        referencedTable: $db.projects,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProjectsTableOrderingComposer(
+              $db: $db,
+              $table: $db.projects,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
 }
 
-class $$AgentTasksTableTableAnnotationComposer
-    extends Composer<_$AppDatabase, $AgentTasksTableTable> {
-  $$AgentTasksTableTableAnnotationComposer({
+class $$AgentTasksTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AgentTasksTable> {
+  $$AgentTasksTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -9216,195 +10504,222 @@ class $$AgentTasksTableTableAnnotationComposer
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<String> get projectId =>
-      $composableBuilder(column: $table.projectId, builder: (column) => column);
-
   GeneratedColumn<String> get taskType =>
       $composableBuilder(column: $table.taskType, builder: (column) => column);
 
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
 
-  GeneratedColumn<String> get inputJson =>
-      $composableBuilder(column: $table.inputJson, builder: (column) => column);
-
-  GeneratedColumn<String> get outputJson => $composableBuilder(
-      column: $table.outputJson, builder: (column) => column);
-
-  GeneratedColumn<String> get model =>
-      $composableBuilder(column: $table.model, builder: (column) => column);
-
-  GeneratedColumn<String> get tokenUsage => $composableBuilder(
-      column: $table.tokenUsage, builder: (column) => column);
-
-  GeneratedColumn<String> get error =>
-      $composableBuilder(column: $table.error, builder: (column) => column);
-
-  GeneratedColumn<String> get sideEffects => $composableBuilder(
-      column: $table.sideEffects, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get startedAt =>
-      $composableBuilder(column: $table.startedAt, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get completedAt => $composableBuilder(
-      column: $table.completedAt, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get createdAt =>
+  GeneratedColumn<int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get updatedAt =>
+  GeneratedColumn<int> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
   GeneratedColumn<int> get schemaVersion => $composableBuilder(
       column: $table.schemaVersion, builder: (column) => column);
+
+  GeneratedColumn<String> get chapterId =>
+      $composableBuilder(column: $table.chapterId, builder: (column) => column);
+
+  GeneratedColumn<String> get instruction => $composableBuilder(
+      column: $table.instruction, builder: (column) => column);
+
+  GeneratedColumn<String> get result =>
+      $composableBuilder(column: $table.result, builder: (column) => column);
+
+  GeneratedColumn<String> get errorMessage => $composableBuilder(
+      column: $table.errorMessage, builder: (column) => column);
+
+  $$ProjectsTableAnnotationComposer get projectId {
+    final $$ProjectsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.projectId,
+        referencedTable: $db.projects,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProjectsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.projects,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
 }
 
-class $$AgentTasksTableTableTableManager extends RootTableManager<
+class $$AgentTasksTableTableManager extends RootTableManager<
     _$AppDatabase,
-    $AgentTasksTableTable,
-    AgentTasksTableData,
-    $$AgentTasksTableTableFilterComposer,
-    $$AgentTasksTableTableOrderingComposer,
-    $$AgentTasksTableTableAnnotationComposer,
-    $$AgentTasksTableTableCreateCompanionBuilder,
-    $$AgentTasksTableTableUpdateCompanionBuilder,
-    (
-      AgentTasksTableData,
-      BaseReferences<_$AppDatabase, $AgentTasksTableTable, AgentTasksTableData>
-    ),
-    AgentTasksTableData,
-    PrefetchHooks Function()> {
-  $$AgentTasksTableTableTableManager(
-      _$AppDatabase db, $AgentTasksTableTable table)
+    $AgentTasksTable,
+    AgentTaskRow,
+    $$AgentTasksTableFilterComposer,
+    $$AgentTasksTableOrderingComposer,
+    $$AgentTasksTableAnnotationComposer,
+    $$AgentTasksTableCreateCompanionBuilder,
+    $$AgentTasksTableUpdateCompanionBuilder,
+    (AgentTaskRow, $$AgentTasksTableReferences),
+    AgentTaskRow,
+    PrefetchHooks Function({bool projectId})> {
+  $$AgentTasksTableTableManager(_$AppDatabase db, $AgentTasksTable table)
       : super(TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$AgentTasksTableTableFilterComposer($db: db, $table: table),
+              $$AgentTasksTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$AgentTasksTableTableOrderingComposer($db: db, $table: table),
+              $$AgentTasksTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$AgentTasksTableTableAnnotationComposer($db: db, $table: table),
+              $$AgentTasksTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback: ({
             Value<String> id = const Value.absent(),
             Value<String> projectId = const Value.absent(),
             Value<String> taskType = const Value.absent(),
             Value<String> status = const Value.absent(),
-            Value<String> inputJson = const Value.absent(),
-            Value<String> outputJson = const Value.absent(),
-            Value<String?> model = const Value.absent(),
-            Value<String?> tokenUsage = const Value.absent(),
-            Value<String?> error = const Value.absent(),
-            Value<String> sideEffects = const Value.absent(),
-            Value<DateTime?> startedAt = const Value.absent(),
-            Value<DateTime?> completedAt = const Value.absent(),
-            Value<DateTime> createdAt = const Value.absent(),
-            Value<DateTime> updatedAt = const Value.absent(),
+            Value<int> createdAt = const Value.absent(),
+            Value<int> updatedAt = const Value.absent(),
             Value<int> schemaVersion = const Value.absent(),
+            Value<String?> chapterId = const Value.absent(),
+            Value<String?> instruction = const Value.absent(),
+            Value<String?> result = const Value.absent(),
+            Value<String?> errorMessage = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
-              AgentTasksTableCompanion(
+              AgentTasksCompanion(
             id: id,
             projectId: projectId,
             taskType: taskType,
             status: status,
-            inputJson: inputJson,
-            outputJson: outputJson,
-            model: model,
-            tokenUsage: tokenUsage,
-            error: error,
-            sideEffects: sideEffects,
-            startedAt: startedAt,
-            completedAt: completedAt,
             createdAt: createdAt,
             updatedAt: updatedAt,
             schemaVersion: schemaVersion,
+            chapterId: chapterId,
+            instruction: instruction,
+            result: result,
+            errorMessage: errorMessage,
             rowid: rowid,
           ),
           createCompanionCallback: ({
             required String id,
             required String projectId,
             required String taskType,
-            Value<String> status = const Value.absent(),
-            Value<String> inputJson = const Value.absent(),
-            Value<String> outputJson = const Value.absent(),
-            Value<String?> model = const Value.absent(),
-            Value<String?> tokenUsage = const Value.absent(),
-            Value<String?> error = const Value.absent(),
-            Value<String> sideEffects = const Value.absent(),
-            Value<DateTime?> startedAt = const Value.absent(),
-            Value<DateTime?> completedAt = const Value.absent(),
-            required DateTime createdAt,
-            required DateTime updatedAt,
+            required String status,
+            required int createdAt,
+            required int updatedAt,
             Value<int> schemaVersion = const Value.absent(),
+            Value<String?> chapterId = const Value.absent(),
+            Value<String?> instruction = const Value.absent(),
+            Value<String?> result = const Value.absent(),
+            Value<String?> errorMessage = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
-              AgentTasksTableCompanion.insert(
+              AgentTasksCompanion.insert(
             id: id,
             projectId: projectId,
             taskType: taskType,
             status: status,
-            inputJson: inputJson,
-            outputJson: outputJson,
-            model: model,
-            tokenUsage: tokenUsage,
-            error: error,
-            sideEffects: sideEffects,
-            startedAt: startedAt,
-            completedAt: completedAt,
             createdAt: createdAt,
             updatedAt: updatedAt,
             schemaVersion: schemaVersion,
+            chapterId: chapterId,
+            instruction: instruction,
+            result: result,
+            errorMessage: errorMessage,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map((e) => (
+                    e.readTable(table),
+                    $$AgentTasksTableReferences(db, table, e)
+                  ))
               .toList(),
-          prefetchHooksCallback: null,
+          prefetchHooksCallback: ({projectId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (projectId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.projectId,
+                    referencedTable:
+                        $$AgentTasksTableReferences._projectIdTable(db),
+                    referencedColumn:
+                        $$AgentTasksTableReferences._projectIdTable(db).id,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
         ));
 }
 
-typedef $$AgentTasksTableTableProcessedTableManager = ProcessedTableManager<
+typedef $$AgentTasksTableProcessedTableManager = ProcessedTableManager<
     _$AppDatabase,
-    $AgentTasksTableTable,
-    AgentTasksTableData,
-    $$AgentTasksTableTableFilterComposer,
-    $$AgentTasksTableTableOrderingComposer,
-    $$AgentTasksTableTableAnnotationComposer,
-    $$AgentTasksTableTableCreateCompanionBuilder,
-    $$AgentTasksTableTableUpdateCompanionBuilder,
-    (
-      AgentTasksTableData,
-      BaseReferences<_$AppDatabase, $AgentTasksTableTable, AgentTasksTableData>
-    ),
-    AgentTasksTableData,
-    PrefetchHooks Function()>;
-typedef $$SnapshotsTableTableCreateCompanionBuilder = SnapshotsTableCompanion
+    $AgentTasksTable,
+    AgentTaskRow,
+    $$AgentTasksTableFilterComposer,
+    $$AgentTasksTableOrderingComposer,
+    $$AgentTasksTableAnnotationComposer,
+    $$AgentTasksTableCreateCompanionBuilder,
+    $$AgentTasksTableUpdateCompanionBuilder,
+    (AgentTaskRow, $$AgentTasksTableReferences),
+    AgentTaskRow,
+    PrefetchHooks Function({bool projectId})>;
+typedef $$TimelineEventsTableCreateCompanionBuilder = TimelineEventsCompanion
     Function({
   required String id,
   required String projectId,
+  required String characterId,
+  required String chapterId,
   required String description,
-  Value<String> trigger,
-  Value<String> dataSnapshot,
-  required DateTime createdAt,
+  Value<int> chapterOrder,
+  Value<String> eventType,
+  Value<String> relatedCharacterIdsJson,
+  required int createdAt,
+  required int updatedAt,
   Value<int> schemaVersion,
   Value<int> rowid,
 });
-typedef $$SnapshotsTableTableUpdateCompanionBuilder = SnapshotsTableCompanion
+typedef $$TimelineEventsTableUpdateCompanionBuilder = TimelineEventsCompanion
     Function({
   Value<String> id,
   Value<String> projectId,
+  Value<String> characterId,
+  Value<String> chapterId,
   Value<String> description,
-  Value<String> trigger,
-  Value<String> dataSnapshot,
-  Value<DateTime> createdAt,
+  Value<int> chapterOrder,
+  Value<String> eventType,
+  Value<String> relatedCharacterIdsJson,
+  Value<int> createdAt,
+  Value<int> updatedAt,
   Value<int> schemaVersion,
   Value<int> rowid,
 });
 
-class $$SnapshotsTableTableFilterComposer
-    extends Composer<_$AppDatabase, $SnapshotsTableTable> {
-  $$SnapshotsTableTableFilterComposer({
+class $$TimelineEventsTableFilterComposer
+    extends Composer<_$AppDatabase, $TimelineEventsTable> {
+  $$TimelineEventsTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -9417,25 +10732,38 @@ class $$SnapshotsTableTableFilterComposer
   ColumnFilters<String> get projectId => $composableBuilder(
       column: $table.projectId, builder: (column) => ColumnFilters(column));
 
+  ColumnFilters<String> get characterId => $composableBuilder(
+      column: $table.characterId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get chapterId => $composableBuilder(
+      column: $table.chapterId, builder: (column) => ColumnFilters(column));
+
   ColumnFilters<String> get description => $composableBuilder(
       column: $table.description, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get trigger => $composableBuilder(
-      column: $table.trigger, builder: (column) => ColumnFilters(column));
+  ColumnFilters<int> get chapterOrder => $composableBuilder(
+      column: $table.chapterOrder, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get dataSnapshot => $composableBuilder(
-      column: $table.dataSnapshot, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get eventType => $composableBuilder(
+      column: $table.eventType, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+  ColumnFilters<String> get relatedCharacterIdsJson => $composableBuilder(
+      column: $table.relatedCharacterIdsJson,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<int> get schemaVersion => $composableBuilder(
       column: $table.schemaVersion, builder: (column) => ColumnFilters(column));
 }
 
-class $$SnapshotsTableTableOrderingComposer
-    extends Composer<_$AppDatabase, $SnapshotsTableTable> {
-  $$SnapshotsTableTableOrderingComposer({
+class $$TimelineEventsTableOrderingComposer
+    extends Composer<_$AppDatabase, $TimelineEventsTable> {
+  $$TimelineEventsTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -9448,27 +10776,40 @@ class $$SnapshotsTableTableOrderingComposer
   ColumnOrderings<String> get projectId => $composableBuilder(
       column: $table.projectId, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get characterId => $composableBuilder(
+      column: $table.characterId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get chapterId => $composableBuilder(
+      column: $table.chapterId, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get description => $composableBuilder(
       column: $table.description, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get trigger => $composableBuilder(
-      column: $table.trigger, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get dataSnapshot => $composableBuilder(
-      column: $table.dataSnapshot,
+  ColumnOrderings<int> get chapterOrder => $composableBuilder(
+      column: $table.chapterOrder,
       builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+  ColumnOrderings<String> get eventType => $composableBuilder(
+      column: $table.eventType, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get relatedCharacterIdsJson => $composableBuilder(
+      column: $table.relatedCharacterIdsJson,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<int> get schemaVersion => $composableBuilder(
       column: $table.schemaVersion,
       builder: (column) => ColumnOrderings(column));
 }
 
-class $$SnapshotsTableTableAnnotationComposer
-    extends Composer<_$AppDatabase, $SnapshotsTableTable> {
-  $$SnapshotsTableTableAnnotationComposer({
+class $$TimelineEventsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $TimelineEventsTable> {
+  $$TimelineEventsTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -9481,85 +10822,113 @@ class $$SnapshotsTableTableAnnotationComposer
   GeneratedColumn<String> get projectId =>
       $composableBuilder(column: $table.projectId, builder: (column) => column);
 
+  GeneratedColumn<String> get characterId => $composableBuilder(
+      column: $table.characterId, builder: (column) => column);
+
+  GeneratedColumn<String> get chapterId =>
+      $composableBuilder(column: $table.chapterId, builder: (column) => column);
+
   GeneratedColumn<String> get description => $composableBuilder(
       column: $table.description, builder: (column) => column);
 
-  GeneratedColumn<String> get trigger =>
-      $composableBuilder(column: $table.trigger, builder: (column) => column);
+  GeneratedColumn<int> get chapterOrder => $composableBuilder(
+      column: $table.chapterOrder, builder: (column) => column);
 
-  GeneratedColumn<String> get dataSnapshot => $composableBuilder(
-      column: $table.dataSnapshot, builder: (column) => column);
+  GeneratedColumn<String> get eventType =>
+      $composableBuilder(column: $table.eventType, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get createdAt =>
+  GeneratedColumn<String> get relatedCharacterIdsJson => $composableBuilder(
+      column: $table.relatedCharacterIdsJson, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
   GeneratedColumn<int> get schemaVersion => $composableBuilder(
       column: $table.schemaVersion, builder: (column) => column);
 }
 
-class $$SnapshotsTableTableTableManager extends RootTableManager<
+class $$TimelineEventsTableTableManager extends RootTableManager<
     _$AppDatabase,
-    $SnapshotsTableTable,
-    SnapshotsTableData,
-    $$SnapshotsTableTableFilterComposer,
-    $$SnapshotsTableTableOrderingComposer,
-    $$SnapshotsTableTableAnnotationComposer,
-    $$SnapshotsTableTableCreateCompanionBuilder,
-    $$SnapshotsTableTableUpdateCompanionBuilder,
+    $TimelineEventsTable,
+    TimelineEventRow,
+    $$TimelineEventsTableFilterComposer,
+    $$TimelineEventsTableOrderingComposer,
+    $$TimelineEventsTableAnnotationComposer,
+    $$TimelineEventsTableCreateCompanionBuilder,
+    $$TimelineEventsTableUpdateCompanionBuilder,
     (
-      SnapshotsTableData,
-      BaseReferences<_$AppDatabase, $SnapshotsTableTable, SnapshotsTableData>
+      TimelineEventRow,
+      BaseReferences<_$AppDatabase, $TimelineEventsTable, TimelineEventRow>
     ),
-    SnapshotsTableData,
+    TimelineEventRow,
     PrefetchHooks Function()> {
-  $$SnapshotsTableTableTableManager(
-      _$AppDatabase db, $SnapshotsTableTable table)
+  $$TimelineEventsTableTableManager(
+      _$AppDatabase db, $TimelineEventsTable table)
       : super(TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$SnapshotsTableTableFilterComposer($db: db, $table: table),
+              $$TimelineEventsTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$SnapshotsTableTableOrderingComposer($db: db, $table: table),
+              $$TimelineEventsTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$SnapshotsTableTableAnnotationComposer($db: db, $table: table),
+              $$TimelineEventsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback: ({
             Value<String> id = const Value.absent(),
             Value<String> projectId = const Value.absent(),
+            Value<String> characterId = const Value.absent(),
+            Value<String> chapterId = const Value.absent(),
             Value<String> description = const Value.absent(),
-            Value<String> trigger = const Value.absent(),
-            Value<String> dataSnapshot = const Value.absent(),
-            Value<DateTime> createdAt = const Value.absent(),
+            Value<int> chapterOrder = const Value.absent(),
+            Value<String> eventType = const Value.absent(),
+            Value<String> relatedCharacterIdsJson = const Value.absent(),
+            Value<int> createdAt = const Value.absent(),
+            Value<int> updatedAt = const Value.absent(),
             Value<int> schemaVersion = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
-              SnapshotsTableCompanion(
+              TimelineEventsCompanion(
             id: id,
             projectId: projectId,
+            characterId: characterId,
+            chapterId: chapterId,
             description: description,
-            trigger: trigger,
-            dataSnapshot: dataSnapshot,
+            chapterOrder: chapterOrder,
+            eventType: eventType,
+            relatedCharacterIdsJson: relatedCharacterIdsJson,
             createdAt: createdAt,
+            updatedAt: updatedAt,
             schemaVersion: schemaVersion,
             rowid: rowid,
           ),
           createCompanionCallback: ({
             required String id,
             required String projectId,
+            required String characterId,
+            required String chapterId,
             required String description,
-            Value<String> trigger = const Value.absent(),
-            Value<String> dataSnapshot = const Value.absent(),
-            required DateTime createdAt,
+            Value<int> chapterOrder = const Value.absent(),
+            Value<String> eventType = const Value.absent(),
+            Value<String> relatedCharacterIdsJson = const Value.absent(),
+            required int createdAt,
+            required int updatedAt,
             Value<int> schemaVersion = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
-              SnapshotsTableCompanion.insert(
+              TimelineEventsCompanion.insert(
             id: id,
             projectId: projectId,
+            characterId: characterId,
+            chapterId: chapterId,
             description: description,
-            trigger: trigger,
-            dataSnapshot: dataSnapshot,
+            chapterOrder: chapterOrder,
+            eventType: eventType,
+            relatedCharacterIdsJson: relatedCharacterIdsJson,
             createdAt: createdAt,
+            updatedAt: updatedAt,
             schemaVersion: schemaVersion,
             rowid: rowid,
           ),
@@ -9570,51 +10939,72 @@ class $$SnapshotsTableTableTableManager extends RootTableManager<
         ));
 }
 
-typedef $$SnapshotsTableTableProcessedTableManager = ProcessedTableManager<
+typedef $$TimelineEventsTableProcessedTableManager = ProcessedTableManager<
     _$AppDatabase,
-    $SnapshotsTableTable,
-    SnapshotsTableData,
-    $$SnapshotsTableTableFilterComposer,
-    $$SnapshotsTableTableOrderingComposer,
-    $$SnapshotsTableTableAnnotationComposer,
-    $$SnapshotsTableTableCreateCompanionBuilder,
-    $$SnapshotsTableTableUpdateCompanionBuilder,
+    $TimelineEventsTable,
+    TimelineEventRow,
+    $$TimelineEventsTableFilterComposer,
+    $$TimelineEventsTableOrderingComposer,
+    $$TimelineEventsTableAnnotationComposer,
+    $$TimelineEventsTableCreateCompanionBuilder,
+    $$TimelineEventsTableUpdateCompanionBuilder,
     (
-      SnapshotsTableData,
-      BaseReferences<_$AppDatabase, $SnapshotsTableTable, SnapshotsTableData>
+      TimelineEventRow,
+      BaseReferences<_$AppDatabase, $TimelineEventsTable, TimelineEventRow>
     ),
-    SnapshotsTableData,
+    TimelineEventRow,
     PrefetchHooks Function()>;
-typedef $$LlmProvidersTableTableCreateCompanionBuilder
-    = LlmProvidersTableCompanion Function({
+typedef $$SessionsTableCreateCompanionBuilder = SessionsCompanion Function({
   required String id,
-  required String displayName,
-  required String baseUrl,
-  Value<String> defaultModel,
-  Value<double> temperature,
-  Value<int> maxTokens,
-  Value<bool> enabled,
-  required DateTime createdAt,
-  required DateTime updatedAt,
+  required String projectId,
+  required String title,
+  required String status,
+  required int createdAt,
+  required int updatedAt,
+  Value<int> schemaVersion,
+  Value<String?> chapterId,
+  Value<String?> agentMode,
+  Value<String?> summary,
+  Value<int?> startedAt,
+  Value<int?> endedAt,
   Value<int> rowid,
 });
-typedef $$LlmProvidersTableTableUpdateCompanionBuilder
-    = LlmProvidersTableCompanion Function({
+typedef $$SessionsTableUpdateCompanionBuilder = SessionsCompanion Function({
   Value<String> id,
-  Value<String> displayName,
-  Value<String> baseUrl,
-  Value<String> defaultModel,
-  Value<double> temperature,
-  Value<int> maxTokens,
-  Value<bool> enabled,
-  Value<DateTime> createdAt,
-  Value<DateTime> updatedAt,
+  Value<String> projectId,
+  Value<String> title,
+  Value<String> status,
+  Value<int> createdAt,
+  Value<int> updatedAt,
+  Value<int> schemaVersion,
+  Value<String?> chapterId,
+  Value<String?> agentMode,
+  Value<String?> summary,
+  Value<int?> startedAt,
+  Value<int?> endedAt,
   Value<int> rowid,
 });
 
-class $$LlmProvidersTableTableFilterComposer
-    extends Composer<_$AppDatabase, $LlmProvidersTableTable> {
-  $$LlmProvidersTableTableFilterComposer({
+final class $$SessionsTableReferences
+    extends BaseReferences<_$AppDatabase, $SessionsTable, SessionRow> {
+  $$SessionsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $ProjectsTable _projectIdTable(_$AppDatabase db) => db.projects
+      .createAlias($_aliasNameGenerator(db.sessions.projectId, db.projects.id));
+
+  $$ProjectsTableProcessedTableManager get projectId {
+    final manager = $$ProjectsTableTableManager($_db, $_db.projects)
+        .filter((f) => f.id($_item.projectId));
+    final item = $_typedResult.readTableOrNull(_projectIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$SessionsTableFilterComposer
+    extends Composer<_$AppDatabase, $SessionsTable> {
+  $$SessionsTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -9624,34 +11014,60 @@ class $$LlmProvidersTableTableFilterComposer
   ColumnFilters<String> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get displayName => $composableBuilder(
-      column: $table.displayName, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get baseUrl => $composableBuilder(
-      column: $table.baseUrl, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get status => $composableBuilder(
+      column: $table.status, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get defaultModel => $composableBuilder(
-      column: $table.defaultModel, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<double> get temperature => $composableBuilder(
-      column: $table.temperature, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get maxTokens => $composableBuilder(
-      column: $table.maxTokens, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<bool> get enabled => $composableBuilder(
-      column: $table.enabled, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+  ColumnFilters<int> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+  ColumnFilters<int> get updatedAt => $composableBuilder(
       column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get schemaVersion => $composableBuilder(
+      column: $table.schemaVersion, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get chapterId => $composableBuilder(
+      column: $table.chapterId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get agentMode => $composableBuilder(
+      column: $table.agentMode, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get summary => $composableBuilder(
+      column: $table.summary, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get startedAt => $composableBuilder(
+      column: $table.startedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get endedAt => $composableBuilder(
+      column: $table.endedAt, builder: (column) => ColumnFilters(column));
+
+  $$ProjectsTableFilterComposer get projectId {
+    final $$ProjectsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.projectId,
+        referencedTable: $db.projects,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProjectsTableFilterComposer(
+              $db: $db,
+              $table: $db.projects,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
 }
 
-class $$LlmProvidersTableTableOrderingComposer
-    extends Composer<_$AppDatabase, $LlmProvidersTableTable> {
-  $$LlmProvidersTableTableOrderingComposer({
+class $$SessionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $SessionsTable> {
+  $$SessionsTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -9661,35 +11077,61 @@ class $$LlmProvidersTableTableOrderingComposer
   ColumnOrderings<String> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get displayName => $composableBuilder(
-      column: $table.displayName, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get baseUrl => $composableBuilder(
-      column: $table.baseUrl, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<String> get status => $composableBuilder(
+      column: $table.status, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get defaultModel => $composableBuilder(
-      column: $table.defaultModel,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<double> get temperature => $composableBuilder(
-      column: $table.temperature, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<int> get maxTokens => $composableBuilder(
-      column: $table.maxTokens, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<bool> get enabled => $composableBuilder(
-      column: $table.enabled, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+  ColumnOrderings<int> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
       column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get schemaVersion => $composableBuilder(
+      column: $table.schemaVersion,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get chapterId => $composableBuilder(
+      column: $table.chapterId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get agentMode => $composableBuilder(
+      column: $table.agentMode, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get summary => $composableBuilder(
+      column: $table.summary, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get startedAt => $composableBuilder(
+      column: $table.startedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get endedAt => $composableBuilder(
+      column: $table.endedAt, builder: (column) => ColumnOrderings(column));
+
+  $$ProjectsTableOrderingComposer get projectId {
+    final $$ProjectsTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.projectId,
+        referencedTable: $db.projects,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProjectsTableOrderingComposer(
+              $db: $db,
+              $table: $db.projects,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
 }
 
-class $$LlmProvidersTableTableAnnotationComposer
-    extends Composer<_$AppDatabase, $LlmProvidersTableTable> {
-  $$LlmProvidersTableTableAnnotationComposer({
+class $$SessionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SessionsTable> {
+  $$SessionsTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -9699,154 +11141,586 @@ class $$LlmProvidersTableTableAnnotationComposer
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<String> get displayName => $composableBuilder(
-      column: $table.displayName, builder: (column) => column);
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
 
-  GeneratedColumn<String> get baseUrl =>
-      $composableBuilder(column: $table.baseUrl, builder: (column) => column);
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
 
-  GeneratedColumn<String> get defaultModel => $composableBuilder(
-      column: $table.defaultModel, builder: (column) => column);
-
-  GeneratedColumn<double> get temperature => $composableBuilder(
-      column: $table.temperature, builder: (column) => column);
-
-  GeneratedColumn<int> get maxTokens =>
-      $composableBuilder(column: $table.maxTokens, builder: (column) => column);
-
-  GeneratedColumn<bool> get enabled =>
-      $composableBuilder(column: $table.enabled, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get createdAt =>
+  GeneratedColumn<int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get updatedAt =>
+  GeneratedColumn<int> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get schemaVersion => $composableBuilder(
+      column: $table.schemaVersion, builder: (column) => column);
+
+  GeneratedColumn<String> get chapterId =>
+      $composableBuilder(column: $table.chapterId, builder: (column) => column);
+
+  GeneratedColumn<String> get agentMode =>
+      $composableBuilder(column: $table.agentMode, builder: (column) => column);
+
+  GeneratedColumn<String> get summary =>
+      $composableBuilder(column: $table.summary, builder: (column) => column);
+
+  GeneratedColumn<int> get startedAt =>
+      $composableBuilder(column: $table.startedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get endedAt =>
+      $composableBuilder(column: $table.endedAt, builder: (column) => column);
+
+  $$ProjectsTableAnnotationComposer get projectId {
+    final $$ProjectsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.projectId,
+        referencedTable: $db.projects,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProjectsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.projects,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
 }
 
-class $$LlmProvidersTableTableTableManager extends RootTableManager<
+class $$SessionsTableTableManager extends RootTableManager<
     _$AppDatabase,
-    $LlmProvidersTableTable,
-    LlmProvidersTableData,
-    $$LlmProvidersTableTableFilterComposer,
-    $$LlmProvidersTableTableOrderingComposer,
-    $$LlmProvidersTableTableAnnotationComposer,
-    $$LlmProvidersTableTableCreateCompanionBuilder,
-    $$LlmProvidersTableTableUpdateCompanionBuilder,
-    (
-      LlmProvidersTableData,
-      BaseReferences<_$AppDatabase, $LlmProvidersTableTable,
-          LlmProvidersTableData>
-    ),
-    LlmProvidersTableData,
-    PrefetchHooks Function()> {
-  $$LlmProvidersTableTableTableManager(
-      _$AppDatabase db, $LlmProvidersTableTable table)
+    $SessionsTable,
+    SessionRow,
+    $$SessionsTableFilterComposer,
+    $$SessionsTableOrderingComposer,
+    $$SessionsTableAnnotationComposer,
+    $$SessionsTableCreateCompanionBuilder,
+    $$SessionsTableUpdateCompanionBuilder,
+    (SessionRow, $$SessionsTableReferences),
+    SessionRow,
+    PrefetchHooks Function({bool projectId})> {
+  $$SessionsTableTableManager(_$AppDatabase db, $SessionsTable table)
       : super(TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$LlmProvidersTableTableFilterComposer($db: db, $table: table),
+              $$SessionsTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$LlmProvidersTableTableOrderingComposer($db: db, $table: table),
+              $$SessionsTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$LlmProvidersTableTableAnnotationComposer(
-                  $db: db, $table: table),
+              $$SessionsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback: ({
             Value<String> id = const Value.absent(),
-            Value<String> displayName = const Value.absent(),
-            Value<String> baseUrl = const Value.absent(),
-            Value<String> defaultModel = const Value.absent(),
-            Value<double> temperature = const Value.absent(),
-            Value<int> maxTokens = const Value.absent(),
-            Value<bool> enabled = const Value.absent(),
-            Value<DateTime> createdAt = const Value.absent(),
-            Value<DateTime> updatedAt = const Value.absent(),
+            Value<String> projectId = const Value.absent(),
+            Value<String> title = const Value.absent(),
+            Value<String> status = const Value.absent(),
+            Value<int> createdAt = const Value.absent(),
+            Value<int> updatedAt = const Value.absent(),
+            Value<int> schemaVersion = const Value.absent(),
+            Value<String?> chapterId = const Value.absent(),
+            Value<String?> agentMode = const Value.absent(),
+            Value<String?> summary = const Value.absent(),
+            Value<int?> startedAt = const Value.absent(),
+            Value<int?> endedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
-              LlmProvidersTableCompanion(
+              SessionsCompanion(
             id: id,
-            displayName: displayName,
-            baseUrl: baseUrl,
-            defaultModel: defaultModel,
-            temperature: temperature,
-            maxTokens: maxTokens,
-            enabled: enabled,
+            projectId: projectId,
+            title: title,
+            status: status,
             createdAt: createdAt,
             updatedAt: updatedAt,
+            schemaVersion: schemaVersion,
+            chapterId: chapterId,
+            agentMode: agentMode,
+            summary: summary,
+            startedAt: startedAt,
+            endedAt: endedAt,
             rowid: rowid,
           ),
           createCompanionCallback: ({
             required String id,
-            required String displayName,
-            required String baseUrl,
-            Value<String> defaultModel = const Value.absent(),
-            Value<double> temperature = const Value.absent(),
-            Value<int> maxTokens = const Value.absent(),
-            Value<bool> enabled = const Value.absent(),
-            required DateTime createdAt,
-            required DateTime updatedAt,
+            required String projectId,
+            required String title,
+            required String status,
+            required int createdAt,
+            required int updatedAt,
+            Value<int> schemaVersion = const Value.absent(),
+            Value<String?> chapterId = const Value.absent(),
+            Value<String?> agentMode = const Value.absent(),
+            Value<String?> summary = const Value.absent(),
+            Value<int?> startedAt = const Value.absent(),
+            Value<int?> endedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
-              LlmProvidersTableCompanion.insert(
+              SessionsCompanion.insert(
             id: id,
-            displayName: displayName,
-            baseUrl: baseUrl,
-            defaultModel: defaultModel,
-            temperature: temperature,
-            maxTokens: maxTokens,
-            enabled: enabled,
+            projectId: projectId,
+            title: title,
+            status: status,
             createdAt: createdAt,
             updatedAt: updatedAt,
+            schemaVersion: schemaVersion,
+            chapterId: chapterId,
+            agentMode: agentMode,
+            summary: summary,
+            startedAt: startedAt,
+            endedAt: endedAt,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map((e) =>
+                  (e.readTable(table), $$SessionsTableReferences(db, table, e)))
               .toList(),
-          prefetchHooksCallback: null,
+          prefetchHooksCallback: ({projectId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (projectId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.projectId,
+                    referencedTable:
+                        $$SessionsTableReferences._projectIdTable(db),
+                    referencedColumn:
+                        $$SessionsTableReferences._projectIdTable(db).id,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
         ));
 }
 
-typedef $$LlmProvidersTableTableProcessedTableManager = ProcessedTableManager<
+typedef $$SessionsTableProcessedTableManager = ProcessedTableManager<
     _$AppDatabase,
-    $LlmProvidersTableTable,
-    LlmProvidersTableData,
-    $$LlmProvidersTableTableFilterComposer,
-    $$LlmProvidersTableTableOrderingComposer,
-    $$LlmProvidersTableTableAnnotationComposer,
-    $$LlmProvidersTableTableCreateCompanionBuilder,
-    $$LlmProvidersTableTableUpdateCompanionBuilder,
-    (
-      LlmProvidersTableData,
-      BaseReferences<_$AppDatabase, $LlmProvidersTableTable,
-          LlmProvidersTableData>
-    ),
-    LlmProvidersTableData,
-    PrefetchHooks Function()>;
+    $SessionsTable,
+    SessionRow,
+    $$SessionsTableFilterComposer,
+    $$SessionsTableOrderingComposer,
+    $$SessionsTableAnnotationComposer,
+    $$SessionsTableCreateCompanionBuilder,
+    $$SessionsTableUpdateCompanionBuilder,
+    (SessionRow, $$SessionsTableReferences),
+    SessionRow,
+    PrefetchHooks Function({bool projectId})>;
+typedef $$SnapshotsTableCreateCompanionBuilder = SnapshotsCompanion Function({
+  required String id,
+  required String projectId,
+  required String name,
+  required String type,
+  required String contentHash,
+  required String contentSnapshot,
+  required int createdAt,
+  required int updatedAt,
+  Value<int> schemaVersion,
+  Value<String?> chapterId,
+  Value<String?> description,
+  Value<int> rowid,
+});
+typedef $$SnapshotsTableUpdateCompanionBuilder = SnapshotsCompanion Function({
+  Value<String> id,
+  Value<String> projectId,
+  Value<String> name,
+  Value<String> type,
+  Value<String> contentHash,
+  Value<String> contentSnapshot,
+  Value<int> createdAt,
+  Value<int> updatedAt,
+  Value<int> schemaVersion,
+  Value<String?> chapterId,
+  Value<String?> description,
+  Value<int> rowid,
+});
+
+final class $$SnapshotsTableReferences
+    extends BaseReferences<_$AppDatabase, $SnapshotsTable, SnapshotRow> {
+  $$SnapshotsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $ProjectsTable _projectIdTable(_$AppDatabase db) =>
+      db.projects.createAlias(
+          $_aliasNameGenerator(db.snapshots.projectId, db.projects.id));
+
+  $$ProjectsTableProcessedTableManager get projectId {
+    final manager = $$ProjectsTableTableManager($_db, $_db.projects)
+        .filter((f) => f.id($_item.projectId));
+    final item = $_typedResult.readTableOrNull(_projectIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$SnapshotsTableFilterComposer
+    extends Composer<_$AppDatabase, $SnapshotsTable> {
+  $$SnapshotsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get type => $composableBuilder(
+      column: $table.type, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get contentHash => $composableBuilder(
+      column: $table.contentHash, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get contentSnapshot => $composableBuilder(
+      column: $table.contentSnapshot,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get schemaVersion => $composableBuilder(
+      column: $table.schemaVersion, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get chapterId => $composableBuilder(
+      column: $table.chapterId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get description => $composableBuilder(
+      column: $table.description, builder: (column) => ColumnFilters(column));
+
+  $$ProjectsTableFilterComposer get projectId {
+    final $$ProjectsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.projectId,
+        referencedTable: $db.projects,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProjectsTableFilterComposer(
+              $db: $db,
+              $table: $db.projects,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$SnapshotsTableOrderingComposer
+    extends Composer<_$AppDatabase, $SnapshotsTable> {
+  $$SnapshotsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get type => $composableBuilder(
+      column: $table.type, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get contentHash => $composableBuilder(
+      column: $table.contentHash, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get contentSnapshot => $composableBuilder(
+      column: $table.contentSnapshot,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get schemaVersion => $composableBuilder(
+      column: $table.schemaVersion,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get chapterId => $composableBuilder(
+      column: $table.chapterId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get description => $composableBuilder(
+      column: $table.description, builder: (column) => ColumnOrderings(column));
+
+  $$ProjectsTableOrderingComposer get projectId {
+    final $$ProjectsTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.projectId,
+        referencedTable: $db.projects,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProjectsTableOrderingComposer(
+              $db: $db,
+              $table: $db.projects,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$SnapshotsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SnapshotsTable> {
+  $$SnapshotsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<String> get contentHash => $composableBuilder(
+      column: $table.contentHash, builder: (column) => column);
+
+  GeneratedColumn<String> get contentSnapshot => $composableBuilder(
+      column: $table.contentSnapshot, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get schemaVersion => $composableBuilder(
+      column: $table.schemaVersion, builder: (column) => column);
+
+  GeneratedColumn<String> get chapterId =>
+      $composableBuilder(column: $table.chapterId, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+      column: $table.description, builder: (column) => column);
+
+  $$ProjectsTableAnnotationComposer get projectId {
+    final $$ProjectsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.projectId,
+        referencedTable: $db.projects,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$ProjectsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.projects,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$SnapshotsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $SnapshotsTable,
+    SnapshotRow,
+    $$SnapshotsTableFilterComposer,
+    $$SnapshotsTableOrderingComposer,
+    $$SnapshotsTableAnnotationComposer,
+    $$SnapshotsTableCreateCompanionBuilder,
+    $$SnapshotsTableUpdateCompanionBuilder,
+    (SnapshotRow, $$SnapshotsTableReferences),
+    SnapshotRow,
+    PrefetchHooks Function({bool projectId})> {
+  $$SnapshotsTableTableManager(_$AppDatabase db, $SnapshotsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SnapshotsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SnapshotsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SnapshotsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> projectId = const Value.absent(),
+            Value<String> name = const Value.absent(),
+            Value<String> type = const Value.absent(),
+            Value<String> contentHash = const Value.absent(),
+            Value<String> contentSnapshot = const Value.absent(),
+            Value<int> createdAt = const Value.absent(),
+            Value<int> updatedAt = const Value.absent(),
+            Value<int> schemaVersion = const Value.absent(),
+            Value<String?> chapterId = const Value.absent(),
+            Value<String?> description = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              SnapshotsCompanion(
+            id: id,
+            projectId: projectId,
+            name: name,
+            type: type,
+            contentHash: contentHash,
+            contentSnapshot: contentSnapshot,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            schemaVersion: schemaVersion,
+            chapterId: chapterId,
+            description: description,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String projectId,
+            required String name,
+            required String type,
+            required String contentHash,
+            required String contentSnapshot,
+            required int createdAt,
+            required int updatedAt,
+            Value<int> schemaVersion = const Value.absent(),
+            Value<String?> chapterId = const Value.absent(),
+            Value<String?> description = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              SnapshotsCompanion.insert(
+            id: id,
+            projectId: projectId,
+            name: name,
+            type: type,
+            contentHash: contentHash,
+            contentSnapshot: contentSnapshot,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            schemaVersion: schemaVersion,
+            chapterId: chapterId,
+            description: description,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$SnapshotsTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: ({projectId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (projectId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.projectId,
+                    referencedTable:
+                        $$SnapshotsTableReferences._projectIdTable(db),
+                    referencedColumn:
+                        $$SnapshotsTableReferences._projectIdTable(db).id,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$SnapshotsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $SnapshotsTable,
+    SnapshotRow,
+    $$SnapshotsTableFilterComposer,
+    $$SnapshotsTableOrderingComposer,
+    $$SnapshotsTableAnnotationComposer,
+    $$SnapshotsTableCreateCompanionBuilder,
+    $$SnapshotsTableUpdateCompanionBuilder,
+    (SnapshotRow, $$SnapshotsTableReferences),
+    SnapshotRow,
+    PrefetchHooks Function({bool projectId})>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
   $AppDatabaseManager(this._db);
-  $$ProjectsTableTableTableManager get projectsTable =>
-      $$ProjectsTableTableTableManager(_db, _db.projectsTable);
-  $$ChaptersTableTableTableManager get chaptersTable =>
-      $$ChaptersTableTableTableManager(_db, _db.chaptersTable);
-  $$RevisionsTableTableTableManager get revisionsTable =>
-      $$RevisionsTableTableTableManager(_db, _db.revisionsTable);
-  $$OutlineNodesTableTableTableManager get outlineNodesTable =>
-      $$OutlineNodesTableTableTableManager(_db, _db.outlineNodesTable);
-  $$CharactersTableTableTableManager get charactersTable =>
-      $$CharactersTableTableTableManager(_db, _db.charactersTable);
-  $$NotesTableTableTableManager get notesTable =>
-      $$NotesTableTableTableManager(_db, _db.notesTable);
-  $$SessionsTableTableTableManager get sessionsTable =>
-      $$SessionsTableTableTableManager(_db, _db.sessionsTable);
-  $$SettingEntriesTableTableTableManager get settingEntriesTable =>
-      $$SettingEntriesTableTableTableManager(_db, _db.settingEntriesTable);
-  $$AgentTasksTableTableTableManager get agentTasksTable =>
-      $$AgentTasksTableTableTableManager(_db, _db.agentTasksTable);
-  $$SnapshotsTableTableTableManager get snapshotsTable =>
-      $$SnapshotsTableTableTableManager(_db, _db.snapshotsTable);
-  $$LlmProvidersTableTableTableManager get llmProvidersTable =>
-      $$LlmProvidersTableTableTableManager(_db, _db.llmProvidersTable);
+  $$ProjectsTableTableManager get projects =>
+      $$ProjectsTableTableManager(_db, _db.projects);
+  $$ChaptersTableTableManager get chapters =>
+      $$ChaptersTableTableManager(_db, _db.chapters);
+  $$RevisionsTableTableManager get revisions =>
+      $$RevisionsTableTableManager(_db, _db.revisions);
+  $$CharactersTableTableManager get characters =>
+      $$CharactersTableTableManager(_db, _db.characters);
+  $$SettingEntriesTableTableManager get settingEntries =>
+      $$SettingEntriesTableTableManager(_db, _db.settingEntries);
+  $$NotesTableTableManager get notes =>
+      $$NotesTableTableManager(_db, _db.notes);
+  $$LlmProvidersTableTableManager get llmProviders =>
+      $$LlmProvidersTableTableManager(_db, _db.llmProviders);
+  $$LlmDefaultSettingsTableTableTableManager get llmDefaultSettingsTable =>
+      $$LlmDefaultSettingsTableTableTableManager(
+          _db, _db.llmDefaultSettingsTable);
+  $$OutlineNodesTableTableManager get outlineNodes =>
+      $$OutlineNodesTableTableManager(_db, _db.outlineNodes);
+  $$AgentTasksTableTableManager get agentTasks =>
+      $$AgentTasksTableTableManager(_db, _db.agentTasks);
+  $$TimelineEventsTableTableManager get timelineEvents =>
+      $$TimelineEventsTableTableManager(_db, _db.timelineEvents);
+  $$SessionsTableTableManager get sessions =>
+      $$SessionsTableTableManager(_db, _db.sessions);
+  $$SnapshotsTableTableManager get snapshots =>
+      $$SnapshotsTableTableManager(_db, _db.snapshots);
 }

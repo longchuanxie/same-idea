@@ -21,12 +21,10 @@ RevisionPatchMetadata _$RevisionPatchMetadataFromJson(
 
 /// @nodoc
 mixin _$RevisionPatchMetadata {
-  String? get prompt => throw _privateConstructorUsedError;
-  String? get model => throw _privateConstructorUsedError;
+  String get prompt => throw _privateConstructorUsedError;
+  String get model => throw _privateConstructorUsedError;
+  String get summary => throw _privateConstructorUsedError;
   String? get taskId => throw _privateConstructorUsedError;
-  String? get summary => throw _privateConstructorUsedError;
-  String? get changeSummary => throw _privateConstructorUsedError;
-  String? get baseContentHash => throw _privateConstructorUsedError;
 
   /// Serializes this RevisionPatchMetadata to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -44,13 +42,7 @@ abstract class $RevisionPatchMetadataCopyWith<$Res> {
           $Res Function(RevisionPatchMetadata) then) =
       _$RevisionPatchMetadataCopyWithImpl<$Res, RevisionPatchMetadata>;
   @useResult
-  $Res call(
-      {String? prompt,
-      String? model,
-      String? taskId,
-      String? summary,
-      String? changeSummary,
-      String? baseContentHash});
+  $Res call({String prompt, String model, String summary, String? taskId});
 }
 
 /// @nodoc
@@ -69,37 +61,27 @@ class _$RevisionPatchMetadataCopyWithImpl<$Res,
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? prompt = freezed,
-    Object? model = freezed,
+    Object? prompt = null,
+    Object? model = null,
+    Object? summary = null,
     Object? taskId = freezed,
-    Object? summary = freezed,
-    Object? changeSummary = freezed,
-    Object? baseContentHash = freezed,
   }) {
     return _then(_value.copyWith(
-      prompt: freezed == prompt
+      prompt: null == prompt
           ? _value.prompt
           : prompt // ignore: cast_nullable_to_non_nullable
-              as String?,
-      model: freezed == model
+              as String,
+      model: null == model
           ? _value.model
           : model // ignore: cast_nullable_to_non_nullable
-              as String?,
+              as String,
+      summary: null == summary
+          ? _value.summary
+          : summary // ignore: cast_nullable_to_non_nullable
+              as String,
       taskId: freezed == taskId
           ? _value.taskId
           : taskId // ignore: cast_nullable_to_non_nullable
-              as String?,
-      summary: freezed == summary
-          ? _value.summary
-          : summary // ignore: cast_nullable_to_non_nullable
-              as String?,
-      changeSummary: freezed == changeSummary
-          ? _value.changeSummary
-          : changeSummary // ignore: cast_nullable_to_non_nullable
-              as String?,
-      baseContentHash: freezed == baseContentHash
-          ? _value.baseContentHash
-          : baseContentHash // ignore: cast_nullable_to_non_nullable
               as String?,
     ) as $Val);
   }
@@ -114,13 +96,7 @@ abstract class _$$RevisionPatchMetadataImplCopyWith<$Res>
       __$$RevisionPatchMetadataImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call(
-      {String? prompt,
-      String? model,
-      String? taskId,
-      String? summary,
-      String? changeSummary,
-      String? baseContentHash});
+  $Res call({String prompt, String model, String summary, String? taskId});
 }
 
 /// @nodoc
@@ -137,37 +113,27 @@ class __$$RevisionPatchMetadataImplCopyWithImpl<$Res>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? prompt = freezed,
-    Object? model = freezed,
+    Object? prompt = null,
+    Object? model = null,
+    Object? summary = null,
     Object? taskId = freezed,
-    Object? summary = freezed,
-    Object? changeSummary = freezed,
-    Object? baseContentHash = freezed,
   }) {
     return _then(_$RevisionPatchMetadataImpl(
-      prompt: freezed == prompt
+      prompt: null == prompt
           ? _value.prompt
           : prompt // ignore: cast_nullable_to_non_nullable
-              as String?,
-      model: freezed == model
+              as String,
+      model: null == model
           ? _value.model
           : model // ignore: cast_nullable_to_non_nullable
-              as String?,
+              as String,
+      summary: null == summary
+          ? _value.summary
+          : summary // ignore: cast_nullable_to_non_nullable
+              as String,
       taskId: freezed == taskId
           ? _value.taskId
           : taskId // ignore: cast_nullable_to_non_nullable
-              as String?,
-      summary: freezed == summary
-          ? _value.summary
-          : summary // ignore: cast_nullable_to_non_nullable
-              as String?,
-      changeSummary: freezed == changeSummary
-          ? _value.changeSummary
-          : changeSummary // ignore: cast_nullable_to_non_nullable
-              as String?,
-      baseContentHash: freezed == baseContentHash
-          ? _value.baseContentHash
-          : baseContentHash // ignore: cast_nullable_to_non_nullable
               as String?,
     ));
   }
@@ -177,32 +143,26 @@ class __$$RevisionPatchMetadataImplCopyWithImpl<$Res>
 @JsonSerializable()
 class _$RevisionPatchMetadataImpl implements _RevisionPatchMetadata {
   const _$RevisionPatchMetadataImpl(
-      {this.prompt,
-      this.model,
-      this.taskId,
-      this.summary,
-      this.changeSummary,
-      this.baseContentHash});
+      {required this.prompt,
+      required this.model,
+      required this.summary,
+      this.taskId});
 
   factory _$RevisionPatchMetadataImpl.fromJson(Map<String, dynamic> json) =>
       _$$RevisionPatchMetadataImplFromJson(json);
 
   @override
-  final String? prompt;
+  final String prompt;
   @override
-  final String? model;
+  final String model;
+  @override
+  final String summary;
   @override
   final String? taskId;
-  @override
-  final String? summary;
-  @override
-  final String? changeSummary;
-  @override
-  final String? baseContentHash;
 
   @override
   String toString() {
-    return 'RevisionPatchMetadata(prompt: $prompt, model: $model, taskId: $taskId, summary: $summary, changeSummary: $changeSummary, baseContentHash: $baseContentHash)';
+    return 'RevisionPatchMetadata(prompt: $prompt, model: $model, summary: $summary, taskId: $taskId)';
   }
 
   @override
@@ -212,18 +172,13 @@ class _$RevisionPatchMetadataImpl implements _RevisionPatchMetadata {
             other is _$RevisionPatchMetadataImpl &&
             (identical(other.prompt, prompt) || other.prompt == prompt) &&
             (identical(other.model, model) || other.model == model) &&
-            (identical(other.taskId, taskId) || other.taskId == taskId) &&
             (identical(other.summary, summary) || other.summary == summary) &&
-            (identical(other.changeSummary, changeSummary) ||
-                other.changeSummary == changeSummary) &&
-            (identical(other.baseContentHash, baseContentHash) ||
-                other.baseContentHash == baseContentHash));
+            (identical(other.taskId, taskId) || other.taskId == taskId));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, prompt, model, taskId, summary,
-      changeSummary, baseContentHash);
+  int get hashCode => Object.hash(runtimeType, prompt, model, summary, taskId);
 
   /// Create a copy of RevisionPatchMetadata
   /// with the given fields replaced by the non-null parameter values.
@@ -244,28 +199,22 @@ class _$RevisionPatchMetadataImpl implements _RevisionPatchMetadata {
 
 abstract class _RevisionPatchMetadata implements RevisionPatchMetadata {
   const factory _RevisionPatchMetadata(
-      {final String? prompt,
-      final String? model,
-      final String? taskId,
-      final String? summary,
-      final String? changeSummary,
-      final String? baseContentHash}) = _$RevisionPatchMetadataImpl;
+      {required final String prompt,
+      required final String model,
+      required final String summary,
+      final String? taskId}) = _$RevisionPatchMetadataImpl;
 
   factory _RevisionPatchMetadata.fromJson(Map<String, dynamic> json) =
       _$RevisionPatchMetadataImpl.fromJson;
 
   @override
-  String? get prompt;
+  String get prompt;
   @override
-  String? get model;
+  String get model;
+  @override
+  String get summary;
   @override
   String? get taskId;
-  @override
-  String? get summary;
-  @override
-  String? get changeSummary;
-  @override
-  String? get baseContentHash;
 
   /// Create a copy of RevisionPatchMetadata
   /// with the given fields replaced by the non-null parameter values.

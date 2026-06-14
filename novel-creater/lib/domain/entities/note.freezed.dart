@@ -23,13 +23,11 @@ mixin _$Note {
   String get id => throw _privateConstructorUsedError;
   String get projectId => throw _privateConstructorUsedError;
   String get title => throw _privateConstructorUsedError;
+  String get content => throw _privateConstructorUsedError;
+  NoteCategory get category => throw _privateConstructorUsedError;
+  List<String> get tags => throw _privateConstructorUsedError;
   DateTime get createdAt => throw _privateConstructorUsedError;
   DateTime get updatedAt => throw _privateConstructorUsedError;
-  String get content => throw _privateConstructorUsedError;
-  NoteType get type => throw _privateConstructorUsedError;
-  String? get sourceUrl => throw _privateConstructorUsedError;
-  String? get agentTaskId => throw _privateConstructorUsedError;
-  List<String> get tags => throw _privateConstructorUsedError;
   int get schemaVersion => throw _privateConstructorUsedError;
 
   /// Serializes this Note to a JSON map.
@@ -50,13 +48,11 @@ abstract class $NoteCopyWith<$Res> {
       {String id,
       String projectId,
       String title,
+      String content,
+      NoteCategory category,
+      List<String> tags,
       DateTime createdAt,
       DateTime updatedAt,
-      String content,
-      NoteType type,
-      String? sourceUrl,
-      String? agentTaskId,
-      List<String> tags,
       int schemaVersion});
 }
 
@@ -78,13 +74,11 @@ class _$NoteCopyWithImpl<$Res, $Val extends Note>
     Object? id = null,
     Object? projectId = null,
     Object? title = null,
+    Object? content = null,
+    Object? category = null,
+    Object? tags = null,
     Object? createdAt = null,
     Object? updatedAt = null,
-    Object? content = null,
-    Object? type = null,
-    Object? sourceUrl = freezed,
-    Object? agentTaskId = freezed,
-    Object? tags = null,
     Object? schemaVersion = null,
   }) {
     return _then(_value.copyWith(
@@ -100,6 +94,18 @@ class _$NoteCopyWithImpl<$Res, $Val extends Note>
           ? _value.title
           : title // ignore: cast_nullable_to_non_nullable
               as String,
+      content: null == content
+          ? _value.content
+          : content // ignore: cast_nullable_to_non_nullable
+              as String,
+      category: null == category
+          ? _value.category
+          : category // ignore: cast_nullable_to_non_nullable
+              as NoteCategory,
+      tags: null == tags
+          ? _value.tags
+          : tags // ignore: cast_nullable_to_non_nullable
+              as List<String>,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -108,26 +114,6 @@ class _$NoteCopyWithImpl<$Res, $Val extends Note>
           ? _value.updatedAt
           : updatedAt // ignore: cast_nullable_to_non_nullable
               as DateTime,
-      content: null == content
-          ? _value.content
-          : content // ignore: cast_nullable_to_non_nullable
-              as String,
-      type: null == type
-          ? _value.type
-          : type // ignore: cast_nullable_to_non_nullable
-              as NoteType,
-      sourceUrl: freezed == sourceUrl
-          ? _value.sourceUrl
-          : sourceUrl // ignore: cast_nullable_to_non_nullable
-              as String?,
-      agentTaskId: freezed == agentTaskId
-          ? _value.agentTaskId
-          : agentTaskId // ignore: cast_nullable_to_non_nullable
-              as String?,
-      tags: null == tags
-          ? _value.tags
-          : tags // ignore: cast_nullable_to_non_nullable
-              as List<String>,
       schemaVersion: null == schemaVersion
           ? _value.schemaVersion
           : schemaVersion // ignore: cast_nullable_to_non_nullable
@@ -147,13 +133,11 @@ abstract class _$$NoteImplCopyWith<$Res> implements $NoteCopyWith<$Res> {
       {String id,
       String projectId,
       String title,
+      String content,
+      NoteCategory category,
+      List<String> tags,
       DateTime createdAt,
       DateTime updatedAt,
-      String content,
-      NoteType type,
-      String? sourceUrl,
-      String? agentTaskId,
-      List<String> tags,
       int schemaVersion});
 }
 
@@ -172,13 +156,11 @@ class __$$NoteImplCopyWithImpl<$Res>
     Object? id = null,
     Object? projectId = null,
     Object? title = null,
+    Object? content = null,
+    Object? category = null,
+    Object? tags = null,
     Object? createdAt = null,
     Object? updatedAt = null,
-    Object? content = null,
-    Object? type = null,
-    Object? sourceUrl = freezed,
-    Object? agentTaskId = freezed,
-    Object? tags = null,
     Object? schemaVersion = null,
   }) {
     return _then(_$NoteImpl(
@@ -194,6 +176,18 @@ class __$$NoteImplCopyWithImpl<$Res>
           ? _value.title
           : title // ignore: cast_nullable_to_non_nullable
               as String,
+      content: null == content
+          ? _value.content
+          : content // ignore: cast_nullable_to_non_nullable
+              as String,
+      category: null == category
+          ? _value.category
+          : category // ignore: cast_nullable_to_non_nullable
+              as NoteCategory,
+      tags: null == tags
+          ? _value._tags
+          : tags // ignore: cast_nullable_to_non_nullable
+              as List<String>,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -202,26 +196,6 @@ class __$$NoteImplCopyWithImpl<$Res>
           ? _value.updatedAt
           : updatedAt // ignore: cast_nullable_to_non_nullable
               as DateTime,
-      content: null == content
-          ? _value.content
-          : content // ignore: cast_nullable_to_non_nullable
-              as String,
-      type: null == type
-          ? _value.type
-          : type // ignore: cast_nullable_to_non_nullable
-              as NoteType,
-      sourceUrl: freezed == sourceUrl
-          ? _value.sourceUrl
-          : sourceUrl // ignore: cast_nullable_to_non_nullable
-              as String?,
-      agentTaskId: freezed == agentTaskId
-          ? _value.agentTaskId
-          : agentTaskId // ignore: cast_nullable_to_non_nullable
-              as String?,
-      tags: null == tags
-          ? _value._tags
-          : tags // ignore: cast_nullable_to_non_nullable
-              as List<String>,
       schemaVersion: null == schemaVersion
           ? _value.schemaVersion
           : schemaVersion // ignore: cast_nullable_to_non_nullable
@@ -237,13 +211,11 @@ class _$NoteImpl implements _Note {
       {required this.id,
       required this.projectId,
       required this.title,
+      required this.content,
+      this.category = NoteCategory.misc,
+      final List<String> tags = const [],
       required this.createdAt,
       required this.updatedAt,
-      this.content = '',
-      this.type = NoteType.idea,
-      this.sourceUrl,
-      this.agentTaskId,
-      final List<String> tags = const [],
       this.schemaVersion = 1})
       : _tags = tags;
 
@@ -257,19 +229,10 @@ class _$NoteImpl implements _Note {
   @override
   final String title;
   @override
-  final DateTime createdAt;
-  @override
-  final DateTime updatedAt;
-  @override
-  @JsonKey()
   final String content;
   @override
   @JsonKey()
-  final NoteType type;
-  @override
-  final String? sourceUrl;
-  @override
-  final String? agentTaskId;
+  final NoteCategory category;
   final List<String> _tags;
   @override
   @JsonKey()
@@ -280,12 +243,16 @@ class _$NoteImpl implements _Note {
   }
 
   @override
+  final DateTime createdAt;
+  @override
+  final DateTime updatedAt;
+  @override
   @JsonKey()
   final int schemaVersion;
 
   @override
   String toString() {
-    return 'Note(id: $id, projectId: $projectId, title: $title, createdAt: $createdAt, updatedAt: $updatedAt, content: $content, type: $type, sourceUrl: $sourceUrl, agentTaskId: $agentTaskId, tags: $tags, schemaVersion: $schemaVersion)';
+    return 'Note(id: $id, projectId: $projectId, title: $title, content: $content, category: $category, tags: $tags, createdAt: $createdAt, updatedAt: $updatedAt, schemaVersion: $schemaVersion)';
   }
 
   @override
@@ -297,17 +264,14 @@ class _$NoteImpl implements _Note {
             (identical(other.projectId, projectId) ||
                 other.projectId == projectId) &&
             (identical(other.title, title) || other.title == title) &&
+            (identical(other.content, content) || other.content == content) &&
+            (identical(other.category, category) ||
+                other.category == category) &&
+            const DeepCollectionEquality().equals(other._tags, _tags) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             (identical(other.updatedAt, updatedAt) ||
                 other.updatedAt == updatedAt) &&
-            (identical(other.content, content) || other.content == content) &&
-            (identical(other.type, type) || other.type == type) &&
-            (identical(other.sourceUrl, sourceUrl) ||
-                other.sourceUrl == sourceUrl) &&
-            (identical(other.agentTaskId, agentTaskId) ||
-                other.agentTaskId == agentTaskId) &&
-            const DeepCollectionEquality().equals(other._tags, _tags) &&
             (identical(other.schemaVersion, schemaVersion) ||
                 other.schemaVersion == schemaVersion));
   }
@@ -319,13 +283,11 @@ class _$NoteImpl implements _Note {
       id,
       projectId,
       title,
+      content,
+      category,
+      const DeepCollectionEquality().hash(_tags),
       createdAt,
       updatedAt,
-      content,
-      type,
-      sourceUrl,
-      agentTaskId,
-      const DeepCollectionEquality().hash(_tags),
       schemaVersion);
 
   /// Create a copy of Note
@@ -349,13 +311,11 @@ abstract class _Note implements Note {
       {required final String id,
       required final String projectId,
       required final String title,
+      required final String content,
+      final NoteCategory category,
+      final List<String> tags,
       required final DateTime createdAt,
       required final DateTime updatedAt,
-      final String content,
-      final NoteType type,
-      final String? sourceUrl,
-      final String? agentTaskId,
-      final List<String> tags,
       final int schemaVersion}) = _$NoteImpl;
 
   factory _Note.fromJson(Map<String, dynamic> json) = _$NoteImpl.fromJson;
@@ -367,19 +327,15 @@ abstract class _Note implements Note {
   @override
   String get title;
   @override
+  String get content;
+  @override
+  NoteCategory get category;
+  @override
+  List<String> get tags;
+  @override
   DateTime get createdAt;
   @override
   DateTime get updatedAt;
-  @override
-  String get content;
-  @override
-  NoteType get type;
-  @override
-  String? get sourceUrl;
-  @override
-  String? get agentTaskId;
-  @override
-  List<String> get tags;
   @override
   int get schemaVersion;
 

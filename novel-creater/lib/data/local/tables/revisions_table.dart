@@ -1,21 +1,18 @@
 import 'package:drift/drift.dart';
+import 'package:novel_creator/data/local/tables/chapters_table.dart';
 
-class RevisionsTable extends Table {
+@DataClassName('RevisionRow')
+class Revisions extends Table {
   TextColumn get id => text()();
   TextColumn get projectId => text()();
-  TextColumn get chapterId => text()();
-  TextColumn get operation => text()();
-  TextColumn get anchor => text()();
-  TextColumn get beforeText => text()();
-  TextColumn get afterText => text()();
-  TextColumn get source => text().withDefault(const Constant('agent'))();
-  TextColumn get status => text().withDefault(const Constant('pending'))();
-  TextColumn get metadata => text().nullable()();
-  DateTimeColumn get resolvedAt => dateTime().nullable()();
-  DateTimeColumn get createdAt => dateTime()();
-  DateTimeColumn get updatedAt => dateTime()();
+  TextColumn get chapterId =>
+      text().references(Chapters, #id, onDelete: KeyAction.cascade)();
+  TextColumn get patchJson => text()();
+  TextColumn get status => text()();
+  IntColumn get createdAt => integer()();
+  IntColumn get updatedAt => integer()();
   IntColumn get schemaVersion => integer().withDefault(const Constant(1))();
 
   @override
-  Set<Column> get primaryKey => {id};
+  Set<Column<Object>> get primaryKey => <Column<Object>>{id};
 }

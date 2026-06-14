@@ -1,21 +1,28 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:novel_creator/domain/enums/app_error_source.dart';
+enum AppErrorSource {
+  storage,
+  llm,
+  search,
+  editor,
+  export,
+  unknown,
+}
 
-part 'app_error.freezed.dart';
-part 'app_error.g.dart';
+final class AppError {
+  const AppError({
+    required this.code,
+    required this.message,
+    required this.userMessage,
+    required this.source,
+    this.technicalDetail,
+    this.recoverable = false,
+    this.suggestedAction,
+  });
 
-@Freezed(toJson: true, fromJson: true)
-class AppError with _$AppError {
-  const factory AppError({
-    required String code,
-    required String message,
-    required String userMessage,
-    String? technicalDetail,
-    @Default(true) bool recoverable,
-    String? suggestedAction,
-    @Default(AppErrorSource.unknown) AppErrorSource source,
-  }) = _AppError;
-
-  factory AppError.fromJson(Map<String, dynamic> json) =>
-      _$AppErrorFromJson(json);
+  final String code;
+  final String message;
+  final String userMessage;
+  final String? technicalDetail;
+  final bool recoverable;
+  final String? suggestedAction;
+  final AppErrorSource source;
 }

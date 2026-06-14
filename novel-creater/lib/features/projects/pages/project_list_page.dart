@@ -1,44 +1,148 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:novel_creator/app/app.dart';
-import 'package:novel_creator/data/di/injection.dart';
-import 'package:novel_creator/domain/domain.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+import 'package:novel_creator/app/theme/app_radius.dart';
+import 'package:novel_creator/app/theme/app_spacing.dart';
+import 'package:novel_creator/app/theme/app_typography.dart';
+import 'package:novel_creator/app/theme/morandi_colors.dart';
+import 'package:novel_creator/app/widgets/app_modal.dart';
+import 'package:novel_creator/app/widgets/app_toast.dart';
+import 'package:novel_creator/app/widgets/empty_hero_widget.dart';
+import 'package:novel_creator/domain/entities/project.dart';
 import 'package:novel_creator/features/projects/bloc/project_list_bloc.dart';
+import 'package:novel_creator/features/projects/bloc/project_list_event.dart';
+import 'package:novel_creator/features/projects/bloc/project_list_state.dart';
 
 class ProjectListPage extends StatelessWidget {
   const ProjectListPage({super.key});
 
   @override
-  Widget build(BuildContext context) => BlocProvider(
-        create: (_) => ProjectListBloc(
-          projectRepository: locator<ProjectRepository>(),
-        )..add(ProjectListStarted()),
-        child: const _ProjectListView(),
-      );
-}
-
-class _ProjectListView extends StatelessWidget {
-  const _ProjectListView();
-
-  @override
   Widget build(BuildContext context) {
-    final morandi = Theme.of(context).extension<MorandiColors>()!;
+    return BlocBuilder<ProjectListBloc, ProjectListState>(
+      builder: (context, state) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final text = isDark ? MorandiColors.darkText : MorandiColors.text;
+        final bg = isDark ? MorandiColors.darkBackground : MorandiColors.background;
+        final surface = isDark ? MorandiColors.darkSurface : MorandiColors.surface;
+        final line = isDark ? MorandiColors.darkLine : MorandiColors.line;
+        final green = isDark ? MorandiColors.darkGreen : MorandiColors.green;
+        final green2 = isDark ? MorandiColors.darkGreen2 : MorandiColors.green2;
+        final muted = isDark ? MorandiColors.darkMuted : MorandiColors.muted;
 
-    return Scaffold(
-      body: Row(
-        children: [
-          _Sidebar(morandi: morandi),
-          Expanded(
-            child: BlocBuilder<ProjectListBloc, ProjectListState>(
-              builder: (context, state) => ColoredBox(
-                color: morandi.bg,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _MainHeader(state: state),
-                    Expanded(child: _MainContent(state: state)),
-                  ],
+        return Scaffold(
+          backgroundColor: bg,
+          body: CustomScrollView(
+            slivers: <Widget>[
+              // 顶部导航栏
+              SliverAppBar(
+                pinned: true,
+                backgroundColor: surface,
+                foregroundColor: text,
+                title: Text(
+                  'Novel Creator',
+                  style: AppTypography.title(
+                    color: text,
+                    weight: AppTypography.weightBold,
+                  ),
                 ),
+                actions: <Widget>[
+                  IconButton(
+                    icon: Icon(LucideIcons.settings, size: AppSpacing.iconMedium),
+                    onPressed: () => Navigator.of(context).pushNamed('/settings'),
+                    tooltip: '设置',
+                  ),
+                ],
+              ),
+              // 标题行
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.workspacePadding,
+                    AppSpacing.xl,
+                    AppSpacing.workspacePadding,
+                    0,
+                  ),
+                  child: Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: Text(
+                          '我的项目',
+                          style: AppTypography.headline(color: text),
+                        ),
+                      ),
+                      FilledButton.icon(
+                        onPressed: () => _showCreateDialog(context),
+                        icon: Icon(LucideIcons.plus, size: 16, color: Colors.white),
+                        label: Text(
+                          '新建项目',
+                          style: AppTypography.small(
+                            color: Colors.white,
+                            weight: AppTypography.weightBold,
+                          ),
+                        ),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: green,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // 内容区
+              if (state.isLoading)
+                SliverFillRemaining(
+                  child: _buildLoadingSkeleton(isDark),
+                )
+              else if (state.projects.isEmpty)
+                SliverToBoxAdapter(
+                  child: _buildEmptyState(context, isDark),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.all(AppSpacing.workspacePadding),
+                  sliver: SliverList.separated(
+                    itemCount: state.projects.length,
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(height: AppSpacing.lg),
+                    itemBuilder: (context, index) =>
+                        _buildProjectCard(context, state.projects[index], isDark),
+                  ),
+                ),
+              // 错误提示
+              if (state.error != null)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.workspacePadding),
+                    child: Text(
+                      state.error!.userMessage,
+                      style: AppTypography.body(color: MorandiColors.danger),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// 加载中骨架屏
+  Widget _buildLoadingSkeleton(bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.workspacePadding),
+      child: Column(
+        children: [
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(
+              3,
+              (_) => Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: SkeletonCard(width: 200, height: 120, isDark: isDark),
               ),
             ),
           ),
@@ -46,610 +150,233 @@ class _ProjectListView extends StatelessWidget {
       ),
     );
   }
-}
 
-class _Sidebar extends StatelessWidget {
-  const _Sidebar({required this.morandi});
-
-  final MorandiColors morandi;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        width: 260,
-        color: morandi.surface2.withOpacity(0.88),
-        child: Column(
-          children: [
-            Container(
-              height: 64,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: morandi.line)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xFFEDF3E8), Color(0xFFDFE8D9)],
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFD8E3D2)),
-                    ),
-                    child: Icon(
-                      Icons.eco_outlined,
-                      size: 16,
-                      color: morandi.greenDark,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Novel Creator',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: morandi.ink,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            _NavItem(
-              icon: Icons.folder_outlined,
-              label: '项目库',
-              isActive: true,
-              morandi: morandi,
-            ),
-            _NavItem(
-              icon: Icons.history,
-              label: '最近打开',
-              isActive: false,
-              morandi: morandi,
-            ),
-            _NavItem(
-              icon: Icons.star_outline,
-              label: '收藏',
-              isActive: false,
-              morandi: morandi,
-            ),
-            _NavItem(
-              icon: Icons.delete_outline,
-              label: '回收站',
-              isActive: false,
-              morandi: morandi,
-            ),
-            const Spacer(),
-            Divider(
-              color: morandi.line,
-              height: 1,
-              indent: 16,
-              endIndent: 16,
-            ),
-            _NavItem(
-              icon: Icons.settings_outlined,
-              label: '设置',
-              isActive: false,
-              morandi: morandi,
-            ),
-            const SizedBox(height: 12),
-          ],
-        ),
-      );
-}
-
-class _NavItem extends StatelessWidget {
-  const _NavItem({
-    required this.icon,
-    required this.label,
-    required this.isActive,
-    required this.morandi,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool isActive;
-  final MorandiColors morandi;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-        decoration: BoxDecoration(
-          color: isActive ? morandi.greenTint : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isActive ? morandi.greenLight : Colors.transparent,
-          ),
-        ),
-        child: ListTile(
-          dense: true,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-          leading: Icon(
-            icon,
-            size: 18,
-            color: isActive
-                ? morandi.greenDark
-                : const Color(0xFF555952),
-          ),
-          title: Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
-              color: isActive
-                  ? morandi.greenDark
-                  : const Color(0xFF555952),
-            ),
-          ),
-          onTap: () {},
-        ),
-      );
-}
-
-class _MainHeader extends StatelessWidget {
-  const _MainHeader({required this.state});
-
-  final ProjectListState state;
-
-  @override
-  Widget build(BuildContext context) {
-    final morandi = Theme.of(context).extension<MorandiColors>()!;
+  /// 空状态：插图 + 标题 + 描述 + CTA + 模板网格 + 骨架屏指标
+  Widget _buildEmptyState(BuildContext context, bool isDark) {
+    final text = isDark ? MorandiColors.darkText : MorandiColors.text;
+    final muted = isDark ? MorandiColors.darkMuted : MorandiColors.muted;
+    final green = isDark ? MorandiColors.darkGreen : MorandiColors.green;
+    final green2 = isDark ? MorandiColors.darkGreen2 : MorandiColors.green2;
+    final surface = isDark ? MorandiColors.darkSurface : MorandiColors.surface;
+    final line = isDark ? MorandiColors.darkLine : MorandiColors.line;
+    final surface2 = isDark ? MorandiColors.darkSurface2 : MorandiColors.surface2;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(32, 24, 32, 0),
-      child: Row(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.workspacePadding),
+      child: Column(
         children: [
-          Text(
-            '我的项目',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              color: morandi.ink,
-            ),
-          ),
-          const SizedBox(width: 16),
+          const SizedBox(height: 20),
+          // 空状态面板（带虚线装饰边框）
           Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 8,
-              vertical: 2,
-            ),
+            padding: const EdgeInsets.symmetric(vertical: 42, horizontal: 32),
             decoration: BoxDecoration(
-              color: morandi.greenLight,
-              borderRadius: BorderRadius.circular(10),
+              color: surface,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
             ),
-            child: Text(
-              '${state.projects.length}',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: morandi.greenDark,
-              ),
-            ),
-          ),
-          const Spacer(),
-          SizedBox(
-            width: 220,
-            height: 36,
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: '搜索项目...',
-                hintStyle: TextStyle(
-                  fontSize: 13,
-                  color: morandi.soft,
-                ),
-                prefixIcon: Icon(
-                  Icons.search,
-                  size: 18,
-                  color: morandi.muted,
-                ),
-                filled: true,
-                fillColor: morandi.canvas,
-                contentPadding: EdgeInsets.zero,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: morandi.line),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: morandi.line),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(
-                    color: morandi.green,
-                    width: 1.5,
-                  ),
-                ),
-              ),
-              style: TextStyle(
-                fontSize: 13,
-                color: morandi.text,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          ElevatedButton.icon(
-            onPressed: () => Navigator.of(context).pushNamed(
-              AppRoutes.newProject,
-            ),
-            icon: const Icon(Icons.add, size: 16),
-            label: const Text(
-              '新建项目',
-              style: TextStyle(fontSize: 13),
-            ),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 10,
-              ),
-              backgroundColor: morandi.green,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MainContent extends StatelessWidget {
-  const _MainContent({required this.state});
-
-  final ProjectListState state;
-
-  @override
-  Widget build(BuildContext context) {
-    if (state.isLoading && state.projects.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (state.error != null && state.projects.isEmpty) {
-      final morandi = Theme.of(context).extension<MorandiColors>()!;
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 48,
-              color: morandi.red,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              state.error!,
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => context
-                  .read<ProjectListBloc>()
-                  .add(ProjectListRefreshed()),
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (state.projects.isEmpty) {
-      final morandi = Theme.of(context).extension<MorandiColors>()!;
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.menu_book_outlined,
-              size: 64,
-              color: morandi.soft.withOpacity(0.5),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              '创建你的第一部小说',
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineSmall
-                  ?.copyWith(color: morandi.muted),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () => Navigator.of(context).pushNamed(
-                AppRoutes.newProject,
-              ),
-              icon: const Icon(Icons.add),
-              label: const Text('新建项目'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: () async {
-        context.read<ProjectListBloc>().add(ProjectListRefreshed());
-      },
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(32, 20, 32, 32),
-        child: GridView.builder(
-          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-            maxCrossAxisExtent: 280,
-            mainAxisExtent: 260,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-          ),
-          itemCount: state.projects.length + 1,
-          itemBuilder: (context, index) {
-            if (index == state.projects.length) {
-              return const _AddProjectTile();
-            }
-            return _ProjectTile(project: state.projects[index]);
-          },
-        ),
-      ),
-    );
-  }
-}
-
-class _ProjectTile extends StatelessWidget {
-  const _ProjectTile({required this.project});
-
-  final Project project;
-
-  static final _gradients = [
-    [const Color(0xFF637B61), const Color(0xFFA8B5A2)],
-    [const Color(0xFFBA8D50), const Color(0xFFD8C5A6)],
-    [const Color(0xFF7C8F95), const Color(0xFFA8B5A2)],
-    [const Color(0xFFC7A99A), const Color(0xFFD9B7AE)],
-    [const Color(0xFFB56A60), const Color(0xFFD9B7AE)],
-  ];
-
-  static final _fallbackTitles = [
-    '未命名项目',
-    '新建小说',
-    '我的创作',
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final morandi = Theme.of(context).extension<MorandiColors>()!;
-    final gradientIndex = project.title.hashCode.abs() % _gradients.length;
-    final gradient = _gradients[gradientIndex];
-
-    return Container(
-      decoration: BoxDecoration(
-        color: morandi.canvas,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: morandi.line),
-      ),
-      child: InkWell(
-        onTap: () => Navigator.of(context).pushNamed(
-          AppRoutes.workspace,
-          arguments: project.id,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(
-              height: 150,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: gradient,
-                ),
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(16),
-                ),
-              ),
-              child: Stack(
-                children: [
-                  Positioned(
-                    top: 12,
-                    right: 12,
-                    child: PopupMenuButton<String>(
-                      icon: Icon(
-                        Icons.more_horiz,
-                        color: Colors.white.withOpacity(0.8),
-                        size: 20,
+            child: Stack(
+              children: [
+                // 虚线装饰边框
+                Positioned.fill(
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: CustomPaint(
+                      painter: _DashedBorderPainter(
+                        color: line,
+                        radius: AppRadius.md,
                       ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      onSelected: (value) {
-                        if (value == 'delete') _confirmDelete(context);
-                      },
-                      itemBuilder: (_) => [
-                        const PopupMenuItem(
-                          value: 'delete',
-                          child: Text('删除项目'),
-                        ),
-                      ],
                     ),
                   ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                ),
+                // 内容
+                Column(
                   children: [
+                    // 插图
+                    _EmptyIllustration(isDark: isDark),
+                    const SizedBox(height: 18),
                     Text(
-                      project.title.isNotEmpty
-                          ? project.title
-                          : _fallbackTitles[
-                              project.id.hashCode.abs() %
-                                  _fallbackTitles.length],
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: morandi.ink,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      '从一个故事种子开始',
+                      style: AppTypography.headline(color: text),
+                      textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 4),
-                    if (project.description.isNotEmpty)
-                      Text(
-                        project.description,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: morandi.muted,
-                          height: 1.4,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      )
-                    else
-                      Text(
-                        '暂无简介',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: morandi.soft,
-                          fontStyle: FontStyle.italic,
-                        ),
+                    const SizedBox(height: 8),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 560),
+                      child: Text(
+                        '创建长篇项目开始你的写作旅程，或从模板快速启动。Agent 会根据上下文给出续写、改写和润色建议，所有修改经你审核后生效。',
+                        style: AppTypography.body(color: muted),
+                        textAlign: TextAlign.center,
                       ),
-                    const Spacer(),
+                    ),
+                    const SizedBox(height: 22),
+                    // 双按钮 CTA
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        _StatusChip(
-                          label: project.genre.isNotEmpty
-                              ? project.genre
-                              : '未分类',
-                          color: morandi.orangeLight,
-                          textColor: morandi.orange,
+                        FilledButton(
+                          onPressed: () => _showCreateDialog(context),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: green,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 10,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(LucideIcons.bookOpen, size: 16, color: Colors.white),
+                              const SizedBox(width: 7),
+                              Text(
+                                '创建长篇项目',
+                                style: AppTypography.small(
+                                  color: Colors.white,
+                                  weight: AppTypography.weightBold,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(width: 6),
-                        _StatusChip(
-                          label: _formatDate(project.updatedAt),
-                          color: morandi.surface3,
-                          textColor: morandi.muted,
+                        const SizedBox(width: 12),
+                        OutlinedButton(
+                          onPressed: () {
+                            AppToast.show(context, message: '导入功能开发中', type: ToastType.info);
+                          },
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: line),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(LucideIcons.upload, size: 16, color: muted),
+                              const SizedBox(width: 7),
+                              Text(
+                                '导入文稿',
+                                style: AppTypography.small(
+                                  color: muted,
+                                  weight: AppTypography.weightBold,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
                   ],
                 ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          // 模板网格
+          Row(
+            children: [
+              _TemplateCard(
+                icon: LucideIcons.building2,
+                title: '都市悬疑',
+                description: '案件线索、角色动机、反转节奏。',
+                isDark: isDark,
+                onTap: () => _createFromTemplate(context, '都市悬疑'),
+              ),
+              const SizedBox(width: 12),
+              _TemplateCard(
+                icon: LucideIcons.castle,
+                title: '奇幻群像',
+                description: '多阵营、地图、势力冲突。',
+                isDark: isDark,
+                onTap: () => _createFromTemplate(context, '奇幻群像'),
+              ),
+              const SizedBox(width: 12),
+              _TemplateCard(
+                icon: LucideIcons.orbit,
+                title: '科幻纪元',
+                description: '设定规则、技术树、主线任务。',
+                isDark: isDark,
+                onTap: () => _createFromTemplate(context, '科幻纪元'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          // 骨架屏指标区
+          Row(
+            children: List.generate(
+              3,
+              (_) => Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: SkeletonCard(height: 122, isDark: isDark),
+                ),
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _formatDate(DateTime dt) {
-    final now = DateTime.now();
-    final diff = now.difference(dt);
-    if (diff.inDays == 0) return '今天';
-    if (diff.inDays == 1) return '昨天';
-    if (diff.inDays < 7) return '${diff.inDays}天前';
-    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-'
-        '${dt.day.toString().padLeft(2, '0')}';
-  }
-
-  void _confirmDelete(BuildContext context) {
-    final morandi = Theme.of(context).extension<MorandiColors>()!;
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('删除项目'),
-        content: Text(
-          '确定删除"${project.title}"吗？此操作不可撤销。',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('取消'),
           ),
-          ElevatedButton(
-            onPressed: () {
-              context.read<ProjectListBloc>().add(
-                    ProjectListDeleteRequested(projectId: project.id),
-                  );
-              Navigator.of(dialogContext).pop();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: morandi.red,
-            ),
-            child: const Text('删除'),
-          ),
+          const SizedBox(height: 24),
         ],
       ),
     );
   }
-}
 
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({
-    required this.label,
-    required this.color,
-    required this.textColor,
-  });
+  Widget _buildProjectCard(BuildContext context, Project project, bool isDark) {
+    final text = isDark ? MorandiColors.darkText : MorandiColors.text;
+    final muted = isDark ? MorandiColors.darkMuted : MorandiColors.muted;
+    final surface = isDark ? MorandiColors.darkSurface : MorandiColors.surface;
+    final line = isDark ? MorandiColors.darkLine : MorandiColors.line;
+    final green = isDark ? MorandiColors.darkGreen : MorandiColors.green;
 
-  final String label;
-  final Color color;
-  final Color textColor;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 8,
-          vertical: 3,
-        ),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            color: textColor,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      );
-}
-
-class _AddProjectTile extends StatelessWidget {
-  const _AddProjectTile();
-
-  @override
-  Widget build(BuildContext context) {
-    final morandi = Theme.of(context).extension<MorandiColors>()!;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: morandi.canvas,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: morandi.line),
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        side: BorderSide(color: line),
       ),
+      color: surface,
       child: InkWell(
-        onTap: () => Navigator.of(context).pushNamed(AppRoutes.newProject),
-        borderRadius: BorderRadius.circular(16),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.add_outlined,
-                size: 36,
-                color: morandi.soft.withOpacity(0.6),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '新建项目',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: morandi.muted,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        onTap: () => _openProject(context, project.id),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.cardPadding),
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      project.name,
+                      style: AppTypography.title(color: text),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (project.description.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        project.description,
+                        style: AppTypography.small(color: muted),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    const SizedBox(height: 6),
+                    Text(
+                      _formatDate(project.updatedAt),
+                      style: AppTypography.caption(color: muted),
+                    ),
+                  ],
                 ),
+              ),
+              IconButton(
+                icon: Icon(
+                  LucideIcons.trash2,
+                  size: 18,
+                  color: MorandiColors.danger.withOpacity(0.7),
+                ),
+                onPressed: () => _confirmDelete(context, project.id, project.name),
+                tooltip: '删除项目',
               ),
             ],
           ),
@@ -657,4 +384,283 @@ class _AddProjectTile extends StatelessWidget {
       ),
     );
   }
+
+  void _openProject(BuildContext context, String projectId) {
+    Navigator.of(context).pushNamed('/workspace', arguments: projectId);
+  }
+
+  void _confirmDelete(BuildContext context, String projectId, String projectName) {
+    AppModal.confirm(
+      context: context,
+      title: '删除项目',
+      message: '确定要删除项目「$projectName」吗？此操作不可撤销。',
+      confirmLabel: '删除',
+      isDanger: true,
+    ).then((confirmed) {
+      if (confirmed) {
+        context.read<ProjectListBloc>().add(ProjectListDeleted(projectId));
+        AppToast.show(context, message: '已删除项目「$projectName」');
+      }
+    });
+  }
+
+  void _showCreateDialog(BuildContext context) {
+    AppModal.createProject(context: context).then((name) {
+      if (name != null) {
+        context.read<ProjectListBloc>().add(ProjectListCreated(name: name));
+        AppToast.show(context, message: '已创建项目「$name」');
+      }
+    });
+  }
+
+  void _createFromTemplate(BuildContext context, String templateName) {
+    context.read<ProjectListBloc>().add(ProjectListCreated(name: templateName));
+    AppToast.show(context, message: '已从模板创建项目「$templateName」');
+  }
+
+  String _formatDate(DateTime dt) {
+    final y = dt.year;
+    final m = dt.month.toString().padLeft(2, '0');
+    final d = dt.day.toString().padLeft(2, '0');
+    return '$y-$m-$d';
+  }
+}
+
+/// 空状态插图：三个浮动卡片 + 书本形状
+class _EmptyIllustration extends StatelessWidget {
+  const _EmptyIllustration({required this.isDark});
+
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final green = isDark ? MorandiColors.darkGreen : MorandiColors.green;
+    final line = isDark ? MorandiColors.darkLine : MorandiColors.line;
+    final surface = isDark ? MorandiColors.darkSurface : MorandiColors.surface;
+
+    return SizedBox(
+      height: 146,
+      width: 330,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // 书本形状
+          Positioned(
+            bottom: 8,
+            child: Container(
+              width: 168,
+              height: 96,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: isDark
+                      ? [MorandiColors.darkGreen3, MorandiColors.darkSurface2]
+                      : [MorandiColors.green3, MorandiColors.surface2],
+                ),
+                border: Border.all(color: line),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 35,
+                    offset: const Offset(0, 18),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Container(
+                  width: 1,
+                  margin: const EdgeInsets.symmetric(vertical: 12),
+                  color: line,
+                ),
+              ),
+            ),
+          ),
+          // 浮动卡片 1（左下，旋转 -8°）
+          Positioned(
+            left: 18,
+            top: 50,
+            child: Transform.rotate(
+              angle: -0.14,
+              child: _FloatingCard(
+                icon: LucideIcons.feather,
+                isDark: isDark,
+              ),
+            ),
+          ),
+          // 浮动卡片 2（中上，无旋转）
+          Positioned(
+            left: 134,
+            top: 7,
+            child: _FloatingCard(
+              icon: LucideIcons.sparkles,
+              isDark: isDark,
+            ),
+          ),
+          // 浮动卡片 3（右下，旋转 9°）
+          Positioned(
+            right: 20,
+            top: 52,
+            child: Transform.rotate(
+              angle: 0.16,
+              child: _FloatingCard(
+                icon: LucideIcons.penTool,
+                isDark: isDark,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 浮动卡片
+class _FloatingCard extends StatelessWidget {
+  const _FloatingCard({
+    required this.icon,
+    required this.isDark,
+  });
+
+  final IconData icon;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final line = isDark ? MorandiColors.darkLine : MorandiColors.line;
+    final green = isDark ? MorandiColors.darkGreen : MorandiColors.green;
+    final surface = isDark ? MorandiColors.darkSurface : MorandiColors.surface;
+
+    return Container(
+      width: 62,
+      height: 62,
+      decoration: BoxDecoration(
+        color: surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: line),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 32,
+            offset: const Offset(0, 14),
+          ),
+        ],
+      ),
+      alignment: Alignment.center,
+      child: Icon(icon, size: 24, color: green),
+    );
+  }
+}
+
+/// 模板卡片
+class _TemplateCard extends StatelessWidget {
+  const _TemplateCard({
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.isDark,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String description;
+  final bool isDark;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = isDark ? MorandiColors.darkText : MorandiColors.text;
+    final muted = isDark ? MorandiColors.darkMuted : MorandiColors.muted;
+    final green = isDark ? MorandiColors.darkGreen : MorandiColors.green;
+    final surface = isDark ? MorandiColors.darkSurface : MorandiColors.surface;
+    final line = isDark ? MorandiColors.darkLine : MorandiColors.line;
+
+    return Expanded(
+      child: Container(
+        decoration: BoxDecoration(
+          color: surface,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: line),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(icon, size: 26, color: green),
+                  const SizedBox(height: 9),
+                  Text(title, style: AppTypography.title(color: text, weight: AppTypography.weightBold)),
+                  const SizedBox(height: 5),
+                  Text(description, style: AppTypography.small(color: muted)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 虚线边框画笔
+class _DashedBorderPainter extends CustomPainter {
+  _DashedBorderPainter({
+    required this.color,
+    required this.radius,
+  });
+
+  final Color color;
+  final double radius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+
+    final rect = Offset.zero & size;
+    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(radius));
+
+    // 使用虚线绘制圆角矩形
+    final path = Path()..addRRect(rrect);
+    _drawDashedPath(canvas, path, paint);
+  }
+
+  void _drawDashedPath(Canvas canvas, Path path, Paint paint) {
+    const dashWidth = 5.0;
+    const dashSpace = 3.0;
+
+    final metrics = path.computeMetrics();
+    for (final metric in metrics) {
+      double distance = 0;
+      while (distance < metric.length) {
+        final length = dashWidth;
+        if (distance + length > metric.length) {
+          canvas.drawPath(
+            metric.extractPath(distance, metric.length),
+            paint,
+          );
+        } else {
+          canvas.drawPath(
+            metric.extractPath(distance, distance + length),
+            paint,
+          );
+        }
+        distance += dashWidth + dashSpace;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedBorderPainter oldDelegate) =>
+      color != oldDelegate.color || radius != oldDelegate.radius;
 }

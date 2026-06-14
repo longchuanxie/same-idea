@@ -1,206 +1,74 @@
-part of 'knowledge_base_bloc.dart';
+import 'package:novel_creator/domain/entities/character.dart';
+import 'package:novel_creator/domain/entities/note.dart';
+import 'package:novel_creator/domain/entities/setting_entry.dart';
+import 'package:novel_creator/features/knowledge_base/bloc/knowledge_base_state.dart';
 
-sealed class KnowledgeBaseEvent extends Equatable {
+sealed class KnowledgeBaseEvent {
   const KnowledgeBaseEvent();
-
-  @override
-  List<Object?> get props => [];
 }
 
-final class KnowledgeBaseStarted extends KnowledgeBaseEvent {
-  const KnowledgeBaseStarted({required this.projectId});
+final class KnowledgeBaseLoaded extends KnowledgeBaseEvent {
+  const KnowledgeBaseLoaded(this.projectId);
 
   final String projectId;
-
-  @override
-  List<Object?> get props => [projectId];
 }
 
-final class KnowledgeBaseQueryChanged extends KnowledgeBaseEvent {
-  const KnowledgeBaseQueryChanged({required this.query});
-
-  final String query;
-
-  @override
-  List<Object?> get props => [query];
-}
-
-final class KnowledgeCharacterCreated extends KnowledgeBaseEvent {
-  const KnowledgeCharacterCreated({
-    required this.name,
-    this.description = '',
-    this.tags = '',
-  });
-
-  final String name;
-  final String description;
-  final String tags;
-
-  @override
-  List<Object?> get props => [name, description, tags];
-}
-
-final class KnowledgeCharacterUpdated extends KnowledgeBaseEvent {
-  const KnowledgeCharacterUpdated({
-    required this.character,
-    required this.name,
-    this.description = '',
-    this.tags = '',
-  });
+final class CharacterCreated extends KnowledgeBaseEvent {
+  const CharacterCreated(this.character);
 
   final Character character;
-  final String name;
-  final String description;
-  final String tags;
-
-  @override
-  List<Object?> get props => [character, name, description, tags];
 }
 
-final class KnowledgeCharacterDeleted extends KnowledgeBaseEvent {
-  const KnowledgeCharacterDeleted({required this.characterId});
+final class CharacterUpdated extends KnowledgeBaseEvent {
+  const CharacterUpdated(this.character);
 
-  final String characterId;
-
-  @override
-  List<Object?> get props => [characterId];
+  final Character character;
 }
 
-final class KnowledgeNoteCreated extends KnowledgeBaseEvent {
-  const KnowledgeNoteCreated({
-    required this.title,
-    this.content = '',
-    this.type = NoteType.idea,
-    this.sourceUrl = '',
-    this.tags = '',
-  });
+final class CharacterDeleted extends KnowledgeBaseEvent {
+  const CharacterDeleted(this.id);
 
-  final String title;
-  final String content;
-  final NoteType type;
-  final String sourceUrl;
-  final String tags;
-
-  @override
-  List<Object?> get props => [title, content, type, sourceUrl, tags];
+  final String id;
 }
 
-final class KnowledgeNoteUpdated extends KnowledgeBaseEvent {
-  const KnowledgeNoteUpdated({
-    required this.note,
-    required this.title,
-    this.content = '',
-    this.type = NoteType.idea,
-    this.sourceUrl = '',
-    this.tags = '',
-  });
-
-  final Note note;
-  final String title;
-  final String content;
-  final NoteType type;
-  final String sourceUrl;
-  final String tags;
-
-  @override
-  List<Object?> get props => [note, title, content, type, sourceUrl, tags];
-}
-
-final class KnowledgeNoteDeleted extends KnowledgeBaseEvent {
-  const KnowledgeNoteDeleted({required this.noteId});
-
-  final String noteId;
-
-  @override
-  List<Object?> get props => [noteId];
-}
-
-final class KnowledgeSettingEntryCreated extends KnowledgeBaseEvent {
-  const KnowledgeSettingEntryCreated({
-    required this.category,
-    required this.title,
-    this.content = '',
-    this.tags = '',
-  });
-
-  final String category;
-  final String title;
-  final String content;
-  final String tags;
-
-  @override
-  List<Object?> get props => [category, title, content, tags];
-}
-
-final class KnowledgeSettingEntryUpdated extends KnowledgeBaseEvent {
-  const KnowledgeSettingEntryUpdated({
-    required this.entry,
-    required this.category,
-    required this.title,
-    this.content = '',
-    this.tags = '',
-  });
+final class SettingEntryCreated extends KnowledgeBaseEvent {
+  const SettingEntryCreated(this.entry);
 
   final SettingEntry entry;
-  final String category;
-  final String title;
-  final String content;
-  final String tags;
-
-  @override
-  List<Object?> get props => [entry, category, title, content, tags];
 }
 
-final class KnowledgeSettingEntryDeleted extends KnowledgeBaseEvent {
-  const KnowledgeSettingEntryDeleted({required this.entryId});
+final class SettingEntryUpdated extends KnowledgeBaseEvent {
+  const SettingEntryUpdated(this.entry);
 
-  final String entryId;
-
-  @override
-  List<Object?> get props => [entryId];
+  final SettingEntry entry;
 }
 
-final class KnowledgeOutlineNodeCreated extends KnowledgeBaseEvent {
-  const KnowledgeOutlineNodeCreated({
-    required this.title,
-    this.summary = '',
-    this.nodeType = OutlineNodeType.chapter,
-    this.status = OutlineNodeStatus.planned,
-  });
+final class SettingEntryDeleted extends KnowledgeBaseEvent {
+  const SettingEntryDeleted(this.id);
 
-  final String title;
-  final String summary;
-  final OutlineNodeType nodeType;
-  final OutlineNodeStatus status;
-
-  @override
-  List<Object?> get props => [title, summary, nodeType, status];
+  final String id;
 }
 
-final class KnowledgeOutlineNodeUpdated extends KnowledgeBaseEvent {
-  const KnowledgeOutlineNodeUpdated({
-    required this.node,
-    required this.title,
-    this.summary = '',
-    this.nodeType = OutlineNodeType.chapter,
-    this.status = OutlineNodeStatus.planned,
-  });
+final class NoteCreated extends KnowledgeBaseEvent {
+  const NoteCreated(this.note);
 
-  final OutlineNode node;
-  final String title;
-  final String summary;
-  final OutlineNodeType nodeType;
-  final OutlineNodeStatus status;
-
-  @override
-  List<Object?> get props => [node, title, summary, nodeType, status];
+  final Note note;
 }
 
-final class KnowledgeOutlineNodeDeleted extends KnowledgeBaseEvent {
-  const KnowledgeOutlineNodeDeleted({required this.nodeId});
+final class NoteUpdated extends KnowledgeBaseEvent {
+  const NoteUpdated(this.note);
 
-  final String nodeId;
+  final Note note;
+}
 
-  @override
-  List<Object?> get props => [nodeId];
+final class NoteDeleted extends KnowledgeBaseEvent {
+  const NoteDeleted(this.id);
+
+  final String id;
+}
+
+final class TabChanged extends KnowledgeBaseEvent {
+  const TabChanged(this.tab);
+
+  final KnowledgeBaseTab tab;
 }

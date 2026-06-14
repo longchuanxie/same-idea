@@ -23,15 +23,12 @@ mixin _$Chapter {
   String get id => throw _privateConstructorUsedError;
   String get projectId => throw _privateConstructorUsedError;
   String get title => throw _privateConstructorUsedError;
-  int get order => throw _privateConstructorUsedError;
+  String get markdownContent => throw _privateConstructorUsedError;
+  String get plainTextCache => throw _privateConstructorUsedError;
   DateTime get createdAt => throw _privateConstructorUsedError;
   DateTime get updatedAt => throw _privateConstructorUsedError;
-  String? get outlineNodeId => throw _privateConstructorUsedError;
-  ContentFormat get contentFormat => throw _privateConstructorUsedError;
-  String get content => throw _privateConstructorUsedError;
-  String get plainTextCache => throw _privateConstructorUsedError;
-  int get wordCount => throw _privateConstructorUsedError;
   ChapterStatus get status => throw _privateConstructorUsedError;
+  int get wordCount => throw _privateConstructorUsedError;
   int get schemaVersion => throw _privateConstructorUsedError;
 
   /// Serializes this Chapter to a JSON map.
@@ -52,15 +49,12 @@ abstract class $ChapterCopyWith<$Res> {
       {String id,
       String projectId,
       String title,
-      int order,
+      String markdownContent,
+      String plainTextCache,
       DateTime createdAt,
       DateTime updatedAt,
-      String? outlineNodeId,
-      ContentFormat contentFormat,
-      String content,
-      String plainTextCache,
-      int wordCount,
       ChapterStatus status,
+      int wordCount,
       int schemaVersion});
 }
 
@@ -82,15 +76,12 @@ class _$ChapterCopyWithImpl<$Res, $Val extends Chapter>
     Object? id = null,
     Object? projectId = null,
     Object? title = null,
-    Object? order = null,
+    Object? markdownContent = null,
+    Object? plainTextCache = null,
     Object? createdAt = null,
     Object? updatedAt = null,
-    Object? outlineNodeId = freezed,
-    Object? contentFormat = null,
-    Object? content = null,
-    Object? plainTextCache = null,
-    Object? wordCount = null,
     Object? status = null,
+    Object? wordCount = null,
     Object? schemaVersion = null,
   }) {
     return _then(_value.copyWith(
@@ -106,10 +97,14 @@ class _$ChapterCopyWithImpl<$Res, $Val extends Chapter>
           ? _value.title
           : title // ignore: cast_nullable_to_non_nullable
               as String,
-      order: null == order
-          ? _value.order
-          : order // ignore: cast_nullable_to_non_nullable
-              as int,
+      markdownContent: null == markdownContent
+          ? _value.markdownContent
+          : markdownContent // ignore: cast_nullable_to_non_nullable
+              as String,
+      plainTextCache: null == plainTextCache
+          ? _value.plainTextCache
+          : plainTextCache // ignore: cast_nullable_to_non_nullable
+              as String,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -118,30 +113,14 @@ class _$ChapterCopyWithImpl<$Res, $Val extends Chapter>
           ? _value.updatedAt
           : updatedAt // ignore: cast_nullable_to_non_nullable
               as DateTime,
-      outlineNodeId: freezed == outlineNodeId
-          ? _value.outlineNodeId
-          : outlineNodeId // ignore: cast_nullable_to_non_nullable
-              as String?,
-      contentFormat: null == contentFormat
-          ? _value.contentFormat
-          : contentFormat // ignore: cast_nullable_to_non_nullable
-              as ContentFormat,
-      content: null == content
-          ? _value.content
-          : content // ignore: cast_nullable_to_non_nullable
-              as String,
-      plainTextCache: null == plainTextCache
-          ? _value.plainTextCache
-          : plainTextCache // ignore: cast_nullable_to_non_nullable
-              as String,
-      wordCount: null == wordCount
-          ? _value.wordCount
-          : wordCount // ignore: cast_nullable_to_non_nullable
-              as int,
       status: null == status
           ? _value.status
           : status // ignore: cast_nullable_to_non_nullable
               as ChapterStatus,
+      wordCount: null == wordCount
+          ? _value.wordCount
+          : wordCount // ignore: cast_nullable_to_non_nullable
+              as int,
       schemaVersion: null == schemaVersion
           ? _value.schemaVersion
           : schemaVersion // ignore: cast_nullable_to_non_nullable
@@ -161,15 +140,12 @@ abstract class _$$ChapterImplCopyWith<$Res> implements $ChapterCopyWith<$Res> {
       {String id,
       String projectId,
       String title,
-      int order,
+      String markdownContent,
+      String plainTextCache,
       DateTime createdAt,
       DateTime updatedAt,
-      String? outlineNodeId,
-      ContentFormat contentFormat,
-      String content,
-      String plainTextCache,
-      int wordCount,
       ChapterStatus status,
+      int wordCount,
       int schemaVersion});
 }
 
@@ -189,15 +165,12 @@ class __$$ChapterImplCopyWithImpl<$Res>
     Object? id = null,
     Object? projectId = null,
     Object? title = null,
-    Object? order = null,
+    Object? markdownContent = null,
+    Object? plainTextCache = null,
     Object? createdAt = null,
     Object? updatedAt = null,
-    Object? outlineNodeId = freezed,
-    Object? contentFormat = null,
-    Object? content = null,
-    Object? plainTextCache = null,
-    Object? wordCount = null,
     Object? status = null,
+    Object? wordCount = null,
     Object? schemaVersion = null,
   }) {
     return _then(_$ChapterImpl(
@@ -213,10 +186,14 @@ class __$$ChapterImplCopyWithImpl<$Res>
           ? _value.title
           : title // ignore: cast_nullable_to_non_nullable
               as String,
-      order: null == order
-          ? _value.order
-          : order // ignore: cast_nullable_to_non_nullable
-              as int,
+      markdownContent: null == markdownContent
+          ? _value.markdownContent
+          : markdownContent // ignore: cast_nullable_to_non_nullable
+              as String,
+      plainTextCache: null == plainTextCache
+          ? _value.plainTextCache
+          : plainTextCache // ignore: cast_nullable_to_non_nullable
+              as String,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -225,30 +202,14 @@ class __$$ChapterImplCopyWithImpl<$Res>
           ? _value.updatedAt
           : updatedAt // ignore: cast_nullable_to_non_nullable
               as DateTime,
-      outlineNodeId: freezed == outlineNodeId
-          ? _value.outlineNodeId
-          : outlineNodeId // ignore: cast_nullable_to_non_nullable
-              as String?,
-      contentFormat: null == contentFormat
-          ? _value.contentFormat
-          : contentFormat // ignore: cast_nullable_to_non_nullable
-              as ContentFormat,
-      content: null == content
-          ? _value.content
-          : content // ignore: cast_nullable_to_non_nullable
-              as String,
-      plainTextCache: null == plainTextCache
-          ? _value.plainTextCache
-          : plainTextCache // ignore: cast_nullable_to_non_nullable
-              as String,
-      wordCount: null == wordCount
-          ? _value.wordCount
-          : wordCount // ignore: cast_nullable_to_non_nullable
-              as int,
       status: null == status
           ? _value.status
           : status // ignore: cast_nullable_to_non_nullable
               as ChapterStatus,
+      wordCount: null == wordCount
+          ? _value.wordCount
+          : wordCount // ignore: cast_nullable_to_non_nullable
+              as int,
       schemaVersion: null == schemaVersion
           ? _value.schemaVersion
           : schemaVersion // ignore: cast_nullable_to_non_nullable
@@ -264,15 +225,12 @@ class _$ChapterImpl extends _Chapter {
       {required this.id,
       required this.projectId,
       required this.title,
-      required this.order,
+      required this.markdownContent,
+      required this.plainTextCache,
       required this.createdAt,
       required this.updatedAt,
-      this.outlineNodeId,
-      this.contentFormat = ContentFormat.markdown,
-      this.content = '',
-      this.plainTextCache = '',
-      this.wordCount = 0,
       this.status = ChapterStatus.draft,
+      this.wordCount = 0,
       this.schemaVersion = 1})
       : super._();
 
@@ -286,35 +244,26 @@ class _$ChapterImpl extends _Chapter {
   @override
   final String title;
   @override
-  final int order;
+  final String markdownContent;
+  @override
+  final String plainTextCache;
   @override
   final DateTime createdAt;
   @override
   final DateTime updatedAt;
   @override
-  final String? outlineNodeId;
-  @override
   @JsonKey()
-  final ContentFormat contentFormat;
-  @override
-  @JsonKey()
-  final String content;
-  @override
-  @JsonKey()
-  final String plainTextCache;
+  final ChapterStatus status;
   @override
   @JsonKey()
   final int wordCount;
-  @override
-  @JsonKey()
-  final ChapterStatus status;
   @override
   @JsonKey()
   final int schemaVersion;
 
   @override
   String toString() {
-    return 'Chapter(id: $id, projectId: $projectId, title: $title, order: $order, createdAt: $createdAt, updatedAt: $updatedAt, outlineNodeId: $outlineNodeId, contentFormat: $contentFormat, content: $content, plainTextCache: $plainTextCache, wordCount: $wordCount, status: $status, schemaVersion: $schemaVersion)';
+    return 'Chapter(id: $id, projectId: $projectId, title: $title, markdownContent: $markdownContent, plainTextCache: $plainTextCache, createdAt: $createdAt, updatedAt: $updatedAt, status: $status, wordCount: $wordCount, schemaVersion: $schemaVersion)';
   }
 
   @override
@@ -326,21 +275,17 @@ class _$ChapterImpl extends _Chapter {
             (identical(other.projectId, projectId) ||
                 other.projectId == projectId) &&
             (identical(other.title, title) || other.title == title) &&
-            (identical(other.order, order) || other.order == order) &&
+            (identical(other.markdownContent, markdownContent) ||
+                other.markdownContent == markdownContent) &&
+            (identical(other.plainTextCache, plainTextCache) ||
+                other.plainTextCache == plainTextCache) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             (identical(other.updatedAt, updatedAt) ||
                 other.updatedAt == updatedAt) &&
-            (identical(other.outlineNodeId, outlineNodeId) ||
-                other.outlineNodeId == outlineNodeId) &&
-            (identical(other.contentFormat, contentFormat) ||
-                other.contentFormat == contentFormat) &&
-            (identical(other.content, content) || other.content == content) &&
-            (identical(other.plainTextCache, plainTextCache) ||
-                other.plainTextCache == plainTextCache) &&
+            (identical(other.status, status) || other.status == status) &&
             (identical(other.wordCount, wordCount) ||
                 other.wordCount == wordCount) &&
-            (identical(other.status, status) || other.status == status) &&
             (identical(other.schemaVersion, schemaVersion) ||
                 other.schemaVersion == schemaVersion));
   }
@@ -352,15 +297,12 @@ class _$ChapterImpl extends _Chapter {
       id,
       projectId,
       title,
-      order,
+      markdownContent,
+      plainTextCache,
       createdAt,
       updatedAt,
-      outlineNodeId,
-      contentFormat,
-      content,
-      plainTextCache,
-      wordCount,
       status,
+      wordCount,
       schemaVersion);
 
   /// Create a copy of Chapter
@@ -384,15 +326,12 @@ abstract class _Chapter extends Chapter {
       {required final String id,
       required final String projectId,
       required final String title,
-      required final int order,
+      required final String markdownContent,
+      required final String plainTextCache,
       required final DateTime createdAt,
       required final DateTime updatedAt,
-      final String? outlineNodeId,
-      final ContentFormat contentFormat,
-      final String content,
-      final String plainTextCache,
-      final int wordCount,
       final ChapterStatus status,
+      final int wordCount,
       final int schemaVersion}) = _$ChapterImpl;
   const _Chapter._() : super._();
 
@@ -405,23 +344,17 @@ abstract class _Chapter extends Chapter {
   @override
   String get title;
   @override
-  int get order;
+  String get markdownContent;
+  @override
+  String get plainTextCache;
   @override
   DateTime get createdAt;
   @override
   DateTime get updatedAt;
   @override
-  String? get outlineNodeId;
-  @override
-  ContentFormat get contentFormat;
-  @override
-  String get content;
-  @override
-  String get plainTextCache;
+  ChapterStatus get status;
   @override
   int get wordCount;
-  @override
-  ChapterStatus get status;
   @override
   int get schemaVersion;
 

@@ -1,20 +1,19 @@
 import 'package:drift/drift.dart';
 
-class OutlineNodesTable extends Table {
+@DataClassName('OutlineNodeRow')
+class OutlineNodes extends Table {
   TextColumn get id => text()();
   TextColumn get projectId => text()();
-  TextColumn get parentId => text().nullable()();
-  IntColumn get orderIndex => integer()();
   TextColumn get title => text()();
-  TextColumn get nodeType =>
-      text().withDefault(const Constant('chapter'))();
   TextColumn get summary => text().withDefault(const Constant(''))();
-  TextColumn get linkedChapterId => text().nullable()();
-  TextColumn get status => text().withDefault(const Constant('planned'))();
-  DateTimeColumn get createdAt => dateTime()();
-  DateTimeColumn get updatedAt => dateTime()();
+  TextColumn get chapterId => text().withDefault(const Constant(''))();
+  TextColumn get parentId => text().withDefault(const Constant(''))();
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+  TextColumn get tagsJson => text().withDefault(const Constant('[]'))();
+  IntColumn get createdAt => integer()();
+  IntColumn get updatedAt => integer()();
   IntColumn get schemaVersion => integer().withDefault(const Constant(1))();
 
   @override
-  Set<Column> get primaryKey => {id};
+  Set<Column<Object>> get primaryKey => <Column<Object>>{id};
 }

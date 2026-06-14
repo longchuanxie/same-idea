@@ -1,1 +1,5 @@
-enum RevisionOperation { insert, delete, replace }
+enum RevisionOperation {
+  insert,
+  delete,
+  replace,
+}

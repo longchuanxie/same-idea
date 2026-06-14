@@ -1,12 +1,10 @@
-String stableContentHash(String content) {
-  const fnvOffset = 0x811c9dc5;
-  const fnvPrime = 0x01000193;
-  const mask32 = 0xffffffff;
+int contentHash(String content) {
+  var hash = 0x811c9dc5;
 
-  var hash = fnvOffset;
-  for (final unit in content.codeUnits) {
-    hash ^= unit;
-    hash = (hash * fnvPrime) & mask32;
+  for (final codeUnit in content.codeUnits) {
+    hash ^= codeUnit;
+    hash = (hash * 0x01000193) & 0xffffffff;
   }
-  return hash.toRadixString(16).padLeft(8, '0');
+
+  return hash;
 }

@@ -20,11 +20,8 @@ RevisionAnchor _$RevisionAnchorFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$RevisionAnchor {
-  AnchorType get type => throw _privateConstructorUsedError;
-  int get offset => throw _privateConstructorUsedError;
-  int get length => throw _privateConstructorUsedError;
-  String get contextBefore => throw _privateConstructorUsedError;
-  String get contextAfter => throw _privateConstructorUsedError;
+  int get startOffset => throw _privateConstructorUsedError;
+  int get endOffset => throw _privateConstructorUsedError;
 
   /// Serializes this RevisionAnchor to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -42,12 +39,7 @@ abstract class $RevisionAnchorCopyWith<$Res> {
           RevisionAnchor value, $Res Function(RevisionAnchor) then) =
       _$RevisionAnchorCopyWithImpl<$Res, RevisionAnchor>;
   @useResult
-  $Res call(
-      {AnchorType type,
-      int offset,
-      int length,
-      String contextBefore,
-      String contextAfter});
+  $Res call({int startOffset, int endOffset});
 }
 
 /// @nodoc
@@ -65,33 +57,18 @@ class _$RevisionAnchorCopyWithImpl<$Res, $Val extends RevisionAnchor>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? type = null,
-    Object? offset = null,
-    Object? length = null,
-    Object? contextBefore = null,
-    Object? contextAfter = null,
+    Object? startOffset = null,
+    Object? endOffset = null,
   }) {
     return _then(_value.copyWith(
-      type: null == type
-          ? _value.type
-          : type // ignore: cast_nullable_to_non_nullable
-              as AnchorType,
-      offset: null == offset
-          ? _value.offset
-          : offset // ignore: cast_nullable_to_non_nullable
+      startOffset: null == startOffset
+          ? _value.startOffset
+          : startOffset // ignore: cast_nullable_to_non_nullable
               as int,
-      length: null == length
-          ? _value.length
-          : length // ignore: cast_nullable_to_non_nullable
+      endOffset: null == endOffset
+          ? _value.endOffset
+          : endOffset // ignore: cast_nullable_to_non_nullable
               as int,
-      contextBefore: null == contextBefore
-          ? _value.contextBefore
-          : contextBefore // ignore: cast_nullable_to_non_nullable
-              as String,
-      contextAfter: null == contextAfter
-          ? _value.contextAfter
-          : contextAfter // ignore: cast_nullable_to_non_nullable
-              as String,
     ) as $Val);
   }
 }
@@ -104,12 +81,7 @@ abstract class _$$RevisionAnchorImplCopyWith<$Res>
       __$$RevisionAnchorImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call(
-      {AnchorType type,
-      int offset,
-      int length,
-      String contextBefore,
-      String contextAfter});
+  $Res call({int startOffset, int endOffset});
 }
 
 /// @nodoc
@@ -125,33 +97,18 @@ class __$$RevisionAnchorImplCopyWithImpl<$Res>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? type = null,
-    Object? offset = null,
-    Object? length = null,
-    Object? contextBefore = null,
-    Object? contextAfter = null,
+    Object? startOffset = null,
+    Object? endOffset = null,
   }) {
     return _then(_$RevisionAnchorImpl(
-      type: null == type
-          ? _value.type
-          : type // ignore: cast_nullable_to_non_nullable
-              as AnchorType,
-      offset: null == offset
-          ? _value.offset
-          : offset // ignore: cast_nullable_to_non_nullable
+      startOffset: null == startOffset
+          ? _value.startOffset
+          : startOffset // ignore: cast_nullable_to_non_nullable
               as int,
-      length: null == length
-          ? _value.length
-          : length // ignore: cast_nullable_to_non_nullable
+      endOffset: null == endOffset
+          ? _value.endOffset
+          : endOffset // ignore: cast_nullable_to_non_nullable
               as int,
-      contextBefore: null == contextBefore
-          ? _value.contextBefore
-          : contextBefore // ignore: cast_nullable_to_non_nullable
-              as String,
-      contextAfter: null == contextAfter
-          ? _value.contextAfter
-          : contextAfter // ignore: cast_nullable_to_non_nullable
-              as String,
     ));
   }
 }
@@ -160,32 +117,19 @@ class __$$RevisionAnchorImplCopyWithImpl<$Res>
 @JsonSerializable()
 class _$RevisionAnchorImpl implements _RevisionAnchor {
   const _$RevisionAnchorImpl(
-      {required this.type,
-      required this.offset,
-      this.length = 0,
-      this.contextBefore = '',
-      this.contextAfter = ''});
+      {required this.startOffset, required this.endOffset});
 
   factory _$RevisionAnchorImpl.fromJson(Map<String, dynamic> json) =>
       _$$RevisionAnchorImplFromJson(json);
 
   @override
-  final AnchorType type;
+  final int startOffset;
   @override
-  final int offset;
-  @override
-  @JsonKey()
-  final int length;
-  @override
-  @JsonKey()
-  final String contextBefore;
-  @override
-  @JsonKey()
-  final String contextAfter;
+  final int endOffset;
 
   @override
   String toString() {
-    return 'RevisionAnchor(type: $type, offset: $offset, length: $length, contextBefore: $contextBefore, contextAfter: $contextAfter)';
+    return 'RevisionAnchor(startOffset: $startOffset, endOffset: $endOffset)';
   }
 
   @override
@@ -193,19 +137,15 @@ class _$RevisionAnchorImpl implements _RevisionAnchor {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _$RevisionAnchorImpl &&
-            (identical(other.type, type) || other.type == type) &&
-            (identical(other.offset, offset) || other.offset == offset) &&
-            (identical(other.length, length) || other.length == length) &&
-            (identical(other.contextBefore, contextBefore) ||
-                other.contextBefore == contextBefore) &&
-            (identical(other.contextAfter, contextAfter) ||
-                other.contextAfter == contextAfter));
+            (identical(other.startOffset, startOffset) ||
+                other.startOffset == startOffset) &&
+            (identical(other.endOffset, endOffset) ||
+                other.endOffset == endOffset));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(
-      runtimeType, type, offset, length, contextBefore, contextAfter);
+  int get hashCode => Object.hash(runtimeType, startOffset, endOffset);
 
   /// Create a copy of RevisionAnchor
   /// with the given fields replaced by the non-null parameter values.
@@ -226,25 +166,16 @@ class _$RevisionAnchorImpl implements _RevisionAnchor {
 
 abstract class _RevisionAnchor implements RevisionAnchor {
   const factory _RevisionAnchor(
-      {required final AnchorType type,
-      required final int offset,
-      final int length,
-      final String contextBefore,
-      final String contextAfter}) = _$RevisionAnchorImpl;
+      {required final int startOffset,
+      required final int endOffset}) = _$RevisionAnchorImpl;
 
   factory _RevisionAnchor.fromJson(Map<String, dynamic> json) =
       _$RevisionAnchorImpl.fromJson;
 
   @override
-  AnchorType get type;
+  int get startOffset;
   @override
-  int get offset;
-  @override
-  int get length;
-  @override
-  String get contextBefore;
-  @override
-  String get contextAfter;
+  int get endOffset;
 
   /// Create a copy of RevisionAnchor
   /// with the given fields replaced by the non-null parameter values.

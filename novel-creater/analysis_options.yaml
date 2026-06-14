@@ -85,6 +85,9 @@ linter:
     unnecessary_lambdas: true
     use_rethrow_when_possible: true
 
+    one_member_abstracts: false
+    cascade_invocations: false
+
     # 性能
     avoid_function_literals_in_foreach_calls: true
     prefer_interpolation_to_compose_strings: true

@@ -1,575 +1,511 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:novel_creator/app/app.dart';
-import 'package:novel_creator/domain/domain.dart';
-import 'package:novel_creator/features/workspace/bloc/agent_bloc.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+import 'package:novel_creator/agent/agent_mode.dart';
+import 'package:novel_creator/app/theme/app_radius.dart';
+import 'package:novel_creator/app/theme/app_spacing.dart';
+import 'package:novel_creator/app/theme/app_typography.dart';
+import 'package:novel_creator/app/theme/morandi_colors.dart';
+import 'package:novel_creator/domain/entities/revision.dart';
+import 'package:novel_creator/domain/enums/revision_status.dart';
+import 'package:novel_creator/features/workspace/bloc/workspace_state.dart';
 
 class AgentPanel extends StatefulWidget {
-  const AgentPanel({super.key});
+  const AgentPanel({
+    required this.mode,
+    required this.suggestion,
+    required this.pendingRevisions,
+    required this.selectedChapterId,
+    required this.currentContent,
+    required this.onGenerateSuggestion,
+    required this.onCreateRevision,
+    required this.onAcceptRevision,
+    required this.onRejectRevision,
+    this.suggestionType,
+    this.suggestionSummary,
+    this.isDark = false,
+    this.onCancel,
+    this.onSubmitInstruction,
+    this.providerName = '',
+    this.modelId = '',
+    this.isGenerating = false,
+    super.key,
+  });
+
+  final AgentMode mode;
+  final String suggestion;
+  final AgentSuggestionType? suggestionType;
+  final String? suggestionSummary;
+  final List<Revision> pendingRevisions;
+  final String selectedChapterId;
+  final String currentContent;
+  final VoidCallback onGenerateSuggestion;
+  final VoidCallback onCreateRevision;
+  final ValueChanged<String> onAcceptRevision;
+  final ValueChanged<String> onRejectRevision;
+  final bool isDark;
+  final VoidCallback? onCancel;
+  final ValueChanged<String>? onSubmitInstruction;
+  final String providerName;
+  final String modelId;
+  final bool isGenerating;
 
   @override
   State<AgentPanel> createState() => _AgentPanelState();
 }
 
 class _AgentPanelState extends State<AgentPanel> {
-  final _inputController = TextEditingController();
+  int _selectedTab = 0;
+  static const _tabs = ['推荐', '洞察', '风险', '灵感'];
+  final _instructionController = TextEditingController();
 
   @override
   void dispose() {
-    _inputController.dispose();
+    _instructionController.dispose();
     super.dispose();
-  }
-
-  void _sendMessage() {
-    final text = _inputController.text.trim();
-    if (text.isEmpty) return;
-
-    context.read<AgentBloc>().add(
-          AgentMessageSubmitted(content: text),
-        );
-    _inputController.clear();
   }
 
   @override
   Widget build(BuildContext context) {
-    final morandi = Theme.of(context).extension<MorandiColors>()!;
+    final isDark = widget.isDark;
+    final text = isDark ? MorandiColors.darkText : MorandiColors.text;
+    final muted = isDark ? MorandiColors.darkMuted : MorandiColors.muted;
+    final green = isDark ? MorandiColors.darkGreen : MorandiColors.green;
+    final green2 = isDark ? MorandiColors.darkGreen2 : MorandiColors.green2;
+    final surface = isDark ? MorandiColors.darkSurface : MorandiColors.surface;
+    final line = isDark ? MorandiColors.darkLine : MorandiColors.line;
+    final surface2 = isDark ? MorandiColors.darkSurface2 : MorandiColors.surface2;
+    final surface3 = isDark ? MorandiColors.darkSurface3 : MorandiColors.surface3;
+    final faint = isDark ? MorandiColors.darkFaint : MorandiColors.faint;
+    final danger = isDark ? MorandiColors.darkDanger : MorandiColors.danger;
+    final orange = isDark ? MorandiColors.darkOrange : MorandiColors.orange;
 
-    return BlocBuilder<AgentBloc, AgentState>(
-      builder: (context, state) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    final chapterRevisions = widget.pendingRevisions
+        .where((r) =>
+            r.chapterId == widget.selectedChapterId &&
+            r.status == RevisionStatus.pending)
+        .toList();
+
+    return Container(
+      width: AppSpacing.agentWidth,
+      decoration: BoxDecoration(
+        color: surface,
+        border: Border(left: BorderSide(color: line)),
+      ),
+      child: Column(
         children: [
-          _AgentHead(morandi: morandi, state: state),
-          _AgentTabs(
-            morandi: morandi,
-            mode: state.mode,
-            onModeChanged: (mode) => context.read<AgentBloc>().add(
-                  AgentModeChanged(mode: mode),
-                ),
-          ),
+          _buildHeader(text, muted, green),
+          _buildModelCard(surface2, muted, text, green, surface3, orange),
+          const SizedBox(height: 10),
+          _buildModeCard(green, green2, surface),
+          const SizedBox(height: 10),
+          _buildTabs(green, green2, muted, text),
+          const SizedBox(height: 10),
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.agentPadding),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (state.isLoading)
-                    _MutedText(morandi: morandi, text: '正在载入 Agent 会话...'),
-                  if (!state.isLoading && state.messages.isEmpty)
-                    _EmptyConversation(morandi: morandi),
-                  ...state.messages.map(
-                    (message) => _Bubble(
-                      morandi: morandi,
-                      isUser: message.role == 'user',
-                      text: message.content,
-                      time: _formatTime(message.createdAt),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  _MiniCard(
-                    morandi: morandi,
-                    title: '任务状态',
-                    child:
-                        _TaskStatusList(morandi: morandi, tasks: state.tasks),
-                  ),
-                  const SizedBox(height: 10),
-                  _MiniCard(
-                    morandi: morandi,
-                    title: '上下文摘要',
-                    child: _MutedText(
-                      morandi: morandi,
-                      text: state.session == null
-                          ? '尚未创建会话。'
-                          : '当前会话包含 ${state.messages.length} 条消息。 '
-                              '后续将接入章节、角色、设定与笔记上下文。',
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  _MiniCard(
-                    morandi: morandi,
-                    title: '参考与来源',
-                    child: _MutedText(
-                      morandi: morandi,
-                      text: '尚未使用外部资料。联网搜索会在后续阶段加入用户确认。',
-                    ),
-                  ),
-                  if (state.error != null) ...[
-                    const SizedBox(height: 10),
-                    _ErrorCard(morandi: morandi, message: state.error!),
-                  ],
-                  const SizedBox(height: 12),
-                  ElevatedButton(
-                    onPressed: state.isRunning ? null : _sendMessage,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: morandi.green,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: Text(
-                      state.isRunning ? '生成中...' : '生成建议',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  if (state.isRunning) ...[
-                    const SizedBox(height: 10),
-                    OutlinedButton(
-                      onPressed: () => context.read<AgentBloc>().add(
-                            const AgentTaskCancelRequested(),
-                          ),
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: morandi.line),
-                        backgroundColor: morandi.surface.withOpacity(0.72),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                      ),
-                      child: Text(
-                        '取消任务',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: morandi.text,
-                        ),
-                      ),
-                    ),
+                  _buildSuggestionCard(text, muted, green, surface2, line),
+                  const SizedBox(height: AppSpacing.xxxx),
+                  if (chapterRevisions.isNotEmpty) ...[
+                    Text('待审核修订：${chapterRevisions.length}', style: AppTypography.small(color: text, weight: AppTypography.weightBold)),
+                    const SizedBox(height: 8),
+                    ...chapterRevisions.map((r) => _buildRevisionItem(r, text, muted, green, surface2, line, danger)),
                   ],
                 ],
               ),
             ),
           ),
-          _AgentInput(
-            morandi: morandi,
-            controller: _inputController,
-            onSend: _sendMessage,
-            enabled: !state.isRunning,
+          _buildInputArea(line, muted, text, surface2, faint, green),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(Color text, Color muted, Color green) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.agentPadding, vertical: AppSpacing.xl),
+      child: Row(
+        children: [
+          Text('Agent', style: AppTypography.title(color: text, weight: AppTypography.weightBold)),
+          const SizedBox(width: 8),
+          Container(
+            width: 8, height: 8,
+            decoration: BoxDecoration(color: green, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 6),
+          Text('在线', style: AppTypography.caption(color: green)),
+          const Spacer(),
+          if (widget.onCancel != null)
+            SizedBox(
+              width: AppSpacing.iconButtonSize,
+              height: AppSpacing.iconButtonSize,
+              child: IconButton(
+                icon: Icon(LucideIcons.square, size: AppSpacing.iconSmall),
+                color: muted,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                onPressed: widget.onCancel,
+                tooltip: '停止生成',
+              ),
+            ),
+          SizedBox(
+            width: AppSpacing.iconButtonSize,
+            height: AppSpacing.iconButtonSize,
+            child: IconButton(
+              icon: Icon(LucideIcons.helpCircle, size: AppSpacing.iconMedium),
+              color: muted,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              onPressed: () {},
+              tooltip: '帮助',
+            ),
           ),
         ],
       ),
     );
   }
-}
 
-class _AgentHead extends StatelessWidget {
-  const _AgentHead({required this.morandi, required this.state});
+  Widget _buildModelCard(Color surface2, Color muted, Color text, Color green, Color surface3, Color orange) {
+    final displayName = widget.providerName.isNotEmpty
+        ? widget.providerName
+        : '未配置模型';
+    final displayModel = widget.modelId.isNotEmpty
+        ? widget.modelId
+        : '请前往设置页配置';
 
-  final MorandiColors morandi;
-  final AgentState state;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.fromLTRB(18, 18, 18, 10),
-        child: Row(
-          children: [
-            Text(
-              'Agent',
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w600,
-                color: morandi.ink,
-              ),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              state.isRunning ? '运行中' : '就绪',
-              style: TextStyle(
-                fontSize: 13,
-                color: state.isRunning ? morandi.orange : morandi.green,
-              ),
-            ),
-            const Spacer(),
-            Icon(
-              Icons.more_horiz,
-              size: 18,
-              color: morandi.muted,
-            ),
-          ],
-        ),
-      );
-}
-
-class _AgentTabs extends StatelessWidget {
-  const _AgentTabs({
-    required this.morandi,
-    required this.mode,
-    required this.onModeChanged,
-  });
-
-  final MorandiColors morandi;
-  final String mode;
-  final ValueChanged<String> onModeChanged;
-
-  static const List<(String, String)> _tabs = [
-    ('brainstorm', '脑暴'),
-    ('research', '调研'),
-    ('outline', '骨架'),
-    ('writing', '写作'),
-    ('polish', '润色'),
-    ('ask', '问答'),
-  ];
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
-        child: Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            ..._tabs.map((tab) {
-              final isActive = mode == tab.$1;
-              return GestureDetector(
-                onTap: () => onModeChanged(tab.$1),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isActive ? morandi.greenLight : Colors.transparent,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isActive ? morandi.green : morandi.line,
-                    ),
-                  ),
-                  child: Text(
-                    tab.$2,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-                      color: isActive ? morandi.green : morandi.muted,
-                    ),
-                  ),
-                ),
-              );
-            }),
-          ],
-        ),
-      );
-}
-
-class _Bubble extends StatelessWidget {
-  const _Bubble({
-    required this.morandi,
-    required this.isUser,
-    required this.text,
-    required this.time,
-  });
-
-  final MorandiColors morandi;
-  final bool isUser;
-  final String text;
-  final String time;
-
-  @override
-  Widget build(BuildContext context) => Align(
-        alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 280),
-          margin: const EdgeInsets.symmetric(vertical: 5),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            color: isUser ? morandi.surface3 : Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: morandi.line),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (!isUser)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text(
-                    'AI',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: morandi.greenDark,
-                    ),
-                  ),
-                ),
-              Text(
-                text,
-                style: TextStyle(
-                  fontSize: 13,
-                  height: 1.65,
-                  color: morandi.text,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Align(
-                alignment: Alignment.centerRight,
-                child: Text(
-                  time,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: morandi.muted,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-}
-
-class _MiniCard extends StatelessWidget {
-  const _MiniCard({
-    required this.morandi,
-    required this.title,
-    required this.child,
-  });
-
-  final MorandiColors morandi;
-  final String title;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(13),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.agentPadding),
+      child: Container(
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(13),
-          border: Border.all(color: morandi.line),
+          color: surface2,
+          borderRadius: BorderRadius.circular(AppRadius.md),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: morandi.ink,
-              ),
+            Row(
+              children: [
+                Text(displayName, style: AppTypography.small(color: text, weight: AppTypography.weightBold)),
+                const Spacer(),
+                if (widget.isGenerating)
+                  SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: green,
+                    ),
+                  ),
+              ],
             ),
-            const SizedBox(height: 10),
-            child,
-          ],
-        ),
-      );
-}
-
-class _TaskStatusList extends StatelessWidget {
-  const _TaskStatusList({required this.morandi, required this.tasks});
-
-  final MorandiColors morandi;
-  final List<AgentTask> tasks;
-
-  @override
-  Widget build(BuildContext context) {
-    if (tasks.isEmpty) {
-      return _MutedText(morandi: morandi, text: '暂无任务。');
-    }
-
-    return Column(
-      children: tasks.take(4).map((task) {
-        final status = _statusLabel(task.status);
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: _statusColor(task.status, morandi),
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  '${task.taskType.name} · $status',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: morandi.text,
+            const SizedBox(height: 4),
+            Text(displayModel, style: AppTypography.caption(color: muted), overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Text('上下文', style: AppTypography.caption(color: muted)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(AppRadius.pill.toDouble()),
+                    child: SizedBox(
+                      height: 4,
+                      child: LinearProgressIndicator(
+                        value: 0.35,
+                        backgroundColor: surface3,
+                        valueColor: AlwaysStoppedAnimation(green),
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
+                const SizedBox(width: 6),
+                Text('35%', style: AppTypography.caption(color: muted)),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Text('输出', style: AppTypography.caption(color: muted)),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(AppRadius.pill.toDouble()),
+                    child: SizedBox(
+                      height: 4,
+                      child: LinearProgressIndicator(
+                        value: 0.12,
+                        backgroundColor: surface3,
+                        valueColor: AlwaysStoppedAnimation(orange),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text('12%', style: AppTypography.caption(color: muted)),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  String _statusLabel(AgentTaskStatus status) => switch (status) {
-        AgentTaskStatus.created => '已创建',
-        AgentTaskStatus.queued => '排队中',
-        AgentTaskStatus.running => '运行中',
-        AgentTaskStatus.succeeded => '已完成',
-        AgentTaskStatus.failed => '失败',
-        AgentTaskStatus.cancelled => '已取消',
-      };
+  Widget _buildModeCard(Color green, Color green2, Color surface) {
+    final modeLabels = {
+      AgentMode.brainstorm: '构思',
+      AgentMode.writing: '写作',
+      AgentMode.revision: '修订',
+      AgentMode.knowledge: '资料',
+      AgentMode.review: '检查',
+    };
 
-  Color _statusColor(AgentTaskStatus status, MorandiColors morandi) =>
-      switch (status) {
-        AgentTaskStatus.created => morandi.muted,
-        AgentTaskStatus.queued => morandi.orange,
-        AgentTaskStatus.running => morandi.orange,
-        AgentTaskStatus.succeeded => morandi.green,
-        AgentTaskStatus.failed => morandi.red,
-        AgentTaskStatus.cancelled => morandi.muted,
-      };
-}
-
-class _EmptyConversation extends StatelessWidget {
-  const _EmptyConversation({required this.morandi});
-
-  final MorandiColors morandi;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: morandi.greenLight.withOpacity(0.42),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: morandi.line),
-        ),
-        child: _MutedText(
-          morandi: morandi,
-          text: '可以先让 Agent 帮你分析章节、生成建议或梳理设定。所有正文修改都会在后续修订阶段进入审核，不会静默覆盖正文。',
-        ),
-      );
-}
-
-class _ErrorCard extends StatelessWidget {
-  const _ErrorCard({required this.morandi, required this.message});
-
-  final MorandiColors morandi;
-  final String message;
-
-  @override
-  Widget build(BuildContext context) => Container(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.agentPadding),
+      child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: morandi.red.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: morandi.red.withOpacity(0.25)),
-        ),
-        child: Text(
-          message,
-          style: TextStyle(
-            fontSize: 12,
-            height: 1.5,
-            color: morandi.red,
-          ),
-        ),
-      );
-}
-
-class _MutedText extends StatelessWidget {
-  const _MutedText({required this.morandi, required this.text});
-
-  final MorandiColors morandi;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Text(
-        text,
-        style: TextStyle(
-          fontSize: 13,
-          height: 1.6,
-          color: morandi.muted,
-        ),
-      );
-}
-
-class _AgentInput extends StatelessWidget {
-  const _AgentInput({
-    required this.morandi,
-    required this.controller,
-    required this.onSend,
-    required this.enabled,
-  });
-
-  final MorandiColors morandi;
-  final TextEditingController controller;
-  final VoidCallback onSend;
-  final bool enabled;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-        decoration: BoxDecoration(
-          color: morandi.canvas,
-          border: Border(top: BorderSide(color: morandi.line)),
+          color: green2,
+          borderRadius: BorderRadius.circular(AppRadius.md),
         ),
         child: Row(
           children: [
-            Expanded(
-              child: TextField(
-                controller: controller,
-                enabled: enabled,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: morandi.text,
-                ),
-                decoration: InputDecoration(
-                  hintText: '向 Agent 提问',
-                  hintStyle: TextStyle(
-                    fontSize: 13,
-                    color: morandi.muted,
-                  ),
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: morandi.line),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: morandi.line),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: morandi.green),
-                  ),
-                  isDense: true,
-                ),
-                maxLines: 4,
-                minLines: 1,
-                onSubmitted: (_) => onSend(),
+            Icon(LucideIcons.sparkles, size: AppSpacing.iconMedium, color: green),
+            const SizedBox(width: 8),
+            Text('当前模式', style: AppTypography.caption(color: green)),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              decoration: BoxDecoration(
+                color: surface,
+                borderRadius: BorderRadius.circular(AppRadius.pill.toDouble()),
+              ),
+              child: Text(
+                modeLabels[widget.mode] ?? widget.mode.name,
+                style: AppTypography.caption(color: green, weight: AppTypography.weightBold),
               ),
             ),
-            const SizedBox(width: 8),
-            SizedBox(
-              width: 44,
-              height: 42,
-              child: ElevatedButton(
-                onPressed: enabled ? onSend : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: morandi.green,
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.zero,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+            const Spacer(),
+            Icon(LucideIcons.chevronDown, size: AppSpacing.iconSmall, color: green),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabs(Color green, Color green2, Color muted, Color text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.agentPadding),
+      child: Row(
+        children: List.generate(_tabs.length, (i) {
+          final isSelected = i == _selectedTab;
+          return Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: Material(
+              color: isSelected ? green2 : Colors.transparent,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                onTap: () => setState(() => _selectedTab = i),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  child: Text(
+                    _tabs[i],
+                    style: AppTypography.small(
+                      color: isSelected ? green : muted,
+                      weight: isSelected ? AppTypography.weightBold : AppTypography.weightRegular,
+                    ),
                   ),
-                  elevation: 0,
-                ),
-                child: const Icon(
-                  Icons.check,
-                  size: 18,
                 ),
               ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildSuggestionCard(Color text, Color muted, Color green, Color surface2, Color line) {
+    if (widget.suggestion.trim().isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          FilledButton(
+            onPressed: widget.onGenerateSuggestion,
+            style: FilledButton.styleFrom(
+              backgroundColor: green,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
+            ),
+            child: Text('生成建议', style: AppTypography.small(color: Colors.white, weight: AppTypography.weightBold)),
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 建议类型标签
+        if (widget.suggestionType != null) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: green.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(AppRadius.pill.toDouble()),
+            ),
+            child: Text(
+              widget.suggestionType!._label,
+              style: AppTypography.caption(color: green, weight: AppTypography.weightBold),
+            ),
+          ),
+          const SizedBox(height: 6),
+        ],
+        // 建议摘要
+        if (widget.suggestionSummary != null) ...[
+          Text(
+            widget.suggestionSummary!,
+            style: AppTypography.small(color: muted),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 8),
+        ],
+        // 建议正文
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: surface2,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(color: line),
+          ),
+          child: Text(widget.suggestion, style: AppTypography.small(color: text)),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            FilledButton(
+              onPressed: widget.onCreateRevision,
+              style: FilledButton.styleFrom(
+                backgroundColor: green,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
+              ),
+              child: Text('创建修订', style: AppTypography.small(color: Colors.white, weight: AppTypography.weightBold)),
             ),
           ],
         ),
-      );
+      ],
+    );
+  }
+
+  Widget _buildRevisionItem(Revision revision, Color text, Color muted, Color green, Color surface2, Color line, Color danger) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: surface2,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(revision.patch.metadata.summary, style: AppTypography.small(color: text)),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              TextButton(
+                onPressed: () => widget.onAcceptRevision(revision.id),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  minimumSize: Size.zero,
+                ),
+                child: Text('接受', style: AppTypography.caption(color: green, weight: AppTypography.weightBold)),
+              ),
+              TextButton(
+                onPressed: () => widget.onRejectRevision(revision.id),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  minimumSize: Size.zero,
+                ),
+                child: Text('拒绝', style: AppTypography.caption(color: danger, weight: AppTypography.weightBold)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInputArea(Color line, Color muted, Color text, Color surface2, Color faint, Color green) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.agentPadding, vertical: AppSpacing.md),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: line)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: SizedBox(
+              height: 36,
+              child: TextField(
+                controller: _instructionController,
+                style: AppTypography.small(color: text),
+                decoration: InputDecoration(
+                  hintText: '输入指令...',
+                  hintStyle: AppTypography.small(color: faint),
+                  filled: true,
+                  fillColor: surface2,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                onSubmitted: (_) => _submitInstruction(),
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          SizedBox(
+            width: 36,
+            height: 36,
+            child: Material(
+              color: green,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                onTap: _submitInstruction,
+                child: Icon(LucideIcons.send, size: 16, color: Colors.white),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _submitInstruction() {
+    final instruction = _instructionController.text.trim();
+    if (instruction.isEmpty) {
+      widget.onGenerateSuggestion();
+    } else {
+      widget.onSubmitInstruction?.call(instruction);
+      _instructionController.clear();
+    }
+  }
 }
 
-String _formatTime(DateTime? time) {
-  if (time == null) return '--:--';
-  return '${time.hour.toString().padLeft(2, '0')}:'
-      '${time.minute.toString().padLeft(2, '0')}';
+extension _AgentSuggestionTypeLabel on AgentSuggestionType {
+  String get _label => switch (this) {
+        AgentSuggestionType.continueWrite => '续写',
+        AgentSuggestionType.write => '写作',
+        AgentSuggestionType.rewrite => '改写',
+        AgentSuggestionType.expand => '扩写',
+        AgentSuggestionType.condense => '缩写',
+        AgentSuggestionType.polish => '润色',
+      };
 }

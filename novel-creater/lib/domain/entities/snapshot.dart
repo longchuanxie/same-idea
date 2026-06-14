@@ -1,19 +1,23 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:novel_creator/domain/enums/snapshot_trigger.dart';
+import 'package:novel_creator/domain/enums/snapshot_type.dart';
 
 part 'snapshot.freezed.dart';
 part 'snapshot.g.dart';
 
-@Freezed(toJson: true, fromJson: true)
+@freezed
 class Snapshot with _$Snapshot {
   const factory Snapshot({
     required String id,
     required String projectId,
-    required String description,
+    required String name,
+    required SnapshotType type,
+    required String contentHash,
+    required String contentSnapshot,
     required DateTime createdAt,
-    @Default(SnapshotTrigger.manual) SnapshotTrigger trigger,
-    @Default('') String dataSnapshot,
+    required DateTime updatedAt,
     @Default(1) int schemaVersion,
+    String? chapterId,
+    String? description,
   }) = _Snapshot;
 
   factory Snapshot.fromJson(Map<String, dynamic> json) =>

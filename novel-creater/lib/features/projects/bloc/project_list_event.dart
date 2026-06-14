@@ -1,21 +1,24 @@
-part of 'project_list_bloc.dart';
-
-sealed class ProjectListEvent extends Equatable {
+sealed class ProjectListEvent {
   const ProjectListEvent();
-
-  @override
-  List<Object?> get props => [];
 }
 
-final class ProjectListStarted extends ProjectListEvent {}
+final class ProjectListStarted extends ProjectListEvent {
+  const ProjectListStarted();
+}
 
-final class ProjectListRefreshed extends ProjectListEvent {}
+final class ProjectListRefreshed extends ProjectListEvent {
+  const ProjectListRefreshed();
+}
 
-final class ProjectListDeleteRequested extends ProjectListEvent {
-  const ProjectListDeleteRequested({required this.projectId});
+final class ProjectListCreated extends ProjectListEvent {
+  const ProjectListCreated({required this.name, this.description = ''});
+
+  final String name;
+  final String description;
+}
+
+final class ProjectListDeleted extends ProjectListEvent {
+  const ProjectListDeleted(this.projectId);
 
   final String projectId;
-
-  @override
-  List<Object?> get props => [projectId];
 }

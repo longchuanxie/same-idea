@@ -1,22 +1,21 @@
 import 'package:drift/drift.dart';
+import 'package:novel_creator/data/local/tables/projects_table.dart';
 
-class AgentTasksTable extends Table {
+@DataClassName('AgentTaskRow')
+class AgentTasks extends Table {
   TextColumn get id => text()();
-  TextColumn get projectId => text()();
+  TextColumn get projectId =>
+      text().references(Projects, #id, onDelete: KeyAction.cascade)();
   TextColumn get taskType => text()();
-  TextColumn get status => text().withDefault(const Constant('created'))();
-  TextColumn get inputJson => text().withDefault(const Constant(''))();
-  TextColumn get outputJson => text().withDefault(const Constant(''))();
-  TextColumn get model => text().nullable()();
-  TextColumn get tokenUsage => text().nullable()();
-  TextColumn get error => text().nullable()();
-  TextColumn get sideEffects => text().withDefault(const Constant('[]'))();
-  DateTimeColumn get startedAt => dateTime().nullable()();
-  DateTimeColumn get completedAt => dateTime().nullable()();
-  DateTimeColumn get createdAt => dateTime()();
-  DateTimeColumn get updatedAt => dateTime()();
+  TextColumn get status => text()();
+  IntColumn get createdAt => integer()();
+  IntColumn get updatedAt => integer()();
   IntColumn get schemaVersion => integer().withDefault(const Constant(1))();
+  TextColumn get chapterId => text().nullable()();
+  TextColumn get instruction => text().nullable()();
+  TextColumn get result => text().nullable()();
+  TextColumn get errorMessage => text().nullable()();
 
   @override
-  Set<Column> get primaryKey => {id};
+  Set<Column<Object>> get primaryKey => <Column<Object>>{id};
 }

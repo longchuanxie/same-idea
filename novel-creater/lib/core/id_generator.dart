@@ -1,7 +1,16 @@
-import 'package:uuid/uuid.dart';
+final class IdGenerator {
+  IdGenerator._();
 
-class IdGenerator {
-  const IdGenerator();
+  static int _counter = 0;
 
-  String generate() => const Uuid().v7();
+  static String create(String prefix) {
+    final normalizedPrefix = prefix.trim();
+    final value = '${DateTime.now().microsecondsSinceEpoch}-${_counter++}';
+
+    if (normalizedPrefix.isEmpty) {
+      return value;
+    }
+
+    return '$normalizedPrefix-$value';
+  }
 }
