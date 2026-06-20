@@ -6,7 +6,7 @@ on:
   push:
     branches: ["main"]
     paths:
-      - reader/kuro-reader/docs/*
+      - 'reader/kuro-reader/docs/**'
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
