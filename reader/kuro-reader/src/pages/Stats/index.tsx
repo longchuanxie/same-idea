@@ -1,18 +1,19 @@
 import React, { useEffect } from 'react';
 import { useStatsStore } from '@/stores/useStatsStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
+import { FormatBadge } from '@/components/atoms/FormatBadge';
 
 export const StatsPage: React.FC = () => {
   const { getStats } = useStatsStore();
-  const { comics, loadComics } = useLibraryStore();
+  const { books, loadBooks } = useLibraryStore();
   const stats = getStats();
 
   useEffect(() => {
-    loadComics();
-  }, [loadComics]);
+    loadBooks();
+  }, [loadBooks]);
 
-  const completedComics = comics.filter((c) =>
-    c.chapters.length > 0 && c.chapters.every((ch) => ch.status === 'read')
+  const completedBooks = books.filter((b) =>
+    b.chapters.length > 0 && b.chapters.every((ch) => ch.status === 'read')
   );
 
   const maxHours = Math.max(...stats.weeklyData.map((d) => d.hours), 1);
@@ -47,25 +48,28 @@ export const StatsPage: React.FC = () => {
         </div>
       </section>
 
-      {completedComics.length > 0 && (
+      {completedBooks.length > 0 && (
         <section className="flex flex-col gap-6">
           <div className="flex items-center gap-2 border-b border-outline-variant pb-2">
             <span className="material-symbols-outlined text-on-surface-variant">check_circle</span>
             <h3 className="font-display text-headline-md text-primary">
-              已完成作品 <span className="text-on-surface-variant font-body text-body-md ml-2">({completedComics.length})</span>
+              已完成作品 <span className="text-on-surface-variant font-body text-body-md ml-2">({completedBooks.length})</span>
             </h3>
           </div>
           <div className="flex flex-col">
-            {completedComics.map((comic) => (
-              <div key={comic.id} className="py-4 border-b border-surface-variant flex justify-between items-center group cursor-pointer hover:pl-2 transition-all">
+            {completedBooks.map((book) => (
+              <div key={book.id} className="py-4 border-b border-surface-variant flex justify-between items-center group cursor-pointer hover:pl-2 transition-all">
                 <div className="flex flex-col">
-                  <span className="font-body text-body-lg text-primary group-hover:underline decoration-1 underline-offset-4">{comic.title}</span>
-                  {comic.author && (
-                    <span className="font-label text-label-sm text-on-surface-variant">{comic.author}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-body text-body-lg text-primary group-hover:underline decoration-1 underline-offset-4">{book.title}</span>
+                    <FormatBadge format={book.format} />
+                  </div>
+                  {book.author && (
+                    <span className="font-label text-label-sm text-on-surface-variant">{book.author}</span>
                   )}
                 </div>
-                {comic.genres.length > 0 && (
-                  <span className="font-label text-label-sm border border-outline-variant px-2 py-1 rounded text-secondary">{comic.genres[0]}</span>
+                {book.genres.length > 0 && (
+                  <span className="font-label text-label-sm border border-outline-variant px-2 py-1 rounded text-secondary">{book.genres[0]}</span>
                 )}
               </div>
             ))}
@@ -120,13 +124,13 @@ export const StatsPage: React.FC = () => {
             <h3 className="font-label text-label-md uppercase tracking-widest">已完成作品</h3>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="font-display text-display-lg-mobile md:text-display-lg text-primary">{completedComics.length}</span>
+            <span className="font-display text-display-lg-mobile md:text-display-lg text-primary">{completedBooks.length}</span>
             <span className="font-body text-body-md text-on-surface-variant">部</span>
           </div>
         </div>
       </section>
 
-      {stats.totalHours === 0 && completedComics.length === 0 && (
+      {stats.totalHours === 0 && completedBooks.length === 0 && (
         <section className="flex flex-col items-center justify-center py-16 text-center">
           <span className="material-symbols-outlined text-on-surface-variant text-6xl mb-4">query_stats</span>
           <p className="font-body text-body-md text-on-surface-variant">还没有阅读数据</p>

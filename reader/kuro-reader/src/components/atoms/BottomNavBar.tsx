@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/utils/cn';
 import type { NavItem } from '@/types';
@@ -25,6 +25,7 @@ export interface BottomNavBarProps {
 export const BottomNavBar: React.FC<BottomNavBarProps> = ({ active = 'home' }) => {
   const navigate = useNavigate();
   const { setActiveNav } = useAppStore();
+  const navRef = useRef<HTMLElement>(null);
 
   const handleClick = (item: NavConfig) => {
     setActiveNav(item.key);
@@ -33,31 +34,35 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ active = 'home' }) =
 
   return (
     <nav
+      ref={navRef}
       className={cn(
         'md:hidden',
         'fixed bottom-8 left-1/2 -translate-x-1/2 z-50',
         'flex justify-around items-center p-2 gap-2',
         'bg-surface-container border border-outline-variant',
         'w-[calc(100%-48px)] max-w-max-width-content rounded-full',
-        'mb-safe'
+        'mb-safe',
+        'relative'
       )}
     >
+     
       {NAV_ITEMS.map((item) => {
         const isActive = item.key === active;
         return (
           <button
             key={item.key}
+            data-nav-item
             className={cn(
-              'flex flex-col items-center justify-center px-4 py-1 rounded-full transition-all duration-150 active:scale-95',
+              'relative z-10 flex flex-col items-center justify-center px-4 py-1 rounded-full transition-colors duration-200',
               isActive
-                ? 'bg-primary text-on-primary'
-                : 'text-on-surface-variant hover:bg-surface-variant'
+                ? 'text-on-primary'
+                : 'text-on-surface-variant'
             )}
             onClick={() => handleClick(item)}
           >
             <span
-              className="material-symbols-outlined text-[24px]"
-              style={isActive ? { fontVariationSettings: "'FILL' 1" } : undefined}
+              className="material-symbols-outlined text-[24px] transition-[font-variation-settings] duration-300"
+              style={isActive ? { fontVariationSettings: "'FILL' 1" } : { fontVariationSettings: "'FILL' 0" }}
             >
               {item.icon}
             </span>

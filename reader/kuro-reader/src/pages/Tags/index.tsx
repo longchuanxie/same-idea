@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLibraryStore } from '@/stores/useLibraryStore';
-import { comicDetailPath } from '@/constants/routes';
+import { bookDetailPath } from '@/constants/routes';
 import { cn } from '@/utils/cn';
+import { FormatBadge } from '@/components/atoms/FormatBadge';
 
 const TAG_COLORS = [
   '#E53935', '#D81B60', '#8E24AA', '#5E35B1', '#3949AB',
@@ -13,7 +14,7 @@ const TAG_COLORS = [
 
 export const TagsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { tags, createTag, updateTag, deleteTag, getComicsByTag } = useLibraryStore();
+  const { tags, coverUrls, createTag, updateTag, deleteTag, getBooksByTag } = useLibraryStore();
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [editingTagId, setEditingTagId] = useState<string | null>(null);
@@ -21,7 +22,7 @@ export const TagsPage: React.FC = () => {
   const [newTagColor, setNewTagColor] = useState(TAG_COLORS[0]);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const filteredComics = selectedTagId ? getComicsByTag(selectedTagId) : [];
+  const filteredBooks = selectedTagId ? getBooksByTag(selectedTagId) : [];
 
   const handleCreateTag = async () => {
     const name = newTagName.trim();
@@ -41,7 +42,7 @@ export const TagsPage: React.FC = () => {
   };
 
   const handleDeleteTag = async (tagId: string) => {
-    if (confirm('确定要删除这个标签吗？关联的漫画将移除此标签。')) {
+    if (confirm('确定要删除这个标签吗？关联的书籍将移除此标签。')) {
       await deleteTag(tagId);
       if (selectedTagId === tagId) setSelectedTagId(null);
     }
@@ -58,7 +59,7 @@ export const TagsPage: React.FC = () => {
     <div className="relative z-10 w-full max-w-max-width-content mx-auto px-margin-mobile md:px-0 pt-8 pb-16">
       <header className="mb-8">
         <h1 className="font-display text-display-lg-mobile md:text-display-lg text-primary mb-2">标签管理</h1>
-        <p className="font-body text-body-md text-on-surface-variant">为漫画添加标签，快速分类和查找。</p>
+        <p className="font-body text-body-md text-on-surface-variant">为书籍添加标签，快速分类和查找。</p>
       </header>
 
       <div className="mb-6">
@@ -169,7 +170,7 @@ export const TagsPage: React.FC = () => {
                   />
                   <span className="font-label text-label-lg text-on-surface">{tag.name}</span>
                   <span className="font-label text-label-sm text-on-surface-variant bg-surface-variant px-2 py-0.5 rounded-full">
-                    {tag.comicIds.length}
+                    {tag.bookIds.length}
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
@@ -202,21 +203,21 @@ export const TagsPage: React.FC = () => {
 
             {selectedTagId === tag.id && (
               <div className="px-4 pb-4">
-                {filteredComics.length === 0 ? (
-                  <p className="font-body text-body-sm text-on-surface-variant py-2">暂无关联漫画</p>
+                {filteredBooks.length === 0 ? (
+                  <p className="font-body text-body-sm text-on-surface-variant py-2">暂无关联书籍</p>
                 ) : (
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-                    {filteredComics.map((comic) => (
+                    {filteredBooks.map((book) => (
                       <button
-                        key={comic.id}
+                        key={book.id}
                         className="flex flex-col items-center gap-2 group text-left"
-                        onClick={() => navigate(comicDetailPath(comic.id))}
+                        onClick={() => navigate(bookDetailPath(book.id))}
                       >
                         <div className="w-full aspect-[3/4] rounded-lg overflow-hidden bg-surface-container border border-outline-variant group-hover:border-primary transition-colors">
-                          {comic.cover ? (
+                          {coverUrls[book.id] ? (
                             <img
-                              src={comic.cover}
-                              alt={comic.title}
+                              src={coverUrls[book.id]}
+                              alt={book.title}
                               className="w-full h-full object-cover"
                               loading="lazy"
                             />
@@ -226,9 +227,12 @@ export const TagsPage: React.FC = () => {
                             </div>
                           )}
                         </div>
-                        <span className="font-label text-label-sm text-on-surface truncate w-full text-center">
-                          {comic.title}
-                        </span>
+                        <div className="flex items-center gap-1 w-full justify-center">
+                          <FormatBadge format={book.format} />
+                          <span className="font-label text-label-sm text-on-surface truncate text-center">
+                            {book.title}
+                          </span>
+                        </div>
                       </button>
                     ))}
                   </div>

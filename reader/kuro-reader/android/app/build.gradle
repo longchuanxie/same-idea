@@ -4,8 +4,8 @@ android {
     namespace = "com.kuro.reader"
     compileSdk = rootProject.ext.compileSdkVersion
     compileOptions {
-      sourceCompatibility JavaVersion.VERSION_23
-      targetCompatibility JavaVersion.VERSION_23
+      sourceCompatibility JavaVersion.VERSION_21
+      targetCompatibility JavaVersion.VERSION_21
   }
     defaultConfig {
         applicationId "com.kuro.reader"

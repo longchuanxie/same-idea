@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kuro Reader — 沉浸式本地阅读器 | 漫画 & 文本</title>
+  <meta name="description" content="Kuro Reader 是一款专注本地阅读体验的跨平台应用，支持漫画（ZIP/CBZ/RAR/CBR）与文本（TXT/EPUB）格式，提供双模式阅读、手势密码保护等功能。" />
+  <meta name="theme-color" content="#0A0A0A" />
+  <meta property="og:title" content="Kuro Reader" />
+  <meta property="og:description" content="沉浸式本地阅读器 — 漫画 & 文本 | 支持 Web & Android" />
+  <meta property="og:type" content="website" />
+  <link rel="icon" type="image/svg+xml" href="icon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <!-- GitHub repo URL — 请替换为你的仓库地址 -->
+  <script>
+    const GITHUB_REPO = "https://github.com/longchuanxie/same-idea";
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0A0A0A;
+      --surface: #1A1A1A;
+      --surface2: #242424;
+      --surface3: #2E2E2E;
+      --text: #FDF8F8;
+      --text2: #A8A2A2;
+      --accent: #E53E3E;
+      --green: #38A169;
+      --radius: 16px;
+      --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; display: block; }
+
+    /* ── NAV ── */
+    .nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(10,10,10,0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .nav-inner {
+      max-width: 1200px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 24px;
+    }
+    .nav-logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.1rem; }
+    .nav-logo svg { width: 32px; height: 32px; }
+    .nav-links { display: flex; gap: 28px; }
+    .nav-links a { color: var(--text2); font-size: 0.9rem; font-weight: 500; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--text); }
+    .nav-gh {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--surface2); border-radius: 8px;
+      padding: 7px 14px; font-size: 0.85rem; font-weight: 600;
+      transition: background 0.2s;
+    }
+    .nav-gh:hover { background: var(--surface3); }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 120px 24px 80px;
+      position: relative;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse 600px 400px at 30% 20%, rgba(229,62,62,0.08) 0%, transparent 70%),
+        radial-gradient(ellipse 500px 350px at 70% 80%, rgba(56,161,105,0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--surface); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 100px; padding: 6px 16px;
+      font-size: 0.82rem; color: var(--text2); margin-bottom: 28px;
+    }
+    .hero-badge span { color: var(--green); font-weight: 600; }
+    .hero h1 {
+      font-size: clamp(3rem, 8vw, 5.5rem);
+      font-weight: 800; letter-spacing: -0.03em;
+      line-height: 1.05; margin-bottom: 20px;
+      background: linear-gradient(135deg, #FDF8F8 0%, #A8A2A2 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero h1 em {
+      font-style: normal;
+      background: linear-gradient(135deg, var(--accent) 0%, #FF6B6B 100%);
+      -webkit-background-clip: text; background-clip: text;
+    }
+    .hero-sub {
+      font-size: clamp(1rem, 2.5vw, 1.3rem);
+      color: var(--text2); max-width: 600px; margin-bottom: 44px;
+    }
+    .hero-actions { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 14px 30px; border-radius: 100px;
+      font-size: 1rem; font-weight: 600;
+      transition: transform 0.2s var(--ease), box-shadow 0.2s, background 0.2s;
+      cursor: pointer; border: none;
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .btn-primary {
+      background: var(--text); color: var(--bg);
+      box-shadow: 0 4px 24px rgba(253,248,248,0.15);
+    }
+    .btn-primary:hover { box-shadow: 0 8px 32px rgba(253,248,248,0.2); }
+    .btn-outline {
+      background: transparent; color: var(--text);
+      border: 1.5px solid rgba(255,255,255,0.2);
+    }
+    .btn-outline:hover { border-color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.04); }
+    .hero-screens {
+      margin-top: 72px; width: 100%; max-width: 900px;
+      display: flex; gap: 16px; justify-content: center;
+      perspective: 1200px;
+    }
+    .hero-screens img {
+      border-radius: 20px; border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+      transition: transform 0.4s var(--ease);
+      height: 420px; object-fit: cover;
+    }
+    .hero-screens img:hover { transform: translateY(-8px) scale(1.02); }
+
+    /* ── SECTION COMMON ── */
+    section { padding: 100px 24px; }
+    .section-inner { max-width: 1100px; margin: 0 auto; }
+    .section-label {
+      font-size: 0.8rem; font-weight: 700;
+      color: var(--accent); letter-spacing: 0.1em;
+      text-transform: uppercase; margin-bottom: 10px;
+    }
+    .section-title {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 800; letter-spacing: -0.02em;
+      margin-bottom: 20px; line-height: 1.1;
+    }
+    .section-desc {
+      font-size: 1.05rem; color: var(--text2);
+      max-width: 560px; margin-bottom: 56px;
+    }
+
+    /* ── FEATURES ── */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
+    .feat-card {
+      background: var(--surface);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius); padding: 28px;
+      transition: transform 0.3s var(--ease), border-color 0.3s;
+    }
+    .feat-card:hover { transform: translateY(-4px); border-color: rgba(255,255,255,0.12); }
+    .feat-icon {
+      width: 44px; height: 44px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 18px;
+    }
+    .fi-red { background: rgba(229,62,62,0.12); color: var(--accent); }
+    .fi-green { background: rgba(56,161,105,0.12); color: var(--green); }
+    .fi-blue { background: rgba(66,133,244,0.12); color: #4285F4; }
+    .fi-yellow { background: rgba(251,188,4,0.12); color: #FBBC04; }
+    .fi-purple { background: rgba(168,85,247,0.12); color: #A855F7; }
+    .fi-cyan { background: rgba(6,182,212,0.12); color: #06B6D4; }
+    .feat-card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 8px; }
+    .feat-card p { font-size: 0.88rem; color: var(--text2); line-height: 1.6; }
+
+    /* ── SCREENSHOTS ── */
+    .shots-section { background: var(--surface); }
+    .shots-scroll {
+      display: flex; gap: 16px;
+      overflow-x: auto; scroll-snap-type: x mandatory;
+      padding-bottom: 16px; -webkit-overflow-scrolling: touch;
+    }
+    .shots-scroll::-webkit-scrollbar { height: 6px; }
+    .shots-scroll::-webkit-scrollbar-track { background: var(--surface2); border-radius: 3px; }
+    .shots-scroll::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 3px; }
+    .shot-item {
+      flex: 0 0 auto; scroll-snap-align: start;
+      border-radius: 16px; overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.08);
+      transition: transform 0.3s var(--ease);
+    }
+    .shot-item:hover { transform: scale(1.02); }
+    .shot-item img { height: 400px; width: auto; object-fit: cover; }
+
+    /* ── DOWNLOAD ── */
+    .dl-section { text-align: center; }
+    .dl-section .section-desc { margin-left: auto; margin-right: auto; }
+    .dl-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px; max-width: 800px; margin: 0 auto;
+    }
+    .dl-card {
+      background: var(--surface);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius); padding: 36px 28px;
+      text-align: center;
+      transition: transform 0.3s var(--ease), border-color 0.3s;
+    }
+    .dl-card:hover { transform: translateY(-4px); border-color: rgba(255,255,255,0.16); }
+    .dl-icon {
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 18px; color: var(--text2);
+    }
+    .dl-card h3 { font-size: 1.2rem; font-weight: 700; margin-bottom: 8px; }
+    .dl-card p { font-size: 0.88rem; color: var(--text2); margin-bottom: 22px; }
+    .dl-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--text); color: var(--bg);
+      padding: 12px 24px; border-radius: 100px;
+      font-size: 0.9rem; font-weight: 600;
+      transition: transform 0.2s var(--ease), box-shadow 0.2s;
+    }
+    .dl-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(253,248,248,0.15); }
+    .dl-note {
+      margin-top: 32px; font-size: 0.82rem; color: var(--text2);
+      background: var(--surface); display: inline-block;
+      padding: 10px 20px; border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    /* ── INSTALL GUIDE ── */
+    .install-section { background: var(--surface); }
+    .install-tabs {
+      display: flex; gap: 8px; margin-bottom: 36px;
+    }
+    .tab-btn {
+      padding: 10px 22px; border-radius: 100px;
+      font-size: 0.9rem; font-weight: 600;
+      background: transparent; color: var(--text2);
+      border: 1px solid rgba(255,255,255,0.1);
+      cursor: pointer; transition: all 0.2s;
+    }
+    .tab-btn.active { background: var(--text); color: var(--bg); border-color: transparent; }
+    .tab-btn:hover:not(.active) { border-color: rgba(255,255,255,0.25); color: var(--text); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .steps { list-style: none; }
+    .step {
+      display: flex; gap: 20px;
+      padding: 20px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .step:last-child { border-bottom: none; }
+    .step-num {
+      flex-shrink: 0; width: 36px; height: 36px;
+      background: rgba(229,62,62,0.12); color: var(--accent);
+      border-radius: 10px; display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.9rem;
+    }
+    .step-content h4 { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
+    .step-content p { font-size: 0.88rem; color: var(--text2); margin-bottom: 10px; }
+    .code-block {
+      background: var(--bg); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px; padding: 12px 18px;
+      font-family: 'Courier New', monospace; font-size: 0.85rem;
+      color: var(--green); overflow-x: auto;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    }
+    .copy-btn {
+      background: rgba(255,255,255,0.06); border: none; color: var(--text2);
+      padding: 4px 10px; border-radius: 6px; font-size: 0.75rem;
+      cursor: pointer; transition: background 0.2s; white-space: nowrap;
+    }
+    .copy-btn:hover { background: rgba(255,255,255,0.12); color: var(--text); }
+
+    /* ── TECH STACK ── */
+    .tech-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 12px;
+    }
+    .tech-chip {
+      background: var(--surface); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 12px; padding: 16px; text-align: center;
+      font-size: 0.85rem; font-weight: 600;
+      transition: border-color 0.2s;
+    }
+    .tech-chip:hover { border-color: rgba(255,255,255,0.15); }
+    .tech-chip small { display: block; font-size: 0.75rem; color: var(--text2); font-weight: 400; margin-top: 4px; }
+
+    /* ── FOOTER ── */
+    .footer {
+      text-align: center; padding: 48px 24px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      color: var(--text2); font-size: 0.85rem;
+    }
+    .footer-links { display: flex; gap: 24px; justify-content: center; margin-bottom: 16px; }
+    .footer-links a { transition: color 0.2s; }
+    .footer-links a:hover { color: var(--text); }
+
+    /* ── ANIMATIONS ── */
+    .reveal {
+      opacity: 0; transform: translateY(24px);
+      transition: opacity 0.7s var(--ease), transform 0.7s var(--ease);
+    }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .hero-screens { flex-direction: column; align-items: center; }
+      .hero-screens img { height: 280px; width: auto; }
+      .features-grid { grid-template-columns: 1fr; }
+      .dl-grid { grid-template-columns: 1fr; }
+      .tech-grid { grid-template-columns: repeat(2, 1fr); }
+      .step { flex-direction: column; gap: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="#" class="nav-logo">
+      <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="200" height="200" rx="48" fill="#FDF8F8"/>
+        <rect x="65" y="70" width="8" height="60" rx="4" fill="#1A1A1A"/>
+        <rect x="80" y="60" width="8" height="80" rx="4" fill="#1A1A1A"/>
+        <rect x="82" y="125" width="4" height="6" rx="1" fill="#E53E3E"/>
+        <rect x="95" y="65" width="8" height="70" rx="4" fill="#1A1A1A"/>
+        <rect x="110" y="55" width="8" height="90" rx="4" fill="#1A1A1A"/>
+        <rect x="112" y="65" width="4" height="8" rx="1" fill="#38A169"/>
+        <rect x="125" y="75" width="8" height="50" rx="4" fill="#1A1A1A"/>
+      </svg>
+      Kuro Reader
+    </a>
+    <div class="nav-links">
+      <a href="#features">功能</a>
+      <a href="#screenshots">截图</a>
+      <a href="#download">下载</a>
+      <a href="#install">安装指引</a>
+      <a href="#tech">技术栈</a>
+    </div>
+    <a id="nav-gh-link" href="#" class="nav-gh" target="_blank" rel="noopener">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.387.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.73.083-.73 1.205.085 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.694.825.576C20.565 21.795 24 17.295 24 12c0-6.63-5.37-12-12-12z"/></svg>
+      GitHub
+    </a>
+  </div>
+</nav>
+
+<!-- ── HERO ── -->
+<section class="hero">
+  <div class="hero-badge">
+    <span>●</span> 开源 · 跨平台 · 隐私优先
+  </div>
+  <h1>Kuro <em>Reader</em></h1>
+  <p class="hero-sub">
+    一款专注于本地阅读体验的跨平台应用。支持漫画与文本阅读，覆盖 Web 与 Android，提供沉浸式阅读与流畅交互动画。
+  </p>
+  <div class="hero-actions">
+    <a id="hero-dl-btn" href="#download" class="btn btn-primary">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      立即下载
+    </a>
+    <a id="hero-gh-btn" href="#" target="_blank" rel="noopener" class="btn btn-outline">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.387.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.73.083-.73 1.205.085 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.694.825.576C20.565 21.795 24 17.295 24 12c0-6.63-5.37-12-12-12z"/></svg>
+      查看源码
+    </a>
+  </div>
+  <div class="hero-screens">
+    <img src="screenshots/home.png" alt="Kuro Reader 主页" loading="lazy" />
+    <img src="screenshots/reader.png" alt="Kuro Reader 阅读器" loading="lazy" />
+  </div>
+</section>
+
+<!-- ── FEATURES ── -->
+<section id="features">
+  <div class="section-inner">
+    <div class="reveal">
+      <div class="section-label">功能特性</div>
+      <h2 class="section-title">为阅读而生</h2>
+      <p class="section-desc">从漫画到文本，从本地到云端，Kuro Reader 覆盖你所需的一切阅读功能。</p>
+    </div>
+    <div class="features-grid">
+      <div class="feat-card reveal">
+        <div class="feat-icon fi-red">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        </div>
+        <h3>多格式支持</h3>
+        <p>支持漫画压缩格式 ZIP/CBZ/RAR/CBR，以及文本格式 TXT/EPUB，直接导入即可阅读。</p>
+      </div>
+      <div class="feat-card reveal">
+        <div class="feat-icon fi-green">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12" y2="18"/></svg>
+        </div>
+        <h3>双模式阅读</h3>
+        <p>漫画支持条漫/页漫模式自由切换、双页模式；文本支持自定义字体与排版，阅读体验舒适。</p>
+      </div>
+      <div class="feat-card reveal">
+        <div class="feat-icon fi-blue">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+        </div>
+        <h3>云端连接</h3>
+        <p>支持 WebDAV、NAS、FTP 等多种云端来源，随时随地同步你的书库。</p>
+      </div>
+      <div class="feat-card reveal">
+        <div class="feat-icon fi-yellow">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <h3>隐私保护</h3>
+        <p>手势密码锁保护你的私密内容，所有数据存储在本地，隐私完全由你掌控。</p>
+      </div>
+      <div class="feat-card reveal">
+        <div class="feat-icon fi-purple">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        </div>
+        <h3>智能管理</h3>
+        <p>子书库分类、标签系统、收藏功能，配合批量导入，轻松管理海量书籍。</p>
+      </div>
+      <div class="feat-card reveal">
+        <div class="feat-icon fi-cyan">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <h3>流畅动画</h3>
+        <p>Material Design 3 设计体系，全 CSS 动画系统带来丝滑的页面过渡与交互反馈。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── SCREENSHOTS ── -->
+<section id="screenshots" class="shots-section">
+  <div class="section-inner">
+    <div class="reveal">
+      <div class="section-label">应用截图</div>
+      <h2 class="section-title">一览阅读体验</h2>
+      <p class="section-desc">Material Design 3 纯黑主色 + 暖白背景，打造沉浸式阅读界面。</p>
+    </div>
+    <div class="shots-scroll">
+      <div class="shot-item"><img src="screenshots/home.png" alt="主页" loading="lazy"/></div>
+      <div class="shot-item"><img src="screenshots/test-02-library.png" alt="书库" loading="lazy"/></div>
+      <div class="shot-item"><img src="screenshots/test-05-search.png" alt="搜索" loading="lazy"/></div>
+      <div class="shot-item"><img src="screenshots/reader.png" alt="阅读器" loading="lazy"/></div>
+      <div class="shot-item"><img src="screenshots/test-09-book-detail.png" alt="书籍详情" loading="lazy"/></div>
+      <div class="shot-item"><img src="screenshots/test-04-settings.png" alt="设置" loading="lazy"/></div>
+      <div class="shot-item"><img src="screenshots/test-tag-management.png" alt="标签管理" loading="lazy"/></div>
+      <div class="shot-item"><img src="screenshots/test-text-selection-04-annotation-popup.png" alt="文本批注" loading="lazy"/></div>
+      <div class="shot-item"><img src="screenshots/menu-test-02-text-reader-initial.png" alt="文本阅读器" loading="lazy"/></div>
+      <div class="shot-item"><img src="screenshots/browser-test-text-reader-ch1.png" alt="文本阅读章节" loading="lazy"/></div>
+      <div class="shot-item"><img src="screenshots/test-text-selection-07-text-selected.png" alt="文本选中" loading="lazy"/></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── DOWNLOAD ── -->
+<section id="download" class="dl-section">
+  <div class="section-inner">
+    <div class="reveal">
+      <div class="section-label">下载</div>
+      <h2 class="section-title">选择你的平台</h2>
+      <p class="section-desc">Kuro Reader 支持 Android 和 Web 双平台，选择适合你的版本开始使用。</p>
+    </div>
+    <div class="dl-grid reveal">
+      <div class="dl-card">
+        <div class="dl-icon">
+          <svg width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+        </div>
+        <h3>Android</h3>
+        <p>原生 APK 安装包，支持 Android 8.0+，完整原生体验与文件系统集成。</p>
+        <a id="dl-android" href="#" target="_blank" rel="noopener" class="dl-btn">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          下载 APK
+        </a>
+      </div>
+      <div class="dl-card">
+        <div class="dl-icon">
+          <svg width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        </div>
+        <h3>Web 版本</h3>
+        <p>使用现代浏览器直接访问，无需安装，即开即用，支持 Chrome / Firefox / Safari。</p>
+        <a id="dl-web" href="#" target="_blank" rel="noopener" class="dl-btn">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          在线体验
+        </a>
+      </div>
+    </div>
+    <div class="dl-note reveal">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" style="display:inline;vertical-align:middle;margin-right:6px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> 所有版本均从 GitHub Releases 下载，开源透明，安全可靠。
+    </div>
+  </div>
+</section>
+
+<!-- ── INSTALL GUIDE ── -->
+<section id="install" class="install-section">
+  <div class="section-inner">
+    <div class="reveal">
+      <div class="section-label">安装指引</div>
+      <h2 class="section-title">从零开始</h2>
+      <p class="section-desc">无论你是普通用户还是开发者，都可以快速上手。</p>
+    </div>
+
+    <div class="install-tabs reveal">
+      <button class="tab-btn active" data-tab="user">用户安装</button>
+      <button class="tab-btn" data-tab="dev">开发者构建</button>
+    </div>
+
+    <!-- USER TAB -->
+    <div id="tab-user" class="tab-panel active reveal">
+      <ul class="steps">
+        <li class="step">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <h4>下载 APK（Android）</h4>
+            <p>直接点击上方「下载 APK」按钮，或前往 GitHub Releases 页面获取最新版本。</p>
+            <div class="code-block">
+              <span id="releases-url-text">https://github.com/longchuanxie/same-idea/releases</span>
+              <button class="copy-btn" onclick="copyText(this, document.getElementById('releases-url-text').textContent)">复制</button>
+            </div>
+          </div>
+        </li>
+        <li class="step">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <h4>允许安装未知来源应用</h4>
+            <p>Android 系统会提示安全警告，前往 <strong>设置 → 安全 → 允许安装未知来源应用</strong>，对你使用的浏览器或文件管理器授权。</p>
+          </div>
+        </li>
+        <li class="step">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <h4>安装并打开</h4>
+            <p>点击 APK 文件进行安装，完成后打开 Kuro Reader 即可开始使用。</p>
+          </div>
+        </li>
+        <li class="step">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <h4>导入书籍</h4>
+            <p>通过应用内的导入功能，选择本地 ZIP/CBZ/RAR/CBR 漫画文件或 TXT/EPUB 文本文件，也可连接 WebDAV / FTP 云端来源批量导入。</p>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- DEV TAB -->
+    <div id="tab-dev" class="tab-panel reveal">
+      <ul class="steps">
+        <li class="step">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <h4>克隆仓库</h4>
+            <p>确保已安装 Git，克隆项目到本地。</p>
+            <div class="code-block">
+              <span>git clone https://github.com/longchuanxie/same-idea.git</span>
+              <button class="copy-btn" onclick="copyText(this, 'git clone https://github.com/longchuanxie/same-idea.git')">复制</button>
+            </div>
+          </div>
+        </li>
+        <li class="step">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <h4>安装依赖</h4>
+            <p>需要 Node.js 18+，在项目根目录执行：</p>
+            <div class="code-block">
+              <span>npm install</span>
+              <button class="copy-btn" onclick="copyText(this, 'npm install')">复制</button>
+            </div>
+          </div>
+        </li>
+        <li class="step">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <h4>Web 开发模式</h4>
+            <p>启动本地开发服务器，支持热更新：</p>
+            <div class="code-block">
+              <span>npm run dev</span>
+              <button class="copy-btn" onclick="copyText(this, 'npm run dev')">复制</button>
+            </div>
+          </div>
+        </li>
+        <li class="step">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <h4>构建 Web 生产包</h4>
+            <p>编译优化后的生产版本，输出到 <code>dist/</code> 目录：</p>
+            <div class="code-block">
+              <span>npm run build</span>
+              <button class="copy-btn" onclick="copyText(this, 'npm run build')">复制</button>
+            </div>
+          </div>
+        </li>
+        <li class="step">
+          <div class="step-num">5</div>
+          <div class="step-content">
+            <h4>构建 Android APK</h4>
+            <p>需要 Java 17+ 和 Android Studio。先同步 Web 资源，再编译 APK：</p>
+            <div class="code-block">
+              <span>npx cap sync android</span>
+              <button class="copy-btn" onclick="copyText(this, 'npx cap sync android')">复制</button>
+            </div>
+            <div class="code-block" style="margin-top:8px">
+              <span>cd android && ./gradlew assembleRelease</span>
+              <button class="copy-btn" onclick="copyText(this, 'cd android && ./gradlew assembleRelease')">复制</button>
+            </div>
+          </div>
+        </li>
+        <li class="step">
+          <div class="step-num">6</div>
+          <div class="step-content">
+            <h4>获取 APK 文件</h4>
+            <p>构建产物位于 <code>android/app/build/outputs/apk/release/app-release.apk</code>，可传输到手机安装。</p>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ── TECH STACK ── -->
+<section id="tech">
+  <div class="section-inner">
+    <div class="reveal">
+      <div class="section-label">技术栈</div>
+      <h2 class="section-title">现代技术构建</h2>
+      <p class="section-desc">基于业界领先的前端技术栈，保证性能、可维护性与开发体验。</p>
+    </div>
+    <div class="tech-grid reveal">
+      <div class="tech-chip">React 18<small>UI 框架</small></div>
+      <div class="tech-chip">TypeScript<small>类型安全</small></div>
+      <div class="tech-chip">Vite 5<small>极速构建</small></div>
+      <div class="tech-chip">Tailwind CSS<small>原子化样式</small></div>
+      <div class="tech-chip">Zustand 4<small>状态管理</small></div>
+      <div class="tech-chip">React Router 6<small>路由管理</small></div>
+      <div class="tech-chip">Capacitor 8<small>跨平台封装</small></div>
+      <div class="tech-chip">IndexedDB<small>本地存储</small></div>
+      <div class="tech-chip">JSZip<small>压缩包解析</small></div>
+      <div class="tech-chip">libarchive.js<small>RAR 支持</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer class="footer">
+  <div class="footer-links">
+    <a id="footer-gh" href="#" target="_blank" rel="noopener">GitHub</a>
+    <a href="#features">功能</a>
+    <a href="#download">下载</a>
+    <a href="#install">安装指引</a>
+  </div>
+  <p>Kuro Reader · MIT License · Open Source</p>
+</footer>
+
+<script>
+  // ── 注入 GitHub 仓库链接 ──
+  (function() {
+    const r = GITHUB_REPO;
+    const releases = r + '/releases';
+    document.getElementById('nav-gh-link').href = r;
+    document.getElementById('hero-gh-btn').href = r;
+    document.getElementById('dl-android').href = 'downloads/app-release.apk';
+    document.getElementById('dl-web').href = r;
+    document.getElementById('footer-gh').href = r;
+    document.getElementById('releases-url-text').textContent = releases;
+  })();
+
+  // ── Tab 切换 ──
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ── 复制功能 ──
+  function copyText(el, text) {
+    navigator.clipboard.writeText(text).then(() => {
+      const orig = el.textContent;
+      el.textContent = '已复制';
+      setTimeout(() => el.textContent = orig, 1500);
+    });
+  }
+
+  // ── 滚动显示动画 ──
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); }});
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>

@@ -29,7 +29,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       onClick={onCancel}
     >
       <div
-        className="bg-surface-bright border border-outline-variant rounded-lg p-6 mx-margin-mobile max-w-md w-full"
+        className="bg-surface-bright border border-outline-variant rounded-lg p-6 mx-margin-mobile max-w-md w-full animate-scale-in"
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="font-display text-headline-md text-primary mb-3">{title}</h3>

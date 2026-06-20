@@ -3,7 +3,8 @@ import { persist } from 'zustand/middleware';
 
 import type { NavItem, UserSettings, AuthConfig } from '@/types';
 import { APP_CONFIG } from '@/constants/config';
-import { setupGesture, verifyGesture, isLockedUntilExpired, calculateLockUntil } from '@/services/gestureAuth';
+import { setupGesture, verifyGesture, isLockedUntilExpired, calculateLockUntil, hashSecurityAnswer, verifySecurityAnswer } from '@/services/gestureAuth';
+import type { SecurityQuestion } from '@/types';
 
 interface AppState {
   theme: 'light' | 'dark' | 'auto';
@@ -20,10 +21,14 @@ interface AppState {
   toggleDarkMode: () => void;
   updateAuthConfig: (partial: Partial<AuthConfig>) => void;
   checkAuthTimeout: () => boolean;
-  setupGestureLock: (points: number[]) => Promise<void>;
+  setupGestureLock: (points: number[], questions?: { question: string; answer: string }[]) => Promise<void>;
   verifyGestureLock: (points: number[]) => Promise<boolean>;
   disableGestureLock: () => void;
   clearAuthData: () => void;
+  /** 验证安全问题答案，成功则返回 true */
+  verifySecurityQuestions: (answers: string[]) => Promise<boolean>;
+  /** 通过安全问题验证后重置密码锁 */
+  resetLockViaSecurityQuestions: () => void;
 }
 
 const DEFAULT_SETTINGS: UserSettings = {
@@ -36,6 +41,16 @@ const DEFAULT_SETTINGS: UserSettings = {
   cloudSync: false,
   fontSize: 16,
   fontFamily: 'literata',
+  brightness: 100,
+  colorTemperature: 0,
+  readingTheme: 'light',
+  textFontFamily: 'serif',
+  textAlign: 'justify',
+  firstLineIndent: true,
+  textLineHeight: 1.8,
+  tapZoneEnabled: true,
+  autoScrollSpeed: 2,
+  textReadingMode: 'scroll',
   auth: {
     isEnabled: false,
     method: 'auto',
@@ -62,6 +77,7 @@ export const useAppStore = create<AppState>()(
       setActiveNav: (nav) => set({ activeNav: nav }),
       updateSettings: (partial) =>
         set((state) => ({
+          theme: partial.theme ?? state.theme,
           settings: { ...state.settings, ...partial },
         })),
       setAuthenticated: (value) =>
@@ -96,8 +112,20 @@ export const useAppStore = create<AppState>()(
         return false;
       },
 
-      setupGestureLock: async (points: number[]) => {
+      setupGestureLock: async (points: number[], questions?: { question: string; answer: string }[]) => {
         const { hash, salt } = await setupGesture(points);
+
+        // 哈希安全问题答案
+        let securityQuestions: SecurityQuestion[] | undefined;
+        if (questions && questions.length > 0) {
+          securityQuestions = await Promise.all(
+            questions.map(async (q) => {
+              const { answerHash, answerSalt } = await hashSecurityAnswer(q.answer);
+              return { question: q.question, answerHash, answerSalt };
+            })
+          );
+        }
+
         set((state) => ({
           settings: {
             ...state.settings,
@@ -109,6 +137,7 @@ export const useAppStore = create<AppState>()(
               gestureSalt: salt,
               failedAttempts: 0,
               lockUntil: undefined,
+              ...(securityQuestions ? { securityQuestions } : {}),
             },
           },
           isAuthenticated: true,
@@ -184,6 +213,40 @@ export const useAppStore = create<AppState>()(
               gestureHash: undefined,
               gestureSalt: undefined,
               lockUntil: undefined,
+              securityQuestions: undefined,
+            },
+          },
+          isAuthenticated: true,
+          lastAuthTime: Date.now(),
+        })),
+
+      verifySecurityQuestions: async (answers: string[]) => {
+        const { settings } = get();
+        const stored = settings.auth.securityQuestions;
+        if (!stored || stored.length === 0) return false;
+        if (answers.length !== stored.length) return false;
+
+        for (let i = 0; i < stored.length; i++) {
+          const valid = await verifySecurityAnswer(
+            answers[i],
+            stored[i].answerHash,
+            stored[i].answerSalt
+          );
+          if (!valid) return false;
+        }
+        return true;
+      },
+
+      resetLockViaSecurityQuestions: () =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            auth: {
+              ...state.settings.auth,
+              gestureHash: undefined,
+              gestureSalt: undefined,
+              failedAttempts: 0,
+              lockUntil: undefined,
             },
           },
           isAuthenticated: true,
@@ -192,6 +255,24 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'kuro-reader-app',
+      merge: (persisted, current) => {
+        const p = persisted as Partial<AppState> | undefined;
+        if (!p) return current;
+        return {
+          ...current,
+          ...p,
+          settings: {
+            ...DEFAULT_SETTINGS,
+            ...current.settings,
+            ...(p.settings ?? {}),
+            auth: {
+              ...DEFAULT_SETTINGS.auth,
+              ...(current.settings?.auth ?? {}),
+              ...(p.settings?.auth ?? {}),
+            },
+          },
+        };
+      },
     }
   )
 );

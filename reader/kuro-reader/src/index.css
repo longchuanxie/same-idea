@@ -3,6 +3,54 @@
 @tailwind utilities;
 
 @layer base {
+  /* 重置 mark 元素的浏览器默认黄色背景，让批注样式完全由 class 控制 */
+  mark {
+    background-color: transparent;
+    color: inherit;
+  }
+
+  :root {
+    --color-background: #fdf8f8;
+    --color-on-background: #1c1b1c;
+    --color-surface: #fdf8f8;
+    --color-surface-bright: #fdf8f8;
+    --color-surface-variant: #e6e1e1;
+    --color-on-surface: #1c1b1c;
+    --color-on-surface-variant: #444748;
+    --color-surface-container-lowest: #ffffff;
+    --color-surface-container-low: #f7f2f2;
+    --color-surface-container: #f1eded;
+    --color-surface-container-high: #ece7e7;
+    --color-surface-container-highest: #e6e1e1;
+    --color-primary: #000000;
+    --color-on-primary: #ffffff;
+    --color-secondary: #5e5e5e;
+    --color-secondary-container: #e4e2e2;
+    --color-outline: #747878;
+    --color-outline-variant: #c4c7c7;
+  }
+
+  .dark {
+    --color-background: #111111;
+    --color-on-background: #f4f0f0;
+    --color-surface: #1c1b1c;
+    --color-surface-bright: #2b2a2b;
+    --color-surface-variant: #444748;
+    --color-on-surface: #f4f0f0;
+    --color-on-surface-variant: #c8c6c5;
+    --color-surface-container-lowest: #171717;
+    --color-surface-container-low: #201f20;
+    --color-surface-container: #252425;
+    --color-surface-container-high: #302f30;
+    --color-surface-container-highest: #3a393a;
+    --color-primary: #f4f0f0;
+    --color-on-primary: #1c1b1c;
+    --color-secondary: #c8c6c5;
+    --color-secondary-container: #313030;
+    --color-outline: #8f9191;
+    --color-outline-variant: #444748;
+  }
+
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -10,9 +58,11 @@
 
   body {
     @apply bg-background text-on-background;
-    font-family: 'Literata', serif;
-    font-size: 16px;
-    line-height: 28px;
+    background-color: var(--color-background);
+    color: var(--color-on-background);
+    font-family: var(--app-body-font-family, 'Literata', serif);
+    font-size: var(--app-body-font-size, 16px);
+    line-height: var(--app-body-line-height, 28px);
   }
 
   .material-symbols-outlined {
@@ -60,13 +110,271 @@
 }
 
 @layer utilities {
+  .bg-background {
+    background-color: var(--color-background);
+  }
+
+  .text-on-background {
+    color: var(--color-on-background);
+  }
+
+  .bg-surface {
+    background-color: var(--color-surface);
+  }
+
+  .bg-surface-bright {
+    background-color: var(--color-surface-bright);
+  }
+
+  .bg-surface-variant {
+    background-color: var(--color-surface-variant);
+  }
+
+  .text-on-surface {
+    color: var(--color-on-surface);
+  }
+
+  .text-on-surface-variant {
+    color: var(--color-on-surface-variant);
+  }
+
+  .bg-surface-container-lowest {
+    background-color: var(--color-surface-container-lowest);
+  }
+
+  .bg-surface-container-low {
+    background-color: var(--color-surface-container-low);
+  }
+
+  .bg-surface-container {
+    background-color: var(--color-surface-container);
+  }
+
+  .bg-surface-container-high {
+    background-color: var(--color-surface-container-high);
+  }
+
+  .bg-surface-container-highest {
+    background-color: var(--color-surface-container-highest);
+  }
+
+  .text-primary {
+    color: var(--color-primary);
+  }
+
+  .bg-primary {
+    background-color: var(--color-primary);
+  }
+
+  .text-on-primary {
+    color: var(--color-on-primary);
+  }
+
+  .text-secondary {
+    color: var(--color-secondary);
+  }
+
+  .bg-secondary-container {
+    background-color: var(--color-secondary-container);
+  }
+
+  .border-outline {
+    border-color: var(--color-outline);
+  }
+
+  .border-outline-variant {
+    border-color: var(--color-outline-variant);
+  }
+
+  .font-body {
+    font-family: var(--app-body-font-family, 'Literata', serif);
+  }
+
+  .text-body-sm {
+    font-size: var(--app-body-sm-font-size, 14px);
+  }
+
+  .text-body-md {
+    font-size: var(--app-body-font-size, 16px);
+    line-height: var(--app-body-line-height, 28px);
+  }
+
+  .text-body-lg {
+    font-size: var(--app-body-lg-font-size, 18px);
+  }
+
   .animate-slide-up {
     animation: slideUp 0.3s ease-out;
+  }
+
+  .animate-slide-down {
+    animation: slideDown 0.3s ease-out;
+  }
+
+  .animate-slide-left {
+    animation: slideLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .animate-fade-in {
     animation: fadeIn 0.2s ease-out;
   }
+
+  .animate-scale-in {
+    animation: scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .animate-stagger-fade-in > * {
+    opacity: 0;
+    animation: staggerFadeIn 0.4s ease-out forwards;
+  }
+
+  .animate-stagger-fade-in > *:nth-child(1) { animation-delay: 0.00s; }
+  .animate-stagger-fade-in > *:nth-child(2) { animation-delay: 0.05s; }
+  .animate-stagger-fade-in > *:nth-child(3) { animation-delay: 0.10s; }
+  .animate-stagger-fade-in > *:nth-child(4) { animation-delay: 0.15s; }
+  .animate-stagger-fade-in > *:nth-child(5) { animation-delay: 0.20s; }
+  .animate-stagger-fade-in > *:nth-child(6) { animation-delay: 0.25s; }
+  .animate-stagger-fade-in > *:nth-child(7) { animation-delay: 0.30s; }
+  .animate-stagger-fade-in > *:nth-child(8) { animation-delay: 0.35s; }
+  .animate-stagger-fade-in > *:nth-child(9) { animation-delay: 0.40s; }
+  .animate-stagger-fade-in > *:nth-child(10) { animation-delay: 0.45s; }
+  .animate-stagger-fade-in > *:nth-child(11) { animation-delay: 0.50s; }
+  .animate-stagger-fade-in > *:nth-child(12) { animation-delay: 0.55s; }
+
+  .animate-page-enter {
+    animation: pageEnter 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .animate-page-exit {
+    animation: pageExit 0.25s ease-in forwards;
+  }
+
+  .animate-card-hover {
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+  }
+
+  .animate-card-hover:hover {
+    transform: translateY(-2px);
+  }
+
+  .animate-press {
+    transition: transform 0.15s ease, opacity 0.15s ease;
+  }
+
+  .animate-press:active {
+    transform: scale(0.97);
+    opacity: 0.9;
+  }
+
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(0, 0, 0, 0.04) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  .dark .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.04) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  .animate-pulse-soft {
+    animation: pulseSoft 2s ease-in-out infinite;
+  }
+
+  .animate-bounce-soft {
+    animation: bounceSoft 2s ease-in-out infinite;
+  }
+
+  .animate-slide-in-right {
+    animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .animate-slide-in-left {
+    animation: slideInLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .animate-shake {
+    animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+  }
+
+  .animate-slide-down-out {
+    animation: slideDownOut 0.25s ease-in forwards;
+  }
+
+  .animate-slide-up-out {
+    animation: slideUpOut 0.25s ease-in forwards;
+  }
+
+  .animate-reader-bar-enter {
+    animation: readerBarEnter 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .animate-reader-bar-exit {
+    animation: readerBarExit 0.25s ease-in forwards;
+  }
+
+  .animate-expand {
+    overflow: hidden;
+    animation: expandIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .animate-collapse {
+    overflow: hidden;
+    animation: collapseOut 0.2s ease-in forwards;
+  }
+
+  .animate-fullscreen-enter {
+    animation: fullscreenEnter 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .animate-page-fade {
+    animation: pageFade 0.3s ease-out;
+  }
+
+  .animate-ripple {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .animate-ripple::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at var(--ripple-x, 50%) var(--ripple-y, 50%), currentColor 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+
+  .animate-ripple:active::after {
+    opacity: 0.08;
+    transition: opacity 0s;
+  }
+
+  .toggle-spring {
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.25s ease;
+  }
+
+  .toggle-thumb-spring {
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.25s ease;
+  }
+
+  .stagger-1 { animation-delay: 0.05s; }
+  .stagger-2 { animation-delay: 0.10s; }
+  .stagger-3 { animation-delay: 0.15s; }
+  .stagger-4 { animation-delay: 0.20s; }
+  .stagger-5 { animation-delay: 0.25s; }
 
   .pt-safe {
     padding-top: env(safe-area-inset-top);
@@ -91,14 +399,45 @@
   .mb-safe {
     margin-bottom: env(safe-area-inset-bottom);
   }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @keyframes slideUp {
   from {
     transform: translateY(100%);
+    opacity: 0;
   }
   to {
     transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideLeft {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
   }
 }
 
@@ -109,4 +448,530 @@
   to {
     opacity: 1;
   }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes staggerFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pageExit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes pulseSoft {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes bounceSoft {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+@keyframes slideDownOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+}
+
+@keyframes slideUpOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+@keyframes readerBarEnter {
+  from {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes readerBarExit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+}
+
+@keyframes expandIn {
+  from {
+    max-height: 0;
+    opacity: 0;
+  }
+  to {
+    max-height: 500px;
+    opacity: 1;
+  }
+}
+
+@keyframes collapseOut {
+  from {
+    max-height: 500px;
+    opacity: 1;
+  }
+  to {
+    max-height: 0;
+    opacity: 0;
+  }
+}
+
+@keyframes fullscreenEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pageFade {
+  from {
+    opacity: 0.4;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 文本阅读翻页动画 - 左右滑动 */
+.text-page-enter-right {
+  animation: textPageEnterRight 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.text-page-enter-left {
+  animation: textPageEnterLeft 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.text-page-exit-left {
+  animation: textPageExitLeft 0.45s cubic-bezier(0.4, 0, 0.6, 1) forwards;
+}
+
+.text-page-exit-right {
+  animation: textPageExitRight 0.45s cubic-bezier(0.4, 0, 0.6, 1) forwards;
+}
+
+@keyframes textPageEnterRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes textPageEnterLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes textPageExitLeft {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+
+@keyframes textPageExitRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+/* ==============================
+ * 模拟翻书 3D 效果 - 重写版
+ * ============================== */
+
+.book-flip-container {
+  perspective: 2000px;
+  perspective-origin: 50% 50%;
+  overflow: hidden;
+}
+
+/* 所有翻书页基础样式 */
+.book-flip-page {
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* ===== 向前翻页（左滑 / 下一页） ===== */
+
+/* 退出页：当前页从正面翻到背面（绕左边缘旋转） */
+.book-page-flip-exit {
+  animation: bookPageFlipExit 900ms cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+  transform-origin: left center;
+  z-index: 3;
+}
+
+/* 进入页：下一页从背面翻到正面（绕右边缘旋转） */
+.book-page-flip-enter {
+  animation: bookPageFlipEnter 900ms cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+  transform-origin: right center;
+  z-index: 2;
+}
+
+/* ===== 向后翻页（右滑 / 上一页） ===== */
+
+.book-page-flip-exit-reverse {
+  animation: bookPageFlipExitReverse 900ms cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+  transform-origin: right center;
+  z-index: 3;
+}
+
+.book-page-flip-enter-reverse {
+  animation: bookPageFlipEnterReverse 900ms cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+  transform-origin: left center;
+  z-index: 2;
+}
+
+/* ===== 翻页阴影覆盖层 ===== */
+
+.book-page-shadow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* 退出页上的阴影（翻页时从右侧扫过） */
+.book-page-flip-exit .book-page-shadow {
+  animation: bookExitShadow 900ms cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+}
+
+/* 进入页上的阴影（翻页时逐渐消失） */
+.book-page-flip-enter .book-page-shadow {
+  animation: bookEnterShadow 900ms cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+}
+
+.book-page-flip-exit-reverse .book-page-shadow {
+  animation: bookExitShadowReverse 900ms cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+}
+
+.book-page-flip-enter-reverse .book-page-shadow {
+  animation: bookEnterShadowReverse 900ms cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+}
+
+/* ===== 书脊折痕光效 ===== */
+
+.book-spine-highlight {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0;
+}
+
+.book-page-flip-exit .book-spine-highlight {
+  left: 0;
+  animation: spineGlow 900ms cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+  background: linear-gradient(to right, rgba(0,0,0,0.3), transparent);
+}
+
+.book-page-flip-enter .book-spine-highlight {
+  right: 0;
+  animation: spineGlow 900ms cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+  background: linear-gradient(to left, rgba(0,0,0,0.3), transparent);
+}
+
+.book-page-flip-exit-reverse .book-spine-highlight {
+  right: 0;
+  animation: spineGlow 900ms cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+  background: linear-gradient(to left, rgba(0,0,0,0.3), transparent);
+}
+
+.book-page-flip-enter-reverse .book-spine-highlight {
+  left: 0;
+  animation: spineGlow 900ms cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+  background: linear-gradient(to right, rgba(0,0,0,0.3), transparent);
+}
+
+/* ===== 关键帧：向前翻页 ===== */
+
+@keyframes bookPageFlipExit {
+  0% {
+    transform: rotateY(0deg);
+    box-shadow: 0 0 0 rgba(0,0,0,0);
+  }
+  100% {
+    transform: rotateY(-160deg);
+    box-shadow: -8px 0 30px rgba(0,0,0,0.15);
+  }
+}
+
+@keyframes bookPageFlipEnter {
+  0% {
+    transform: rotateY(160deg);
+  }
+  100% {
+    transform: rotateY(0deg);
+  }
+}
+
+/* ===== 关键帧：向后翻页 ===== */
+
+@keyframes bookPageFlipExitReverse {
+  0% {
+    transform: rotateY(0deg);
+    box-shadow: 0 0 0 rgba(0,0,0,0);
+  }
+  100% {
+    transform: rotateY(160deg);
+    box-shadow: 8px 0 30px rgba(0,0,0,0.15);
+  }
+}
+
+@keyframes bookPageFlipEnterReverse {
+  0% {
+    transform: rotateY(-160deg);
+  }
+  100% {
+    transform: rotateY(0deg);
+  }
+}
+
+/* ===== 阴影关键帧 ===== */
+
+@keyframes bookExitShadow {
+  0% { background: transparent; }
+  40% { background: linear-gradient(to left, rgba(0,0,0,0.25) 0%, transparent 50%); }
+  100% { background: transparent; }
+}
+
+@keyframes bookEnterShadow {
+  0% { background: linear-gradient(to right, rgba(0,0,0,0.35) 0%, transparent 40%); }
+  60% { background: linear-gradient(to right, rgba(0,0,0,0.08) 0%, transparent 20%); }
+  100% { background: transparent; }
+}
+
+@keyframes bookExitShadowReverse {
+  0% { background: transparent; }
+  40% { background: linear-gradient(to right, rgba(0,0,0,0.25) 0%, transparent 50%); }
+  100% { background: transparent; }
+}
+
+@keyframes bookEnterShadowReverse {
+  0% { background: linear-gradient(to left, rgba(0,0,0,0.35) 0%, transparent 40%); }
+  60% { background: linear-gradient(to left, rgba(0,0,0,0.08) 0%, transparent 20%); }
+  100% { background: transparent; }
+}
+
+@keyframes spineGlow {
+  0% { opacity: 0; }
+  30% { opacity: 0.6; }
+  70% { opacity: 0.6; }
+  100% { opacity: 0; }
+}
+
+/* ===== 翻书完成动画（松手后继续完成翻页） ===== */
+
+.book-flip-complete-exit {
+  transition: transform 450ms cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.book-flip-complete-enter {
+  transition: transform 450ms cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+/* ===== 翻书弹回动画（松手后回弹） ===== */
+
+.book-flip-snapback {
+  transition: transform 350ms cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* ===== 跟手翻页时的阴影过渡 ===== */
+
+.book-flip-interactive .book-page-shadow {
+  transition: background 100ms ease;
+}
+
+/* ===== 阅读进度条滑块 ===== */
+
+.progress-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 8px;
+  background: transparent;
+  cursor: pointer;
+  outline: none;
+}
+
+.progress-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-surface-container-high, #ece7e7);
+}
+
+.progress-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-primary, #000);
+  border: 2px solid var(--color-surface, #fdf8f8);
+  margin-top: -6px;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.progress-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.progress-slider::-webkit-slider-thumb:active {
+  transform: scale(1.3);
+}
+
+.progress-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-surface-container-high, #ece7e7);
+  border: none;
+}
+
+.progress-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-primary, #000);
+  border: 2px solid var(--color-surface, #fdf8f8);
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+
+.progress-slider::-moz-range-progress {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(0,0,0,0.4);
 }

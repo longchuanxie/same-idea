@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { TopAppBar } from '@/components/atoms/TopAppBar';
 import { BottomNavBar } from '@/components/atoms/BottomNavBar';
@@ -16,6 +16,8 @@ const PATH_TO_NAV: Record<string, NavItem> = {
   '/search': 'library',
   '/batch': 'library',
 };
+
+const SYSTEM_DARK_QUERY = '(prefers-color-scheme: dark)';
 
 interface AppBarConfig {
   variant: 'home' | 'default' | 'back' | 'detail';
@@ -59,15 +61,30 @@ const getAppBarConfig = (pathname: string): AppBarConfig => {
 export const MainLayout: React.FC = () => {
   const location = useLocation();
   const { theme } = useAppStore();
+  const [systemPrefersDark, setSystemPrefersDark] = useState(() =>
+    window.matchMedia(SYSTEM_DARK_QUERY).matches
+  );
 
-  const isDark = theme === 'dark';
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(SYSTEM_DARK_QUERY);
+    const handleChange = () => setSystemPrefersDark(mediaQuery.matches);
+
+    handleChange();
+    mediaQuery.addEventListener('change', handleChange);
+
+    return () => {
+      mediaQuery.removeEventListener('change', handleChange);
+    };
+  }, []);
+
+  const isDark = theme === 'dark' || (theme === 'auto' && systemPrefersDark);
   useStatusBar(isDark);
 
   const currentNav = PATH_TO_NAV[location.pathname] ?? 'home';
   const { variant, title } = getAppBarConfig(location.pathname);
 
   return (
-    <div className={isDark ? 'dark' : ''}>
+    <div>
       <div className="bg-background text-on-background min-h-screen paper-texture relative">
         <TopAppBar variant={variant} title={title} />
         <main className="pb-32 md:pb-24">

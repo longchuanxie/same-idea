@@ -6,21 +6,33 @@ import type { PaperType } from '@/types';
 
 export interface ReaderBottomBarProps {
   direction: 'vertical' | 'horizontal';
+  pageLayout: 'single' | 'double';
   paperModeEnabled: boolean;
   paperType: PaperType;
+  brightness: number;
+  colorTemperature: number;
   onDirectionChange: (dir: 'vertical' | 'horizontal') => void;
+  onPageLayoutChange: (layout: 'single' | 'double') => void;
   onPaperModeToggle: () => void;
   onPaperTypeChange: (type: PaperType) => void;
+  onBrightnessChange: (value: number) => void;
+  onColorTemperatureChange: (value: number) => void;
   onClose: () => void;
 }
 
 export const ReaderBottomBar: React.FC<ReaderBottomBarProps> = ({
   direction,
+  pageLayout,
   paperModeEnabled,
   paperType,
+  brightness,
+  colorTemperature,
   onDirectionChange,
+  onPageLayoutChange,
   onPaperModeToggle,
   onPaperTypeChange,
+  onBrightnessChange,
+  onColorTemperatureChange,
   onClose,
 }) => {
   const paperTypes = getAllPaperTypes();
@@ -70,6 +82,35 @@ export const ReaderBottomBar: React.FC<ReaderBottomBarProps> = ({
             </button>
           </div>
 
+          {direction === 'horizontal' && (
+            <div className="flex gap-3 mb-4">
+              <button
+                className={cn(
+                  'flex-1 flex flex-col items-center gap-2 py-3 rounded-xl border transition-colors',
+                  pageLayout === 'single'
+                    ? 'bg-primary text-on-primary border-primary'
+                    : 'bg-surface-container-lowest text-on-surface-variant border-outline-variant hover:bg-surface-variant'
+                )}
+                onClick={() => onPageLayoutChange('single')}
+              >
+                <span className="material-symbols-outlined text-[24px]">crop_portrait</span>
+                <span className="font-label text-label-sm">单页</span>
+              </button>
+              <button
+                className={cn(
+                  'flex-1 flex flex-col items-center gap-2 py-3 rounded-xl border transition-colors',
+                  pageLayout === 'double'
+                    ? 'bg-primary text-on-primary border-primary'
+                    : 'bg-surface-container-lowest text-on-surface-variant border-outline-variant hover:bg-surface-variant'
+                )}
+                onClick={() => onPageLayoutChange('double')}
+              >
+                <span className="material-symbols-outlined text-[24px]">auto_stories</span>
+                <span className="font-label text-label-sm">双页</span>
+              </button>
+            </div>
+          )}
+
           <div className="flex items-center justify-between py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant mb-4">
             <div className="flex items-center gap-3">
               <span className="material-symbols-outlined text-on-surface-variant">note</span>
@@ -82,7 +123,7 @@ export const ReaderBottomBar: React.FC<ReaderBottomBarProps> = ({
             </div>
             <button
               className={cn(
-                'relative inline-block w-11 h-6 rounded-full transition-colors duration-200',
+                'relative inline-block w-11 h-6 rounded-full toggle-spring',
                 paperModeEnabled ? 'bg-primary' : 'bg-surface-variant'
               )}
               onClick={onPaperModeToggle}
@@ -90,7 +131,7 @@ export const ReaderBottomBar: React.FC<ReaderBottomBarProps> = ({
             >
               <span
                 className={cn(
-                  'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-200 border',
+                  'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full toggle-thumb-spring border',
                   paperModeEnabled
                     ? 'translate-x-5 border-primary'
                     : 'border-outline-variant'
@@ -121,6 +162,43 @@ export const ReaderBottomBar: React.FC<ReaderBottomBarProps> = ({
               </div>
             </div>
           )}
+
+          <div className="py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-on-surface-variant text-[18px]">brightness_6</span>
+                <p className="font-label text-label-md text-on-surface">亮度</p>
+              </div>
+              <span className="font-label text-label-sm text-on-surface-variant">{brightness}%</span>
+            </div>
+            <input
+              type="range"
+              min={20}
+              max={100}
+              value={brightness}
+              onChange={(e) => onBrightnessChange(Number(e.target.value))}
+              className="w-full h-1.5 bg-surface-variant rounded-full appearance-none cursor-pointer accent-primary"
+            />
+          </div>
+
+          <div className="py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-on-surface-variant text-[18px]">thermostat</span>
+                <p className="font-label text-label-md text-on-surface">色温</p>
+              </div>
+              <span className="font-label text-label-sm text-on-surface-variant">{colorTemperature === 0 ? '冷光' : colorTemperature <= 50 ? '暖白' : '暖光'}</span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={colorTemperature}
+              onChange={(e) => onColorTemperatureChange(Number(e.target.value))}
+              className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-primary"
+              style={{ background: `linear-gradient(to right, #ffffff, #ffcc80)` }}
+            />
+          </div>
         </div>
       </div>
     </div>

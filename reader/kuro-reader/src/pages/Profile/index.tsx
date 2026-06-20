@@ -1,16 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useLibraryStore } from '@/stores/useLibraryStore';
-import { getStorageUsage } from '@/services/storageService';
+import { getStorageUsage } from '@/utils/storage';
 import { APP_CONFIG } from '@/constants/config';
 
 export const ProfilePage: React.FC = () => {
-  const { comics, loadComics } = useLibraryStore();
+  const { books, loadBooks } = useLibraryStore();
   const [storageInfo, setStorageInfo] = useState<{ used: number; quota: number }>({ used: 0, quota: 0 });
 
   useEffect(() => {
-    loadComics();
+    loadBooks();
     getStorageUsage().then(setStorageInfo);
-  }, [loadComics]);
+  }, [loadBooks]);
 
   const formatBytes = (bytes: number): string => {
     if (bytes === 0) return '0 B';
@@ -45,7 +45,7 @@ export const ProfilePage: React.FC = () => {
           <div className="absolute top-0 left-0 h-full bg-primary rounded-full transition-all duration-500 ease-out" style={{ width: `${usedPercent}%` }} />
         </div>
         <p className="font-body text-body-md text-on-surface-variant text-sm mt-1">
-          已导入 {comics.length} 本漫画
+          已导入 {books.length} 本书籍
         </p>
       </section>
 
@@ -62,9 +62,9 @@ export const ProfilePage: React.FC = () => {
         <a className="col-span-1 group border border-outline-variant bg-surface p-5 flex flex-col justify-between min-h-[140px] hover:bg-surface-container transition-colors duration-200 cursor-pointer">
           <div className="flex justify-between items-start w-full">
             <span className="material-symbols-outlined text-primary">auto_stories</span>
-            <span className="font-label text-label-md text-on-surface-variant">{comics.length}</span>
+            <span className="font-label text-label-md text-on-surface-variant">{books.length}</span>
           </div>
-          <h3 className="font-label text-label-md text-primary font-bold mt-4">我的漫画</h3>
+          <h3 className="font-label text-label-md text-primary font-bold mt-4">我的书籍</h3>
         </a>
         <a className="col-span-1 group border border-outline-variant bg-surface p-5 flex flex-col justify-between min-h-[140px] hover:bg-surface-container transition-colors duration-200 cursor-pointer">
           <div className="flex justify-between items-start w-full">

@@ -53,3 +53,30 @@ export function calculateLockUntil(failedAttempts: number, maxAttempts: number):
   }
   return undefined;
 }
+
+/** 对安全问题答案进行哈希（与手势密码使用相同的算法） */
+export async function hashSecurityAnswer(
+  answer: string
+): Promise<{ answerHash: string; answerSalt: string }> {
+  const salt = await generateSalt();
+  const encoder = new TextEncoder();
+  const dataBuffer = encoder.encode(answer + ':' + salt);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const answerHash = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+  return { answerHash, answerSalt: salt };
+}
+
+/** 验证安全问题答案 */
+export async function verifySecurityAnswer(
+  answer: string,
+  storedHash: string,
+  salt: string
+): Promise<boolean> {
+  const encoder = new TextEncoder();
+  const dataBuffer = encoder.encode(answer + ':' + salt);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const answerHash = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+  return timingSafeEqual(answerHash, storedHash);
+}
