@@ -55,7 +55,7 @@ const getReadingPercentage = (
 
 export const ReaderPage: React.FC = () => {
   const navigate = useNavigate();
-  const { comicId, chapterId } = useParams<{ comicId: string; chapterId?: string }>();
+  const { bookId, chapterId } = useParams<{ bookId: string; chapterId?: string }>();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isTogglingRef = useRef(false);
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
@@ -64,7 +64,7 @@ export const ReaderPage: React.FC = () => {
   const readingStartTimeRef = useRef<number>(0);
   const lastStatsRecordRef = useRef<number>(0);
   const progressRef = useRef({
-    comicId: '',
+    bookId: '',
     chapterId: '',
     currentPage: 1,
     pageScrollRatio: DEFAULT_PAGE_SCROLL_RATIO,
@@ -118,7 +118,7 @@ export const ReaderPage: React.FC = () => {
     fullscreenImageUrl,
     fullscreenPageIndex,
     isBottomBarVisible,
-    openComic,
+    openBook,
     openChapter,
     setPageLayout,
     toggleUi,
@@ -143,7 +143,7 @@ export const ReaderPage: React.FC = () => {
     totalPages,
     isActive: !isLoading,
   });
-  const { updateProgress, getComicById, toggleFavorite } = useLibraryStore();
+  const { updateProgress, getBookById, toggleFavorite } = useLibraryStore();
   const { addReadingSession } = useStatsStore();
   const { settings } = useAppStore();
   const readingDirection = settings.readingDirection;
@@ -169,7 +169,7 @@ export const ReaderPage: React.FC = () => {
     ? chapters[currentChapterIndex + 1]
     : null;
 
-  const comic = comicId ? getComicById(comicId) : undefined;
+  const book = bookId ? getBookById(bookId) : undefined;
   const totalImages = chapters.reduce((sum, ch) => sum + ch.pages.length, 0) || totalPages;
   const imagesBeforeCurrentChapter = chapters
     .slice(0, Math.max(0, currentChapterIndex))
@@ -262,8 +262,8 @@ export const ReaderPage: React.FC = () => {
   }, [isUiVisible]);
 
   useEffect(() => {
-    if (comicId) {
-      const progress = useLibraryStore.getState().readingProgress[comicId];
+    if (bookId) {
+      const progress = useLibraryStore.getState().readingProgress[bookId];
       initialScrollDoneRef.current = false;
       initialScrollRestoreKeyRef.current = '';
       initialPageScrollRatioRef.current = progress && (!chapterId || progress.chapterId === chapterId)
@@ -284,18 +284,18 @@ export const ReaderPage: React.FC = () => {
       if (progress?.pageLayout) {
         setPageLayout(progress.pageLayout);
       }
-      openComic(comicId, chapterId);
+      openBook(bookId, chapterId);
       readingStartTimeRef.current = Date.now();
       lastStatsRecordRef.current = Date.now();
     }
 
     const statsTimer = setInterval(() => {
-      if (comicId && lastStatsRecordRef.current > 0) {
+      if (bookId && lastStatsRecordRef.current > 0) {
         const now = Date.now();
         const elapsed = now - lastStatsRecordRef.current;
         if (elapsed >= MS_PER_MINUTE) {
           const minutes = Math.round(elapsed / MS_PER_MINUTE);
-          addReadingSession(comicId, minutes);
+          addReadingSession(bookId, minutes);
           lastStatsRecordRef.current = now;
         }
       }
@@ -303,18 +303,18 @@ export const ReaderPage: React.FC = () => {
 
     return () => {
       clearInterval(statsTimer);
-      if (readingStartTimeRef.current > 0 && comicId) {
+      if (readingStartTimeRef.current > 0 && bookId) {
         const now = Date.now();
         const elapsedSinceLastRecord = now - lastStatsRecordRef.current;
         if (elapsedSinceLastRecord >= MS_PER_MINUTE * 0.5) {
           const minutes = Math.max(1, Math.round(elapsedSinceLastRecord / MS_PER_MINUTE));
-          addReadingSession(comicId, minutes);
+          addReadingSession(bookId, minutes);
         }
       }
       const lastProgress = progressRef.current;
-      if (lastProgress.comicId && lastProgress.currentPage > 0 && lastProgress.totalPages > 0 && lastProgress.chapterId) {
-        updateProgress(lastProgress.comicId, {
-          comicId: lastProgress.comicId,
+      if (lastProgress.bookId && lastProgress.currentPage > 0 && lastProgress.totalPages > 0 && lastProgress.chapterId) {
+        updateProgress(lastProgress.bookId, {
+          bookId: lastProgress.bookId,
           chapterId: lastProgress.chapterId,
           page: lastProgress.currentPage,
           pageScrollRatio: lastProgress.pageScrollRatio,
@@ -329,10 +329,10 @@ export const ReaderPage: React.FC = () => {
       }
       closeReader();
     };
-  }, [comicId, chapterId, openComic, closeReader, addReadingSession, updateProgress, setDirection, setPageLayout]);
+  }, [bookId, chapterId, openBook, closeReader, addReadingSession, updateProgress, setDirection, setPageLayout]);
 
   useEffect(() => {
-    if (comicId && currentPage > 0 && totalPages > 0 && currentChapterId) {
+    if (bookId && currentPage > 0 && totalPages > 0 && currentChapterId) {
       const pageScrollRatio = direction === 'vertical' && !initialScrollDoneRef.current
         ? initialPageScrollRatioRef.current
         : getCurrentPageScrollRatio();
@@ -341,7 +341,7 @@ export const ReaderPage: React.FC = () => {
         : getCurrentChapterScrollRatio();
       const percentage = getReadingPercentage(globalPageIndex, totalImages, pageScrollRatio, direction);
       progressRef.current = {
-        comicId,
+        bookId,
         chapterId: currentChapterId,
         currentPage,
         pageScrollRatio,
@@ -353,8 +353,8 @@ export const ReaderPage: React.FC = () => {
         totalImages,
         percentage,
       };
-      updateProgress(comicId, {
-        comicId,
+      updateProgress(bookId, {
+        bookId,
         chapterId: currentChapterId,
         page: currentPage,
         pageScrollRatio,
@@ -368,7 +368,7 @@ export const ReaderPage: React.FC = () => {
       });
     }
   }, [
-    comicId,
+    bookId,
     currentChapterId,
     currentPage,
     totalPages,
@@ -394,14 +394,14 @@ export const ReaderPage: React.FC = () => {
     const updateVerticalProgress = () => {
       if (isPrependingVerticalScrollRef.current) return;
       const position = getCurrentVerticalReadingPosition();
-      if (!position || !comicId || !currentChapterId || totalPages === 0) return;
+      if (!position || !bookId || !currentChapterId || totalPages === 0) return;
 
       const verticalGlobalPageIndex = imagesBeforeCurrentChapter + position.page;
       const chapterScrollRatio = getCurrentChapterScrollRatio();
       const percentage = getReadingPercentage(verticalGlobalPageIndex, totalImages, position.pageScrollRatio, direction);
 
       progressRef.current = {
-        comicId,
+        bookId,
         chapterId: currentChapterId,
         currentPage: position.page,
         pageScrollRatio: position.pageScrollRatio,
@@ -421,9 +421,9 @@ export const ReaderPage: React.FC = () => {
       }
       progressSaveTimerRef.current = setTimeout(() => {
         const latestProgress = progressRef.current;
-        if (!latestProgress.comicId || !latestProgress.chapterId) return;
-        updateProgress(latestProgress.comicId, {
-          comicId: latestProgress.comicId,
+        if (!latestProgress.bookId || !latestProgress.chapterId) return;
+        updateProgress(latestProgress.bookId, {
+          bookId: latestProgress.bookId,
           chapterId: latestProgress.chapterId,
           page: latestProgress.currentPage,
           pageScrollRatio: latestProgress.pageScrollRatio,
@@ -449,7 +449,7 @@ export const ReaderPage: React.FC = () => {
       }
     };
   }, [
-    comicId,
+    bookId,
     currentChapterId,
     direction,
     isLoading,
@@ -503,7 +503,7 @@ export const ReaderPage: React.FC = () => {
   }, []);
 
   const saveVerticalProgressForPage = useCallback((page: number) => {
-    if (!comicId || !currentChapterId || totalPages === 0) return;
+    if (!bookId || !currentChapterId || totalPages === 0) return;
     const verticalGlobalPageIndex = imagesBeforeCurrentChapter + page;
     const percentage = getReadingPercentage(
       verticalGlobalPageIndex,
@@ -512,7 +512,7 @@ export const ReaderPage: React.FC = () => {
       'vertical'
     );
     const nextProgress = {
-      comicId,
+      bookId,
       chapterId: currentChapterId,
       currentPage: page,
       pageScrollRatio: DEFAULT_PAGE_SCROLL_RATIO,
@@ -527,8 +527,8 @@ export const ReaderPage: React.FC = () => {
 
     progressRef.current = nextProgress;
     setVerticalProgressPercent(percentage);
-    updateProgress(comicId, {
-      comicId,
+    updateProgress(bookId, {
+      bookId,
       chapterId: currentChapterId,
       page,
       pageScrollRatio: nextProgress.pageScrollRatio,
@@ -541,7 +541,7 @@ export const ReaderPage: React.FC = () => {
       totalImages,
     });
   }, [
-    comicId,
+    bookId,
     currentChapterId,
     getCurrentChapterScrollRatio,
     imagesBeforeCurrentChapter,
@@ -1047,7 +1047,7 @@ export const ReaderPage: React.FC = () => {
     if (direction !== 'vertical' || totalPages === 0 || isLoading) {
       return;
     }
-    const restoreKey = `${comicId ?? ''}:${currentChapterId ?? ''}:${totalPages}`;
+    const restoreKey = `${bookId ?? ''}:${currentChapterId ?? ''}:${totalPages}`;
     if (initialScrollRestoreKeyRef.current === restoreKey) {
       return;
     }
@@ -1199,7 +1199,7 @@ export const ReaderPage: React.FC = () => {
       setProgrammaticScroll(false);
     };
   }, [
-    comicId,
+    bookId,
     currentChapterId,
     direction,
     totalPages,
@@ -1290,7 +1290,7 @@ export const ReaderPage: React.FC = () => {
       <div className="bg-background text-on-background min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <span className="material-symbols-outlined text-on-surface-variant text-6xl">image_not_supported</span>
-          <p className="font-body text-body-md text-on-surface-variant">无法加载漫画页面</p>
+          <p className="font-body text-body-md text-on-surface-variant">无法加载页面</p>
           <button
             className="font-label text-label-md text-primary border border-outline-variant px-6 py-2 hover:bg-surface-variant transition-colors"
             onClick={() => navigate(-1)}
@@ -1502,15 +1502,15 @@ export const ReaderPage: React.FC = () => {
               </h1>
               <div className="flex items-center gap-1">
                 <button
-                  className={`${comic?.isFavorite ? 'text-primary' : 'text-on-surface-variant'} hover:text-primary transition-colors flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-variant/50`}
+                  className={`${book?.isFavorite ? 'text-primary' : 'text-on-surface-variant'} hover:text-primary transition-colors flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-variant/50`}
                   onClick={() => {
-                    if (comicId) toggleFavorite(comicId);
+                    if (bookId) toggleFavorite(bookId);
                   }}
                   data-ui-control
-                  aria-label={comic?.isFavorite ? '取消收藏' : '收藏'}
+                  aria-label={book?.isFavorite ? '取消收藏' : '收藏'}
                 >
-                  <span className="material-symbols-outlined text-headline-md" style={comic?.isFavorite ? { fontVariationSettings: "'FILL' 1" } : undefined}>
-                    {comic?.isFavorite ? 'bookmark' : 'bookmark_border'}
+                  <span className="material-symbols-outlined text-headline-md" style={book?.isFavorite ? { fontVariationSettings: "'FILL' 1" } : undefined}>
+                    {book?.isFavorite ? 'bookmark' : 'bookmark_border'}
                   </span>
                 </button>
                 <button

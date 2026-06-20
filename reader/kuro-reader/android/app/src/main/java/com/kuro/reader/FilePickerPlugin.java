@@ -6,7 +6,6 @@ import android.content.ContentResolver;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
-import android.os.Build;
 import android.provider.DocumentsContract;
 import android.provider.OpenableColumns;
 
@@ -39,10 +38,11 @@ public class FilePickerPlugin extends Plugin {
         boolean multiple = call.getBoolean("multiple", false);
         JSArray mimeTypes = call.getArray("mimeTypes", new JSArray());
 
+        cleanPickedFilesCache();
+
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
 
-        // Set mime types for archive and image files
         if (mimeTypes.length() > 0) {
             try {
                 String[] types = new String[mimeTypes.length()];
@@ -108,6 +108,8 @@ public class FilePickerPlugin extends Plugin {
 
     @PluginMethod
     public void pickFolder(PluginCall call) {
+        cleanPickedFilesCache();
+
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
         intent.addFlags(
             Intent.FLAG_GRANT_READ_URI_PERMISSION |
@@ -134,7 +136,6 @@ public class FilePickerPlugin extends Plugin {
                 return;
             }
 
-            // Take persistable permission
             try {
                 getContext().getContentResolver().takePersistableUriPermission(
                     treeUri,
@@ -181,11 +182,15 @@ public class FilePickerPlugin extends Plugin {
                 }
             }
 
-            // Copy file to app cache for easy access
-            String cachePath = copyToCache(resolver, uri, name);
+            String uniqueId = String.valueOf(Math.abs(uri.hashCode()));
+            String cachePath = copyToCache(resolver, uri, uniqueId, name);
+
+            if (cachePath == null) {
+                return null;
+            }
 
             JSObject fileInfo = new JSObject();
-            fileInfo.put("path", cachePath != null ? cachePath : uri.toString());
+            fileInfo.put("path", cachePath);
             fileInfo.put("name", name);
             fileInfo.put("mimeType", mimeType != null ? mimeType : "application/octet-stream");
             fileInfo.put("size", size);
@@ -195,14 +200,36 @@ public class FilePickerPlugin extends Plugin {
         }
     }
 
-    private String copyToCache(ContentResolver resolver, Uri uri, String fileName) {
+    private void cleanPickedFilesCache() {
+        File cacheDir = new File(getContext().getCacheDir(), "picked_files");
+        if (cacheDir.exists()) {
+            File[] files = cacheDir.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    file.delete();
+                }
+            }
+        }
+    }
+
+    private String sanitizeFileName(String fileName) {
+        if (fileName == null || fileName.isEmpty()) {
+            return "unknown_file";
+        }
+        return fileName.replaceAll("[/\\\\:*?\"<>|]", "_");
+    }
+
+    private String copyToCache(ContentResolver resolver, Uri uri, String uniqueId, String fileName) {
         try {
             File cacheDir = new File(getContext().getCacheDir(), "picked_files");
             if (!cacheDir.exists()) {
                 cacheDir.mkdirs();
             }
 
-            File outFile = new File(cacheDir, fileName);
+            String safeName = sanitizeFileName(fileName);
+            String uniqueName = uniqueId + "_" + safeName;
+            File outFile = new File(cacheDir, uniqueName);
+
             try (InputStream is = resolver.openInputStream(uri);
                  FileOutputStream fos = new FileOutputStream(outFile)) {
                 if (is == null) return null;
@@ -237,6 +264,12 @@ public class FilePickerPlugin extends Plugin {
         String docId = DocumentsContract.getTreeDocumentId(treeUri);
         Uri childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, docId);
 
+        collectFilesRecursive(resolver, treeUri, childrenUri, files);
+
+        return files;
+    }
+
+    private void collectFilesRecursive(ContentResolver resolver, Uri treeUri, Uri childrenUri, List<JSObject> files) {
         try (Cursor cursor = resolver.query(
                 childrenUri,
                 new String[]{
@@ -247,33 +280,37 @@ public class FilePickerPlugin extends Plugin {
                 },
                 null, null, null)) {
 
-            if (cursor != null) {
-                while (cursor.moveToNext()) {
-                    String documentId = cursor.getString(0);
-                    String name = cursor.getString(1);
-                    String mimeType = cursor.getString(2);
-                    long size = cursor.getLong(3);
+            if (cursor == null) return;
 
-                    // Skip directories
-                    if (DocumentsContract.Document.MIME_TYPE_DIR.equals(mimeType)) {
-                        continue;
-                    }
+            while (cursor.moveToNext()) {
+                String documentId = cursor.getString(0);
+                String name = cursor.getString(1);
+                String mimeType = cursor.getString(2);
+                long size = cursor.getLong(3);
 
-                    Uri fileUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, documentId);
-                    String cachePath = copyToCache(resolver, fileUri, name);
-
-                    JSObject fileInfo = new JSObject();
-                    fileInfo.put("path", cachePath != null ? cachePath : fileUri.toString());
-                    fileInfo.put("name", name);
-                    fileInfo.put("mimeType", mimeType);
-                    fileInfo.put("size", size);
-                    files.add(fileInfo);
+                if (DocumentsContract.Document.MIME_TYPE_DIR.equals(mimeType)) {
+                    Uri subChildrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, documentId);
+                    collectFilesRecursive(resolver, treeUri, subChildrenUri, files);
+                    continue;
                 }
+
+                Uri fileUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, documentId);
+                String uniqueId = String.valueOf(Math.abs(documentId.hashCode()));
+                String cachePath = copyToCache(resolver, fileUri, uniqueId, name);
+
+                if (cachePath == null) {
+                    continue;
+                }
+
+                JSObject fileInfo = new JSObject();
+                fileInfo.put("path", cachePath);
+                fileInfo.put("name", name);
+                fileInfo.put("mimeType", mimeType != null ? mimeType : "application/octet-stream");
+                fileInfo.put("size", size);
+                files.add(fileInfo);
             }
         } catch (Exception e) {
-            // Ignore errors
+            // Ignore errors for individual directories
         }
-
-        return files;
     }
 }

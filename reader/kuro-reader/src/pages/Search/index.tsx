@@ -1,41 +1,42 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLibraryStore } from '@/stores/useLibraryStore';
-import { ROUTES, comicDetailPath } from '@/constants/routes';
+import { ROUTES, bookDetailPath } from '@/constants/routes';
 import { cn } from '@/utils/cn';
+import { FormatBadge } from '@/components/atoms/FormatBadge';
 
 export const SearchPage: React.FC = () => {
   const navigate = useNavigate();
-  const { comics, coverUrls, tags, loadComics } = useLibraryStore();
+  const { books, coverUrls, tags, loadBooks } = useLibraryStore();
   const [query, setQuery] = useState('');
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
 
   useEffect(() => {
-    loadComics();
-  }, [loadComics]);
+    loadBooks();
+  }, [loadBooks]);
 
   const results = useMemo(() => {
     if (!query.trim() && !selectedTagId) return [];
     const q = query.toLowerCase().trim();
-    return comics.filter((c) => {
+    return books.filter((b) => {
       const matchesQuery = !q ||
-        c.title.toLowerCase().includes(q) ||
-        c.author.toLowerCase().includes(q) ||
-        c.genres.some((g) => g.toLowerCase().includes(q)) ||
-        (Array.isArray(c.tags) ? c.tags : []).some((tid) => {
+        b.title.toLowerCase().includes(q) ||
+        b.author.toLowerCase().includes(q) ||
+        b.genres.some((g) => g.toLowerCase().includes(q)) ||
+        (Array.isArray(b.tags) ? b.tags : []).some((tid) => {
           const tag = tags.find((t) => t.id === tid);
           return tag && tag.name.toLowerCase().includes(q);
         });
-      const matchesTag = !selectedTagId || (Array.isArray(c.tags) ? c.tags : []).includes(selectedTagId);
+      const matchesTag = !selectedTagId || (Array.isArray(b.tags) ? b.tags : []).includes(selectedTagId);
       return matchesQuery && matchesTag;
     });
-  }, [query, comics, tags, selectedTagId]);
+  }, [query, books, tags, selectedTagId]);
 
-  const recentComics = useMemo(() => {
-    return [...comics]
+  const recentBooks = useMemo(() => {
+    return [...books]
       .sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime())
       .slice(0, 6);
-  }, [comics]);
+  }, [books]);
 
   return (
     <div className="w-full max-w-max-width-content px-margin-mobile pt-8 flex flex-col gap-12">
@@ -87,7 +88,7 @@ export const SearchPage: React.FC = () => {
                 onClick={() => setSelectedTagId(selectedTagId === tag.id ? null : tag.id)}
               >
                 {tag.name}
-                <span className="ml-1 opacity-70">{tag.comicIds.length}</span>
+                <span className="ml-1 opacity-70">{tag.bookIds.length}</span>
               </button>
             ))}
           </div>
@@ -100,15 +101,15 @@ export const SearchPage: React.FC = () => {
             搜索结果 ({results.length})
           </h2>
           <div className="flex flex-col">
-            {results.map((comic) => (
+            {results.map((book) => (
               <article
-                key={comic.id}
+                key={book.id}
                 className="py-4 border-b border-surface-variant flex gap-4 items-center group cursor-pointer hover:pl-2 transition-all"
-                onClick={() => navigate(comicDetailPath(comic.id))}
+                onClick={() => navigate(bookDetailPath(book.id))}
               >
                 <div className="w-12 h-16 flex-shrink-0 border border-outline-variant bg-surface-container overflow-hidden">
-                  {coverUrls[comic.id] ? (
-                    <img src={coverUrls[comic.id]} alt={comic.title} className="w-full h-full object-cover" />
+                  {coverUrls[book.id] ? (
+                    <img src={coverUrls[book.id]} alt={book.title} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full bg-surface-variant flex items-center justify-center">
                       <span className="material-symbols-outlined text-on-surface-variant text-sm">menu_book</span>
@@ -116,16 +117,19 @@ export const SearchPage: React.FC = () => {
                   )}
                 </div>
                 <div className="flex flex-col flex-1 min-w-0">
-                  <span className="font-body text-body-lg text-primary group-hover:underline decoration-1 underline-offset-4 truncate">
-                    {comic.title}
-                  </span>
-                  {comic.author && (
-                    <span className="font-label text-label-sm text-on-surface-variant">{comic.author}</span>
+                  <div className="flex items-center gap-1.5">
+                    <FormatBadge format={book.format} />
+                    <span className="font-body text-body-lg text-primary group-hover:underline decoration-1 underline-offset-4 truncate">
+                      {book.title}
+                    </span>
+                  </div>
+                  {book.author && (
+                    <span className="font-label text-label-sm text-on-surface-variant">{book.author}</span>
                   )}
                 </div>
-                {comic.genres.length > 0 && (
+                {book.genres.length > 0 && (
                   <span className="font-label text-label-sm border border-outline-variant px-2 py-1 rounded text-secondary flex-shrink-0">
-                    {comic.genres[0]}
+                    {book.genres[0]}
                   </span>
                 )}
               </article>
@@ -137,28 +141,28 @@ export const SearchPage: React.FC = () => {
       {(query.trim() || selectedTagId) && results.length === 0 && (
         <section className="w-full flex flex-col items-center justify-center py-16 text-center">
           <span className="material-symbols-outlined text-on-surface-variant text-6xl mb-4">search_off</span>
-          <p className="font-body text-body-md text-on-surface-variant">未找到匹配的漫画</p>
-          <p className="font-label text-label-sm text-on-surface-variant mt-2">尝试其他关键词或先导入漫画</p>
+          <p className="font-body text-body-md text-on-surface-variant">未找到匹配的书籍</p>
+          <p className="font-label text-label-sm text-on-surface-variant mt-2">尝试其他关键词或先导入书籍</p>
         </section>
       )}
 
-      {!query.trim() && comics.length > 0 && (
+      {!query.trim() && books.length > 0 && (
         <section className="w-full flex flex-col gap-8">
           <div className="flex justify-between items-end">
             <h2 className="font-display text-display-lg-mobile text-primary">最近添加</h2>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
-            {recentComics.map((comic) => (
+            {recentBooks.map((book) => (
               <article
-                key={comic.id}
+                key={book.id}
                 className="group cursor-pointer flex flex-col"
-                onClick={() => navigate(comicDetailPath(comic.id))}
+                onClick={() => navigate(bookDetailPath(book.id))}
               >
                 <div className="border border-outline-variant bg-surface-container aspect-[2/3] overflow-hidden mb-3">
-                  {coverUrls[comic.id] ? (
+                  {coverUrls[book.id] ? (
                     <img
-                      src={coverUrls[comic.id]}
-                      alt={comic.title}
+                      src={coverUrls[book.id]}
+                      alt={book.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
                     />
                   ) : (
@@ -167,9 +171,12 @@ export const SearchPage: React.FC = () => {
                     </div>
                   )}
                 </div>
-                <h4 className="font-body text-body-lg text-primary leading-tight truncate">{comic.title}</h4>
+                <div className="flex items-center gap-1.5">
+                  <FormatBadge format={book.format} />
+                  <h4 className="font-body text-body-lg text-primary leading-tight truncate">{book.title}</h4>
+                </div>
                 <p className="font-label text-label-md text-on-surface-variant mt-1">
-                  {comic.author || (comic.status === 'completed' ? '已完结' : `${comic.totalChapters} 话`)}
+                  {book.author || (book.status === 'completed' ? '已完结' : `${book.totalChapters} 话`)}
                 </p>
               </article>
             ))}
@@ -177,11 +184,11 @@ export const SearchPage: React.FC = () => {
         </section>
       )}
 
-      {!query.trim() && comics.length === 0 && (
+      {!query.trim() && books.length === 0 && (
         <section className="w-full flex flex-col items-center justify-center py-16 text-center">
           <span className="material-symbols-outlined text-on-surface-variant text-6xl mb-4">auto_stories</span>
           <p className="font-body text-body-md text-on-surface-variant">书架为空</p>
-          <p className="font-label text-label-sm text-on-surface-variant mt-2">导入漫画后可在此搜索</p>
+          <p className="font-label text-label-sm text-on-surface-variant mt-2">导入书籍后可在此搜索</p>
           <button
             className="font-label text-label-md text-primary border border-outline-variant px-6 py-2 hover:bg-surface-variant transition-colors mt-4"
             onClick={() => navigate(ROUTES.IMPORT)}

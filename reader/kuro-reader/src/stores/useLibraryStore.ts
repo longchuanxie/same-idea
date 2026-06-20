@@ -1,11 +1,19 @@
 import { create } from 'zustand';
-import type { Comic, ReadingProgress, SubLibrary, Tag } from '@/types';
-import * as db from '@/services/storageService';
-import { parseArchiveFile, parseImageFiles, buildComicFromArchive } from '@/services/archiveParser';
+
 import { STORAGE_KEYS } from '@/constants/storage';
+import { ComicArchiveParser } from '@/services/parsers/comicArchiveParser';
+import { getParserForFile } from '@/services/parsers';
+import type { ParsedBook } from '@/services/parsers/types';
+import { bookRepo } from '@/services/storage/bookRepo';
+import { bookFileRepo } from '@/services/storage/bookFileRepo';
+import { pageRepo } from '@/services/storage/pageRepo';
+import { subLibraryRepo } from '@/services/storage/subLibraryRepo';
+import { tagRepo } from '@/services/storage/tagRepo';
+import type { Book, Chapter, ReadingProgress, SubLibrary, Tag } from '@/types';
+import { extractTitleFromFileName } from '@/utils/extractTitle';
 
 interface LibraryState {
-  comics: Comic[];
+  books: Book[];
   subLibraries: SubLibrary[];
   tags: Tag[];
   coverUrls: Record<string, string>;
@@ -18,36 +26,36 @@ interface LibraryState {
   batchImportCurrent: number;
   batchImportCurrentFile: string;
 
-  loadComics: () => Promise<void>;
-  importFile: (file: File) => Promise<Comic | null>;
-  importFolder: (files: File[], folderName: string) => Promise<Comic | null>;
+  loadBooks: () => Promise<void>;
+  importFile: (file: File) => Promise<Book | null>;
+  importFolder: (files: File[], folderName: string) => Promise<Book | null>;
   importArchivesAsSubLibrary: (files: File[], folderName: string) => Promise<SubLibrary | null>;
-  removeComic: (id: string) => Promise<void>;
-  updateProgress: (comicId: string, progress: ReadingProgress) => void;
+  removeBook: (id: string) => Promise<void>;
+  updateProgress: (bookId: string, progress: ReadingProgress) => void;
   toggleFavorite: (id: string) => Promise<void>;
   batchDelete: (ids: string[]) => Promise<void>;
   batchMarkAsRead: (ids: string[]) => void;
-  updateComic: (id: string, updates: Partial<Pick<Comic, 'title' | 'author' | 'description' | 'status' | 'tags'>>) => Promise<void>;
-  getContinueReading: () => Comic[];
-  removeContinueReading: (comicId: string) => void;
-  getRecentlyRead: () => Comic[];
-  getFavorites: () => Comic[];
-  getComicsByTag: (tagId: string) => Comic[];
+  updateBook: (id: string, updates: Partial<Pick<Book, 'title' | 'author' | 'description' | 'status' | 'tags'>>) => Promise<void>;
+  getContinueReading: () => Book[];
+  removeContinueReading: (bookId: string) => void;
+  getRecentlyRead: () => Book[];
+  getFavorites: () => Book[];
+  getBooksByTag: (tagId: string) => Book[];
 
-  createSubLibrary: (name: string, comicIds?: string[]) => Promise<SubLibrary>;
+  createSubLibrary: (name: string, bookIds?: string[]) => Promise<SubLibrary>;
   renameSubLibrary: (id: string, name: string) => Promise<void>;
   deleteSubLibrary: (id: string) => Promise<void>;
-  addComicsToSubLibrary: (subLibraryId: string, comicIds: string[]) => Promise<void>;
-  removeComicsFromSubLibrary: (subLibraryId: string, comicIds: string[]) => Promise<void>;
-  getSubLibraryComics: (subLibraryId: string) => Comic[];
+  addBooksToSubLibrary: (subLibraryId: string, bookIds: string[]) => Promise<void>;
+  removeBooksFromSubLibrary: (subLibraryId: string, bookIds: string[]) => Promise<void>;
+  getSubLibraryBooks: (subLibraryId: string) => Book[];
 
   createTag: (name: string, color?: string) => Promise<Tag>;
   updateTag: (id: string, updates: Partial<Pick<Tag, 'name' | 'color'>>) => Promise<void>;
   deleteTag: (id: string) => Promise<void>;
-  addTagToComic: (comicId: string, tagId: string) => Promise<void>;
-  removeTagFromComic: (comicId: string, tagId: string) => Promise<void>;
-  getTagsForComic: (comicId: string) => Tag[];
-  getComicById: (comicId: string) => Comic | undefined;
+  addTagToBook: (bookId: string, tagId: string) => Promise<void>;
+  removeTagFromBook: (bookId: string, tagId: string) => Promise<void>;
+  getTagsForBook: (bookId: string) => Tag[];
+  getBookById: (bookId: string) => Book | undefined;
 }
 
 const TAG_COLORS = [
@@ -61,8 +69,81 @@ function getRandomColor(): string {
   return TAG_COLORS[Math.floor(Math.random() * TAG_COLORS.length)];
 }
 
+const STREAMING_THRESHOLD_MB = 50;
+const BYTES_PER_MB = 1024 * 1024;
+
+/** 将 ParsedBook 转换为 Book + Chapter 实体 */
+function buildBookFromParsed(parsed: ParsedBook, bookId: string): { book: Book; chapter: Chapter } {
+  const chapterId = `${bookId}-ch1`;
+
+  const book: Book = {
+    id: bookId,
+    title: parsed.title,
+    author: '',
+    cover: '',
+    genres: [],
+    tags: [],
+    description: '',
+    status: 'completed',
+    totalChapters: 1,
+    chapters: [],
+    addedAt: new Date(),
+    isFavorite: false,
+    format: parsed.format,
+  };
+
+  let pages: string[] = [];
+  let pageRefs = parsed.pageRefs;
+
+  if (parsed.format === 'comic') {
+    pages = parsed.imagePageNames;
+  }
+
+  // 文本格式：支持多章节
+  if (parsed.format === 'text') {
+    // 提取作者（如果解析器提供了）
+    if (parsed.author) {
+      book.author = parsed.author;
+    }
+
+    // 如果解析器拆分了章节，为每个章节创建 Chapter 实体
+    if (parsed.chapters && parsed.chapters.length > 0) {
+      book.totalChapters = parsed.chapters.length;
+      const chapters: Chapter[] = parsed.chapters.map((ch, idx) => ({
+        id: `${bookId}-ch${idx + 1}`,
+        bookId,
+        number: idx + 1,
+        title: ch.title || `第${idx + 1}章`,
+        pages: [],
+        status: 'unread',
+        pageRefs: [{ kind: 'text-content' as const }],
+      }));
+      book.chapters = chapters;
+    } else {
+      // 未拆分章节，使用默认单章节
+      pageRefs = parsed.pageRefs || [{ kind: 'text-content' as const }];
+    }
+  }
+
+  // 如果还没有章节，创建默认章节
+  if (book.chapters.length === 0) {
+    const chapter: Chapter = {
+      id: chapterId,
+      bookId,
+      number: 1,
+      title: parsed.title,
+      pages,
+      status: 'unread',
+      pageRefs,
+    };
+    book.chapters = [chapter];
+  }
+
+  return { book, chapter: book.chapters[0] };
+}
+
 export const useLibraryStore = create<LibraryState>()((set, get) => ({
-  comics: [],
+  books: [],
   subLibraries: [],
   tags: [],
   coverUrls: {},
@@ -75,31 +156,28 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
   batchImportCurrent: 0,
   batchImportCurrentFile: '',
 
-  loadComics: async () => {
+  loadBooks: async () => {
     set({ isLoading: true, error: null });
     try {
-      const rawComics = await db.getAllComics();
-      const comics = (rawComics as unknown as Comic[]).map((c) => ({
-        ...c,
-        tags: Array.isArray(c.tags) ? c.tags : [],
+      const books = await bookRepo.getAll();
+      const booksWithTags = books.map((b) => ({
+        ...b,
+        tags: Array.isArray(b.tags) ? b.tags : [],
       }));
       const coverUrls: Record<string, string> = {};
-      for (const comic of comics) {
-        const blob = await db.getCover(comic.id);
+      for (const book of booksWithTags) {
+        const blob = await bookRepo.getCover(book.id);
         if (blob) {
-          coverUrls[comic.id] = URL.createObjectURL(blob);
+          coverUrls[book.id] = URL.createObjectURL(blob);
         }
       }
       const stored = localStorage.getItem(STORAGE_KEYS.PROGRESS);
       const readingProgress = stored ? JSON.parse(stored) : {};
 
-      const rawSubLibraries = await db.getAllSubLibraries();
-      const subLibraries = rawSubLibraries as unknown as SubLibrary[];
+      const subLibraries = await subLibraryRepo.getAll();
+      const tags = await tagRepo.getAll();
 
-      const rawTags = await db.getAllTags();
-      const tags = rawTags as unknown as Tag[];
-
-      set({ comics, coverUrls, readingProgress, subLibraries, tags, isLoading: false });
+      set({ books: booksWithTags, coverUrls, readingProgress, subLibraries, tags, isLoading: false });
     } catch (e) {
       set({ error: (e as Error).message, isLoading: false });
     }
@@ -108,37 +186,85 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
   importFile: async (file: File) => {
     set({ isImporting: true, importProgress: 0, error: null });
     try {
+      set({ importProgress: 10 });
+
+      // 检查是否已存在相同标题的书籍（避免重复导入）
+      const fileTitle = extractTitleFromFileName(file.name);
+      const existingBook = get().books.find(b => b.title === fileTitle || b.title === file.name);
+      if (existingBook) {
+        set({ 
+          error: `「${existingBook.title}」已存在于书架中`, 
+          isImporting: false, 
+          importProgress: 0 
+        });
+        return null;
+      }
+
+      // 根据文件类型选择合适的 parser
+      const parser = getParserForFile(file);
+      if (!parser) {
+        set({ error: '不支持的文件格式', isImporting: false, importProgress: 0 });
+        return null;
+      }
+
       set({ importProgress: 20 });
-      const parsed = await parseArchiveFile(file);
+
+      const bookId = `book-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+      const chapterId = `${bookId}-ch1`;
+
+      const useStreaming = file.size > STREAMING_THRESHOLD_MB * BYTES_PER_MB;
+
+      let parsed: ParsedBook;
+
+      if (useStreaming && parser.parseStreaming) {
+        parsed = await parser.parseStreaming(file, (pct) => {
+          set({ importProgress: 20 + Math.round(pct * 0.4) });
+        });
+      } else {
+        parsed = await parser.parse(file, (pct) => {
+          set({ importProgress: 20 + Math.round(pct * 0.4) });
+        });
+      }
+
       set({ importProgress: 60 });
 
-      const fileId = `comic-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-      const { comic, chapter } = buildComicFromArchive(parsed, fileId);
-
-      if (parsed.coverBlob) {
-        await db.saveCover(fileId, parsed.coverBlob);
+      // 再次检查解析后的实际标题是否已存在（如 EPUB 内置标题）
+      const existingByParsedTitle = get().books.find(b => b.title === parsed.title);
+      if (existingByParsedTitle) {
+        set({ 
+          error: `「${parsed.title}」已存在于书架中`, 
+          isImporting: false, 
+          importProgress: 0 
+        });
+        return null;
       }
 
-      const chapterId = chapter.id;
-      await db.saveAllPages(fileId, chapterId, parsed.pages);
+      const { book } = buildBookFromParsed(parsed, bookId);
+
+      // Save cover
+      await bookRepo.saveCover(bookId, parsed.coverBlob);
+
+      // Save format-specific content
+      if (parsed.format === 'comic') {
+        await pageRepo.saveAllPages(bookId, chapterId, parsed.imagePages);
+      } else if (parsed.format === 'text') {
+        await bookFileRepo.save(bookId, parsed.textFile);
+      }
+
       set({ importProgress: 80 });
 
-      const comicData = { ...comic, tags: [] } as unknown as Record<string, unknown>;
-      await db.saveComic(comicData);
+      await bookRepo.save({ ...book, tags: [] });
 
-      let coverUrl = '';
-      if (parsed.coverBlob) {
-        coverUrl = URL.createObjectURL(parsed.coverBlob);
-      }
+      const coverUrl = URL.createObjectURL(parsed.coverBlob);
 
       set((state) => ({
-        comics: [...state.comics, { ...comic, tags: [] }],
-        coverUrls: { ...state.coverUrls, [fileId]: coverUrl },
+        books: [...state.books, { ...book, tags: [] }],
+        coverUrls: { ...state.coverUrls, [bookId]: coverUrl },
         isImporting: false,
         importProgress: 100,
       }));
 
-      return { ...comic, tags: [] };
+      return { ...book, tags: [] };
     } catch (e) {
       set({ error: (e as Error).message, isImporting: false, importProgress: 0 });
       return null;
@@ -149,42 +275,47 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     set({ isImporting: true, importProgress: 0, error: null });
     try {
       set({ importProgress: 20 });
-      const parsed = await parseImageFiles(files, folderName);
 
-      if (parsed.pages.length === 0) {
+      // 检查是否已存在相同名称的书籍（避免重复导入）
+      const existingBook = get().books.find(b => b.title === folderName);
+      if (existingBook) {
+        set({ 
+          error: `「${folderName}」已存在于书架中`, 
+          isImporting: false, 
+          importProgress: 0 
+        });
+        return null;
+      }
+
+      const parsed = await new ComicArchiveParser().parseImageFolder(files, folderName);
+
+      if (parsed.format !== 'comic' || parsed.imagePages.length === 0) {
         set({ error: '该文件夹中没有找到图片文件', isImporting: false, importProgress: 0 });
         return null;
       }
 
       set({ importProgress: 50 });
 
-      const fileId = `comic-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-      const { comic, chapter } = buildComicFromArchive(parsed, fileId);
+      const bookId = `book-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+      const { book, chapter } = buildBookFromParsed(parsed, bookId);
 
-      if (parsed.coverBlob) {
-        await db.saveCover(fileId, parsed.coverBlob);
-      }
+      await bookRepo.saveCover(bookId, parsed.coverBlob);
+      await pageRepo.saveAllPages(bookId, chapter.id, parsed.imagePages);
 
-      const chapterId = chapter.id;
-      await db.saveAllPages(fileId, chapterId, parsed.pages);
       set({ importProgress: 80 });
 
-      const comicData = { ...comic, tags: [] } as unknown as Record<string, unknown>;
-      await db.saveComic(comicData);
+      await bookRepo.save({ ...book, tags: [] });
 
-      let coverUrl = '';
-      if (parsed.coverBlob) {
-        coverUrl = URL.createObjectURL(parsed.coverBlob);
-      }
+      const coverUrl = URL.createObjectURL(parsed.coverBlob);
 
       set((state) => ({
-        comics: [...state.comics, { ...comic, tags: [] }],
-        coverUrls: { ...state.coverUrls, [fileId]: coverUrl },
+        books: [...state.books, { ...book, tags: [] }],
+        coverUrls: { ...state.coverUrls, [bookId]: coverUrl },
         isImporting: false,
         importProgress: 100,
       }));
 
-      return { ...comic, tags: [] };
+      return { ...book, tags: [] };
     } catch (e) {
       set({ error: (e as Error).message, isImporting: false, importProgress: 0 });
       return null;
@@ -201,11 +332,29 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
       batchImportCurrentFile: '',
     });
 
-    const importedComicIds: string[] = [];
+    const importedBookIds: string[] = [];
     const importedCovers: Record<string, string> = {};
-    const importedComics: Comic[] = [];
+    const importedBooks: Book[] = [];
+    const skippedDuplicates: string[] = [];
 
     try {
+      // 检查是否已存在同名子书库（避免重复导入）
+      const existingSubLib = get().subLibraries.find(s => s.name === folderName);
+      if (existingSubLib) {
+        set({ 
+          error: `子书库「${folderName}」已存在`, 
+          isImporting: false, 
+          importProgress: 0,
+          batchImportTotal: 0,
+          batchImportCurrent: 0,
+          batchImportCurrentFile: '',
+        });
+        return null;
+      }
+
+      // 获取现有书籍标题用于去重
+      const existingTitles = new Set(get().books.map(b => b.title));
+
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         set({
@@ -215,36 +364,60 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
         });
 
         try {
-          const parsed = await parseArchiveFile(file);
-          if (parsed.pages.length === 0) continue;
-
-          const fileId = `comic-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-          const { comic, chapter } = buildComicFromArchive(parsed, fileId);
-
-          if (parsed.coverBlob) {
-            await db.saveCover(fileId, parsed.coverBlob);
+          // 检查文件名提取标题是否已存在
+          const title = extractTitleFromFileName(file.name);
+          if (existingTitles.has(title)) {
+            skippedDuplicates.push(file.name);
+            continue;
           }
 
-          const chapterId = chapter.id;
-          await db.saveAllPages(fileId, chapterId, parsed.pages);
+          const bookId = `book-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+          const chapterId = `${bookId}-ch1`;
 
-          const comicData = { ...comic, tags: [] } as unknown as Record<string, unknown>;
-          await db.saveComic(comicData);
+          // 根据文件类型选择合适的 parser
+          const parser = getParserForFile(file);
+          if (!parser) continue;
 
-          importedComicIds.push(fileId);
-          importedComics.push({ ...comic, tags: [] });
+          const useStreaming = file.size > STREAMING_THRESHOLD_MB * BYTES_PER_MB;
 
-          if (parsed.coverBlob) {
-            importedCovers[fileId] = URL.createObjectURL(parsed.coverBlob);
+          let parsed: ParsedBook;
+
+          if (useStreaming && parser.parseStreaming) {
+            parsed = await parser.parseStreaming(file, () => {});
+          } else {
+            parsed = await parser.parse(file);
           }
+
+          // Skip if no content
+          if (parsed.format === 'comic' && parsed.imagePages.length === 0) continue;
+
+          const { book } = buildBookFromParsed(parsed, bookId);
+
+          await bookRepo.saveCover(bookId, parsed.coverBlob);
+
+          if (parsed.format === 'comic') {
+            await pageRepo.saveAllPages(bookId, chapterId, parsed.imagePages);
+          } else if (parsed.format === 'text') {
+            await bookFileRepo.save(bookId, parsed.textFile);
+          }
+
+          await bookRepo.save({ ...book, tags: [] });
+
+          importedBookIds.push(bookId);
+          importedBooks.push({ ...book, tags: [] });
+          importedCovers[bookId] = URL.createObjectURL(parsed.coverBlob);
+          existingTitles.add(book.title);
         } catch {
           continue;
         }
       }
 
-      if (importedComicIds.length === 0) {
+      if (importedBookIds.length === 0) {
+        const msg = skippedDuplicates.length > 0
+          ? `所有文件均已存在（跳过了 ${skippedDuplicates.length} 个重复文件）`
+          : '所有压缩包解析失败';
         set({
-          error: '所有压缩包解析失败',
+          error: msg,
           isImporting: false,
           importProgress: 0,
           batchImportTotal: 0,
@@ -260,14 +433,14 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
       const subLibrary: SubLibrary = {
         id: `sublib-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
         name: folderName,
-        comicIds: importedComicIds,
+        bookIds: importedBookIds,
         createdAt: now,
         updatedAt: now,
       };
-      await db.saveSubLibrary(subLibrary as unknown as Record<string, unknown>);
+      await subLibraryRepo.save(subLibrary);
 
       set((state) => ({
-        comics: [...state.comics, ...importedComics],
+        books: [...state.books, ...importedBooks],
         coverUrls: { ...state.coverUrls, ...importedCovers },
         subLibraries: [...state.subLibraries, subLibrary],
         isImporting: false,
@@ -291,18 +464,24 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     }
   },
 
-  removeComic: async (id: string) => {
+  removeBook: async (id: string) => {
     try {
-      await db.deleteComicFully(id);
+      await bookRepo.deleteFully(id);
       const coverUrl = get().coverUrls[id];
       if (coverUrl) URL.revokeObjectURL(coverUrl);
       const { [id]: _, ...restCoverUrls } = get().coverUrls;
+      // 持久化受影响的标签（移除已删除书籍的引用）
+      const affectedTags = get().tags.filter((t) => t.bookIds.includes(id));
+      for (const tag of affectedTags) {
+        const updatedTag = { ...tag, bookIds: tag.bookIds.filter((bid) => bid !== id) };
+        await tagRepo.save(updatedTag);
+      }
       set((state) => ({
-        comics: state.comics.filter((c) => c.id !== id),
+        books: state.books.filter((b) => b.id !== id),
         coverUrls: restCoverUrls as Record<string, string>,
         tags: state.tags.map((t) => ({
           ...t,
-          comicIds: t.comicIds.filter((cid) => cid !== id),
+          bookIds: t.bookIds.filter((bid) => bid !== id),
         })),
       }));
     } catch (e) {
@@ -310,117 +489,128 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     }
   },
 
-  updateProgress: (comicId, progress) => {
+  updateProgress: (bookId, progress) => {
     set((state) => {
-      const readingProgress = { ...state.readingProgress, [comicId]: progress };
+      const readingProgress = { ...state.readingProgress, [bookId]: progress };
       localStorage.setItem(STORAGE_KEYS.PROGRESS, JSON.stringify(readingProgress));
       return { readingProgress };
     });
-    set((state) => ({
-      comics: state.comics.map((c) =>
-        c.id === comicId ? { ...c, lastReadAt: new Date() } : c
-      ),
-    }));
+    const book = get().books.find((b) => b.id === bookId);
+    if (book) {
+      const updatedBook = { ...book, lastReadAt: new Date() };
+      bookRepo.save(updatedBook);
+      set((state) => ({
+        books: state.books.map((b) =>
+          b.id === bookId ? updatedBook : b
+        ),
+      }));
+    }
   },
 
   toggleFavorite: async (id: string) => {
-    const comic = get().comics.find((c) => c.id === id);
-    if (!comic) return;
-    const updated = { ...comic, isFavorite: !comic.isFavorite };
-    await db.saveComic(updated as unknown as Record<string, unknown>);
+    const book = get().books.find((b) => b.id === id);
+    if (!book) return;
+    const updated = { ...book, isFavorite: !book.isFavorite };
+    await bookRepo.save(updated);
     set((state) => ({
-      comics: state.comics.map((c) => (c.id === id ? updated : c)),
+      books: state.books.map((b) => (b.id === id ? updated : b)),
     }));
   },
 
   batchDelete: async (ids: string[]) => {
     for (const id of ids) {
-      await db.deleteComicFully(id);
+      await bookRepo.deleteFully(id);
       const coverUrl = get().coverUrls[id];
       if (coverUrl) URL.revokeObjectURL(coverUrl);
     }
+    // 持久化受影响的标签（移除已删除书籍的引用）
+    const affectedTags = get().tags.filter((t) => t.bookIds.some((bid) => ids.includes(bid)));
+    for (const tag of affectedTags) {
+      const updatedTag = { ...tag, bookIds: tag.bookIds.filter((bid) => !ids.includes(bid)) };
+      await tagRepo.save(updatedTag);
+    }
     set((state) => ({
-      comics: state.comics.filter((c) => !ids.includes(c.id)),
+      books: state.books.filter((b) => !ids.includes(b.id)),
       coverUrls: Object.fromEntries(
         Object.entries(state.coverUrls).filter(([k]) => !ids.includes(k))
       ),
       tags: state.tags.map((t) => ({
         ...t,
-        comicIds: t.comicIds.filter((cid) => !ids.includes(cid)),
+        bookIds: t.bookIds.filter((bid) => !ids.includes(bid)),
       })),
     }));
   },
 
   batchMarkAsRead: (ids: string[]) => {
     set((state) => ({
-      comics: state.comics.map((c) =>
-        ids.includes(c.id)
+      books: state.books.map((b) =>
+        ids.includes(b.id)
           ? {
-              ...c,
-              chapters: c.chapters.map((ch) => ({ ...ch, status: 'read' as const })),
+              ...b,
+              chapters: b.chapters.map((ch) => ({ ...ch, status: 'read' as const })),
             }
-          : c
+          : b
       ),
     }));
   },
 
-  updateComic: async (id, updates) => {
-    const comic = get().comics.find((c) => c.id === id);
-    if (!comic) return;
-    const updated = { ...comic, ...updates };
-    await db.saveComic(updated as unknown as Record<string, unknown>);
+  updateBook: async (id, updates) => {
+    const book = get().books.find((b) => b.id === id);
+    if (!book) return;
+    const updated = { ...book, ...updates };
+    await bookRepo.save(updated);
     set((state) => ({
-      comics: state.comics.map((c) => (c.id === id ? updated : c)),
+      books: state.books.map((b) => (b.id === id ? updated : b)),
     }));
   },
 
   getContinueReading: () => {
-    const { comics, readingProgress } = get();
-    return comics
-      .filter((c) => readingProgress[c.id] && readingProgress[c.id].percentage < 100)
+    const { books, readingProgress } = get();
+    return books
+      .filter((b) => readingProgress[b.id] && readingProgress[b.id].percentage < 100)
       .sort((a, b) => (b.lastReadAt ? new Date(b.lastReadAt).getTime() : 0) - (a.lastReadAt ? new Date(a.lastReadAt).getTime() : 0));
   },
 
-  removeContinueReading: (comicId: string) => {
+  removeContinueReading: (bookId: string) => {
     const { readingProgress } = get();
-    if (!readingProgress[comicId]) return;
-    const { [comicId]: _, ...rest } = readingProgress;
+    if (!readingProgress[bookId]) return;
+    const { [bookId]: _, ...rest } = readingProgress;
     localStorage.setItem(STORAGE_KEYS.PROGRESS, JSON.stringify(rest));
     set({ readingProgress: rest as Record<string, ReadingProgress> });
   },
 
   getRecentlyRead: () => {
-    const { comics } = get();
-    return comics
-      .filter((c) => c.lastReadAt)
+    const { books } = get();
+    return books
+      .filter((b) => b.lastReadAt)
       .sort((a, b) => new Date(b.lastReadAt!).getTime() - new Date(a.lastReadAt!).getTime())
       .slice(0, 6);
   },
 
   getFavorites: () => {
-    const { comics } = get();
-    return comics.filter((c) => c.isFavorite);
+    const { books } = get();
+    return books.filter((b) => b.isFavorite);
   },
 
-  getComicsByTag: (tagId: string) => {
-    const { comics, tags } = get();
+  getBooksByTag: (tagId: string) => {
+    const { books, tags } = get();
     const tag = tags.find((t) => t.id === tagId);
     if (!tag) return [];
-    return tag.comicIds
-      .map((id) => comics.find((c) => c.id === id))
-      .filter((c): c is Comic => c !== undefined);
+    return tag.bookIds
+      .map((id) => books.find((b) => b.id === id))
+      .filter((b): b is Book => b !== undefined);
   },
 
-  createSubLibrary: async (name: string, comicIds: string[] = []) => {
+  createSubLibrary: async (name: string, bookIds: string[] = []) => {
     const now = new Date();
     const subLibrary: SubLibrary = {
       id: `sublib-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
       name,
-      comicIds,
+      bookIds,
       createdAt: now,
       updatedAt: now,
     };
-    await db.saveSubLibrary(subLibrary as unknown as Record<string, unknown>);
+    await subLibraryRepo.save(subLibrary);
     set((state) => ({
       subLibraries: [...state.subLibraries, subLibrary],
     }));
@@ -431,48 +621,48 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     const subLibrary = get().subLibraries.find((s) => s.id === id);
     if (!subLibrary) return;
     const updated = { ...subLibrary, name, updatedAt: new Date() };
-    await db.saveSubLibrary(updated as unknown as Record<string, unknown>);
+    await subLibraryRepo.save(updated);
     set((state) => ({
       subLibraries: state.subLibraries.map((s) => (s.id === id ? updated : s)),
     }));
   },
 
   deleteSubLibrary: async (id: string) => {
-    await db.deleteSubLibrary(id);
+    await subLibraryRepo.delete(id);
     set((state) => ({
       subLibraries: state.subLibraries.filter((s) => s.id !== id),
     }));
   },
 
-  addComicsToSubLibrary: async (subLibraryId: string, comicIds: string[]) => {
+  addBooksToSubLibrary: async (subLibraryId: string, bookIds: string[]) => {
     const subLibrary = get().subLibraries.find((s) => s.id === subLibraryId);
     if (!subLibrary) return;
-    const mergedIds = [...new Set([...subLibrary.comicIds, ...comicIds])];
-    const updated = { ...subLibrary, comicIds: mergedIds, updatedAt: new Date() };
-    await db.saveSubLibrary(updated as unknown as Record<string, unknown>);
+    const mergedIds = [...new Set([...subLibrary.bookIds, ...bookIds])];
+    const updated = { ...subLibrary, bookIds: mergedIds, updatedAt: new Date() };
+    await subLibraryRepo.save(updated);
     set((state) => ({
       subLibraries: state.subLibraries.map((s) => (s.id === subLibraryId ? updated : s)),
     }));
   },
 
-  removeComicsFromSubLibrary: async (subLibraryId: string, comicIds: string[]) => {
+  removeBooksFromSubLibrary: async (subLibraryId: string, bookIds: string[]) => {
     const subLibrary = get().subLibraries.find((s) => s.id === subLibraryId);
     if (!subLibrary) return;
-    const filteredIds = subLibrary.comicIds.filter((id) => !comicIds.includes(id));
-    const updated = { ...subLibrary, comicIds: filteredIds, updatedAt: new Date() };
-    await db.saveSubLibrary(updated as unknown as Record<string, unknown>);
+    const filteredIds = subLibrary.bookIds.filter((id) => !bookIds.includes(id));
+    const updated = { ...subLibrary, bookIds: filteredIds, updatedAt: new Date() };
+    await subLibraryRepo.save(updated);
     set((state) => ({
       subLibraries: state.subLibraries.map((s) => (s.id === subLibraryId ? updated : s)),
     }));
   },
 
-  getSubLibraryComics: (subLibraryId: string) => {
-    const { comics, subLibraries } = get();
+  getSubLibraryBooks: (subLibraryId: string) => {
+    const { books, subLibraries } = get();
     const subLibrary = subLibraries.find((s) => s.id === subLibraryId);
     if (!subLibrary) return [];
-    return subLibrary.comicIds
-      .map((id) => comics.find((c) => c.id === id))
-      .filter((c): c is Comic => c !== undefined);
+    return subLibrary.bookIds
+      .map((id) => books.find((b) => b.id === id))
+      .filter((b): b is Book => b !== undefined);
   },
 
   createTag: async (name: string, color?: string) => {
@@ -480,10 +670,10 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
       id: `tag-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
       name: name.trim(),
       color: color || getRandomColor(),
-      comicIds: [],
+      bookIds: [],
       createdAt: new Date(),
     };
-    await db.saveTag(tag as unknown as Record<string, unknown>);
+    await tagRepo.save(tag);
     set((state) => ({
       tags: [...state.tags, tag],
     }));
@@ -494,68 +684,79 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     const tag = get().tags.find((t) => t.id === id);
     if (!tag) return;
     const updated = { ...tag, ...updates };
-    await db.saveTag(updated as unknown as Record<string, unknown>);
+    await tagRepo.save(updated);
     set((state) => ({
       tags: state.tags.map((t) => (t.id === id ? updated : t)),
     }));
   },
 
   deleteTag: async (id: string) => {
-    await db.deleteTag(id);
+    await tagRepo.delete(id);
+    // 持久化受影响的书籍（移除已删除标签的引用）
+    const affectedBooks = get().books.filter(
+      (b) => Array.isArray(b.tags) && b.tags.includes(id)
+    );
+    for (const book of affectedBooks) {
+      const updatedBook = {
+        ...book,
+        tags: book.tags.filter((tid) => tid !== id),
+      };
+      await bookRepo.save(updatedBook);
+    }
     set((state) => ({
       tags: state.tags.filter((t) => t.id !== id),
-      comics: state.comics.map((c) => ({
-        ...c,
-        tags: Array.isArray(c.tags) ? c.tags.filter((tid) => tid !== id) : [],
+      books: state.books.map((b) => ({
+        ...b,
+        tags: Array.isArray(b.tags) ? b.tags.filter((tid) => tid !== id) : [],
       })),
     }));
   },
 
-  addTagToComic: async (comicId: string, tagId: string) => {
-    const { comics, tags } = get();
-    const comic = comics.find((c) => c.id === comicId);
+  addTagToBook: async (bookId: string, tagId: string) => {
+    const { books, tags } = get();
+    const book = books.find((b) => b.id === bookId);
     const tag = tags.find((t) => t.id === tagId);
-    if (!comic || !tag) return;
+    if (!book || !tag) return;
 
-    const comicTags = Array.isArray(comic.tags) ? comic.tags : [];
-    const updatedComic = { ...comic, tags: [...new Set([...comicTags, tagId])] };
-    const updatedTag = { ...tag, comicIds: [...new Set([...tag.comicIds, comicId])] };
+    const bookTags = Array.isArray(book.tags) ? book.tags : [];
+    const updatedBook = { ...book, tags: [...new Set([...bookTags, tagId])] };
+    const updatedTag = { ...tag, bookIds: [...new Set([...tag.bookIds, bookId])] };
 
-    await db.saveComic(updatedComic as unknown as Record<string, unknown>);
-    await db.saveTag(updatedTag as unknown as Record<string, unknown>);
+    await bookRepo.save(updatedBook);
+    await tagRepo.save(updatedTag);
 
     set((state) => ({
-      comics: state.comics.map((c) => (c.id === comicId ? updatedComic : c)),
+      books: state.books.map((b) => (b.id === bookId ? updatedBook : b)),
       tags: state.tags.map((t) => (t.id === tagId ? updatedTag : t)),
     }));
   },
 
-  removeTagFromComic: async (comicId: string, tagId: string) => {
-    const { comics, tags } = get();
-    const comic = comics.find((c) => c.id === comicId);
+  removeTagFromBook: async (bookId: string, tagId: string) => {
+    const { books, tags } = get();
+    const book = books.find((b) => b.id === bookId);
     const tag = tags.find((t) => t.id === tagId);
-    if (!comic || !tag) return;
+    if (!book || !tag) return;
 
-    const comicTags = Array.isArray(comic.tags) ? comic.tags : [];
-    const updatedComic = { ...comic, tags: comicTags.filter((tid) => tid !== tagId) };
-    const updatedTag = { ...tag, comicIds: tag.comicIds.filter((cid) => cid !== comicId) };
+    const bookTags = Array.isArray(book.tags) ? book.tags : [];
+    const updatedBook = { ...book, tags: bookTags.filter((tid) => tid !== tagId) };
+    const updatedTag = { ...tag, bookIds: tag.bookIds.filter((bid) => bid !== bookId) };
 
-    await db.saveComic(updatedComic as unknown as Record<string, unknown>);
-    await db.saveTag(updatedTag as unknown as Record<string, unknown>);
+    await bookRepo.save(updatedBook);
+    await tagRepo.save(updatedTag);
 
     set((state) => ({
-      comics: state.comics.map((c) => (c.id === comicId ? updatedComic : c)),
+      books: state.books.map((b) => (b.id === bookId ? updatedBook : b)),
       tags: state.tags.map((t) => (t.id === tagId ? updatedTag : t)),
     }));
   },
 
-  getTagsForComic: (comicId: string) => {
+  getTagsForBook: (bookId: string) => {
     const { tags } = get();
-    return tags.filter((t) => t.comicIds.includes(comicId));
+    return tags.filter((t) => t.bookIds.includes(bookId));
   },
 
-  getComicById: (comicId: string) => {
-    const { comics } = get();
-    return comics.find((c) => c.id === comicId);
+  getBookById: (bookId: string) => {
+    const { books } = get();
+    return books.find((b) => b.id === bookId);
   },
 }));

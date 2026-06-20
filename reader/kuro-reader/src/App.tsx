@@ -6,8 +6,9 @@ import { AuthGuard } from '@/components/layouts/AuthGuard';
 import { HomePage } from '@/pages/Home';
 import { LibraryPage } from '@/pages/Library';
 import { SubLibraryPage } from '@/pages/SubLibrary';
-import { ComicDetailPage } from '@/pages/ComicDetail';
+import { BookDetailPage } from '@/pages/BookDetail';
 import { ReaderPage } from '@/pages/Reader';
+import { TextReaderPage } from '@/pages/TextReader';
 import { ImportPage } from '@/pages/Import';
 import { CustomCloudPage } from '@/pages/CustomCloud';
 import { SettingsPage } from '@/pages/Settings';
@@ -82,8 +83,9 @@ const App: React.FC = () => {
           <Route path={ROUTES.STATS} element={<StatsPage />} />
           <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
         </Route>
-        <Route path={ROUTES.COMIC_DETAIL} element={<ComicDetailPage />} />
+        <Route path={ROUTES.BOOK_DETAIL} element={<BookDetailPage />} />
         <Route path={ROUTES.READER} element={<ReaderPage />} />
+        <Route path={ROUTES.TEXT_READER} element={<TextReaderPage />} />
         <Route path={ROUTES.CUSTOM_CLOUD} element={<CustomCloudPage />} />
         <Route path={ROUTES.TAGS} element={<TagsPage />} />
         <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />

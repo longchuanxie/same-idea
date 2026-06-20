@@ -1,22 +1,21 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLibraryStore } from '@/stores/useLibraryStore';
-import { ROUTES, comicDetailPath } from '@/constants/routes';
-
-const LONG_PRESS_DURATION = 500;
+import { ROUTES, bookDetailPath } from '@/constants/routes';
+import { FormatBadge } from '@/components/atoms/FormatBadge';
 
 export const SubLibraryPage: React.FC = () => {
   const navigate = useNavigate();
   const { subLibraryId } = useParams<{ subLibraryId: string }>();
   const {
-    comics,
+    books,
     subLibraries,
     coverUrls,
     readingProgress,
-    loadComics,
+    loadBooks,
     renameSubLibrary,
     deleteSubLibrary,
-    removeComicsFromSubLibrary,
+    removeBooksFromSubLibrary,
     batchDelete,
     batchMarkAsRead,
   } = useLibraryStore();
@@ -26,19 +25,18 @@ export const SubLibraryPage: React.FC = () => {
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (comics.length === 0) {
-      loadComics();
+    if (books.length === 0) {
+      loadBooks();
     }
-  }, [comics.length, loadComics]);
+  }, [books.length, loadBooks]);
 
   const subLibrary = subLibraries.find((s) => s.id === subLibraryId);
-  const subLibComics = subLibrary
-    ? subLibrary.comicIds
-        .map((id) => comics.find((c) => c.id === id))
-        .filter((c): c is NonNullable<typeof c> => c !== undefined)
+  const subLibBooks = subLibrary
+    ? subLibrary.bookIds
+        .map((id) => books.find((b) => b.id === id))
+        .filter((b): b is NonNullable<typeof b> => b !== undefined)
     : [];
 
   const enterEditMode = useCallback(() => {
@@ -69,10 +67,10 @@ export const SubLibraryPage: React.FC = () => {
   };
 
   const selectAll = () => {
-    if (selectedIds.size === subLibComics.length) {
+    if (selectedIds.size === subLibBooks.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(subLibComics.map((c) => c.id)));
+      setSelectedIds(new Set(subLibBooks.map((b) => b.id)));
     }
   };
 
@@ -85,10 +83,10 @@ export const SubLibraryPage: React.FC = () => {
     if (selectedIds.size === 0) return;
     await batchDelete(Array.from(selectedIds));
     if (subLibraryId) {
-      await removeComicsFromSubLibrary(subLibraryId, Array.from(selectedIds));
+      await removeBooksFromSubLibrary(subLibraryId, Array.from(selectedIds));
     }
     setSelectedIds(new Set());
-    if (subLibComics.length <= selectedIds.size) {
+    if (subLibBooks.length <= selectedIds.size) {
       setIsSelectMode(false);
     }
   };
@@ -101,33 +99,15 @@ export const SubLibraryPage: React.FC = () => {
 
   const handleRemoveFromSubLib = async () => {
     if (selectedIds.size === 0 || !subLibraryId) return;
-    await removeComicsFromSubLibrary(subLibraryId, Array.from(selectedIds));
+    await removeBooksFromSubLibrary(subLibraryId, Array.from(selectedIds));
     setSelectedIds(new Set());
   };
 
-  const handleLongPressStart = useCallback((comicId: string) => {
-    longPressTimerRef.current = setTimeout(() => {
-      setIsSelectMode(true);
-      setSelectedIds(new Set([comicId]));
-    }, LONG_PRESS_DURATION);
-  }, []);
-
-  const handleLongPressEnd = useCallback(() => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-  }, []);
-
-  const handleComicClick = useCallback((comicId: string) => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
+  const handleBookClick = useCallback((bookId: string) => {
     if (isSelectMode) {
-      toggleSelect(comicId);
+      toggleSelect(bookId);
     } else {
-      navigate(comicDetailPath(comicId));
+      navigate(bookDetailPath(bookId));
     }
   }, [isSelectMode, navigate]);
 
@@ -195,7 +175,7 @@ export const SubLibraryPage: React.FC = () => {
       <main className="relative z-10 max-w-max-width-content mx-auto px-margin-mobile pt-8 pb-32">
         <div className="mb-8 flex items-center justify-between">
           <p className="font-label text-label-sm text-on-surface-variant uppercase tracking-widest">
-            {subLibComics.length} 本藏书
+            {subLibBooks.length} 本藏书
           </p>
           {!isSelectMode && (
             <div className="flex gap-2">
@@ -233,10 +213,10 @@ export const SubLibraryPage: React.FC = () => {
           )}
         </div>
 
-        {subLibComics.length === 0 ? (
+        {subLibBooks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
             <span className="material-symbols-outlined text-on-surface-variant text-6xl mb-4">folder_open</span>
-            <p className="font-body text-body-md text-on-surface-variant mb-6">此子书库暂无漫画</p>
+            <p className="font-body text-body-md text-on-surface-variant mb-6">此子书库暂无书籍</p>
             <button
               className="font-label text-label-md text-primary border border-outline-variant px-6 py-2 hover:bg-surface-variant transition-colors"
               onClick={() => navigate(ROUTES.LIBRARY)}
@@ -246,26 +226,16 @@ export const SubLibraryPage: React.FC = () => {
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-x-gutter gap-y-8">
-            {subLibComics.map((comic) => {
-              const isSelected = selectedIds.has(comic.id);
-              const progress = readingProgress[comic.id];
+            {subLibBooks.map((book) => {
+              const isSelected = selectedIds.has(book.id);
+              const progress = readingProgress[book.id];
               const pct = progress ? Math.round(progress.percentage) : 0;
 
               return (
                 <article
-                  key={comic.id}
+                  key={book.id}
                   className="flex flex-col gap-3 group cursor-pointer relative"
-                  onClick={() => handleComicClick(comic.id)}
-                  onTouchStart={() => handleLongPressStart(comic.id)}
-                  onTouchEnd={handleLongPressEnd}
-                  onTouchCancel={handleLongPressEnd}
-                  onContextMenu={(e) => {
-                    e.preventDefault();
-                    if (!isSelectMode) {
-                      setIsSelectMode(true);
-                      setSelectedIds(new Set([comic.id]));
-                    }
-                  }}
+                  onClick={() => handleBookClick(book.id)}
                 >
                   {isSelectMode && (
                     <div className="absolute top-2 left-2 z-10">
@@ -286,10 +256,10 @@ export const SubLibraryPage: React.FC = () => {
                   <div className={`w-full aspect-[2/3] border bg-surface-container-lowest relative overflow-hidden rounded-sm ${
                     isSelectMode && isSelected ? 'border-primary' : 'border-outline-variant'
                   }`}>
-                    {coverUrls[comic.id] ? (
+                    {coverUrls[book.id] ? (
                       <img
-                        src={coverUrls[comic.id]}
-                        alt={comic.title}
+                        src={coverUrls[book.id]}
+                        alt={book.title}
                         className="w-full h-full object-cover grayscale opacity-90 group-hover:opacity-100 transition-opacity"
                       />
                     ) : (
@@ -309,9 +279,12 @@ export const SubLibraryPage: React.FC = () => {
                     )}
                   </div>
                   <div>
-                    <h3 className="font-label text-label-md text-on-background line-clamp-1 group-hover:underline decoration-1 underline-offset-4">
-                      {comic.title}
-                    </h3>
+                    <div className="flex items-center gap-1">
+                      <FormatBadge format={book.format} />
+                      <h3 className="font-label text-label-md text-on-background line-clamp-1 group-hover:underline decoration-1 underline-offset-4">
+                        {book.title}
+                      </h3>
+                    </div>
                     <p className="font-label text-label-sm text-on-surface-variant mt-1">
                       {pct > 0 ? `${pct}% 读完` : '未开始'}
                     </p>

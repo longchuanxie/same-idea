@@ -6,14 +6,14 @@ import { STORAGE_KEYS } from '@/constants/storage';
 interface ReadingSession {
   date: string;
   minutes: number;
-  comicId: string;
+  bookId: string;
 }
 
 interface StatsState {
   stats: ReadingStats;
   readingSessions: ReadingSession[];
 
-  addReadingSession: (comicId: string, minutes: number) => void;
+  addReadingSession: (bookId: string, minutes: number) => void;
   getStats: () => ReadingStats;
   calculateWeeklyData: () => { day: string; hours: number }[];
 }
@@ -22,7 +22,7 @@ const DEFAULT_STATS: ReadingStats = {
   totalHours: 0,
   currentStreak: 0,
   longestStreak: 0,
-  completedComics: 0,
+  completedBooks: 0,
   weeklyData: [],
 };
 
@@ -85,12 +85,12 @@ export const useStatsStore = create<StatsState>()(
       stats: DEFAULT_STATS,
       readingSessions: [],
 
-      addReadingSession: (comicId, minutes) => {
+      addReadingSession: (bookId, minutes) => {
         if (minutes <= 0) return;
 
         const date = getDateString(new Date());
         set((state) => {
-          const sessions = [...state.readingSessions, { date, minutes, comicId }];
+          const sessions = [...state.readingSessions, { date, minutes, bookId }];
           const totalMinutes = sessions.reduce((sum, s) => sum + s.minutes, 0);
           const totalHours = Math.round((totalMinutes / 60) * 10) / 10;
 
@@ -104,7 +104,7 @@ export const useStatsStore = create<StatsState>()(
               totalHours,
               currentStreak,
               longestStreak,
-              completedComics: state.stats.completedComics,
+              completedBooks: state.stats.completedBooks,
               weeklyData,
             },
           };

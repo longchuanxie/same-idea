@@ -1,14 +1,14 @@
 import { Archive } from 'libarchive.js';
 
-import type { Comic, Chapter } from '@/types';
+import { APP_CONFIG } from '@/constants/config';
 import { isNativePlatform } from '@/utils/capacitor';
 
-const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp']);
+const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.img']);
 const BYTES_PER_KB = 1024;
 const BYTES_PER_MB = BYTES_PER_KB * BYTES_PER_KB;
-const MAX_EXTRACT_SIZE_MB = 500;
-const MAX_EXTRACT_SIZE = MAX_EXTRACT_SIZE_MB * BYTES_PER_MB;
-const ARCHIVE_TIMEOUT = 30000;
+const ARCHIVE_TIMEOUT_BASE = 30000;
+const ARCHIVE_TIMEOUT_PER_MB = 200;
+const MAX_EXTRACT_SIZE = APP_CONFIG.maxFileSize;
 
 function getFileExtension(name: string): string {
   const dot = name.lastIndexOf('.');
@@ -79,6 +79,18 @@ export interface ParsedArchive {
   pageNames: string[];
 }
 
+export interface ArchiveEntry {
+  path: string;
+  blob: Blob;
+}
+
+export interface StreamingArchiveResult {
+  title: string;
+  coverBlob: Blob | null;
+  pageNames: string[];
+  totalPages: number;
+}
+
 function checkFileSize(file: File): void {
   if (file.size > MAX_EXTRACT_SIZE) {
     const fileSizeMB = (file.size / BYTES_PER_MB).toFixed(1);
@@ -102,6 +114,18 @@ async function extractWithJSZip(file: File): Promise<Record<string, Blob>> {
   return result;
 }
 
+async function* extractWithJSZipStreaming(file: File): AsyncGenerator<ArchiveEntry, void, unknown> {
+  const JSZip = (await import('jszip')).default;
+  const zip = await JSZip.loadAsync(file);
+
+  for (const [path, zipEntry] of Object.entries(zip.files)) {
+    if (!zipEntry.dir) {
+      const blob = await zipEntry.async('blob');
+      yield { path, blob };
+    }
+  }
+}
+
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('timeout')), ms);
@@ -110,6 +134,11 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
       (err) => { clearTimeout(timer); reject(err); }
     );
   });
+}
+
+function getArchiveTimeout(fileSize: number): number {
+  const fileSizeMB = fileSize / BYTES_PER_MB;
+  return Math.max(ARCHIVE_TIMEOUT_BASE, ARCHIVE_TIMEOUT_BASE + fileSizeMB * ARCHIVE_TIMEOUT_PER_MB);
 }
 
 function shouldUseJSZipFirst(fileName: string): boolean {
@@ -121,11 +150,12 @@ function shouldUseJSZipFirst(fileName: string): boolean {
 export async function parseArchiveFile(file: File): Promise<ParsedArchive> {
   checkFileSize(file);
 
+  const timeout = getArchiveTimeout(file.size);
   let extracted: Record<string, Blob>;
 
   if (shouldUseJSZipFirst(file.name)) {
     try {
-      extracted = await withTimeout(extractWithJSZip(file), ARCHIVE_TIMEOUT);
+      extracted = await withTimeout(extractWithJSZip(file), timeout);
     } catch {
       try {
         Archive.init({
@@ -143,8 +173,8 @@ export async function parseArchiveFile(file: File): Promise<ParsedArchive> {
       Archive.init({
         workerUrl: new URL('libarchive.js/dist/worker-bundle.js', import.meta.url).href,
       });
-      const archive = await withTimeout(Archive.open(file), ARCHIVE_TIMEOUT);
-      const files = await withTimeout(archive.extractFiles(), ARCHIVE_TIMEOUT);
+      const archive = await withTimeout(Archive.open(file), timeout);
+      const files = await withTimeout(archive.extractFiles(), timeout);
       extracted = flattenArchiveFiles(files as Record<string, unknown>);
     } catch {
       throw new Error('压缩包解析失败，请确保文件格式正确');
@@ -176,6 +206,81 @@ export async function parseArchiveFile(file: File): Promise<ParsedArchive> {
   const title = extractTitleFromFileName(file.name);
 
   return { title, coverBlob, pages, pageNames };
+}
+
+export async function parseArchiveFileStreaming(
+  file: File,
+  onPageExtracted: (pageIndex: number, blob: Blob) => Promise<void> | void
+): Promise<StreamingArchiveResult> {
+  checkFileSize(file);
+
+  const timeout = getArchiveTimeout(file.size);
+  const imageEntries: { path: string; blob: Blob }[] = [];
+
+  if (shouldUseJSZipFirst(file.name)) {
+    try {
+      const generator = extractWithJSZipStreaming(file);
+      for await (const entry of generator) {
+        if (isImageFile(entry.path)) {
+          imageEntries.push(entry);
+        }
+      }
+    } catch {
+      try {
+        Archive.init({
+          workerUrl: new URL('libarchive.js/dist/worker-bundle.js', import.meta.url).href,
+        });
+        const archive = await Archive.open(file);
+        const files = await archive.extractFiles();
+        const extracted = flattenArchiveFiles(files as Record<string, unknown>);
+        for (const [path, blob] of Object.entries(extracted)) {
+          if (isImageFile(path)) {
+            imageEntries.push({ path, blob });
+          }
+        }
+      } catch {
+        throw new Error('压缩包解析失败，请确保文件格式正确');
+      }
+    }
+  } else {
+    try {
+      Archive.init({
+        workerUrl: new URL('libarchive.js/dist/worker-bundle.js', import.meta.url).href,
+      });
+      const archive = await withTimeout(Archive.open(file), timeout);
+      const files = await withTimeout(archive.extractFiles(), timeout);
+      const extracted = flattenArchiveFiles(files as Record<string, unknown>);
+      for (const [path, blob] of Object.entries(extracted)) {
+        if (isImageFile(path)) {
+          imageEntries.push({ path, blob });
+        }
+      }
+    } catch {
+      throw new Error('压缩包解析失败，请确保文件格式正确');
+    }
+  }
+
+  const sortedEntries = [...imageEntries].sort((a, b) => {
+    const nameA = a.path.split('/').pop() ?? a.path;
+    const nameB = b.path.split('/').pop() ?? b.path;
+    return naturalCompare(nameA, nameB);
+  });
+
+  const pageNames: string[] = [];
+  let coverBlob: Blob | null = null;
+
+  for (let i = 0; i < sortedEntries.length; i++) {
+    const entry = sortedEntries[i];
+    pageNames.push(entry.path.split('/').pop() ?? entry.path);
+    if (i === 0) {
+      coverBlob = entry.blob;
+    }
+    await onPageExtracted(i, entry.blob);
+  }
+
+  const title = extractTitleFromFileName(file.name);
+
+  return { title, coverBlob, pageNames, totalPages: sortedEntries.length };
 }
 
 function flattenArchiveFiles(
@@ -213,44 +318,4 @@ export async function parseImageFiles(files: File[], folderName: string): Promis
   const title = extractTitleFromFileName(folderName);
 
   return { title, coverBlob, pages, pageNames };
-}
-
-export function buildComicFromArchive(
-  parsed: ParsedArchive,
-  fileId: string
-): { comic: Comic; chapter: Chapter } {
-  const comicId = fileId;
-  const chapterId = `${fileId}-ch1`;
-
-  const comic: Comic = {
-    id: comicId,
-    title: parsed.title,
-    author: '',
-    cover: '',
-    genres: [],
-    tags: [],
-    description: '',
-    status: 'completed',
-    totalChapters: 1,
-    chapters: [],
-    addedAt: new Date(),
-    isFavorite: false,
-  };
-
-  const chapter: Chapter = {
-    id: chapterId,
-    comicId,
-    number: 1,
-    title: parsed.title,
-    pages: parsed.pageNames,
-    status: 'unread',
-  };
-
-  comic.chapters = [chapter];
-
-  return { comic, chapter };
-}
-
-export function blobToObjectURL(blob: Blob): string {
-  return URL.createObjectURL(blob);
 }

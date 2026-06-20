@@ -1,36 +1,36 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-import { ComicEditDialog } from '@/components/molecules/ComicEditDialog';
+import { BookEditDialog } from '@/components/molecules/BookEditDialog';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
 import { SubLibraryMenu } from '@/components/molecules/SubLibraryMenu';
-import { ROUTES, comicDetailPath, subLibraryPath } from '@/constants/routes';
+import { ROUTES, bookDetailPath, subLibraryPath } from '@/constants/routes';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import { cn } from '@/utils/cn';
-import type { Comic } from '@/types';
+import { FormatBadge } from '@/components/atoms/FormatBadge';
+import type { Book } from '@/types';
 
-const LONG_PRESS_DURATION = 500;
 
 export const LibraryPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const {
-    comics,
+    books,
     subLibraries,
     tags,
     coverUrls,
     isLoading,
-    loadComics,
-    removeComic,
+    loadBooks,
+    removeBook,
     batchDelete,
     batchMarkAsRead,
     toggleFavorite,
-    updateComic,
+    updateBook,
     createSubLibrary,
-    addComicsToSubLibrary,
+    addBooksToSubLibrary,
     renameSubLibrary,
     deleteSubLibrary,
-    getComicsByTag,
+    getBooksByTag,
   } = useLibraryStore();
 
   const [isSelectMode, setIsSelectMode] = useState(false);
@@ -38,10 +38,13 @@ export const LibraryPage: React.FC = () => {
   const [showNewSubLibDialog, setShowNewSubLibDialog] = useState(false);
   const [showAddToSubLibDialog, setShowAddToSubLibDialog] = useState(false);
   const [newSubLibName, setNewSubLibName] = useState('');
-  const [editingComic, setEditingComic] = useState<Comic | null>(null);
+  const [editingBook, setEditingBook] = useState<Book | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [activeTagId, setActiveTagId] = useState<string | null>(null);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [sortBy, setSortBy] = useState<'title' | 'addedAt' | 'lastReadAt'>('addedAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [showSortMenu, setShowSortMenu] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -54,12 +57,10 @@ export const LibraryPage: React.FC = () => {
     message: '',
     onConfirm: () => {},
   });
-  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isLongPressRef = useRef(false);
 
   useEffect(() => {
-    loadComics();
-  }, [loadComics]);
+    loadBooks();
+  }, [loadBooks]);
 
   useEffect(() => {
     if (location.state?.selectMode) {
@@ -68,14 +69,32 @@ export const LibraryPage: React.FC = () => {
     }
   }, [location.state, location.pathname, navigate]);
 
-  const subLibraryComicIds = new Set(subLibraries.flatMap((sl) => sl.comicIds));
+  const subLibraryBookIds = new Set(subLibraries.flatMap((sl) => sl.bookIds));
 
-  const displayedComics = (() => {
-    let result = activeTagId ? getComicsByTag(activeTagId) : comics;
-    result = result.filter((c) => !subLibraryComicIds.has(c.id));
+  const displayedBooks = (() => {
+    let result = activeTagId ? getBooksByTag(activeTagId) : books;
+    result = result.filter((b) => !subLibraryBookIds.has(b.id));
     if (showFavoritesOnly) {
-      result = result.filter((c) => c.isFavorite);
+      result = result.filter((b) => b.isFavorite);
     }
+    result = [...result].sort((a, b) => {
+      let cmp = 0;
+      switch (sortBy) {
+        case 'title':
+          cmp = a.title.localeCompare(b.title, 'zh');
+          break;
+        case 'addedAt':
+          cmp = new Date(a.addedAt).getTime() - new Date(b.addedAt).getTime();
+          break;
+        case 'lastReadAt': {
+          const aTime = a.lastReadAt ? new Date(a.lastReadAt).getTime() : 0;
+          const bTime = b.lastReadAt ? new Date(b.lastReadAt).getTime() : 0;
+          cmp = aTime - bTime;
+          break;
+        }
+      }
+      return sortOrder === 'asc' ? cmp : -cmp;
+    });
     return result;
   })();
 
@@ -89,10 +108,10 @@ export const LibraryPage: React.FC = () => {
   };
 
   const selectAll = () => {
-    if (selectedIds.size === displayedComics.length) {
+    if (selectedIds.size === displayedBooks.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(displayedComics.map((c) => c.id)));
+      setSelectedIds(new Set(displayedBooks.map((b) => b.id)));
     }
   };
 
@@ -114,12 +133,12 @@ export const LibraryPage: React.FC = () => {
     setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
   };
 
-  const handleSingleDelete = (comicId: string, comicTitle: string) => {
+  const handleSingleDelete = (bookId: string, bookTitle: string) => {
     openConfirm(
-      '删除漫画',
-      `确定要删除《${comicTitle}》吗？此操作不可恢复。`,
+      '删除书籍',
+      `确定要删除《${bookTitle}》吗？此操作不可恢复。`,
       async () => {
-        await removeComic(comicId);
+        await removeBook(bookId);
         closeConfirm();
       },
       'danger'
@@ -130,11 +149,11 @@ export const LibraryPage: React.FC = () => {
     if (selectedIds.size === 0) return;
     openConfirm(
       '批量删除',
-      `确定要删除选中的 ${selectedIds.size} 本漫画吗？此操作不可恢复。`,
+      `确定要删除选中的 ${selectedIds.size} 本书籍吗？此操作不可恢复。`,
       async () => {
         await batchDelete(Array.from(selectedIds));
         setSelectedIds(new Set());
-        if (comics.length <= selectedIds.size) {
+        if (books.length <= selectedIds.size) {
           setIsSelectMode(false);
         }
         closeConfirm();
@@ -149,24 +168,24 @@ export const LibraryPage: React.FC = () => {
     setSelectedIds(new Set());
   };
 
-  const handleToggleFavorite = async (comicId: string, e: React.MouseEvent) => {
+  const handleToggleFavorite = async (bookId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    await toggleFavorite(comicId);
+    await toggleFavorite(bookId);
   };
 
-  const handleEditComic = (comic: Comic, e: React.MouseEvent) => {
+  const handleEditBook = (book: Book, e: React.MouseEvent) => {
     e.stopPropagation();
-    setEditingComic(comic);
+    setEditingBook(book);
     setShowEditDialog(true);
   };
 
-  const handleSaveComic = async (
+  const handleSaveBook = async (
     id: string,
-    updates: Partial<Pick<Comic, 'title' | 'author' | 'description' | 'status'>>
+    updates: Partial<Pick<Book, 'title' | 'author' | 'description' | 'status'>>
   ) => {
-    await updateComic(id, updates);
+    await updateBook(id, updates);
     setShowEditDialog(false);
-    setEditingComic(null);
+    setEditingBook(null);
   };
 
   const handleCreateSubLibrary = useCallback(async () => {
@@ -179,10 +198,10 @@ export const LibraryPage: React.FC = () => {
 
   const handleAddToSubLibrary = useCallback(async (subLibraryId: string) => {
     if (selectedIds.size === 0) return;
-    await addComicsToSubLibrary(subLibraryId, Array.from(selectedIds));
+    await addBooksToSubLibrary(subLibraryId, Array.from(selectedIds));
     setShowAddToSubLibDialog(false);
     exitSelectMode();
-  }, [selectedIds, addComicsToSubLibrary]);
+  }, [selectedIds, addBooksToSubLibrary]);
 
   const handleCreateEmptySubLibrary = useCallback(async () => {
     if (!newSubLibName.trim()) return;
@@ -198,7 +217,7 @@ export const LibraryPage: React.FC = () => {
   const handleDeleteSubLibrary = (id: string, name: string) => {
     openConfirm(
       '删除子书库',
-      `确定要删除子书库「${name}」吗？其中的漫画不会被删除。`,
+      `确定要删除子书库「${name}」吗？其中的书籍不会被删除。`,
       async () => {
         await deleteSubLibrary(id);
         closeConfirm();
@@ -207,35 +226,11 @@ export const LibraryPage: React.FC = () => {
     );
   };
 
-  const handleLongPressStart = useCallback((comicId: string) => {
-    isLongPressRef.current = false;
-    longPressTimerRef.current = setTimeout(() => {
-      isLongPressRef.current = true;
-      setIsSelectMode(true);
-      setSelectedIds(new Set([comicId]));
-    }, LONG_PRESS_DURATION);
-  }, []);
-
-  const handleLongPressEnd = useCallback(() => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-  }, []);
-
-  const handleComicClick = useCallback((comicId: string) => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-    if (isLongPressRef.current) {
-      isLongPressRef.current = false;
-      return;
-    }
+  const handleBookClick = useCallback((bookId: string) => {
     if (isSelectMode) {
-      toggleSelect(comicId);
+      toggleSelect(bookId);
     } else {
-      navigate(comicDetailPath(comicId));
+      navigate(bookDetailPath(bookId));
     }
   }, [isSelectMode, navigate]);
 
@@ -250,7 +245,7 @@ export const LibraryPage: React.FC = () => {
     );
   }
 
-  if (comics.length === 0 && subLibraries.length === 0) {
+  if (books.length === 0 && subLibraries.length === 0) {
     return (
       <div className="flex-grow flex flex-col items-center justify-center px-margin-mobile max-w-max-width-content mx-auto w-full min-h-[60vh]">
         <div className="flex flex-col items-center text-center max-w-md w-full">
@@ -261,7 +256,7 @@ export const LibraryPage: React.FC = () => {
           </div>
           <h2 className="font-display text-headline-md text-primary mb-4 tracking-tight">书架空空如也</h2>
           <p className="font-body text-body-md text-on-surface-variant mb-12">
-            开启你的第一次沉浸阅读，从导入漫画开始。
+            开启你的第一次沉浸阅读，从导入书籍开始。
           </p>
           <div className="flex flex-col w-full gap-4">
             <button
@@ -310,7 +305,61 @@ export const LibraryPage: React.FC = () => {
           </div>
         ) : (
           <div className="flex items-center gap-3">
-            <span className="font-label text-label-sm text-on-surface-variant">{displayedComics.length} 本</span>
+            <span className="font-label text-label-sm text-on-surface-variant">{displayedBooks.length} 本</span>
+            <div className="relative">
+              <button
+                className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1"
+                onClick={() => setShowSortMenu(!showSortMenu)}
+              >
+                <span className="material-symbols-outlined text-lg">sort</span>
+                排序
+              </button>
+              {showSortMenu && (
+                <div className="absolute right-0 top-full mt-2 bg-surface-bright border border-outline-variant rounded-lg shadow-lg z-50 min-w-[160px] overflow-hidden animate-scale-in">
+                  <button
+                    className={cn(
+                      'w-full text-left px-4 py-2.5 font-label text-label-md hover:bg-surface-container transition-colors flex items-center gap-2',
+                      sortBy === 'addedAt' ? 'text-primary' : 'text-on-surface-variant'
+                    )}
+                    onClick={() => { setSortBy('addedAt'); setShowSortMenu(false); }}
+                  >
+                    <span className="material-symbols-outlined text-lg">schedule</span>
+                    添加时间
+                    {sortBy === 'addedAt' && <span className="material-symbols-outlined text-sm ml-auto">{sortOrder === 'desc' ? 'arrow_downward' : 'arrow_upward'}</span>}
+                  </button>
+                  <button
+                    className={cn(
+                      'w-full text-left px-4 py-2.5 font-label text-label-md hover:bg-surface-container transition-colors flex items-center gap-2',
+                      sortBy === 'lastReadAt' ? 'text-primary' : 'text-on-surface-variant'
+                    )}
+                    onClick={() => { setSortBy('lastReadAt'); setShowSortMenu(false); }}
+                  >
+                    <span className="material-symbols-outlined text-lg">auto_stories</span>
+                    最近阅读
+                    {sortBy === 'lastReadAt' && <span className="material-symbols-outlined text-sm ml-auto">{sortOrder === 'desc' ? 'arrow_downward' : 'arrow_upward'}</span>}
+                  </button>
+                  <button
+                    className={cn(
+                      'w-full text-left px-4 py-2.5 font-label text-label-md hover:bg-surface-container transition-colors flex items-center gap-2',
+                      sortBy === 'title' ? 'text-primary' : 'text-on-surface-variant'
+                    )}
+                    onClick={() => { setSortBy('title'); setShowSortMenu(false); }}
+                  >
+                    <span className="material-symbols-outlined text-lg">title</span>
+                    标题
+                    {sortBy === 'title' && <span className="material-symbols-outlined text-sm ml-auto">{sortOrder === 'desc' ? 'arrow_downward' : 'arrow_upward'}</span>}
+                  </button>
+                  <div className="border-t border-outline-variant" />
+                  <button
+                    className="w-full text-left px-4 py-2.5 font-label text-label-md text-on-surface-variant hover:bg-surface-container transition-colors flex items-center gap-2"
+                    onClick={() => { setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); setShowSortMenu(false); }}
+                  >
+                    <span className="material-symbols-outlined text-lg">{sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward'}</span>
+                    {sortOrder === 'asc' ? '升序' : '降序'}
+                  </button>
+                </div>
+              )}
+            </div>
             <button
               className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1"
               onClick={() => setIsSelectMode(true)}
@@ -341,9 +390,9 @@ export const LibraryPage: React.FC = () => {
                   />
                 </div>
                 <div className="border border-outline-variant bg-surface-container aspect-[2/3] overflow-hidden mb-3 relative">
-                  {subLib.comicIds.length > 0 && coverUrls[subLib.comicIds[0]] ? (
+                  {subLib.bookIds.length > 0 && coverUrls[subLib.bookIds[0]] ? (
                     <img
-                      src={coverUrls[subLib.comicIds[0]]}
+                      src={coverUrls[subLib.bookIds[0]]}
                       alt={subLib.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
                     />
@@ -353,7 +402,7 @@ export const LibraryPage: React.FC = () => {
                     </div>
                   )}
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-primary/80 to-transparent p-3">
-                    <p className="font-label text-label-sm text-on-primary">{subLib.comicIds.length} 本</p>
+                    <p className="font-label text-label-sm text-on-primary">{subLib.bookIds.length} 本</p>
                   </div>
                 </div>
                 <h4 className="font-body text-body-lg text-primary leading-tight truncate">{subLib.name}</h4>
@@ -378,7 +427,7 @@ export const LibraryPage: React.FC = () => {
         </section>
       )}
 
-      {(tags.length > 0 || comics.some((c) => c.isFavorite)) && !isSelectMode && (
+      {(tags.length > 0 || books.some((b) => b.isFavorite)) && !isSelectMode && (
         <section className="mb-6">
           <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
             <button
@@ -395,7 +444,7 @@ export const LibraryPage: React.FC = () => {
             >
               全部
             </button>
-            {comics.some((c) => c.isFavorite) && (
+            {books.some((b) => b.isFavorite) && (
               <button
                 className={cn(
                   'px-3 py-1.5 rounded-full font-label text-label-sm whitespace-nowrap transition-colors border flex items-center gap-1',
@@ -428,14 +477,14 @@ export const LibraryPage: React.FC = () => {
                 }}
               >
                 {tag.name}
-                <span className="ml-1 opacity-70">{tag.comicIds.length}</span>
+                <span className="ml-1 opacity-70">{tag.bookIds.length}</span>
               </button>
             ))}
           </div>
         </section>
       )}
 
-      {subLibraries.length === 0 && !isSelectMode && comics.length > 0 && (
+      {subLibraries.length === 0 && !isSelectMode && books.length > 0 && (
         <div className="mb-6">
           <button
             className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1 border border-outline-variant rounded-full px-4 py-2"
@@ -450,25 +499,15 @@ export const LibraryPage: React.FC = () => {
         </div>
       )}
 
-      {displayedComics.length > 0 ? (
+      {displayedBooks.length > 0 ? (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
-          {displayedComics.map((comic) => {
-          const isSelected = selectedIds.has(comic.id);
+          {displayedBooks.map((book) => {
+          const isSelected = selectedIds.has(book.id);
           return (
             <article
-              key={comic.id}
+              key={book.id}
               className="group cursor-pointer flex flex-col relative"
-              onClick={() => handleComicClick(comic.id)}
-              onTouchStart={() => handleLongPressStart(comic.id)}
-              onTouchEnd={handleLongPressEnd}
-              onTouchCancel={handleLongPressEnd}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                if (!isSelectMode) {
-                  setIsSelectMode(true);
-                  setSelectedIds(new Set([comic.id]));
-                }
-              }}
+              onClick={() => handleBookClick(book.id)}
             >
               {isSelectMode && (
                 <div className="absolute top-2 left-2 z-10">
@@ -490,17 +529,17 @@ export const LibraryPage: React.FC = () => {
               {!isSelectMode && (
                 <div className="absolute top-2 right-2 z-10 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
-                    className={`w-8 h-8 rounded-full bg-surface-bright/90 backdrop-blur-sm flex items-center justify-center ${comic.isFavorite ? 'text-primary' : 'text-on-surface-variant'} hover:text-primary shadow-sm transition-colors`}
-                    onClick={(e) => handleToggleFavorite(comic.id, e)}
-                    aria-label={comic.isFavorite ? '取消收藏' : '收藏'}
+                    className={`w-8 h-8 rounded-full bg-surface-bright/90 backdrop-blur-sm flex items-center justify-center ${book.isFavorite ? 'text-primary' : 'text-on-surface-variant'} hover:text-primary shadow-sm transition-colors`}
+                    onClick={(e) => handleToggleFavorite(book.id, e)}
+                    aria-label={book.isFavorite ? '取消收藏' : '收藏'}
                   >
-                    <span className="material-symbols-outlined text-[18px]" style={comic.isFavorite ? { fontVariationSettings: "'FILL' 1" } : undefined}>
-                      {comic.isFavorite ? 'bookmark' : 'bookmark_border'}
+                    <span className="material-symbols-outlined text-[18px]" style={book.isFavorite ? { fontVariationSettings: "'FILL' 1" } : undefined}>
+                      {book.isFavorite ? 'bookmark' : 'bookmark_border'}
                     </span>
                   </button>
                   <button
                     className="w-8 h-8 rounded-full bg-surface-bright/90 backdrop-blur-sm flex items-center justify-center text-on-surface-variant hover:text-primary shadow-sm transition-colors"
-                    onClick={(e) => handleEditComic(comic, e)}
+                    onClick={(e) => handleEditBook(book, e)}
                     aria-label="编辑"
                   >
                     <span className="material-symbols-outlined text-[18px]">edit</span>
@@ -509,7 +548,7 @@ export const LibraryPage: React.FC = () => {
                     className="w-8 h-8 rounded-full bg-surface-bright/90 backdrop-blur-sm flex items-center justify-center text-on-surface-variant hover:text-error shadow-sm transition-colors"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleSingleDelete(comic.id, comic.title);
+                      handleSingleDelete(book.id, book.title);
                     }}
                     aria-label="删除"
                   >
@@ -522,10 +561,10 @@ export const LibraryPage: React.FC = () => {
                 isSelectMode && isSelected ? 'border-primary' : 'border-outline-variant'
               }`}>
                 {isSelectMode && isSelected && <div className="absolute inset-0 bg-primary/5 mix-blend-multiply z-0" />}
-                {coverUrls[comic.id] ? (
+                {coverUrls[book.id] ? (
                   <img
-                    src={coverUrls[comic.id]}
-                    alt={comic.title}
+                    src={coverUrls[book.id]}
+                    alt={book.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
                   />
                 ) : (
@@ -533,17 +572,20 @@ export const LibraryPage: React.FC = () => {
                     <span className="material-symbols-outlined text-on-surface-variant text-5xl">auto_stories</span>
                   </div>
                 )}
-                {comic.isFavorite && !isSelectMode && (
+                {book.isFavorite && !isSelectMode && (
                   <div className="absolute bottom-2 left-2">
                     <span className="material-symbols-outlined text-primary text-[20px] drop-shadow-sm" style={{ fontVariationSettings: "'FILL' 1" }}>bookmark</span>
                   </div>
                 )}
               </div>
-              <h4 className={`font-body text-body-lg leading-tight truncate ${
-                isSelectMode && isSelected ? 'text-primary' : 'text-primary'
-              }`}>{comic.title}</h4>
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <FormatBadge format={book.format} />
+                <h4 className={`font-body text-body-lg leading-tight truncate ${
+                  isSelectMode && isSelected ? 'text-primary' : 'text-primary'
+                }`}>{book.title}</h4>
+              </div>
               <p className="font-label text-label-md text-on-surface-variant mt-1">
-                {comic.author || (comic.status === 'completed' ? '已完结' : `${comic.totalChapters} 话`)}
+                {book.author || (book.status === 'completed' ? '已完结' : `${book.totalChapters} 话`)}
               </p>
             </article>
           );
@@ -552,7 +594,7 @@ export const LibraryPage: React.FC = () => {
       ) : (
         <div className="text-center py-16">
           <span className="material-symbols-outlined text-on-surface-variant text-5xl mb-4 block">auto_stories</span>
-          <p className="font-body text-body-md text-on-surface-variant mb-6">主书架暂无漫画</p>
+          <p className="font-body text-body-md text-on-surface-variant mb-6">主书架暂无书籍</p>
           <button
             className="font-label text-label-md text-primary border border-outline-variant px-6 py-2 hover:bg-surface-variant transition-colors"
             onClick={() => navigate(ROUTES.IMPORT)}
@@ -645,7 +687,7 @@ export const LibraryPage: React.FC = () => {
                     <span className="material-symbols-outlined text-on-surface-variant">folder</span>
                     <div className="flex-1">
                       <p className="font-label text-label-md text-primary">{subLib.name}</p>
-                      <p className="font-label text-label-sm text-on-surface-variant">{subLib.comicIds.length} 本</p>
+                      <p className="font-label text-label-sm text-on-surface-variant">{subLib.bookIds.length} 本</p>
                     </div>
                   </button>
                 ))}
@@ -676,13 +718,13 @@ export const LibraryPage: React.FC = () => {
         </div>
       )}
 
-      <ComicEditDialog
-        comic={editingComic}
+      <BookEditDialog
+        book={editingBook}
         isOpen={showEditDialog}
-        onSave={handleSaveComic}
+        onSave={handleSaveBook}
         onCancel={() => {
           setShowEditDialog(false);
-          setEditingComic(null);
+          setEditingBook(null);
         }}
       />
 

@@ -164,7 +164,12 @@ cd android
 ```
 
 构建产物位于 `android/app/build/outputs/apk/debug/app-debug.apk`。
-
+### 构建正式APK
+```bash
+cd android
+./gradlew assembleRelease
+```
+构建产物位于 `android/app/build/outputs/apk/release/app-release.apk`。
 ### 使用 Android Studio 调试
 ```bash
 npx cap open android

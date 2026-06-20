@@ -3,20 +3,21 @@ import { useNavigate } from 'react-router-dom';
 
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import { APP_CONFIG } from '@/constants/config';
-import { ROUTES, comicDetailPath, customCloudPath, subLibraryPath } from '@/constants/routes';
+import { ROUTES, bookDetailPath, customCloudPath, subLibraryPath } from '@/constants/routes';
+import { Capacitor } from '@capacitor/core';
 import { isNativePlatform } from '@/utils/capacitor';
 import { FilePicker } from '@/plugins/FilePickerPlugin';
 
-const ARCHIVE_EXTENSIONS = APP_CONFIG.supportedFormats;
-const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
+const SUPPORTED_EXTENSIONS = APP_CONFIG.supportedFormats;
+const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.img'];
 
 function getFileExtension(name: string): string {
   const dot = name.lastIndexOf('.');
   return dot >= 0 ? name.substring(dot).toLowerCase() : '';
 }
 
-function isArchiveFile(name: string): boolean {
-  return (ARCHIVE_EXTENSIONS as readonly string[]).includes(getFileExtension(name));
+function isSupportedFile(name: string): boolean {
+  return (SUPPORTED_EXTENSIONS as readonly string[]).includes(getFileExtension(name));
 }
 
 function isImageFile(name: string): boolean {
@@ -24,13 +25,11 @@ function isImageFile(name: string): boolean {
 }
 
 async function pathToFile(path: string, name: string, mimeType: string): Promise<File> {
-  if (path.startsWith('file://') || path.startsWith('/')) {
-    const response = await fetch(path);
-    const blob = await response.blob();
-    return new File([blob], name, { type: mimeType });
+  let accessiblePath = path;
+  if (isNativePlatform() && (path.startsWith('/') || path.startsWith('file://'))) {
+    accessiblePath = Capacitor.convertFileSrc(path);
   }
-  // For web URLs or other paths
-  const response = await fetch(path);
+  const response = await fetch(accessiblePath);
   const blob = await response.blob();
   return new File([blob], name, { type: mimeType });
 }
@@ -52,7 +51,7 @@ export const ImportPage: React.FC = () => {
   } = useLibraryStore();
 
   const [importResult, setImportResult] = useState<{
-    type: 'comic' | 'sublibrary';
+    type: 'book' | 'sublibrary';
     title: string;
     id: string;
     count?: number;
@@ -68,15 +67,15 @@ export const ImportPage: React.FC = () => {
       const file = files[0];
       if (file.size > APP_CONFIG.maxFileSize) return;
       const ext = getFileExtension(file.name);
-      if (!(ARCHIVE_EXTENSIONS as readonly string[]).includes(ext)) return;
-      const comic = await importFile(file);
-      if (comic) setImportResult({ type: 'comic', title: comic.title, id: comic.id });
+      if (!(SUPPORTED_EXTENSIONS as readonly string[]).includes(ext)) return;
+      const book = await importFile(file);
+      if (book) setImportResult({ type: 'book', title: book.title, id: book.id });
     } else {
       const imageFiles = Array.from(files).filter((f) => isImageFile(f.name));
       if (imageFiles.length === 0) return;
       const folderName = imageFiles[0].webkitRelativePath?.split('/')[0] || '未命名文件夹';
-      const comic = await importFolder(imageFiles, folderName);
-      if (comic) setImportResult({ type: 'comic', title: comic.title, id: comic.id });
+      const book = await importFolder(imageFiles, folderName);
+      if (book) setImportResult({ type: 'book', title: book.title, id: book.id });
     }
 
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -89,13 +88,13 @@ export const ImportPage: React.FC = () => {
     setImportResult(null);
 
     const allFiles = Array.from(files);
-    const archiveFiles = allFiles.filter((f) => isArchiveFile(f.name));
+    const bookFiles = allFiles.filter((f) => isSupportedFile(f.name));
     const imageFiles = allFiles.filter((f) => isImageFile(f.name));
 
     const folderName = allFiles[0]?.webkitRelativePath?.split('/')[0] || '未命名文件夹';
 
-    if (archiveFiles.length > 0 && archiveFiles.length >= imageFiles.length) {
-      const validArchives = archiveFiles.filter((f) => f.size <= APP_CONFIG.maxFileSize);
+    if (bookFiles.length > 0 && bookFiles.length >= imageFiles.length) {
+      const validArchives = bookFiles.filter((f) => f.size <= APP_CONFIG.maxFileSize);
       if (validArchives.length === 0) return;
 
       const subLibrary = await importArchivesAsSubLibrary(validArchives, folderName);
@@ -104,13 +103,13 @@ export const ImportPage: React.FC = () => {
           type: 'sublibrary',
           title: subLibrary.name,
           id: subLibrary.id,
-          count: subLibrary.comicIds.length,
+          count: subLibrary.bookIds.length,
         });
       }
     } else {
       if (imageFiles.length === 0) return;
-      const comic = await importFolder(imageFiles, folderName);
-      if (comic) setImportResult({ type: 'comic', title: comic.title, id: comic.id });
+      const book = await importFolder(imageFiles, folderName);
+      if (book) setImportResult({ type: 'book', title: book.title, id: book.id });
     }
 
     if (folderInputRef.current) folderInputRef.current.value = '';
@@ -133,6 +132,8 @@ export const ImportPage: React.FC = () => {
           'application/vnd.rar',
           'application/x-cbr',
           'application/x-cbz',
+          'text/plain',
+          'application/epub+zip',
         ],
       });
 
@@ -145,8 +146,8 @@ export const ImportPage: React.FC = () => {
         return;
       }
 
-      const comic = await importFile(file);
-      if (comic) setImportResult({ type: 'comic', title: comic.title, id: comic.id });
+      const book = await importFile(file);
+      if (book) setImportResult({ type: 'book', title: book.title, id: book.id });
     } catch {
       // User cancelled or error
     }
@@ -166,30 +167,37 @@ export const ImportPage: React.FC = () => {
         return;
       }
 
-      const allFiles = await Promise.all(
+      const fileResults = await Promise.allSettled(
         result.files.map((f) => pathToFile(f.path, f.name, f.mimeType))
       );
 
-      const archiveFiles = allFiles.filter((f) => isArchiveFile(f.name));
+      const allFiles = fileResults
+        .filter((r): r is PromiseFulfilledResult<File> => r.status === 'fulfilled')
+        .map((r) => r.value);
+
+      if (allFiles.length === 0) return;
+
+      const bookFiles = allFiles.filter((f) => isSupportedFile(f.name));
       const imageFiles = allFiles.filter((f) => isImageFile(f.name));
+      const validArchives = bookFiles.filter((f) => f.size <= APP_CONFIG.maxFileSize);
 
-      if (archiveFiles.length > 0 && archiveFiles.length >= imageFiles.length) {
-        const validArchives = archiveFiles.filter((f) => f.size <= APP_CONFIG.maxFileSize);
-        if (validArchives.length === 0) return;
-
+      if (validArchives.length > 0) {
         const subLibrary = await importArchivesAsSubLibrary(validArchives, result.name);
         if (subLibrary) {
           setImportResult({
             type: 'sublibrary',
             title: subLibrary.name,
             id: subLibrary.id,
-            count: subLibrary.comicIds.length,
+            count: subLibrary.bookIds.length,
           });
         }
-      } else {
-        if (imageFiles.length === 0) return;
-        const comic = await importFolder(imageFiles, result.name);
-        if (comic) setImportResult({ type: 'comic', title: comic.title, id: comic.id });
+      }
+
+      if (imageFiles.length > 0) {
+        const book = await importFolder(imageFiles, validArchives.length > 0 ? `${result.name} - 图片` : result.name);
+        if (book && !importResult) {
+          setImportResult({ type: 'book', title: book.title, id: book.id });
+        }
       }
     } catch {
       // User cancelled or error
@@ -210,7 +218,7 @@ export const ImportPage: React.FC = () => {
       <input
         ref={folderInputRef}
         type="file"
-        accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.zip,.cbz,.rar,.cbr"
+        accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.zip,.cbz,.rar,.cbr,.txt,.epub"
         onChange={handleFolderSelect}
         {...({ webkitdirectory: '', directory: '' } as Record<string, string>)}
         className="hidden"
@@ -218,7 +226,7 @@ export const ImportPage: React.FC = () => {
 
       <section className="flex flex-col gap-2">
         <h2 className="font-display text-display-lg-mobile md:text-display-lg text-primary tracking-tight">导入中心</h2>
-        <p className="font-body text-body-md text-on-surface-variant">从本地或 NAS 添加您的漫画资源。</p>
+        <p className="font-body text-body-md text-on-surface-variant">从本地或 NAS 添加您的书籍资源。</p>
       </section>
 
       {isImporting && (
@@ -265,7 +273,7 @@ export const ImportPage: React.FC = () => {
                 子书库「{importResult.title}」
               </p>
               <p className="font-label text-label-sm text-on-surface-variant mb-4">
-                共导入 {importResult.count} 本漫画
+                共导入 {importResult.count} 本书籍
               </p>
               <div className="flex gap-4">
                 <button
@@ -288,7 +296,7 @@ export const ImportPage: React.FC = () => {
               <div className="flex gap-4">
                 <button
                   className="bg-primary text-on-primary font-label text-label-md px-6 py-2 rounded hover:opacity-90 transition-colors"
-                  onClick={() => navigate(comicDetailPath(importResult.id))}
+                  onClick={() => navigate(bookDetailPath(importResult.id))}
                 >
                   查看详情
                 </button>
@@ -317,7 +325,7 @@ export const ImportPage: React.FC = () => {
               disabled={isImporting}
             >
               <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>document_scanner</span>
-              选择压缩文件
+              选择文件
             </button>
             <button
               className="w-full bg-transparent text-primary py-3 px-4 rounded border border-primary font-label text-label-md flex items-center justify-center gap-2 hover:bg-surface-variant transition-colors"
@@ -328,7 +336,7 @@ export const ImportPage: React.FC = () => {
               从文件夹导入
             </button>
             <p className="font-label text-label-sm text-on-surface-variant mt-2 text-center normal-case tracking-normal">
-              压缩文件支持 {formatList} 格式，最大 {Math.round(APP_CONFIG.maxFileSize / (1024 * 1024))}MB；文件夹导入将自动识别压缩包并创建子书库
+              支持 {formatList} 格式，最大 {Math.round(APP_CONFIG.maxFileSize / (1024 * 1024))}MB；文件夹导入将自动识别支持的文件并创建子书库
             </p>
           </div>
         </section>
@@ -353,7 +361,7 @@ export const ImportPage: React.FC = () => {
             </button>
           </div>
           <p className="font-label text-label-sm text-on-surface-variant text-center">
-            通过 WebDAV 协议连接您的 NAS 或私有云存储，直接浏览并导入漫画文件
+            通过 WebDAV 协议连接您的 NAS 或私有云存储，直接浏览并导入书籍文件
           </p>
         </section>
       </div>

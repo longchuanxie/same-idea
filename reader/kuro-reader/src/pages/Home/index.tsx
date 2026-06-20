@@ -1,15 +1,16 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLibraryStore } from '@/stores/useLibraryStore';
-import { ROUTES, comicDetailPath, readerPath } from '@/constants/routes';
+import { ROUTES, bookDetailPath, readerPathForBook } from '@/constants/routes';
+import { FormatBadge } from '@/components/atoms/FormatBadge';
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
-  const { coverUrls, readingProgress, loadComics, getContinueReading, removeContinueReading, getFavorites } = useLibraryStore();
+  const { coverUrls, readingProgress, loadBooks, getContinueReading, removeContinueReading, getFavorites } = useLibraryStore();
 
   useEffect(() => {
-    loadComics();
-  }, [loadComics]);
+    loadBooks();
+  }, [loadBooks]);
 
   const continueReading = getContinueReading().slice(0, 1);
   const favorites = getFavorites();
@@ -19,33 +20,33 @@ export const HomePage: React.FC = () => {
       {continueReading.length > 0 && (
         <section className="mb-12">
           <h2 className="font-display text-headline-md text-on-background mb-6">继续阅读</h2>
-          {continueReading.map((comic) => {
-            const progress = readingProgress[comic.id];
+          {continueReading.map((book) => {
+            const progress = readingProgress[book.id];
             const pct = progress ? Math.round(progress.percentage) : 0;
             const chapter = progress?.chapterId
-              ? comic.chapters.find((ch) => ch.id === progress.chapterId) ?? comic.chapters[0]
-              : comic.chapters[0];
+              ? book.chapters.find((ch) => ch.id === progress.chapterId) ?? book.chapters[0]
+              : book.chapters[0];
             return (
               <article
-                key={comic.id}
+                key={book.id}
                 className="flex flex-row border border-outline-variant rounded overflow-hidden bg-background hover:bg-surface-container-low transition-colors group cursor-pointer noise-overlay mb-4 relative"
-                onClick={() => navigate(readerPath(comic.id, chapter?.id))}
+                onClick={() => navigate(readerPathForBook(book, chapter?.id))}
               >
                 <button
                   className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-surface/80 backdrop-blur-sm flex items-center justify-center text-on-surface-variant hover:text-error hover:bg-surface transition-colors opacity-0 group-hover:opacity-100"
                   onClick={(e) => {
                     e.stopPropagation();
-                    removeContinueReading(comic.id);
+                    removeContinueReading(book.id);
                   }}
                   aria-label="移除"
                 >
                   <span className="material-symbols-outlined text-[18px]">close</span>
                 </button>
                 <div className="w-1/3 md:w-1/4 flex-shrink-0 border-r border-outline-variant bg-surface-container">
-                  {coverUrls[comic.id] ? (
+                  {coverUrls[book.id] ? (
                     <img
-                      src={coverUrls[comic.id]}
-                      alt={comic.title}
+                      src={coverUrls[book.id]}
+                      alt={book.title}
                       className="w-full h-full object-cover aspect-[2/3]"
                     />
                   ) : (
@@ -56,16 +57,19 @@ export const HomePage: React.FC = () => {
                 </div>
                 <div className="p-4 md:p-6 flex flex-col justify-between flex-1">
                   <div>
-                    {comic.genres.length > 0 && (
+                    {book.genres.length > 0 && (
                       <span className="inline-block border border-outline-variant text-on-surface-variant font-label text-label-sm px-2 py-1 rounded mb-3">
-                        {comic.genres[0]}
+                        {book.genres[0]}
                       </span>
                     )}
-                    <h3 className="font-display text-headline-md text-primary leading-tight mb-2 group-hover:underline decoration-1 underline-offset-4">
-                      {comic.title}
-                    </h3>
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="font-display text-headline-md text-primary leading-tight group-hover:underline decoration-1 underline-offset-4">
+                        {book.title}
+                      </h3>
+                      <FormatBadge format={book.format} />
+                    </div>
                     <p className="font-body text-body-md text-on-surface-variant mb-4">
-                      {chapter ? `第 ${chapter.number} 话` : `${comic.totalChapters} 话`}
+                      {chapter ? `第 ${chapter.number} 话` : `${book.totalChapters} 话`}
                     </p>
                   </div>
                   <div className="mt-auto">
@@ -97,17 +101,17 @@ export const HomePage: React.FC = () => {
         </div>
         {favorites.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
-            {favorites.slice(0, 6).map((comic) => (
+            {favorites.slice(0, 6).map((book) => (
               <article
-                key={comic.id}
+                key={book.id}
                 className="group cursor-pointer flex flex-col"
-                onClick={() => navigate(comicDetailPath(comic.id))}
+                onClick={() => navigate(bookDetailPath(book.id))}
               >
                 <div className="border border-outline-variant bg-surface-container aspect-[2/3] overflow-hidden mb-3">
-                  {coverUrls[comic.id] ? (
+                  {coverUrls[book.id] ? (
                     <img
-                      src={coverUrls[comic.id]}
-                      alt={comic.title}
+                      src={coverUrls[book.id]}
+                      alt={book.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
                     />
                   ) : (
@@ -116,9 +120,12 @@ export const HomePage: React.FC = () => {
                     </div>
                   )}
                 </div>
-                <h4 className="font-body text-body-lg text-primary leading-tight truncate">{comic.title}</h4>
+                <div className="flex items-center gap-1.5">
+                  <FormatBadge format={book.format} />
+                  <h4 className="font-body text-body-lg text-primary leading-tight truncate">{book.title}</h4>
+                </div>
                 <p className="font-label text-label-md text-on-surface-variant mt-1">
-                  {comic.status === 'completed' ? '已完结' : `${comic.totalChapters} 话`}
+                  {book.status === 'completed' ? '已完结' : `${book.totalChapters} 话`}
                 </p>
               </article>
             ))}
@@ -126,8 +133,8 @@ export const HomePage: React.FC = () => {
         ) : (
           <div className="text-center py-12">
             <span className="material-symbols-outlined text-on-surface-variant text-5xl mb-4 block">bookmark_border</span>
-            <p className="font-body text-body-md text-on-surface-variant mb-6">还没有收藏的漫画</p>
-            <p className="font-label text-label-sm text-on-surface-variant mb-6">在书库中长按漫画即可收藏</p>
+            <p className="font-body text-body-md text-on-surface-variant mb-6">还没有收藏的书籍</p>
+            <p className="font-label text-label-sm text-on-surface-variant mb-6">在书库中悬停书籍即可收藏</p>
             <button
               className="font-label text-label-md text-primary border border-outline-variant px-6 py-2 hover:bg-surface-variant transition-colors"
               onClick={() => navigate(ROUTES.LIBRARY)}

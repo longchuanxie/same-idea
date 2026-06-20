@@ -5,12 +5,12 @@ import { ROUTES } from '@/constants/routes';
 
 export const BatchPage: React.FC = () => {
   const navigate = useNavigate();
-  const { comics, coverUrls, loadComics, batchDelete, batchMarkAsRead } = useLibraryStore();
+  const { books, coverUrls, loadBooks, batchDelete, batchMarkAsRead } = useLibraryStore();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    loadComics();
-  }, [loadComics]);
+    loadBooks();
+  }, [loadBooks]);
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -22,10 +22,10 @@ export const BatchPage: React.FC = () => {
   };
 
   const selectAll = () => {
-    if (selectedIds.size === comics.length) {
+    if (selectedIds.size === books.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(comics.map((c) => c.id)));
+      setSelectedIds(new Set(books.map((b) => b.id)));
     }
   };
 
@@ -41,7 +41,7 @@ export const BatchPage: React.FC = () => {
     setSelectedIds(new Set());
   };
 
-  if (comics.length === 0) {
+  if (books.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -78,10 +78,10 @@ export const BatchPage: React.FC = () => {
           </span>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-          {comics.map((comic) => {
-            const isSelected = selectedIds.has(comic.id);
+          {books.map((book) => {
+            const isSelected = selectedIds.has(book.id);
             return (
-              <div key={comic.id} className="relative group cursor-pointer" onClick={() => toggleSelect(comic.id)}>
+              <div key={book.id} className="relative group cursor-pointer" onClick={() => toggleSelect(book.id)}>
                 <div className="absolute top-2 left-2 z-10">
                   <div
                     className={`w-6 h-6 rounded grid place-content-center border transition-colors ${
@@ -100,10 +100,10 @@ export const BatchPage: React.FC = () => {
                   isSelected ? 'border-primary' : 'border-outline-variant'
                 }`}>
                   {isSelected && <div className="absolute inset-0 bg-primary/5 mix-blend-multiply z-0" />}
-                  {coverUrls[comic.id] ? (
+                  {coverUrls[book.id] ? (
                     <img
-                      src={coverUrls[comic.id]}
-                      alt={comic.title}
+                      src={coverUrls[book.id]}
+                      alt={book.title}
                       className="w-full h-full object-cover grayscale opacity-90"
                     />
                   ) : (
@@ -113,10 +113,10 @@ export const BatchPage: React.FC = () => {
                   )}
                 </div>
                 <h3 className={`font-label text-label-md truncate ${isSelected ? 'text-primary' : 'text-on-surface'}`}>
-                  {comic.title}
+                  {book.title}
                 </h3>
                 <p className="font-label text-label-sm text-on-surface-variant mt-1">
-                  {comic.status === 'completed' ? '已完结' : `${comic.totalChapters} 话`}
+                  {book.status === 'completed' ? '已完结' : `${book.totalChapters} 话`}
                 </p>
               </div>
             );

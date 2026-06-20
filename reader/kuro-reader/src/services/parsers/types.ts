@@ -31,11 +31,32 @@ export interface ParsedPdfBook extends ParsedBookBase {
 }
 
 /**
+ * 文本分支：原始文本文件与编码信息必填。
+ * 适用于 .txt 和 .epub 格式。
+ * chapters 可选：若解析器能拆分章节，则填充此字段。
+ */
+export interface ParsedTextChapter {
+  title: string
+  content: string
+}
+
+export interface ParsedTextBook extends ParsedBookBase {
+  format: 'text'
+  textFile: Blob
+  textEncoding: string
+  /** 解析器在导入时拆分出的章节列表。为空表示未拆分。 */
+  chapters?: ParsedTextChapter[]
+  /** EPUB 作者 */
+  author?: string
+}
+
+/**
  * Parser 输出的统一结构。通过 `format` 字段进行判别联合：
  * - `format: 'comic'` → 必含 imagePages / imagePageNames
  * - `format: 'pdf'`   → 必含 pdfFile / pdfTotalPages
+ * - `format: 'text'`  → 必含 textFile / textEncoding
  */
-export type ParsedBook = ParsedComicBook | ParsedPdfBook
+export type ParsedBook = ParsedComicBook | ParsedPdfBook | ParsedTextBook
 
 /**
  * Book Parser 适配器接口。

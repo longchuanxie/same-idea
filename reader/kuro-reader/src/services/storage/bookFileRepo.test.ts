@@ -19,24 +19,27 @@ beforeEach(async () => {
   })
 })
 
-describe('bookFileRepo interface (Phase 1 stub)', () => {
+describe('bookFileRepo', () => {
   it('exposes save / get / delete methods', () => {
     expect(typeof bookFileRepo.save).toBe('function')
     expect(typeof bookFileRepo.get).toBe('function')
     expect(typeof bookFileRepo.delete).toBe('function')
   })
 
-  it('save throws clear error in Phase 1 (no v4 store yet)', async () => {
-    await expect(bookFileRepo.save('a', new Blob(['x']))).rejects.toThrow(
-      /bookFiles store not yet available/i
-    )
+  it('save + get round-trips a blob', async () => {
+    const data = new Blob(['hello world'], { type: 'text/plain' })
+    await bookFileRepo.save('book-1', data)
+    const result = await bookFileRepo.get('book-1')
+    expect(result).toBeDefined()
   })
 
-  it('get returns undefined when store missing', async () => {
-    expect(await bookFileRepo.get('a')).toBeUndefined()
+  it('get returns undefined for missing key', async () => {
+    expect(await bookFileRepo.get('nonexistent')).toBeUndefined()
   })
 
-  it('delete is a no-op when store missing', async () => {
-    await expect(bookFileRepo.delete('a')).resolves.toBeUndefined()
+  it('delete removes stored blob', async () => {
+    await bookFileRepo.save('book-2', new Blob(['data']))
+    await bookFileRepo.delete('book-2')
+    expect(await bookFileRepo.get('book-2')).toBeUndefined()
   })
 })

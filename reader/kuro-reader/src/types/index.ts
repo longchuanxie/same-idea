@@ -1,17 +1,24 @@
 /**
  * 书籍格式判别。
  * - 'comic'：传统漫画（图片序列，来自 zip/cbz/rar/cbr/散图）
- * - 'pdf'：PDF 文档（Phase 4 起支持）
+ * - 'pdf'：PDF 文档
+ * - 'text'：纯文本 / EPUB 等文本格式
  */
-export type BookFormat = 'comic' | 'pdf'
+export type BookFormat = 'comic' | 'pdf' | 'text'
 
 /**
  * 页面引用（联合类型）。
  * 渲染器根据 kind 分派到对应实现。
+ * - 'image'：图片页（漫画）
+ * - 'pdf-page'：PDF 页面
+ * - 'text-content'：文本内容（纯文本/EPUB）
  */
-export type PageRef = { kind: 'image'; index: number } | { kind: 'pdf-page'; pageNumber: number }
+export type PageRef =
+  | { kind: 'image'; index: number }
+  | { kind: 'pdf-page'; pageNumber: number }
+  | { kind: 'text-content' }
 
-export interface Comic {
+export interface Book {
   id: string
   title: string
   author: string
@@ -30,17 +37,20 @@ export interface Comic {
   format?: BookFormat
 }
 
+/** @deprecated Use `Book` instead. Kept for incremental migration. */
+export type Comic = Book
+
 export interface Tag {
   id: string
   name: string
   color: string
-  comicIds: string[]
+  bookIds: string[]
   createdAt: Date
 }
 
 export interface Chapter {
   id: string
-  comicId: string
+  bookId: string
   number: number
   title: string
   pages: string[]
@@ -51,7 +61,7 @@ export interface Chapter {
 }
 
 export interface ReadingProgress {
-  comicId: string
+  bookId: string
   chapterId: string
   page: number
   pageScrollRatio?: number
@@ -62,18 +72,30 @@ export interface ReadingProgress {
   percentage: number
   globalPageIndex: number
   totalImages: number
-  /** EPUB CFI 或其他富定位符。Phase 1 不消费，预留给 EPUB。 */
+  /** EPUB CFI 或其他富定位符。预留用。 */
   locator?: string
 }
 
 export interface Collection {
   id: string
   name: string
-  comicIds: string[]
+  bookIds: string[]
   createdAt: Date
 }
 
 export type PaperType = 'coated' | 'rice' | 'kraft' | 'newsprint' | 'matte' | 'eink'
+
+/** 阅读主题预设 */
+export type ReadingTheme = 'light' | 'green' | 'sepia' | 'dark'
+
+/** 文本字体族 */
+export type TextFontFamily = 'system' | 'serif' | 'kaiti' | 'sans'
+
+/** 文本对齐方式 */
+export type TextAlign = 'left' | 'justify'
+
+/** 文本阅读模式 */
+export type TextReadingMode = 'scroll' | 'paginate' | 'book'
 
 export interface UserSettings {
   theme: 'light' | 'dark' | 'auto'
@@ -88,6 +110,21 @@ export interface UserSettings {
   brightness: number
   colorTemperature: number
   auth: AuthConfig
+  /** 文本阅读专属设置 */
+  readingTheme: ReadingTheme
+  textFontFamily: TextFontFamily
+  textAlign: TextAlign
+  firstLineIndent: boolean
+  textLineHeight: number
+  tapZoneEnabled: boolean
+  autoScrollSpeed: number
+  textReadingMode: TextReadingMode
+}
+
+export interface SecurityQuestion {
+  question: string
+  answerHash: string
+  answerSalt: string
 }
 
 export interface AuthConfig {
@@ -99,13 +136,15 @@ export interface AuthConfig {
   gestureSalt?: string
   failedAttempts: number
   lockUntil?: number
+  /** 安全问题列表，设置密码锁时必须提供至少 1 个 */
+  securityQuestions?: SecurityQuestion[]
 }
 
 export interface ReadingStats {
   totalHours: number
   currentStreak: number
   longestStreak: number
-  completedComics: number
+  completedBooks: number
   weeklyData: { day: string; hours: number }[]
 }
 
@@ -130,9 +169,39 @@ export interface CloudSourceConfig {
 export interface SubLibrary {
   id: string
   name: string
-  comicIds: string[]
+  bookIds: string[]
   createdAt: Date
   updatedAt: Date
 }
 
 export type NavItem = 'home' | 'library' | 'import' | 'settings'
+
+/** 书签 */
+export interface Bookmark {
+  id: string
+  bookId: string
+  chapterIndex: number
+  chapterTitle: string
+  pageIndex?: number
+  scrollRatio?: number
+  textPreview: string
+  createdAt: Date
+}
+
+/** 批注样式类型 */
+export type AnnotationStyle = 'underline' | 'wavy' | 'highlight'
+
+/** 批注 */
+export interface Annotation {
+  id: string
+  bookId: string
+  chapterIndex: number
+  chapterTitle: string
+  selectedText: string
+  note: string
+  startOffset: number
+  endOffset: number
+  style?: AnnotationStyle // 默认 'highlight'
+  createdAt: Date
+  updatedAt: Date
+}

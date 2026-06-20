@@ -1,18 +1,19 @@
 import { create } from 'zustand';
 
-import * as db from '@/services/storageService';
+import { bookRepo } from '@/services/storage/bookRepo';
+import { pageRepo } from '@/services/storage/pageRepo';
 import { useAppStore } from '@/stores/useAppStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 
 const PRELOAD_RADIUS = 10;
 const INITIAL_LOAD_RADIUS = 3;
 
-interface ComicCacheEntry {
+interface BookCacheEntry {
   chapters: { id: string; title: string; pages: string[] }[];
 }
 
 interface ReaderState {
-  currentComicId: string | null;
+  currentBookId: string | null;
   currentChapterId: string | null;
   currentPage: number;
   totalPages: number;
@@ -27,9 +28,9 @@ interface ReaderState {
   fullscreenPageIndex: number;
   isBottomBarVisible: boolean;
   paperModeEnabled: boolean;
-  comicCache: Record<string, ComicCacheEntry>;
+  bookCache: Record<string, BookCacheEntry>;
 
-  openComic: (comicId: string, chapterId?: string, startPage?: number) => Promise<void>;
+  openBook: (bookId: string, chapterId?: string, startPage?: number) => Promise<void>;
   openChapter: (chapterId: string, startPage?: number) => Promise<void>;
   loadPage: (pageIndex: number) => Promise<void>;
   loadPageSync: (pageIndex: number) => void;
@@ -51,10 +52,10 @@ interface ReaderState {
 
 const loadingPages = new Set<number>();
 const failedPages = new Set<number>();
-let openComicCounter = 0;
+let openBookCounter = 0;
 
 export const useReaderStore = create<ReaderState>()((set, get) => ({
-  currentComicId: null,
+  currentBookId: null,
   currentChapterId: null,
   currentPage: 1,
   totalPages: 0,
@@ -69,44 +70,44 @@ export const useReaderStore = create<ReaderState>()((set, get) => ({
   fullscreenPageIndex: -1,
   isBottomBarVisible: false,
   paperModeEnabled: useAppStore.getState().settings.paperMode,
-  comicCache: {},
+  bookCache: {},
 
-  openComic: async (comicId, chapterId, startPage) => {
-    const currentCall = ++openComicCounter;
+  openBook: async (bookId, chapterId, startPage) => {
+    const currentCall = ++openBookCounter;
     set({ isLoading: true, isUiVisible: false });
     try {
-      const cached = get().comicCache[comicId];
+      const cached = get().bookCache[bookId];
       let chapters: { id: string; title: string; pages: string[] }[];
 
       if (cached) {
         chapters = cached.chapters;
       } else {
-        const libraryComic = useLibraryStore.getState().getComicById(comicId);
-        if (libraryComic) {
-          chapters = libraryComic.chapters;
+        const libraryBook = useLibraryStore.getState().getBookById(bookId);
+        if (libraryBook) {
+          chapters = libraryBook.chapters;
         } else {
-          const comicData = await db.getComic(comicId);
-          if (!comicData) {
-            if (currentCall === openComicCounter) set({ isLoading: false });
+          const bookData = await bookRepo.get(bookId);
+          if (!bookData) {
+            if (currentCall === openBookCounter) set({ isLoading: false });
             return;
           }
-          chapters = comicData.chapters as { id: string; title: string; pages: string[] }[];
+          chapters = bookData.chapters as { id: string; title: string; pages: string[] }[];
         }
         set((state) => ({
-          comicCache: { ...state.comicCache, [comicId]: { chapters } },
+          bookCache: { ...state.bookCache, [bookId]: { chapters } },
         }));
       }
 
-      if (currentCall !== openComicCounter) return;
+      if (currentCall !== openBookCounter) return;
 
-      const progress = useLibraryStore.getState().readingProgress[comicId];
+      const progress = useLibraryStore.getState().readingProgress[bookId];
       const targetChapterId = chapterId ?? progress?.chapterId;
       const targetChapter = targetChapterId
         ? chapters.find((ch) => ch.id === targetChapterId)
         : chapters[0];
 
       if (!targetChapter) {
-        if (currentCall === openComicCounter) set({ isLoading: false });
+        if (currentCall === openBookCounter) set({ isLoading: false });
         return;
       }
 
@@ -129,7 +130,7 @@ export const useReaderStore = create<ReaderState>()((set, get) => ({
         resolvedStartPage = Math.max(1, Math.min(startPage, pageCount));
       }
 
-      if (currentCall !== openComicCounter) return;
+      if (currentCall !== openBookCounter) return;
 
       get().pageUrls.forEach((url) => {
         if (url) URL.revokeObjectURL(url);
@@ -139,7 +140,7 @@ export const useReaderStore = create<ReaderState>()((set, get) => ({
 
       const initialUrls: (string | null)[] = new Array(pageCount).fill(null);
       set({
-        currentComicId: comicId,
+        currentBookId: bookId,
         currentChapterId: resolvedChapterId,
         currentPage: resolvedStartPage,
         totalPages: pageCount,
@@ -158,7 +159,7 @@ export const useReaderStore = create<ReaderState>()((set, get) => ({
       }
       await Promise.all(criticalPages);
 
-      if (currentCall !== openComicCounter) return;
+      if (currentCall !== openBookCounter) return;
 
       set({ isLoading: false });
 
@@ -169,13 +170,13 @@ export const useReaderStore = create<ReaderState>()((set, get) => ({
         if (before >= 0) get().loadPageSync(before);
       }
     } catch {
-      if (currentCall === openComicCounter) set({ isLoading: false });
+      if (currentCall === openBookCounter) set({ isLoading: false });
     }
   },
 
   loadPage: async (pageIndex) => {
-    const { currentComicId, currentChapterId, pageUrls, totalPages } = get();
-    if (!currentComicId || !currentChapterId) return;
+    const { currentBookId, currentChapterId, pageUrls, totalPages } = get();
+    if (!currentBookId || !currentChapterId) return;
     if (pageIndex < 0 || pageIndex >= totalPages) return;
     if (pageUrls[pageIndex] !== null) return;
     if (loadingPages.has(pageIndex)) return;
@@ -183,14 +184,14 @@ export const useReaderStore = create<ReaderState>()((set, get) => ({
 
     loadingPages.add(pageIndex);
     try {
-      const comicId = currentComicId;
+      const bookId = currentBookId;
       const chapterId = currentChapterId;
-      const blob = await db.getPage(comicId, chapterId, pageIndex);
+      const blob = await pageRepo.getPage(bookId, chapterId, pageIndex);
       if (blob) {
         const url = URL.createObjectURL(blob);
         const currentState = get();
         if (
-          currentState.currentComicId === comicId &&
+          currentState.currentBookId === bookId &&
           currentState.currentChapterId === chapterId &&
           pageIndex < currentState.pageUrls.length &&
           currentState.pageUrls[pageIndex] === null
@@ -212,8 +213,8 @@ export const useReaderStore = create<ReaderState>()((set, get) => ({
   },
 
   loadPageSync: (pageIndex) => {
-    const { currentComicId, currentChapterId, pageUrls, totalPages } = get();
-    if (!currentComicId || !currentChapterId) return;
+    const { currentBookId, currentChapterId, pageUrls, totalPages } = get();
+    if (!currentBookId || !currentChapterId) return;
     if (pageIndex < 0 || pageIndex >= totalPages) return;
     if (pageUrls[pageIndex] !== null) return;
     if (loadingPages.has(pageIndex)) return;
@@ -266,10 +267,10 @@ export const useReaderStore = create<ReaderState>()((set, get) => ({
   setPageLayout: (layout) => set({ pageLayout: layout }),
 
   openChapter: async (chapterId, startPage) => {
-    const { currentComicId, chapters, comicCache } = get();
-    if (!currentComicId) return;
+    const { currentBookId, chapters, bookCache } = get();
+    if (!currentBookId) return;
 
-    const cached = comicCache[currentComicId];
+    const cached = bookCache[currentBookId];
     const chapterList = cached ? cached.chapters : chapters;
     const targetChapter = chapterList.find((ch) => ch.id === chapterId);
     if (!targetChapter) return;
@@ -319,7 +320,7 @@ export const useReaderStore = create<ReaderState>()((set, get) => ({
     loadingPages.clear();
     failedPages.clear();
     set({
-      currentComicId: null,
+      currentBookId: null,
       currentChapterId: null,
       currentPage: 1,
       totalPages: 0,

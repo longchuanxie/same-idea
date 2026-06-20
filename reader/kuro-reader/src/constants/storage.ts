@@ -3,4 +3,6 @@ export const STORAGE_KEYS = {
   PROGRESS: 'kuro-reader-progress',
   STATS: 'kuro-reader-stats',
   AUTH: 'kuro-reader-auth',
+  BOOKMARKS: 'kuro-reader-bookmarks',
+  ANNOTATIONS: 'kuro-reader-annotations',
 } as const;

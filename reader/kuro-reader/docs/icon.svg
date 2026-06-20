@@ -1,0 +1,34 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="200" height="200" rx="48" fill="#FDF8F8"/>
+
+  <!-- Spine 1 -->
+  <g>
+    <rect x="65" y="70" width="8" height="60" rx="4" fill="#1A1A1A"/>
+    <rect x="67" y="75" width="4" height="2" rx="1" fill="white" fill-opacity="0.8"/>
+  </g>
+
+  <!-- Spine 2 -->
+  <g>
+    <rect x="80" y="60" width="8" height="80" rx="4" fill="#1A1A1A"/>
+    <rect x="82" y="125" width="4" height="6" rx="1" fill="#E53E3E"/>
+  </g>
+
+  <!-- Spine 3 -->
+  <g>
+    <rect x="95" y="65" width="8" height="70" rx="4" fill="#1A1A1A"/>
+    <rect x="97" y="72" width="4" height="2" rx="1" fill="white" fill-opacity="0.8"/>
+    <rect x="97" y="77" width="4" height="2" rx="1" fill="white" fill-opacity="0.8"/>
+  </g>
+
+  <!-- Spine 4 -->
+  <g>
+    <rect x="110" y="55" width="8" height="90" rx="4" fill="#1A1A1A"/>
+    <rect x="112" y="65" width="4" height="8" rx="1" fill="#38A169"/>
+  </g>
+
+  <!-- Spine 5 -->
+  <g>
+    <rect x="125" y="75" width="8" height="50" rx="4" fill="#1A1A1A"/>
+    <rect x="127" y="82" width="4" height="2" rx="1" fill="white" fill-opacity="0.8"/>
+  </g>
+</svg>

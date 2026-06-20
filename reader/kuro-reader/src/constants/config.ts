@@ -1,8 +1,8 @@
 export const APP_CONFIG = {
   name: 'Kuro Reader',
   version: '1.0.0',
-  maxFileSize: 100 * 1024 * 1024,
-  supportedFormats: ['.zip', '.cbz', '.rar', '.cbr'] as const,
+  maxFileSize: 2000 * 1024 * 1024,
+  supportedFormats: ['.zip', '.cbz', '.rar', '.cbr', '.txt', '.epub'] as const,
   defaultTheme: 'light' as const,
   paperMode: {
     defaultIntensity: 50,

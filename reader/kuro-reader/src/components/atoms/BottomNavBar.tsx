@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/utils/cn';
 import type { NavItem } from '@/types';
@@ -26,22 +26,6 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ active = 'home' }) =
   const navigate = useNavigate();
   const { setActiveNav } = useAppStore();
   const navRef = useRef<HTMLElement>(null);
-  const [indicatorStyle, setIndicatorStyle] = React.useState<React.CSSProperties>({});
-
-  const activeIndex = NAV_ITEMS.findIndex((item) => item.key === active);
-
-  useEffect(() => {
-    if (!navRef.current || activeIndex < 0) return;
-    const buttons = navRef.current.querySelectorAll<HTMLButtonElement>('[data-nav-item]');
-    const activeBtn = buttons[activeIndex];
-    if (!activeBtn) return;
-    const navRect = navRef.current.getBoundingClientRect();
-    const btnRect = activeBtn.getBoundingClientRect();
-    setIndicatorStyle({
-      transform: `translateX(${btnRect.left - navRect.left}px)`,
-      width: `${btnRect.width}px`,
-    });
-  }, [activeIndex]);
 
   const handleClick = (item: NavConfig) => {
     setActiveNav(item.key);
@@ -61,10 +45,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ active = 'home' }) =
         'relative'
       )}
     >
-      <div
-        className="absolute top-2 bottom-2 rounded-full bg-primary transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
-        style={indicatorStyle}
-      />
+     
       {NAV_ITEMS.map((item) => {
         const isActive = item.key === active;
         return (

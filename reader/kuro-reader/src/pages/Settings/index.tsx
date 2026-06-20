@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 
 import { useAppStore } from '@/stores/useAppStore';
+import { useLibraryStore } from '@/stores/useLibraryStore';
 import { GestureLock } from '@/components/organisms/GestureLock';
 import { Collapsible } from '@/components/atoms/Collapsible';
-import { getStorageUsage } from '@/services/storageService';
+import { getStorageUsage } from '@/utils/storage';
 import { getAllPaperTypes } from '@/utils/paperTexture';
+import { STORAGE_KEYS } from '@/constants/storage';
 import type { PaperType } from '@/types';
 
 const LOCK_TIMEOUT_OPTIONS = [
@@ -21,6 +23,17 @@ const MAX_ATTEMPTS_OPTIONS = [
   { value: 10, label: '10 次' },
 ];
 
+const SECURITY_QUESTIONS = [
+  '你第一只宠物的名字是什么？',
+  '你出生的城市是哪里？',
+  '你母亲的姓名是？',
+  '你最喜欢的书是什么？',
+  '你小学的名字是？',
+  '你最好的朋友叫什么？',
+  '你最喜欢的电影是什么？',
+  '你第一个老师的名字是？',
+];
+
 export const SettingsPage: React.FC = () => {
   const {
     settings,
@@ -32,6 +45,50 @@ export const SettingsPage: React.FC = () => {
     disableGestureLock,
   } = useAppStore();
   const [storageInfo, setStorageInfo] = useState<{ used: number; quota: number }>({ used: 0, quota: 0 });
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { books, tags, subLibraries, readingProgress } = useLibraryStore();
+
+  const handleExportData = () => {
+    const data = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      settings,
+      books,
+      tags,
+      subLibraries,
+      readingProgress,
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `kuro-reader-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportData = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = JSON.parse(event.target?.result as string);
+        if (data.version !== 1) {
+          alert('不支持的备份文件版本');
+          return;
+        }
+        if (!confirm('导入将覆盖当前所有数据，确定继续吗？')) return;
+        if (data.settings) updateSettings(data.settings);
+        localStorage.setItem(STORAGE_KEYS.PROGRESS, JSON.stringify(data.readingProgress || {}));
+        alert('数据导入成功，请重启应用以生效');
+      } catch {
+        alert('备份文件格式错误');
+      }
+    };
+    reader.readAsText(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
   const [showDirectionOptions, setShowDirectionOptions] = useState(false);
   const [showFontOptions, setShowFontOptions] = useState(false);
   const [showLockTimeoutOptions, setShowLockTimeoutOptions] = useState(false);
@@ -39,6 +96,12 @@ export const SettingsPage: React.FC = () => {
   const [showGestureSetup, setShowGestureSetup] = useState(false);
   const [showGestureChange, setShowGestureChange] = useState(false);
   const [gestureError, setGestureError] = useState<string | null>(null);
+  const [pendingGesturePoints, setPendingGesturePoints] = useState<number[] | null>(null);
+  const [showQuestionsSetup, setShowQuestionsSetup] = useState(false);
+  const [securityQuestions, setSecurityQuestions] = useState<{ question: string; answer: string }[]>([
+    { question: '', answer: '' },
+    { question: '', answer: '' },
+  ]);
 
   useEffect(() => {
     getStorageUsage().then(setStorageInfo);
@@ -59,23 +122,35 @@ export const SettingsPage: React.FC = () => {
   const lockTimeoutLabel = LOCK_TIMEOUT_OPTIONS.find((o) => o.value === auth.lockTimeout)?.label ?? '5 分钟';
   const maxAttemptsLabel = MAX_ATTEMPTS_OPTIONS.find((o) => o.value === auth.maxAttempts)?.label ?? '5 次';
 
-  const handleGestureSetupComplete = async (points: number[]) => {
-    try {
-      await setupGestureLock(points);
-      setShowGestureSetup(false);
-      setGestureError(null);
-    } catch {
-      setGestureError('设置失败，请重试');
-    }
+  const handleGestureSetupComplete = (points: number[]) => {
+    setPendingGesturePoints(points);
+    setGestureError(null);
+    setShowGestureSetup(false);
+    setShowQuestionsSetup(true);
   };
 
-  const handleGestureChangeComplete = async (points: number[]) => {
+  const handleGestureChangeComplete = (points: number[]) => {
+    setPendingGesturePoints(points);
+    setGestureError(null);
+    setShowGestureChange(false);
+    setShowQuestionsSetup(true);
+  };
+
+  const handleSubmitSecurityQuestions = async () => {
+    if (!pendingGesturePoints) return;
+    const validQuestions = securityQuestions.filter((q) => q.question && q.answer.trim());
+    if (validQuestions.length < 1) {
+      setGestureError('请至少设置 1 个安全问题');
+      return;
+    }
     try {
-      await setupGestureLock(points);
-      setShowGestureChange(false);
+      await setupGestureLock(pendingGesturePoints, validQuestions);
+      setShowQuestionsSetup(false);
+      setPendingGesturePoints(null);
       setGestureError(null);
+      setSecurityQuestions([{ question: '', answer: '' }, { question: '', answer: '' }]);
     } catch {
-      setGestureError('修改失败，请重试');
+      setGestureError('设置失败，请重试');
     }
   };
 
@@ -100,6 +175,82 @@ export const SettingsPage: React.FC = () => {
           {gestureError && (
             <p className="font-body text-body-sm text-error text-center">{gestureError}</p>
           )}
+        </main>
+      </div>
+    );
+  }
+
+  if (showQuestionsSetup) {
+    return (
+      <div className="bg-background text-on-background min-h-screen flex flex-col items-center justify-center noise-overlay antialiased relative">
+        <main className="w-full max-w-[400px] px-margin-mobile flex flex-col items-center gap-6 z-10 py-12">
+          <header className="flex flex-col items-center text-center gap-2 w-full">
+            <div className="w-12 h-12 flex items-center justify-center rounded-full border border-outline-variant text-primary mb-2">
+              <span className="material-symbols-outlined text-[24px]">question_mark</span>
+            </div>
+            <h1 className="font-display text-headline-md text-primary">设置安全问题</h1>
+            <p className="font-body text-body-sm text-on-surface-variant">
+              忘记密码时可通过安全问题重置，请至少设置 1 个
+            </p>
+          </header>
+
+          <div className="w-full space-y-6">
+            {securityQuestions.map((q, idx) => (
+              <div key={idx} className="space-y-2">
+                <label className="font-label text-label-sm text-on-surface-variant">安全问题 {idx + 1}</label>
+                <select
+                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-3 font-body text-body-md text-on-surface focus:border-primary focus:ring-0 outline-none transition-colors"
+                  value={q.question}
+                  onChange={(e) => {
+                    const next = [...securityQuestions];
+                    next[idx] = { ...next[idx], question: e.target.value };
+                    setSecurityQuestions(next);
+                  }}
+                >
+                  <option value="">-- 请选择问题 --</option>
+                  {SECURITY_QUESTIONS.map((sq) => (
+                    <option key={sq} value={sq} disabled={securityQuestions.some((o, i) => i !== idx && o.question === sq)}>
+                      {sq}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-3 font-body text-body-md text-on-surface placeholder:text-on-surface-variant/50 focus:border-primary focus:ring-0 outline-none transition-colors"
+                  placeholder="输入答案"
+                  value={q.answer}
+                  onChange={(e) => {
+                    const next = [...securityQuestions];
+                    next[idx] = { ...next[idx], answer: e.target.value };
+                    setSecurityQuestions(next);
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+
+          {gestureError && (
+            <p className="font-body text-body-sm text-error text-center">{gestureError}</p>
+          )}
+
+          <div className="flex gap-3 w-full">
+            <button
+              className="flex-1 font-label text-label-md text-on-surface-variant border border-outline-variant rounded-xl py-3 hover:bg-surface-container transition-colors"
+              onClick={() => {
+                setShowQuestionsSetup(false);
+                setPendingGesturePoints(null);
+                setGestureError(null);
+                setSecurityQuestions([{ question: '', answer: '' }, { question: '', answer: '' }]);
+              }}
+            >
+              取消
+            </button>
+            <button
+              className="flex-1 font-label text-label-md text-on-primary bg-primary rounded-xl py-3 hover:opacity-90 transition-opacity"
+              onClick={handleSubmitSecurityQuestions}
+            >
+              完成设置
+            </button>
+          </div>
         </main>
       </div>
     );
@@ -430,6 +581,32 @@ export const SettingsPage: React.FC = () => {
               </div>
             </Collapsible>
 
+            <div className="p-6 border-b border-outline-variant flex justify-between items-center bg-surface-container-lowest">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant">
+                  <span className="material-symbols-outlined">swipe</span>
+                </div>
+                <div>
+                  <h3 className="font-display text-headline-sm text-on-surface">滑动翻页</h3>
+                  <p className="font-body text-body-md text-on-surface-variant text-sm leading-tight mt-1">
+                    {settings.pageTurnGestures ? '已启用，左右滑动翻页' : '已关闭，仅点击翻页'}
+                  </p>
+                </div>
+              </div>
+              <button
+                className={`relative inline-block w-11 h-6 rounded-full toggle-spring ${
+                  settings.pageTurnGestures ? 'bg-primary' : 'bg-surface-variant'
+                }`}
+                onClick={() => updateSettings({ pageTurnGestures: !settings.pageTurnGestures })}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full toggle-thumb-spring border ${
+                    settings.pageTurnGestures ? 'translate-x-5 border-primary' : 'border-outline-variant'
+                  }`}
+                />
+              </button>
+            </div>
+
             <button
               className="w-full p-6 flex justify-between items-center bg-surface-container-lowest cursor-pointer hover:bg-surface-container-low transition-colors group text-left"
               onClick={() => setShowFontOptions(!showFontOptions)}
@@ -522,6 +699,41 @@ export const SettingsPage: React.FC = () => {
               </div>
               <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">chevron_right</span>
             </button>
+            <div className="border-t border-outline-variant" />
+            <div className="p-6 bg-surface-container-lowest">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant">
+                  <span className="material-symbols-outlined">backup</span>
+                </div>
+                <div>
+                  <h3 className="font-display text-headline-sm text-on-surface">数据备份</h3>
+                  <p className="font-body text-body-md text-on-surface-variant text-sm leading-tight mt-1">
+                    导出或导入应用数据
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  className="flex-1 bg-primary text-on-primary font-label text-label-md py-3 px-4 rounded-xl hover:opacity-90 transition-opacity"
+                  onClick={handleExportData}
+                >
+                  导出备份
+                </button>
+                <button
+                  className="flex-1 bg-transparent text-primary font-label text-label-md py-3 px-4 rounded-xl border border-outline-variant hover:bg-surface-container transition-colors"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  导入恢复
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".json"
+                  className="hidden"
+                  onChange={handleImportData}
+                />
+              </div>
+            </div>
           </div>
         </section>
       </div>

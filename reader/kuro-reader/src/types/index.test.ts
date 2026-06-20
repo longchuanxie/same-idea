@@ -58,7 +58,7 @@ describe('Chapter.pageRefs is optional', () => {
   it('omitted pageRefs is allowed', () => {
     const c: Partial<Chapter> = {
       id: 'a',
-      comicId: 'b',
+      bookId: 'b',
       number: 1,
       title: 't',
       pages: ['1.jpg'],
@@ -77,7 +77,7 @@ describe('Chapter.pageRefs is optional', () => {
 
 describe('ReadingProgress.locator is optional', () => {
   it('omitted locator is allowed', () => {
-    const p: Partial<ReadingProgress> = { comicId: 'a', chapterId: 'b', page: 1 }
+    const p: Partial<ReadingProgress> = { bookId: 'a', chapterId: 'b', page: 1 }
     expect(p.locator).toBeUndefined()
   })
 })
