@@ -4,7 +4,7 @@ export const ROUTES = {
   SUB_LIBRARY: '/library/:subLibraryId',
   BOOK_DETAIL: '/book/:id',
   READER: '/reader/:bookId/:chapterId?',
-  TEXT_READER: '/text-reader/:bookId',
+  TEXT_READER: '/text-reader/:bookId/:chapterId?',
   IMPORT: '/import',
   CUSTOM_CLOUD: '/import/custom-cloud',
   SETTINGS: '/settings',
@@ -27,7 +27,10 @@ export function readerPath(bookId: string, chapterId?: string): string {
   return `/reader/${bookId}`;
 }
 
-export function textReaderPath(bookId: string): string {
+export function textReaderPath(bookId: string, chapterId?: string): string {
+  if (chapterId) {
+    return `/text-reader/${bookId}/${chapterId}`;
+  }
   return `/text-reader/${bookId}`;
 }
 
@@ -38,7 +41,7 @@ export function textReaderPath(bookId: string): string {
  */
 export function readerPathForBook(book: { id: string; format?: string }, chapterId?: string): string {
   if (book.format === 'text') {
-    return textReaderPath(book.id);
+    return textReaderPath(book.id, chapterId);
   }
   return readerPath(book.id, chapterId);
 }

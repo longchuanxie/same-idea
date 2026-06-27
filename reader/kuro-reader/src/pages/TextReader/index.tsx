@@ -15,7 +15,7 @@ import { BookmarkPanel } from '@/components/molecules/BookmarkPanel';
 import { AnnotationPopup } from '@/components/molecules/AnnotationPopup';
 import { AnnotationList } from '@/components/molecules/AnnotationList';
 import { splitTextIntoChapters, cleanHtmlToText } from '@/services/parsers/utils';
-import type { Bookmark, Annotation, AnnotationStyle } from '@/types';
+import type { Bookmark, Annotation, AnnotationStyle, Chapter } from '@/types';
 
 const STATS_RECORD_INTERVAL = 60000;
 const MS_PER_MINUTE = 60000;
@@ -28,6 +28,34 @@ export interface TextChapter {
   title: string;
   content: string;
 }
+
+const resolveTextChapterIndex = (
+  textChapters: TextChapter[],
+  bookChapters: Chapter[] | undefined,
+  bookId: string,
+  chapterId: string
+): number => {
+  const bookChapterIndex = bookChapters?.findIndex((chapter) => chapter.id === chapterId) ?? -1;
+  if (bookChapterIndex >= 0 && bookChapterIndex < textChapters.length) {
+    return bookChapterIndex;
+  }
+
+  const textChapterIndex = textChapters.findIndex((chapter) => chapter.id === chapterId);
+  if (textChapterIndex >= 0) {
+    return textChapterIndex;
+  }
+
+  const legacyChapterPrefix = `${bookId}-ch`;
+  if (chapterId.startsWith(legacyChapterPrefix)) {
+    const chapterNumber = Number(chapterId.slice(legacyChapterPrefix.length));
+    const index = chapterNumber - 1;
+    if (Number.isInteger(index) && index >= 0 && index < textChapters.length) {
+      return index;
+    }
+  }
+
+  return -1;
+};
 
 /**
  * 从 bookFileRepo 加载文本内容。
@@ -133,7 +161,7 @@ async function loadTextContent(bookId: string): Promise<{ chapters: TextChapter[
 
 export const TextReaderPage: React.FC = () => {
   const navigate = useNavigate();
-  const { bookId } = useParams<{ bookId: string }>();
+  const { bookId, chapterId } = useParams<{ bookId: string; chapterId?: string }>();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const readingStartTimeRef = useRef<number>(Date.now());
   const lastStatsRecordRef = useRef<number>(Date.now());
@@ -303,6 +331,19 @@ export const TextReaderPage: React.FC = () => {
   // 恢复阅读位置（增强：支持章节+分页恢复）
   useEffect(() => {
     if (!bookId || isLoading) return;
+    if (chapterId) {
+      const targetChapterIndex = resolveTextChapterIndex(chapters, book?.chapters, bookId, chapterId);
+      if (targetChapterIndex >= 0) {
+        setCurrentChapterIndex(targetChapterIndex);
+        setCurrentPageIndex(0);
+        setScrollPercent(0);
+        requestAnimationFrame(() => {
+          scrollContainerRef.current?.scrollTo(0, 0);
+        });
+      }
+      return;
+    }
+
     const progress = useLibraryStore.getState().readingProgress[bookId];
     if (!progress) return;
 
@@ -350,7 +391,7 @@ export const TextReaderPage: React.FC = () => {
         return () => clearTimeout(timer);
       }
     }
-  }, [bookId, isLoading, textReadingMode, chapters.length]);
+  }, [bookId, chapterId, isLoading, textReadingMode, chapters, book?.chapters]);
 
   // 统计阅读时间
   useEffect(() => {
