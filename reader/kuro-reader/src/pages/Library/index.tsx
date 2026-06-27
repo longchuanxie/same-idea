@@ -30,11 +30,13 @@ export const LibraryPage: React.FC = () => {
     addBooksToSubLibrary,
     renameSubLibrary,
     deleteSubLibrary,
+    batchDeleteSubLibraries,
     getBooksByTag,
   } = useLibraryStore();
 
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedSubLibIds, setSelectedSubLibIds] = useState<Set<string>>(new Set());
   const [showNewSubLibDialog, setShowNewSubLibDialog] = useState(false);
   const [showAddToSubLibDialog, setShowAddToSubLibDialog] = useState(false);
   const [newSubLibName, setNewSubLibName] = useState('');
@@ -108,16 +110,27 @@ export const LibraryPage: React.FC = () => {
   };
 
   const selectAll = () => {
-    if (selectedIds.size === displayedBooks.length) {
+    const allBookIds = new Set(displayedBooks.map((b) => b.id));
+    const allSubLibIds = new Set(subLibraries.map((sl) => sl.id));
+    const allSelected =
+      selectedIds.size === displayedBooks.length &&
+      displayedBooks.length > 0 &&
+      selectedSubLibIds.size === subLibraries.length &&
+      subLibraries.length > 0;
+
+    if (allSelected) {
       setSelectedIds(new Set());
+      setSelectedSubLibIds(new Set());
     } else {
-      setSelectedIds(new Set(displayedBooks.map((b) => b.id)));
+      setSelectedIds(allBookIds);
+      setSelectedSubLibIds(allSubLibIds);
     }
   };
 
   const exitSelectMode = () => {
     setIsSelectMode(false);
     setSelectedIds(new Set());
+    setSelectedSubLibIds(new Set());
   };
 
   const openConfirm = (
@@ -226,6 +239,36 @@ export const LibraryPage: React.FC = () => {
     );
   };
 
+  const toggleSubLibSelect = (id: string) => {
+    setSelectedSubLibIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBatchDeleteSubLibraries = () => {
+    if (selectedSubLibIds.size === 0) return;
+    const selectedSubLibs = subLibraries.filter((sl) => selectedSubLibIds.has(sl.id));
+    const totalBooks = selectedSubLibs.reduce((sum, sl) => sum + sl.bookIds.length, 0);
+    const names = selectedSubLibs.map((sl) => `「${sl.name}」`).join('、');
+
+    openConfirm(
+      '移除子书库',
+      `确定要移除${names}共 ${selectedSubLibIds.size} 个子书库及其中的 ${totalBooks} 本书籍吗？此操作不可恢复。`,
+      async () => {
+        await batchDeleteSubLibraries(Array.from(selectedSubLibIds), true);
+        setSelectedSubLibIds(new Set());
+        if (selectedIds.size === 0 && selectedSubLibIds.size <= 1) {
+          setIsSelectMode(false);
+        }
+        closeConfirm();
+      },
+      'danger'
+    );
+  };
+
   const handleBookClick = useCallback((bookId: string) => {
     if (isSelectMode) {
       toggleSelect(bookId);
@@ -284,7 +327,7 @@ export const LibraryPage: React.FC = () => {
           <h2 className="font-display text-headline-md text-primary">我的书架</h2>
           {isSelectMode && (
             <span className="font-label text-label-sm text-on-surface-variant">
-              已选 {selectedIds.size} 项
+              已选 {selectedIds.size + selectedSubLibIds.size} 项
             </span>
           )}
         </div>
@@ -375,12 +418,37 @@ export const LibraryPage: React.FC = () => {
         <section className="mb-8">
           <h3 className="font-label text-label-sm text-on-surface-variant uppercase tracking-widest mb-4">子书库</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
-            {subLibraries.map((subLib) => (
+            {subLibraries.map((subLib) => {
+              const isSubLibSelected = selectedSubLibIds.has(subLib.id);
+              return (
               <article
                 key={subLib.id}
                 className="group cursor-pointer flex flex-col relative"
-                onClick={() => navigate(subLibraryPath(subLib.id))}
+                onClick={() => {
+                  if (isSelectMode) {
+                    toggleSubLibSelect(subLib.id);
+                  } else {
+                    navigate(subLibraryPath(subLib.id));
+                  }
+                }}
               >
+                {isSelectMode && (
+                  <div className="absolute top-2 left-2 z-10">
+                    <div
+                      className={`w-6 h-6 rounded grid place-content-center border transition-colors ${
+                        isSubLibSelected ? 'bg-primary border-primary' : 'bg-surface-bright/80 border-outline'
+                      }`}
+                    >
+                      {isSubLibSelected && (
+                        <div className="w-3.5 h-3.5" style={{
+                          clipPath: 'polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%)',
+                          backgroundColor: 'white',
+                        }} />
+                      )}
+                    </div>
+                  </div>
+                )}
+                {!isSelectMode && (
                 <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
                   <SubLibraryMenu
                     subLibraryId={subLib.id}
@@ -389,7 +457,11 @@ export const LibraryPage: React.FC = () => {
                     onDelete={(id) => handleDeleteSubLibrary(id, subLib.name)}
                   />
                 </div>
-                <div className="border border-outline-variant bg-surface-container aspect-[2/3] overflow-hidden mb-3 relative">
+                )}
+                <div className={`border bg-surface-container aspect-[2/3] overflow-hidden mb-3 relative ${
+                  isSelectMode && isSubLibSelected ? 'border-primary' : 'border-outline-variant'
+                }`}>
+                  {isSelectMode && isSubLibSelected && <div className="absolute inset-0 bg-primary/5 mix-blend-multiply z-0" />}
                   {subLib.bookIds.length > 0 && coverUrls[subLib.bookIds[0]] ? (
                     <img
                       src={coverUrls[subLib.bookIds[0]]}
@@ -407,7 +479,9 @@ export const LibraryPage: React.FC = () => {
                 </div>
                 <h4 className="font-body text-body-lg text-primary leading-tight truncate">{subLib.name}</h4>
               </article>
-            ))}
+              );
+            })}
+            {!isSelectMode && (
             <article
               className="group cursor-pointer flex flex-col"
               onClick={() => {
@@ -423,6 +497,7 @@ export const LibraryPage: React.FC = () => {
               </div>
               <h4 className="font-body text-body-lg text-on-surface-variant leading-tight">&nbsp;</h4>
             </article>
+            )}
           </div>
         </section>
       )}
@@ -606,38 +681,61 @@ export const LibraryPage: React.FC = () => {
 
       {isSelectMode && (
         <div className="fixed bottom-gutter md:bottom-gutter left-1/2 -translate-x-1/2 w-[calc(100%-48px)] max-w-md bg-surface-container-highest border border-outline-variant rounded-full z-50 flex justify-around items-center p-2 gap-2 md:mb-0 mb-20">
-          <button
-            className={`flex flex-col items-center justify-center rounded-full px-4 py-2 transition-all group ${
-              selectedIds.size > 0 ? 'text-on-surface-variant hover:bg-surface-dim' : 'text-on-surface-variant/40 cursor-not-allowed'
-            }`}
-            onClick={handleBatchDelete}
-            disabled={selectedIds.size === 0}
-          >
-            <span className="material-symbols-outlined group-hover:text-primary mb-1">delete</span>
-            <span className="font-label text-label-sm group-hover:text-primary">删除</span>
-          </button>
-          <button
-            className={`flex flex-col items-center justify-center rounded-full px-4 py-2 transition-all group border-l border-outline-variant/50 pl-6 ${
-              selectedIds.size > 0 ? 'text-on-surface-variant hover:bg-surface-dim' : 'text-on-surface-variant/40 cursor-not-allowed'
-            }`}
-            onClick={handleBatchMarkAsRead}
-            disabled={selectedIds.size === 0}
-          >
-            <span className="material-symbols-outlined group-hover:text-primary mb-1">done_all</span>
-            <span className="font-label text-label-sm group-hover:text-primary">标为已读</span>
-          </button>
-          <button
-            className={`flex flex-col items-center justify-center rounded-full px-4 py-2 transition-all group border-l border-outline-variant/50 pl-6 ${
-              selectedIds.size > 0 ? 'text-on-surface-variant hover:bg-surface-dim' : 'text-on-surface-variant/40 cursor-not-allowed'
-            }`}
-            onClick={() => {
-              if (selectedIds.size > 0) setShowAddToSubLibDialog(true);
-            }}
-            disabled={selectedIds.size === 0}
-          >
-            <span className="material-symbols-outlined group-hover:text-primary mb-1">create_new_folder</span>
-            <span className="font-label text-label-sm group-hover:text-primary">归入</span>
-          </button>
+          {(selectedIds.size > 0 || selectedSubLibIds.size > 0) && (
+            <button
+              className="flex flex-col items-center justify-center rounded-full px-4 py-2 transition-all group text-on-surface-variant hover:bg-surface-dim"
+              onClick={() => {
+                if (selectedSubLibIds.size > 0 && selectedIds.size > 0) {
+                  // 同时选中了子书库和书籍
+                  const selectedSubLibs = subLibraries.filter((sl) => selectedSubLibIds.has(sl.id));
+                  const subLibBookCount = selectedSubLibs.reduce((sum, sl) => sum + sl.bookIds.length, 0);
+                  openConfirm(
+                    '批量删除',
+                    `确定要删除选中的 ${selectedIds.size} 本书籍和 ${selectedSubLibIds.size} 个子书库（含其中 ${subLibBookCount} 本书籍）吗？此操作不可恢复。`,
+                    async () => {
+                      await batchDelete(Array.from(selectedIds));
+                      await batchDeleteSubLibraries(Array.from(selectedSubLibIds), true);
+                      setSelectedIds(new Set());
+                      setSelectedSubLibIds(new Set());
+                      setIsSelectMode(false);
+                      closeConfirm();
+                    },
+                    'danger'
+                  );
+                } else if (selectedSubLibIds.size > 0) {
+                  handleBatchDeleteSubLibraries();
+                } else {
+                  handleBatchDelete();
+                }
+              }}
+            >
+              <span className="material-symbols-outlined group-hover:text-primary mb-1">delete</span>
+              <span className="font-label text-label-sm group-hover:text-primary">
+                {selectedSubLibIds.size > 0 && selectedIds.size === 0 ? '移除' : '删除'}
+              </span>
+            </button>
+          )}
+          {selectedIds.size > 0 && (
+            <>
+              <button
+                className="flex flex-col items-center justify-center rounded-full px-4 py-2 transition-all group border-l border-outline-variant/50 pl-6 text-on-surface-variant hover:bg-surface-dim"
+                onClick={handleBatchMarkAsRead}
+              >
+                <span className="material-symbols-outlined group-hover:text-primary mb-1">done_all</span>
+                <span className="font-label text-label-sm group-hover:text-primary">标为已读</span>
+              </button>
+              <button
+                className="flex flex-col items-center justify-center rounded-full px-4 py-2 transition-all group border-l border-outline-variant/50 pl-6 text-on-surface-variant hover:bg-surface-dim"
+                onClick={() => setShowAddToSubLibDialog(true)}
+              >
+                <span className="material-symbols-outlined group-hover:text-primary mb-1">create_new_folder</span>
+                <span className="font-label text-label-sm group-hover:text-primary">归入</span>
+              </button>
+            </>
+          )}
+          {selectedIds.size === 0 && selectedSubLibIds.size === 0 && (
+            <p className="font-label text-label-md text-on-surface-variant/60 py-2">点击选择书籍或子书库</p>
+          )}
         </div>
       )}
 

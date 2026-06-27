@@ -25,6 +25,7 @@ export const SubLibraryPage: React.FC = () => {
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteBooksOnRemove, setDeleteBooksOnRemove] = useState(false);
 
   useEffect(() => {
     if (books.length === 0) {
@@ -53,9 +54,9 @@ export const SubLibraryPage: React.FC = () => {
 
   const handleDeleteSubLibrary = useCallback(async () => {
     if (!subLibraryId) return;
-    await deleteSubLibrary(subLibraryId);
+    await deleteSubLibrary(subLibraryId, deleteBooksOnRemove);
     navigate(ROUTES.LIBRARY);
-  }, [subLibraryId, deleteSubLibrary, navigate]);
+  }, [subLibraryId, deleteSubLibrary, navigate, deleteBooksOnRemove]);
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -188,7 +189,10 @@ export const SubLibraryPage: React.FC = () => {
               </button>
               <button
                 className="font-label text-label-md text-on-surface-variant hover:text-error transition-colors flex items-center gap-1"
-                onClick={() => setShowDeleteDialog(true)}
+                onClick={() => {
+                  setDeleteBooksOnRemove(false);
+                  setShowDeleteDialog(true);
+                }}
               >
                 <span className="material-symbols-outlined text-lg">delete</span>
                 删除书库
@@ -335,21 +339,42 @@ export const SubLibraryPage: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-on-background/40">
           <div className="bg-surface-bright border border-outline-variant rounded-lg p-6 mx-margin-mobile max-w-md w-full">
             <h3 className="font-display text-headline-md text-primary mb-2">删除子书库</h3>
-            <p className="font-body text-body-md text-on-surface-variant mb-6">
-              确定要删除「{subLibrary.name}」吗？子书库中的漫画不会被删除，仅移除分组关系。
+            <p className="font-body text-body-md text-on-surface-variant mb-4">
+              确定要删除「{subLibrary.name}」吗？
             </p>
+            <label className="flex items-start gap-3 mb-6 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={deleteBooksOnRemove}
+                onChange={(e) => setDeleteBooksOnRemove(e.target.checked)}
+                className="mt-0.5 w-5 h-5 accent-error cursor-pointer"
+              />
+              <div>
+                <p className="font-label text-label-md text-on-surface group-hover:text-primary transition-colors">
+                  同时删除其中的 {subLibBooks.length} 本书籍
+                </p>
+                <p className="font-label text-label-sm text-on-surface-variant mt-0.5">
+                  {deleteBooksOnRemove ? '书籍将被永久删除，此操作不可恢复' : '仅移除分组关系，书籍保留在主书架'}
+                </p>
+              </div>
+            </label>
             <div className="flex gap-3 justify-end">
               <button
                 className="border border-outline-variant text-on-surface-variant font-label text-label-md px-6 py-2 rounded hover:bg-surface-variant transition-colors"
-                onClick={() => setShowDeleteDialog(false)}
+                onClick={() => {
+                  setShowDeleteDialog(false);
+                  setDeleteBooksOnRemove(false);
+                }}
               >
                 取消
               </button>
               <button
-                className="bg-error text-on-error font-label text-label-md px-6 py-2 rounded hover:opacity-90 transition-colors"
+                className={`font-label text-label-md px-6 py-2 rounded hover:opacity-90 transition-colors ${
+                  deleteBooksOnRemove ? 'bg-error text-on-error' : 'bg-primary text-on-primary'
+                }`}
                 onClick={handleDeleteSubLibrary}
               >
-                删除
+                {deleteBooksOnRemove ? '删除书库及书籍' : '仅删除书库'}
               </button>
             </div>
           </div>

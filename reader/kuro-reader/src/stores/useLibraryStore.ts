@@ -44,7 +44,8 @@ interface LibraryState {
 
   createSubLibrary: (name: string, bookIds?: string[]) => Promise<SubLibrary>;
   renameSubLibrary: (id: string, name: string) => Promise<void>;
-  deleteSubLibrary: (id: string) => Promise<void>;
+  deleteSubLibrary: (id: string, deleteBooks?: boolean) => Promise<void>;
+  batchDeleteSubLibraries: (ids: string[], deleteBooks?: boolean) => Promise<void>;
   addBooksToSubLibrary: (subLibraryId: string, bookIds: string[]) => Promise<void>;
   removeBooksFromSubLibrary: (subLibraryId: string, bookIds: string[]) => Promise<void>;
   getSubLibraryBooks: (subLibraryId: string) => Book[];
@@ -627,11 +628,100 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     }));
   },
 
-  deleteSubLibrary: async (id: string) => {
+  deleteSubLibrary: async (id: string, deleteBooks = false) => {
+    const subLibrary = get().subLibraries.find((s) => s.id === id);
+    if (!subLibrary) return;
+
+    if (deleteBooks && subLibrary.bookIds.length > 0) {
+      // 删除子书库中的所有书籍
+      for (const bookId of subLibrary.bookIds) {
+        await bookRepo.deleteFully(bookId);
+        const coverUrl = get().coverUrls[bookId];
+        if (coverUrl) URL.revokeObjectURL(coverUrl);
+      }
+      // 持久化受影响的标签
+      const affectedTags = get().tags.filter((t) =>
+        t.bookIds.some((bid) => subLibrary.bookIds.includes(bid))
+      );
+      for (const tag of affectedTags) {
+        const updatedTag = {
+          ...tag,
+          bookIds: tag.bookIds.filter((bid) => !subLibrary.bookIds.includes(bid)),
+        };
+        await tagRepo.save(updatedTag);
+      }
+    }
+
     await subLibraryRepo.delete(id);
+
+    const bookIdsToDelete = deleteBooks ? subLibrary.bookIds : [];
     set((state) => ({
       subLibraries: state.subLibraries.filter((s) => s.id !== id),
+      ...(deleteBooks
+        ? {
+            books: state.books.filter((b) => !bookIdsToDelete.includes(b.id)),
+            coverUrls: Object.fromEntries(
+              Object.entries(state.coverUrls).filter(([k]) => !bookIdsToDelete.includes(k))
+            ),
+            tags: state.tags.map((t) => ({
+              ...t,
+              bookIds: t.bookIds.filter((bid) => !bookIdsToDelete.includes(bid)),
+            })),
+          }
+        : {}),
     }));
+  },
+
+  batchDeleteSubLibraries: async (ids: string[], deleteBooks = false) => {
+    const allBookIdsToDelete: string[] = [];
+
+    for (const id of ids) {
+      const subLibrary = get().subLibraries.find((s) => s.id === id);
+      if (!subLibrary) continue;
+
+      if (deleteBooks) {
+        allBookIdsToDelete.push(...subLibrary.bookIds);
+      }
+
+      await subLibraryRepo.delete(id);
+    }
+
+    // 如果需要删除书籍，执行书籍删除
+    if (deleteBooks && allBookIdsToDelete.length > 0) {
+      const uniqueBookIds = [...new Set(allBookIdsToDelete)];
+      for (const bookId of uniqueBookIds) {
+        await bookRepo.deleteFully(bookId);
+        const coverUrl = get().coverUrls[bookId];
+        if (coverUrl) URL.revokeObjectURL(coverUrl);
+      }
+      // 持久化受影响的标签
+      const affectedTags = get().tags.filter((t) =>
+        t.bookIds.some((bid) => uniqueBookIds.includes(bid))
+      );
+      for (const tag of affectedTags) {
+        const updatedTag = {
+          ...tag,
+          bookIds: tag.bookIds.filter((bid) => !uniqueBookIds.includes(bid)),
+        };
+        await tagRepo.save(updatedTag);
+      }
+
+      set((state) => ({
+        subLibraries: state.subLibraries.filter((s) => !ids.includes(s.id)),
+        books: state.books.filter((b) => !uniqueBookIds.includes(b.id)),
+        coverUrls: Object.fromEntries(
+          Object.entries(state.coverUrls).filter(([k]) => !uniqueBookIds.includes(k))
+        ),
+        tags: state.tags.map((t) => ({
+          ...t,
+          bookIds: t.bookIds.filter((bid) => !uniqueBookIds.includes(bid)),
+        })),
+      }));
+    } else {
+      set((state) => ({
+        subLibraries: state.subLibraries.filter((s) => !ids.includes(s.id)),
+      }));
+    }
   },
 
   addBooksToSubLibrary: async (subLibraryId: string, bookIds: string[]) => {

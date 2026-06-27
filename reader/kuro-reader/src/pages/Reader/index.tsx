@@ -2,6 +2,7 @@ import React, { useEffect, useCallback, useRef, useState, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { FullscreenViewer } from '@/components/molecules/FullscreenViewer';
+import { HorizontalReaderView } from '@/components/molecules/HorizontalReaderView';
 import { ReaderBottomBar } from '@/components/molecules/ReaderBottomBar';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import { useReaderStore } from '@/stores/useReaderStore';
@@ -10,6 +11,17 @@ import { useAppStore } from '@/stores/useAppStore';
 import { useSmoothScroll } from '@/hooks/useSmoothScroll';
 import { cn } from '@/utils/cn';
 import { getPaperConfig } from '@/utils/paperTexture';
+import {
+  getHorizontalPageSpread,
+  getHorizontalPageStart,
+  getHorizontalPageTurnTarget,
+  getPageSpreadLabel,
+  getPageTurnForKeyboard,
+  getPageTurnForSwipe,
+  getPageTurnForTapZone,
+  getTapZone,
+  type PageTurn,
+} from '@/utils/readerPagination';
 
 const LONG_PRESS_DURATION = 500;
 const UI_ANIMATION_DURATION = 300;
@@ -18,7 +30,6 @@ const TOUCH_MOVE_THRESHOLD = 10;
 const SWIPE_THRESHOLD = 50;
 const STATS_RECORD_INTERVAL = 60000;
 const MS_PER_MINUTE = 60000;
-const CLICK_REGION_RATIO = 1 / 3;
 const SWIPE_TIMEOUT = 500;
 const SCROLL_RETRY_INTERVAL = 150;
 const LAYOUT_STABLE_DELAY = 100;
@@ -32,6 +43,8 @@ const VERTICAL_APPEND_BATCH_SIZE = 8;
 const VERTICAL_PREPEND_THRESHOLD = 120;
 const VERTICAL_APPEND_THRESHOLD = 600;
 const FIRST_PAGE_NOTICE_DURATION = 1600;
+const FIRST_PAGE_NOTICE_TEXT = '已经到第一页';
+const LAST_PAGE_NOTICE_TEXT = '已经到最后一页';
 const DEFAULT_PAGE_SCROLL_RATIO = 0;
 const MAX_PAGE_SCROLL_RATIO = 1;
 const PAGE_PROGRESS_OFFSET = 1;
@@ -123,8 +136,6 @@ export const ReaderPage: React.FC = () => {
     setPageLayout,
     toggleUi,
     setDirection,
-    nextPage,
-    prevPage,
     goToPage,
     closeReader,
     openFullscreen,
@@ -468,6 +479,14 @@ export const ReaderPage: React.FC = () => {
   }, [currentPage, currentChapterId]);
 
   useEffect(() => {
+    if (direction !== 'horizontal' || totalPages <= 0) return;
+    const alignedPage = getHorizontalPageStart(currentPage, totalPages, pageLayout);
+    if (alignedPage !== currentPage) {
+      goToPage(alignedPage);
+    }
+  }, [currentPage, direction, goToPage, pageLayout, totalPages]);
+
+  useEffect(() => {
     if (direction !== 'vertical' || totalPages <= 0) return;
     setVerticalBufferStartIndex((startIndex) => Math.max(0, Math.min(startIndex, totalPages - 1)));
     setVerticalRenderStartIndex((startIndex) => Math.max(0, Math.min(startIndex, totalPages - 1)));
@@ -491,8 +510,8 @@ export const ReaderPage: React.FC = () => {
     verticalRenderStartIndex,
   ]);
 
-  const showFirstPageNotice = useCallback(() => {
-    setReaderNotice('已经到第一页');
+  const showReaderNotice = useCallback((notice: string) => {
+    setReaderNotice(notice);
     if (firstPageNoticeTimerRef.current) {
       clearTimeout(firstPageNoticeTimerRef.current);
     }
@@ -501,6 +520,14 @@ export const ReaderPage: React.FC = () => {
       firstPageNoticeTimerRef.current = null;
     }, FIRST_PAGE_NOTICE_DURATION);
   }, []);
+
+  const showFirstPageNotice = useCallback(() => {
+    showReaderNotice(FIRST_PAGE_NOTICE_TEXT);
+  }, [showReaderNotice]);
+
+  const showLastPageNotice = useCallback(() => {
+    showReaderNotice(LAST_PAGE_NOTICE_TEXT);
+  }, [showReaderNotice]);
 
   const saveVerticalProgressForPage = useCallback((page: number) => {
     if (!bookId || !currentChapterId || totalPages === 0) return;
@@ -739,17 +766,39 @@ export const ReaderPage: React.FC = () => {
     }
   }, []);
 
-  const pageStep = pageLayout === 'double' && direction === 'horizontal' ? 2 : 1;
+  const goReaderPageTurn = useCallback((turn: PageTurn) => {
+    if (totalPages <= 0) return;
+    const target = direction === 'horizontal'
+      ? getHorizontalPageTurnTarget(currentPage, totalPages, pageLayout, turn)
+      : Math.max(1, Math.min(currentPage + (turn === 'next' ? 1 : -1), totalPages));
+    if (target !== currentPage) {
+      goToPage(target);
+      return;
+    }
+    if (direction === 'horizontal') {
+      if (turn === 'prev') {
+        showFirstPageNotice();
+      } else {
+        showLastPageNotice();
+      }
+    }
+  }, [
+    currentPage,
+    direction,
+    pageLayout,
+    showFirstPageNotice,
+    showLastPageNotice,
+    totalPages,
+    goToPage,
+  ]);
 
   const goNextPage = useCallback(() => {
-    const target = Math.min(currentPage + pageStep, totalPages);
-    goToPage(target);
-  }, [currentPage, pageStep, totalPages, goToPage]);
+    goReaderPageTurn('next');
+  }, [goReaderPageTurn]);
 
   const goPrevPage = useCallback(() => {
-    const target = Math.max(currentPage - pageStep, 1);
-    goToPage(target);
-  }, [currentPage, pageStep, goToPage]);
+    goReaderPageTurn('prev');
+  }, [goReaderPageTurn]);
 
   const handleImageClick = useCallback(
     (pageIndex: number, e: React.MouseEvent) => {
@@ -788,27 +837,25 @@ export const ReaderPage: React.FC = () => {
       }
 
       if (direction === 'horizontal') {
-        const clickX = e.clientX;
-        const screenWidth = window.innerWidth;
-        const regionWidth = screenWidth * CLICK_REGION_RATIO;
-        const isRtl = readingDirection === 'rtl';
-
-        if (clickX < regionWidth) {
-          singleClickTimerRef.current = setTimeout(() => {
-            singleClickTimerRef.current = null;
-            isRtl ? goPrevPage() : goNextPage();
-          }, DOUBLE_CLICK_THRESHOLD);
-        } else if (clickX > screenWidth - regionWidth) {
-          singleClickTimerRef.current = setTimeout(() => {
-            singleClickTimerRef.current = null;
-            isRtl ? goNextPage() : goPrevPage();
-          }, DOUBLE_CLICK_THRESHOLD);
-        } else {
+        if (zoomScale > 1) {
           singleClickTimerRef.current = setTimeout(() => {
             singleClickTimerRef.current = null;
             toggleUi();
           }, DOUBLE_CLICK_THRESHOLD);
+          return;
         }
+
+        const tapZone = getTapZone(e.clientX, window.innerWidth);
+        const pageTurn = getPageTurnForTapZone(tapZone, readingDirection);
+
+        singleClickTimerRef.current = setTimeout(() => {
+          singleClickTimerRef.current = null;
+          if (!pageTurn) {
+            toggleUi();
+            return;
+          }
+          goReaderPageTurn(pageTurn);
+        }, DOUBLE_CLICK_THRESHOLD);
       } else {
         singleClickTimerRef.current = setTimeout(() => {
           singleClickTimerRef.current = null;
@@ -816,7 +863,7 @@ export const ReaderPage: React.FC = () => {
         }, DOUBLE_CLICK_THRESHOLD);
       }
     },
-    [toggleUi, direction, readingDirection, goNextPage, goPrevPage, zoomScale]
+    [toggleUi, direction, readingDirection, goReaderPageTurn, zoomScale]
   );
 
   const handleImageTouchStart = useCallback(
@@ -860,7 +907,14 @@ export const ReaderPage: React.FC = () => {
       clearLongPress();
 
       if (direction !== 'horizontal' || !touchStartRef.current) return;
-      if (!pageTurnGestures) return;
+      if (zoomScale > 1) {
+        touchStartRef.current = null;
+        return;
+      }
+      if (!pageTurnGestures) {
+        touchStartRef.current = null;
+        return;
+      }
       const touch = e.changedTouches[0];
       const deltaX = touch.clientX - touchStartRef.current.x;
       const deltaY = touch.clientY - touchStartRef.current.y;
@@ -871,15 +925,12 @@ export const ReaderPage: React.FC = () => {
       if (Math.abs(deltaX) < SWIPE_THRESHOLD || Math.abs(deltaY) > Math.abs(deltaX)) return;
       if (elapsed > SWIPE_TIMEOUT) return;
 
-      const isForward = deltaX < 0;
-      const shouldGoForward = readingDirection === 'rtl' ? isForward : !isForward;
-      if (shouldGoForward) {
-        goNextPage();
-      } else {
-        goPrevPage();
+      const pageTurn = getPageTurnForSwipe(deltaX, readingDirection);
+      if (pageTurn) {
+        goReaderPageTurn(pageTurn);
       }
     },
-    [direction, goNextPage, goPrevPage, clearLongPress, readingDirection, pageTurnGestures]
+    [direction, goReaderPageTurn, clearLongPress, readingDirection, pageTurnGestures, zoomScale]
   );
 
   const handleMainClick = useCallback(
@@ -902,18 +953,24 @@ export const ReaderPage: React.FC = () => {
   const handleScrollTrackClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    const targetPage = Math.max(1, Math.min(Math.round(ratio * totalPages), totalPages));
+    const rawTargetPage = Math.max(1, Math.min(Math.round(ratio * totalPages), totalPages));
+    const targetPage = direction === 'horizontal'
+      ? getHorizontalPageStart(rawTargetPage, totalPages, pageLayout)
+      : rawTargetPage;
     goToPage(targetPage);
     isTogglingRef.current = true;
-  }, [totalPages, goToPage]);
+  }, [direction, pageLayout, totalPages, goToPage]);
 
   const getPageFromClientX = useCallback((clientX: number) => {
     const track = progressTrackRef.current;
     if (!track || totalPages === 0) return 1;
     const rect = track.getBoundingClientRect();
     const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    return Math.max(1, Math.min(Math.round(ratio * totalPages), totalPages));
-  }, [totalPages]);
+    const rawPage = Math.max(1, Math.min(Math.round(ratio * totalPages), totalPages));
+    return direction === 'horizontal'
+      ? getHorizontalPageStart(rawPage, totalPages, pageLayout)
+      : rawPage;
+  }, [direction, pageLayout, totalPages]);
 
   const handleProgressMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -987,18 +1044,16 @@ export const ReaderPage: React.FC = () => {
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (fullscreenImageUrl) return;
-      const isRtl = readingDirection === 'rtl';
-      const isNextKey = isRtl ? e.key === 'ArrowLeft' : (e.key === 'ArrowRight' || e.key === 'ArrowDown');
-      const isPrevKey = isRtl ? e.key === 'ArrowRight' : (e.key === 'ArrowLeft' || e.key === 'ArrowUp');
-      if (isNextKey) {
+      const pageTurn = getPageTurnForKeyboard(e.key, direction, readingDirection);
+      if (pageTurn === 'next') {
         goNextPage();
-      } else if (isPrevKey) {
+      } else if (pageTurn === 'prev') {
         goPrevPage();
       } else if (e.key === 'Escape') {
         navigate(-1);
       }
     },
-    [goNextPage, goPrevPage, navigate, fullscreenImageUrl, readingDirection]
+    [direction, goNextPage, goPrevPage, navigate, fullscreenImageUrl, readingDirection]
   );
 
   useEffect(() => {
@@ -1273,6 +1328,23 @@ export const ReaderPage: React.FC = () => {
     ),
     [totalPages, verticalRenderEndIndex, verticalRenderStartIndex]
   );
+  const horizontalPageSpread = useMemo(
+    () => direction === 'horizontal'
+      ? getHorizontalPageSpread(currentPage, totalPages, pageLayout, readingDirection)
+      : [],
+    [currentPage, direction, pageLayout, readingDirection, totalPages]
+  );
+  const currentPageLabel = useMemo(
+    () => direction === 'horizontal' && pageLayout === 'double' && horizontalPageSpread.length > 0
+      ? getPageSpreadLabel(horizontalPageSpread)
+      : `${currentPage}`,
+    [currentPage, direction, horizontalPageSpread, pageLayout]
+  );
+  const dragPageLabel = useMemo(() => {
+    if (dragPage === null) return currentPageLabel;
+    if (direction !== 'horizontal' || pageLayout !== 'double') return `${dragPage}`;
+    return getPageSpreadLabel(getHorizontalPageSpread(dragPage, totalPages, pageLayout, readingDirection));
+  }, [currentPageLabel, direction, dragPage, pageLayout, readingDirection, totalPages]);
 
   if (isLoading) {
     return (
@@ -1372,101 +1444,28 @@ export const ReaderPage: React.FC = () => {
             })}
           </div>
         ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            {pageLayout === 'double' && currentPage < totalPages && pageUrls[currentPage - 1] && pageUrls[currentPage] ? (
-              <div className="flex items-center justify-center h-full w-full gap-1 animate-page-fade">
-                {readingDirection === 'rtl' ? (
-                  <>
-                    <img
-                      key={`r-${currentPage}`}
-                      src={pageUrls[currentPage]!}
-                      alt={`Page ${currentPage + 1}`}
-                      className="max-w-[50%] max-h-full object-contain cursor-pointer"
-                      style={{ ...(paperModeEnabled && paperConfig ? { filter: paperConfig.imageFilter } : {}), willChange: 'transform' }}
-                      draggable={false}
-                      onClick={(e) => handleImageClick(currentPage, e)}
-                      onTouchStart={(e) => handleImageTouchStart(currentPage, e)}
-                      onTouchMove={handleImageTouchMove}
-                      onTouchEnd={handleImageTouchEnd}
-                    />
-                    <img
-                      key={`l-${currentPage - 1}`}
-                      src={pageUrls[currentPage - 1]!}
-                      alt={`Page ${currentPage}`}
-                      className="max-w-[50%] max-h-full object-contain cursor-pointer"
-                      style={{ ...(paperModeEnabled && paperConfig ? { filter: paperConfig.imageFilter } : {}), willChange: 'transform' }}
-                      draggable={false}
-                      onClick={(e) => handleImageClick(currentPage - 1, e)}
-                      onTouchStart={(e) => handleImageTouchStart(currentPage - 1, e)}
-                      onTouchMove={handleImageTouchMove}
-                      onTouchEnd={handleImageTouchEnd}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <img
-                      key={`l-${currentPage - 1}`}
-                      src={pageUrls[currentPage - 1]!}
-                      alt={`Page ${currentPage}`}
-                      className="max-w-[50%] max-h-full object-contain cursor-pointer"
-                      style={{ ...(paperModeEnabled && paperConfig ? { filter: paperConfig.imageFilter } : {}), willChange: 'transform' }}
-                      draggable={false}
-                      onClick={(e) => handleImageClick(currentPage - 1, e)}
-                      onTouchStart={(e) => handleImageTouchStart(currentPage - 1, e)}
-                      onTouchMove={handleImageTouchMove}
-                      onTouchEnd={handleImageTouchEnd}
-                    />
-                    <img
-                      key={`r-${currentPage}`}
-                      src={pageUrls[currentPage]!}
-                      alt={`Page ${currentPage + 1}`}
-                      className="max-w-[50%] max-h-full object-contain cursor-pointer"
-                      style={{ ...(paperModeEnabled && paperConfig ? { filter: paperConfig.imageFilter } : {}), willChange: 'transform' }}
-                      draggable={false}
-                      onClick={(e) => handleImageClick(currentPage, e)}
-                      onTouchStart={(e) => handleImageTouchStart(currentPage, e)}
-                      onTouchMove={handleImageTouchMove}
-                      onTouchEnd={handleImageTouchEnd}
-                    />
-                  </>
-                )}
-              </div>
-            ) : pageUrls[currentPage - 1] ? (
-              <img
-                key={currentPage}
-                src={pageUrls[currentPage - 1]!}
-                alt={`Page ${currentPage}`}
-                className={cn(
-                  'max-w-full max-h-full object-contain cursor-pointer animate-page-fade',
-                  zoomScale > 1 && 'transition-transform duration-200'
-                )}
-                style={{
-                  ...(paperModeEnabled && paperConfig ? { filter: paperConfig.imageFilter } : {}),
-                  willChange: 'transform',
-                  ...(zoomScale > 1 ? {
-                    transform: `scale(${zoomScale})`,
-                    transformOrigin: `${zoomOrigin.x}px ${zoomOrigin.y}px`,
-                  } : {}),
-                }}
-                draggable={false}
-                onClick={(e) => handleImageClick(currentPage - 1, e)}
-                onTouchStart={(e) => handleImageTouchStart(currentPage - 1, e)}
-                onTouchMove={handleImageTouchMove}
-                onTouchEnd={handleImageTouchEnd}
-              />
-            ) : (
-              <div className="flex flex-col items-center gap-2">
-                <span className="material-symbols-outlined text-on-surface-variant text-4xl animate-spin">progress_activity</span>
-                <p className="font-label text-label-sm text-on-surface-variant">{currentPage} / {totalPages}</p>
-              </div>
-            )}
-          </div>
+          <HorizontalReaderView
+            pageLayout={pageLayout}
+            readingDirection={readingDirection}
+            pageUrls={pageUrls}
+            currentPage={currentPage}
+            currentPageLabel={currentPageLabel}
+            totalPages={totalPages}
+            horizontalPageSpread={horizontalPageSpread}
+            zoomScale={zoomScale}
+            zoomOrigin={zoomOrigin}
+            paperConfig={paperModeEnabled && paperConfig ? paperConfig : null}
+            onImageClick={handleImageClick}
+            onImageTouchStart={handleImageTouchStart}
+            onImageTouchMove={handleImageTouchMove}
+            onImageTouchEnd={handleImageTouchEnd}
+          />
         )}
       </main>
 
       <div className="fixed top-gutter right-margin-mobile z-40 pointer-events-none mt-safe">
         <div className="bg-on-surface/50 backdrop-blur-sm rounded-full px-3 py-1">
-          <span className="font-label text-label-sm text-surface">{currentPage} / {totalPages}</span>
+          <span className="font-label text-label-sm text-surface">{currentPageLabel} / {totalPages}</span>
         </div>
       </div>
 
@@ -1540,8 +1539,8 @@ export const ReaderPage: React.FC = () => {
           >
             <div className="max-w-max-width-content mx-auto flex flex-col gap-3">
               <div className="flex items-center justify-center gap-3">
-                <span className="font-label text-label-sm text-on-surface-variant tabular-nums w-8 text-right">
-                  {dragPage ?? currentPage}
+                <span className="font-label text-label-sm text-on-surface-variant tabular-nums min-w-10 text-right">
+                  {dragPageLabel}
                 </span>
                 <div
                   ref={progressTrackRef}
@@ -1560,21 +1559,21 @@ export const ReaderPage: React.FC = () => {
                     style={{ left: `${dragPage !== null ? ((dragPage / totalPages) * PERCENT_MULTIPLIER) : progressPercent}%`, transform: 'translate(-50%, -50%)' }}
                   />
                 </div>
-                <span className="font-label text-label-sm text-on-surface-variant tabular-nums w-8">{totalPages}</span>
+                <span className="font-label text-label-sm text-on-surface-variant tabular-nums min-w-8">{totalPages}</span>
               </div>
 
               {direction === 'horizontal' && (
                 <div className="flex justify-center gap-3 pb-2">
                   <button
                     className="w-11 h-11 rounded-full border border-outline-variant/60 flex items-center justify-center text-primary hover:bg-surface-variant/50 transition-colors bg-surface/50"
-                    onClick={prevPage}
+                    onClick={goPrevPage}
                     data-ui-control
                   >
                     <span className="material-symbols-outlined">navigate_before</span>
                   </button>
                   <button
                     className="w-11 h-11 rounded-full bg-primary text-on-primary flex items-center justify-center hover:opacity-90 transition-opacity shadow-sm"
-                    onClick={nextPage}
+                    onClick={goNextPage}
                     data-ui-control
                   >
                     <span className="material-symbols-outlined">navigate_next</span>
@@ -1614,6 +1613,7 @@ export const ReaderPage: React.FC = () => {
         <ReaderBottomBar
           direction={direction}
           pageLayout={pageLayout}
+          readingDirection={readingDirection}
           paperModeEnabled={paperModeEnabled}
           paperType={paperType}
           brightness={brightness}
@@ -1621,6 +1621,15 @@ export const ReaderPage: React.FC = () => {
           onDirectionChange={handleReaderDirectionChange}
           onPageLayoutChange={(layout) => {
             setPageLayout(layout);
+            if (direction === 'horizontal') {
+              const alignedPage = getHorizontalPageStart(currentPage, totalPages, layout);
+              if (alignedPage !== currentPage) {
+                goToPage(alignedPage);
+              }
+            }
+          }}
+          onReadingDirectionChange={(nextReadingDirection) => {
+            useAppStore.getState().updateSettings({ readingDirection: nextReadingDirection });
           }}
           onPaperModeToggle={() => {
             const { togglePaperMode: toggle } = useAppStore.getState();

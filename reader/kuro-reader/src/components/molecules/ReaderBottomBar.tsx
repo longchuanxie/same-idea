@@ -1,18 +1,29 @@
-import React from 'react';
+import type { FC } from 'react';
 
+import type { PaperType } from '@/types';
 import { cn } from '@/utils/cn';
 import { getAllPaperTypes } from '@/utils/paperTexture';
-import type { PaperType } from '@/types';
+
+type ReadingDirection = 'rtl' | 'ltr';
+
+const READING_DIRECTION_LABELS: Record<ReadingDirection, string> = {
+  rtl: '\u4ece\u53f3\u81f3\u5de6',
+  ltr: '\u4ece\u5de6\u81f3\u53f3',
+};
+
+const WARM_TEMPERATURE_THRESHOLD = 50;
 
 export interface ReaderBottomBarProps {
   direction: 'vertical' | 'horizontal';
   pageLayout: 'single' | 'double';
+  readingDirection: ReadingDirection;
   paperModeEnabled: boolean;
   paperType: PaperType;
   brightness: number;
   colorTemperature: number;
   onDirectionChange: (dir: 'vertical' | 'horizontal') => void;
   onPageLayoutChange: (layout: 'single' | 'double') => void;
+  onReadingDirectionChange: (direction: ReadingDirection) => void;
   onPaperModeToggle: () => void;
   onPaperTypeChange: (type: PaperType) => void;
   onBrightnessChange: (value: number) => void;
@@ -20,15 +31,17 @@ export interface ReaderBottomBarProps {
   onClose: () => void;
 }
 
-export const ReaderBottomBar: React.FC<ReaderBottomBarProps> = ({
+export const ReaderBottomBar: FC<ReaderBottomBarProps> = ({
   direction,
   pageLayout,
+  readingDirection,
   paperModeEnabled,
   paperType,
   brightness,
   colorTemperature,
   onDirectionChange,
   onPageLayoutChange,
+  onReadingDirectionChange,
   onPaperModeToggle,
   onPaperTypeChange,
   onBrightnessChange,
@@ -111,6 +124,35 @@ export const ReaderBottomBar: React.FC<ReaderBottomBarProps> = ({
             </div>
           )}
 
+          {direction === 'horizontal' && (
+            <div className="flex gap-3 mb-4">
+              <button
+                className={cn(
+                  'flex-1 flex flex-col items-center gap-2 py-3 rounded-xl border transition-colors',
+                  readingDirection === 'rtl'
+                    ? 'bg-primary text-on-primary border-primary'
+                    : 'bg-surface-container-lowest text-on-surface-variant border-outline-variant hover:bg-surface-variant'
+                )}
+                onClick={() => onReadingDirectionChange('rtl')}
+              >
+                <span className="material-symbols-outlined text-[24px]">format_textdirection_r_to_l</span>
+                <span className="font-label text-label-sm">{READING_DIRECTION_LABELS.rtl}</span>
+              </button>
+              <button
+                className={cn(
+                  'flex-1 flex flex-col items-center gap-2 py-3 rounded-xl border transition-colors',
+                  readingDirection === 'ltr'
+                    ? 'bg-primary text-on-primary border-primary'
+                    : 'bg-surface-container-lowest text-on-surface-variant border-outline-variant hover:bg-surface-variant'
+                )}
+                onClick={() => onReadingDirectionChange('ltr')}
+              >
+                <span className="material-symbols-outlined text-[24px]">format_textdirection_l_to_r</span>
+                <span className="font-label text-label-sm">{READING_DIRECTION_LABELS.ltr}</span>
+              </button>
+            </div>
+          )}
+
           <div className="flex items-center justify-between py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant mb-4">
             <div className="flex items-center gap-3">
               <span className="material-symbols-outlined text-on-surface-variant">note</span>
@@ -187,7 +229,7 @@ export const ReaderBottomBar: React.FC<ReaderBottomBarProps> = ({
                 <span className="material-symbols-outlined text-on-surface-variant text-[18px]">thermostat</span>
                 <p className="font-label text-label-md text-on-surface">色温</p>
               </div>
-              <span className="font-label text-label-sm text-on-surface-variant">{colorTemperature === 0 ? '冷光' : colorTemperature <= 50 ? '暖白' : '暖光'}</span>
+              <span className="font-label text-label-sm text-on-surface-variant">{colorTemperature === 0 ? '冷光' : colorTemperature <= WARM_TEMPERATURE_THRESHOLD ? '暖白' : '暖光'}</span>
             </div>
             <input
               type="range"
