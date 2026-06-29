@@ -36,13 +36,13 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ active = 'home' }) =
     <nav
       ref={navRef}
       className={cn(
-        'md:hidden',
-        'fixed bottom-8 left-1/2 -translate-x-1/2 z-50',
-        'flex justify-around items-center p-2 gap-2',
+        'lg:hidden landscape:flex',
+        'fixed bottom-8 left-1/2 z-50 -translate-x-1/2',
+        'flex items-center justify-around gap-2 p-2',
+        'landscape:bottom-4 landscape:gap-1 landscape:p-1',
         'bg-surface-container border border-outline-variant',
         'w-[calc(100%-48px)] max-w-max-width-content rounded-full',
-        'mb-safe',
-        'relative'
+        'mb-safe'
       )}
     >
      
@@ -54,9 +54,10 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ active = 'home' }) =
             data-nav-item
             className={cn(
               'relative z-10 flex flex-col items-center justify-center px-4 py-1 rounded-full transition-colors duration-200',
+              'landscape:px-3 landscape:py-0.5',
               isActive
-                ? 'text-on-primary'
-                : 'text-on-surface-variant'
+                ? 'bg-primary text-on-primary'
+                : 'text-on-surface-variant hover:bg-surface-container-highest'
             )}
             onClick={() => handleClick(item)}
           >

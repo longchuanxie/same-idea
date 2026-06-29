@@ -95,7 +95,7 @@ export type TextFontFamily = 'system' | 'serif' | 'kaiti' | 'sans'
 export type TextAlign = 'left' | 'justify'
 
 /** 文本阅读模式 */
-export type TextReadingMode = 'scroll' | 'paginate' | 'book'
+export type TextReadingMode = 'scroll' | 'paginate' | 'book' | 'columns'
 
 export interface UserSettings {
   theme: 'light' | 'dark' | 'auto'
@@ -117,6 +117,7 @@ export interface UserSettings {
   firstLineIndent: boolean
   textLineHeight: number
   tapZoneEnabled: boolean
+  autoAdvanceTextChapter: boolean
   autoScrollSpeed: number
   textReadingMode: TextReadingMode
 }

@@ -17,14 +17,15 @@ interface HorizontalReaderViewProps {
   zoomScale: number;
   zoomOrigin: { x: number; y: number };
   paperConfig: PaperTextureConfig | null;
+  onSurfaceClick: (event: MouseEvent) => void;
+  onSurfaceTouchStart: (event: TouchEvent) => void;
+  onSurfaceTouchMove: (event: TouchEvent) => void;
+  onSurfaceTouchEnd: (event: TouchEvent) => void;
   onImageClick: (pageIndex: number, event: MouseEvent) => void;
-  onImageTouchStart: (pageIndex: number, event: TouchEvent) => void;
-  onImageTouchMove: (event: TouchEvent) => void;
-  onImageTouchEnd: (event: TouchEvent) => void;
 }
 
-const HORIZONTAL_VIEW_CLASSES = 'w-full h-full flex items-center justify-center px-margin-mobile md:px-margin-desktop';
-const DOUBLE_SPREAD_CLASSES = 'flex items-center justify-center h-full w-full gap-2 animate-page-fade';
+const HORIZONTAL_VIEW_CLASSES = 'w-full h-full flex items-center justify-center overflow-hidden px-1 sm:px-2';
+const DOUBLE_SPREAD_CLASSES = 'flex items-center justify-center h-full w-full gap-1 animate-page-fade';
 const DOUBLE_PAGE_SLOT_CLASSES = 'h-full min-w-0 flex-1 flex items-center justify-center';
 const DOUBLE_IMAGE_CLASSES = 'max-w-full max-h-full object-contain cursor-pointer';
 const SINGLE_IMAGE_CLASSES = 'max-w-full max-h-full object-contain cursor-pointer animate-page-fade';
@@ -42,10 +43,11 @@ export const HorizontalReaderView: FC<HorizontalReaderViewProps> = ({
   zoomScale,
   zoomOrigin,
   paperConfig,
+  onSurfaceClick,
+  onSurfaceTouchStart,
+  onSurfaceTouchMove,
+  onSurfaceTouchEnd,
   onImageClick,
-  onImageTouchStart,
-  onImageTouchMove,
-  onImageTouchEnd,
 }) => {
   const imageStyle = {
     ...(paperConfig ? { filter: paperConfig.imageFilter } : {}),
@@ -60,7 +62,14 @@ export const HorizontalReaderView: FC<HorizontalReaderViewProps> = ({
     : {};
 
   return (
-    <div className={HORIZONTAL_VIEW_CLASSES}>
+    <div
+      data-testid="horizontal-reader-surface"
+      className={HORIZONTAL_VIEW_CLASSES}
+      onClick={onSurfaceClick}
+      onTouchStart={onSurfaceTouchStart}
+      onTouchMove={onSurfaceTouchMove}
+      onTouchEnd={onSurfaceTouchEnd}
+    >
       {pageLayout === 'double' && horizontalPageSpread.length > 1 ? (
         <div className={DOUBLE_SPREAD_CLASSES}>
           {horizontalPageSpread.map((pageNumber) => {
@@ -76,9 +85,6 @@ export const HorizontalReaderView: FC<HorizontalReaderViewProps> = ({
                     loading="eager"
                     draggable={false}
                     onClick={(event) => onImageClick(pageNumber - 1, event)}
-                    onTouchStart={(event) => onImageTouchStart(pageNumber - 1, event)}
-                    onTouchMove={onImageTouchMove}
-                    onTouchEnd={onImageTouchEnd}
                   />
                 ) : (
                   <div className={LOADING_SLOT_CLASSES}>
@@ -105,9 +111,6 @@ export const HorizontalReaderView: FC<HorizontalReaderViewProps> = ({
           loading="eager"
           draggable={false}
           onClick={(event) => onImageClick(currentPage - 1, event)}
-          onTouchStart={(event) => onImageTouchStart(currentPage - 1, event)}
-          onTouchMove={onImageTouchMove}
-          onTouchEnd={onImageTouchEnd}
         />
       ) : (
         <div className={LOADING_FALLBACK_CLASSES}>

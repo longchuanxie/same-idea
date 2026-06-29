@@ -16,6 +16,7 @@ export interface TextReaderBottomBarProps {
   textAlign: TextAlign;
   firstLineIndent: boolean;
   tapZoneEnabled: boolean;
+  autoAdvanceTextChapter: boolean;
   autoScrollSpeed: number;
   textReadingMode: TextReadingMode;
   onFontSizeChange: (size: number) => void;
@@ -29,6 +30,7 @@ export interface TextReaderBottomBarProps {
   onTextAlignChange: (align: TextAlign) => void;
   onFirstLineIndentToggle: () => void;
   onTapZoneEnabledToggle: () => void;
+  onAutoAdvanceTextChapterToggle: () => void;
   onAutoScrollSpeedChange: (speed: number) => void;
   onTextReadingModeChange: (mode: TextReadingMode) => void;
   onClose: () => void;
@@ -59,8 +61,17 @@ const TEXT_FONTS: { family: TextFontFamily; label: string }[] = [
 const READING_MODES: { mode: TextReadingMode; label: string; icon: string }[] = [
   { mode: 'scroll', label: '上下滚动', icon: 'swap_vert' },
   { mode: 'paginate', label: '左右翻页', icon: 'chevron_left' },
+  { mode: 'columns', label: '双栏阅读', icon: 'view_week' },
   { mode: 'book', label: '模拟翻书', icon: 'menu_book' },
 ];
+
+const AUTO_ADVANCE_TEXT_CHAPTER_LABELS = {
+  title: '\u7ae0\u672b\u81ea\u52a8\u4e0b\u4e00\u7ae0',
+  enabled: '\u6eda\u52a8\u5230\u5e95\u81ea\u52a8\u8fdb\u5165\u4e0b\u4e00\u7ae0',
+  disabled: '\u6eda\u52a8\u5230\u5e95\u663e\u793a\u7ee7\u7eed\u63d0\u793a',
+  enableAria: '\u5f00\u542f\u7ae0\u672b\u81ea\u52a8\u4e0b\u4e00\u7ae0',
+  disableAria: '\u5173\u95ed\u7ae0\u672b\u81ea\u52a8\u4e0b\u4e00\u7ae0',
+} as const;
 
 export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
   fontSize,
@@ -74,6 +85,7 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
   textAlign,
   firstLineIndent,
   tapZoneEnabled,
+  autoAdvanceTextChapter,
   autoScrollSpeed,
   textReadingMode,
   onFontSizeChange,
@@ -87,6 +99,7 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
   onTextAlignChange,
   onFirstLineIndentToggle,
   onTapZoneEnabledToggle,
+  onAutoAdvanceTextChapterToggle,
   onAutoScrollSpeedChange,
   onTextReadingModeChange,
   onClose,
@@ -128,9 +141,38 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
           >
 
           {/* 阅读模式 */}
+          <div className="flex items-center justify-between py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant mb-4">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-on-surface-variant">last_page</span>
+              <div>
+                <p className="font-label text-label-md text-on-surface">{AUTO_ADVANCE_TEXT_CHAPTER_LABELS.title}</p>
+                <p className="font-body text-body-sm text-on-surface-variant">
+                  {autoAdvanceTextChapter ? AUTO_ADVANCE_TEXT_CHAPTER_LABELS.enabled : AUTO_ADVANCE_TEXT_CHAPTER_LABELS.disabled}
+                </p>
+              </div>
+            </div>
+            <button
+              className={cn(
+                'relative inline-block w-11 h-6 rounded-full toggle-spring',
+                autoAdvanceTextChapter ? 'bg-primary' : 'bg-surface-variant'
+              )}
+              onClick={onAutoAdvanceTextChapterToggle}
+              aria-label={autoAdvanceTextChapter ? AUTO_ADVANCE_TEXT_CHAPTER_LABELS.disableAria : AUTO_ADVANCE_TEXT_CHAPTER_LABELS.enableAria}
+            >
+              <span
+                className={cn(
+                  'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full toggle-thumb-spring border',
+                  autoAdvanceTextChapter
+                    ? 'translate-x-5 border-primary'
+                    : 'border-outline-variant'
+                )}
+              />
+            </button>
+          </div>
+
           <div className="py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant mb-4">
             <p className="font-label text-label-md text-on-surface mb-3">阅读模式</p>
-            <div className="flex gap-2">
+            <div className="grid grid-cols-4 gap-2">
               {READING_MODES.map(({ mode, label, icon }) => (
                 <button
                   key={mode}

@@ -933,6 +933,20 @@ export const ReaderPage: React.FC = () => {
     [direction, goReaderPageTurn, clearLongPress, readingDirection, pageTurnGestures, zoomScale]
   );
 
+  const handleHorizontalSurfaceClick = useCallback(
+    (e: React.MouseEvent) => {
+      handleImageClick(currentPage - 1, e);
+    },
+    [currentPage, handleImageClick]
+  );
+
+  const handleHorizontalSurfaceTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      handleImageTouchStart(currentPage - 1, e);
+    },
+    [currentPage, handleImageTouchStart]
+  );
+
   const handleMainClick = useCallback(
     (e: React.MouseEvent) => {
       if (isLongPressRef.current) {
@@ -1403,14 +1417,14 @@ export const ReaderPage: React.FC = () => {
         onTouchMoveCapture={handleVerticalTouchMoveCapture}
       >
         {direction === 'vertical' ? (
-          <div className="max-w-max-width-content w-full flex flex-col items-center">
+          <div className="w-full max-w-max-width-content landscape:max-w-none mx-auto flex flex-col items-center">
             {verticalPageIndices.map((idx) => {
               const url = pageUrls[idx];
               return (
                 <div
                   key={idx}
                   data-page-index={idx}
-                  className="w-full min-h-[40vh]"
+                  className="w-full min-h-[40vh] flex justify-center"
                   style={{ contain: 'layout style' }}
                 >
                   {url ? (
@@ -1418,7 +1432,7 @@ export const ReaderPage: React.FC = () => {
                       src={url}
                       alt={`Page ${idx + 1}`}
                       className={cn(
-                        'w-full h-auto cursor-pointer'
+                        'w-full h-auto cursor-pointer landscape:max-w-none'
                       )}
                       style={{
                         ...(paperModeEnabled && paperConfig ? { filter: paperConfig.imageFilter } : {}),
@@ -1455,10 +1469,11 @@ export const ReaderPage: React.FC = () => {
             zoomScale={zoomScale}
             zoomOrigin={zoomOrigin}
             paperConfig={paperModeEnabled && paperConfig ? paperConfig : null}
+            onSurfaceClick={handleHorizontalSurfaceClick}
+            onSurfaceTouchStart={handleHorizontalSurfaceTouchStart}
+            onSurfaceTouchMove={handleImageTouchMove}
+            onSurfaceTouchEnd={handleImageTouchEnd}
             onImageClick={handleImageClick}
-            onImageTouchStart={handleImageTouchStart}
-            onImageTouchMove={handleImageTouchMove}
-            onImageTouchEnd={handleImageTouchEnd}
           />
         )}
       </main>

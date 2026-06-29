@@ -88,6 +88,9 @@ export const BookDetailPage: React.FC = () => {
     : null;
   const firstUnreadChapter = book.chapters.find((ch) => ch.status === 'unread');
   const startChapter = continueChapter || firstUnreadChapter || book.chapters[0];
+  const startReaderPath = continueChapter
+    ? readerPathForBook(book)
+    : readerPathForBook(book, startChapter?.id);
 
   const getChapterStatusText = (status: string): string => {
     switch (status) {
@@ -332,7 +335,7 @@ export const BookDetailPage: React.FC = () => {
                 <div className="flex gap-4 justify-center md:justify-start mt-auto">
                   <button
                     className="bg-primary text-on-primary font-label text-label-md px-8 py-3 rounded hover:opacity-90 transition-colors w-full md:w-auto"
-                    onClick={() => navigate(readerPathForBook(book, startChapter?.id))}
+                    onClick={() => navigate(startReaderPath)}
                   >
                     {continueChapter ? '继续阅读' : '立即阅读'}
                   </button>

@@ -1,12 +1,14 @@
+import type { ComponentProps } from 'react';
+
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { HorizontalReaderView } from './HorizontalReaderView';
 
 const renderHorizontalReaderView = (
-  overrides: Partial<React.ComponentProps<typeof HorizontalReaderView>> = {}
+  overrides: Partial<ComponentProps<typeof HorizontalReaderView>> = {}
 ) => {
-  const props: React.ComponentProps<typeof HorizontalReaderView> = {
+  const props: ComponentProps<typeof HorizontalReaderView> = {
     pageLayout: 'double',
     readingDirection: 'rtl',
     pageUrls: ['page-1.jpg', 'page-2.jpg'],
@@ -17,10 +19,11 @@ const renderHorizontalReaderView = (
     zoomScale: 1,
     zoomOrigin: { x: 0, y: 0 },
     paperConfig: null,
+    onSurfaceClick: vi.fn(),
+    onSurfaceTouchStart: vi.fn(),
+    onSurfaceTouchMove: vi.fn(),
+    onSurfaceTouchEnd: vi.fn(),
     onImageClick: vi.fn(),
-    onImageTouchStart: vi.fn(),
-    onImageTouchMove: vi.fn(),
-    onImageTouchEnd: vi.fn(),
     ...overrides,
   };
 
@@ -68,5 +71,21 @@ describe('HorizontalReaderView', () => {
 
     fireEvent.click(image);
     expect(onImageClick).toHaveBeenCalledWith(1, expect.any(Object));
+  });
+
+  it('should capture gestures on the blank reading surface', () => {
+    const onSurfaceTouchStart = vi.fn();
+    const onSurfaceTouchEnd = vi.fn();
+    renderHorizontalReaderView({
+      onSurfaceTouchStart,
+      onSurfaceTouchEnd,
+    });
+
+    const surface = screen.getByTestId('horizontal-reader-surface');
+    fireEvent.touchStart(surface);
+    fireEvent.touchEnd(surface);
+
+    expect(onSurfaceTouchStart).toHaveBeenCalled();
+    expect(onSurfaceTouchEnd).toHaveBeenCalled();
   });
 });

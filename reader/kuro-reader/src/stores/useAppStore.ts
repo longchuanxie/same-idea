@@ -49,6 +49,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   firstLineIndent: true,
   textLineHeight: 1.8,
   tapZoneEnabled: true,
+  autoAdvanceTextChapter: false,
   autoScrollSpeed: 2,
   textReadingMode: 'scroll',
   auth: {

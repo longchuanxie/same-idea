@@ -22,6 +22,57 @@ const MS_PER_MINUTE = 60000;
 const PROGRESS_SAVE_DEBOUNCE = 500;
 const AUTO_SCROLL_INTERVAL = 50;
 const SWIPE_THRESHOLD = 50;
+const TEXT_SCROLL_END_THRESHOLD = 0.995;
+const TEXT_SCROLL_END_EPSILON_PX = 2;
+const TEXT_READER_ARTICLE_MAX_WIDTH = 680;
+const TEXT_READER_HORIZONTAL_PADDING = 48;
+const TEXT_READER_MOBILE_VERTICAL_PADDING = 64;
+const TEXT_READER_DESKTOP_VERTICAL_PADDING = 96;
+const TEXT_READER_DESKTOP_MEDIA_QUERY = '(min-width: 768px)';
+const TEXT_READER_COLUMNS_LG_MEDIA_QUERY = '(min-width: 1024px)';
+const TEXT_READER_COLUMNS_MEDIA_QUERY = '(orientation: landscape)';
+const TEXT_PAGE_MEASURE_SAFETY_PX = 24;
+const TEXT_COLUMNS_MOBILE_INLINE_PADDING = 32;
+const TEXT_COLUMNS_LG_INLINE_PADDING = 64;
+const TEXT_COLUMNS_MOBILE_VERTICAL_PADDING = 80;
+const TEXT_COLUMNS_LG_VERTICAL_PADDING = 112;
+const TEXT_COLUMNS_MOBILE_ARTICLE_INLINE_PADDING = 48;
+const TEXT_COLUMNS_LG_ARTICLE_INLINE_PADDING = 80;
+const TEXT_PAGE_BREAK_SEARCH_RATIO = 0.25;
+const TEXT_PAGE_BREAK_SEARCH_MIN = 32;
+const TEXT_PAGE_BREAK_SEARCH_MAX = 120;
+const MIN_TEXT_PAGE_LENGTH = 1;
+const EMPTY_TEXT_PAGE_INDEX = 0;
+const TEXT_PAGE_RESET_INDEX = 0;
+const TEXT_COLUMNS_PAGE_STEP = 2;
+const TEXT_PAGE_TITLE_MARGIN_BOTTOM = 32;
+const TEXT_PAGE_TITLE_FONT_WEIGHT = '700';
+const TEXT_PAGE_TITLE_OPACITY = '0.8';
+const TEXT_PAGE_BREAK_CHARS = new Set([
+  '\n',
+  '\r',
+  '\t',
+  ' ',
+  '\u3000',
+  '\u3002',
+  '\uff0c',
+  '\uff01',
+  '\uff1f',
+  '\uff1b',
+  '\uff1a',
+  '\u3001',
+  '.',
+  ',',
+  '!',
+  '?',
+  ';',
+  ':',
+]);
+const TEXT_CHAPTER_END_PROMPT_LABELS = {
+  title: '\u5df2\u8bfb\u5b8c\u672c\u7ae0',
+  action: '\u7ee7\u7eed\u4e0b\u4e00\u7ae0',
+} as const;
+const NORMALIZE_CHAPTER_TITLE_PATTERN = /[\s\u3000:：,，.。!！?？;；、\-—_《》<>[\]【】()（）"'“”‘’]/g;
 
 export interface TextChapter {
   id: string;
@@ -29,29 +80,83 @@ export interface TextChapter {
   content: string;
 }
 
+interface TextPageMetrics {
+  contentWidth: number;
+  pageHeight: number;
+}
+
+const getTextPageMetrics = (isColumnsLayoutActive: boolean): TextPageMetrics => {
+  if (isColumnsLayoutActive) {
+    const isLargeViewport = window.matchMedia(TEXT_READER_COLUMNS_LG_MEDIA_QUERY).matches;
+    const outerInlinePadding = isLargeViewport
+      ? TEXT_COLUMNS_LG_INLINE_PADDING
+      : TEXT_COLUMNS_MOBILE_INLINE_PADDING;
+    const verticalPadding = isLargeViewport
+      ? TEXT_COLUMNS_LG_VERTICAL_PADDING
+      : TEXT_COLUMNS_MOBILE_VERTICAL_PADDING;
+    const articleInlinePadding = isLargeViewport
+      ? TEXT_COLUMNS_LG_ARTICLE_INLINE_PADDING
+      : TEXT_COLUMNS_MOBILE_ARTICLE_INLINE_PADDING;
+    const spreadContentWidth = window.innerWidth - outerInlinePadding;
+
+    return {
+      contentWidth: Math.floor((spreadContentWidth / TEXT_COLUMNS_PAGE_STEP) - articleInlinePadding),
+      pageHeight: window.innerHeight - verticalPadding - TEXT_PAGE_MEASURE_SAFETY_PX,
+    };
+  }
+
+  const verticalPadding = window.matchMedia(TEXT_READER_DESKTOP_MEDIA_QUERY).matches
+    ? TEXT_READER_DESKTOP_VERTICAL_PADDING
+    : TEXT_READER_MOBILE_VERTICAL_PADDING;
+  const articleWidth = Math.min(TEXT_READER_ARTICLE_MAX_WIDTH, window.innerWidth);
+
+  return {
+    contentWidth: articleWidth - TEXT_READER_HORIZONTAL_PADDING,
+    pageHeight: window.innerHeight - (verticalPadding * 2) - TEXT_PAGE_MEASURE_SAFETY_PX,
+  };
+};
+
 const resolveTextChapterIndex = (
   textChapters: TextChapter[],
   bookChapters: Chapter[] | undefined,
   bookId: string,
   chapterId: string
 ): number => {
-  const bookChapterIndex = bookChapters?.findIndex((chapter) => chapter.id === chapterId) ?? -1;
-  if (bookChapterIndex >= 0 && bookChapterIndex < textChapters.length) {
-    return bookChapterIndex;
-  }
-
   const textChapterIndex = textChapters.findIndex((chapter) => chapter.id === chapterId);
   if (textChapterIndex >= 0) {
     return textChapterIndex;
   }
 
+  const targetBookChapter = bookChapters?.find((chapter) => chapter.id === chapterId);
+  const normalizedTargetTitle = targetBookChapter
+    ? targetBookChapter.title.trim().toLowerCase().replace(NORMALIZE_CHAPTER_TITLE_PATTERN, '')
+    : '';
+  if (normalizedTargetTitle) {
+    const titleMatchedIndex = textChapters.findIndex((chapter) =>
+      chapter.title.trim().toLowerCase().replace(NORMALIZE_CHAPTER_TITLE_PATTERN, '') === normalizedTargetTitle
+    );
+    if (titleMatchedIndex >= 0) {
+      return titleMatchedIndex;
+    }
+  }
+
   const legacyChapterPrefix = `${bookId}-ch`;
   if (chapterId.startsWith(legacyChapterPrefix)) {
     const chapterNumber = Number(chapterId.slice(legacyChapterPrefix.length));
+    const textChapterIdIndex = textChapters.findIndex((chapter) => chapter.id === `ch${chapterNumber}`);
+    if (textChapterIdIndex >= 0) {
+      return textChapterIdIndex;
+    }
+
     const index = chapterNumber - 1;
     if (Number.isInteger(index) && index >= 0 && index < textChapters.length) {
       return index;
     }
+  }
+
+  const bookChapterIndex = bookChapters?.findIndex((chapter) => chapter.id === chapterId) ?? -1;
+  if (bookChapterIndex >= 0 && bookChapterIndex < textChapters.length) {
+    return bookChapterIndex;
   }
 
   return -1;
@@ -169,6 +274,7 @@ export const TextReaderPage: React.FC = () => {
   const autoScrollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const uiAutoHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoAdvancedChapterRef = useRef<number | null>(null);
 
   const [chapters, setChapters] = useState<TextChapter[]>([]);
   const [currentChapterIndex, setCurrentChapterIndex] = useState(0);
@@ -182,8 +288,12 @@ export const TextReaderPage: React.FC = () => {
   const [scrollPercent, setScrollPercent] = useState(0);
   const [isAutoScrolling, setIsAutoScrolling] = useState(false);
   const [estimatedTimeLeft, setEstimatedTimeLeft] = useState<string>('');
+  const [isChapterEndPromptVisible, setIsChapterEndPromptVisible] = useState(false);
   const [isProgressDragging, setIsProgressDragging] = useState(false);
   const [dragPercent, setDragPercent] = useState(0);
+  const [isLandscapeViewport, setIsLandscapeViewport] = useState(() =>
+    window.matchMedia(TEXT_READER_COLUMNS_MEDIA_QUERY).matches
+  );
 
   // 分页模式状态
   const [textPages, setTextPages] = useState<string[]>([]);
@@ -240,6 +350,14 @@ export const TextReaderPage: React.FC = () => {
   const { addReadingSession } = useStatsStore();
   const { settings } = useAppStore();
 
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(TEXT_READER_COLUMNS_MEDIA_QUERY);
+    const handleChange = () => setIsLandscapeViewport(mediaQuery.matches);
+    handleChange();
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
   // 用 ref 追踪所有阅读设置最新值，供退出时统一保存
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
@@ -261,10 +379,14 @@ export const TextReaderPage: React.FC = () => {
   const textAlign = settings.textAlign;
   const firstLineIndent = settings.firstLineIndent;
   const tapZoneEnabled = settings.tapZoneEnabled;
+  const autoAdvanceTextChapter = settings.autoAdvanceTextChapter;
   const autoScrollSpeed = settings.autoScrollSpeed;
   const textReadingMode = settings.textReadingMode;
   const brightness = settings.brightness;
   const colorTemperature = settings.colorTemperature;
+  const isColumnsReadingMode = textReadingMode === 'columns';
+  const isColumnsLayoutActive = isColumnsReadingMode && isLandscapeViewport;
+  const textPageStep = isColumnsLayoutActive ? TEXT_COLUMNS_PAGE_STEP : 1;
 
   const book = bookId ? getBookById(bookId) : undefined;
   const title = book?.title ?? '未知书籍';
@@ -501,12 +623,36 @@ export const TextReaderPage: React.FC = () => {
       setScrollPercent(Math.round(ratio * 100));
     }
 
+    const hasNextChapter = currentChapterIndex < chapters.length - 1;
+    const isAtChapterEnd = ratio >= TEXT_SCROLL_END_THRESHOLD ||
+      container.scrollTop + container.clientHeight >= container.scrollHeight - TEXT_SCROLL_END_EPSILON_PX;
+    if (hasNextChapter && isAtChapterEnd) {
+      if (autoAdvanceTextChapter) {
+        if (autoAdvancedChapterRef.current !== currentChapterIndex) {
+          autoAdvancedChapterRef.current = currentChapterIndex;
+          setIsChapterEndPromptVisible(false);
+          setCurrentChapterIndex(currentChapterIndex + 1);
+          requestAnimationFrame(() => {
+            scrollContainerRef.current?.scrollTo(0, 0);
+            setScrollPercent(0);
+          });
+        }
+      } else {
+        setIsChapterEndPromptVisible(true);
+      }
+    } else {
+      setIsChapterEndPromptVisible(false);
+      if (!isAtChapterEnd) {
+        autoAdvancedChapterRef.current = null;
+      }
+    }
+
     // 防抖保存进度
     if (progressSaveTimerRef.current) clearTimeout(progressSaveTimerRef.current);
     progressSaveTimerRef.current = setTimeout(() => {
       saveTextProgress(currentChapterIndex, undefined, ratio);
     }, PROGRESS_SAVE_DEBOUNCE);
-  }, [bookId, currentChapterIndex, saveTextProgress, isProgressDragging]);
+  }, [bookId, currentChapterIndex, chapters.length, autoAdvanceTextChapter, saveTextProgress, isProgressDragging]);
 
   // 离开时保存最终进度 + 清理 UI 定时器 + 持久化阅读设置
   useEffect(() => {
@@ -526,6 +672,7 @@ export const TextReaderPage: React.FC = () => {
         textAlign: s.textAlign,
         firstLineIndent: s.firstLineIndent,
         tapZoneEnabled: s.tapZoneEnabled,
+        autoAdvanceTextChapter: s.autoAdvanceTextChapter,
         autoScrollSpeed: s.autoScrollSpeed,
         textReadingMode: s.textReadingMode,
         brightness: s.brightness,
@@ -668,6 +815,8 @@ export const TextReaderPage: React.FC = () => {
       setCurrentChapterIndex(index);
       scrollContainerRef.current?.scrollTo(0, 0);
       setScrollPercent(0);
+      setIsChapterEndPromptVisible(false);
+      autoAdvancedChapterRef.current = null;
       setIsChapterDrawerOpen(false);
     }
   }, [chapters.length]);
@@ -853,26 +1002,157 @@ export const TextReaderPage: React.FC = () => {
     }
   }, [currentChapter, textReadingMode, fontSize, lineHeight, resolvedFontFamily, firstLineIndent]);
 
+  const paginateMeasuredContent = useCallback(() => {
+    if (!currentChapter || textReadingMode === 'scroll') {
+      setTextPages([]);
+      return;
+    }
+
+    const measureEl = measureRef.current;
+    if (!measureEl) {
+      paginateContent();
+      return;
+    }
+
+    const { contentWidth, pageHeight } = getTextPageMetrics(isColumnsLayoutActive);
+
+    if (pageHeight <= 0 || contentWidth <= 0) return;
+
+    measureEl.style.position = 'absolute';
+    measureEl.style.left = '-99999px';
+    measureEl.style.top = '0';
+    measureEl.style.visibility = 'hidden';
+    measureEl.style.pointerEvents = 'none';
+    measureEl.style.width = `${contentWidth}px`;
+    measureEl.style.fontSize = `${fontSize}px`;
+    measureEl.style.lineHeight = String(lineHeight);
+    measureEl.style.fontFamily = resolvedFontFamily;
+    measureEl.style.color = themeStyles.color;
+    measureEl.style.whiteSpace = 'normal';
+    measureEl.style.wordBreak = 'break-word';
+    measureEl.style.boxSizing = 'border-box';
+    measureEl.style.textAlign = textAlign === 'justify' ? 'justify' : 'left';
+
+    const measurePageHeight = (pageText: string): number => {
+      const wrapper = document.createElement('div');
+
+      if (hasMultipleChapters && currentChapter) {
+        const titleEl = document.createElement('h2');
+        titleEl.textContent = currentChapter.title;
+        titleEl.style.textAlign = 'center';
+        titleEl.style.fontWeight = TEXT_PAGE_TITLE_FONT_WEIGHT;
+        titleEl.style.marginBottom = `${TEXT_PAGE_TITLE_MARGIN_BOTTOM}px`;
+        titleEl.style.opacity = TEXT_PAGE_TITLE_OPACITY;
+        wrapper.appendChild(titleEl);
+      }
+
+      const contentEl = document.createElement('div');
+      contentEl.textContent = pageText;
+      contentEl.style.whiteSpace = 'pre-wrap';
+      contentEl.style.wordBreak = 'break-word';
+      contentEl.style.textIndent = firstLineIndent ? '2em' : '0';
+      wrapper.appendChild(contentEl);
+
+      measureEl.replaceChildren(wrapper);
+      return measureEl.scrollHeight;
+    };
+
+    const fitsPage = (pageText: string): boolean => measurePageHeight(pageText) <= pageHeight;
+
+    const findPreferredBreak = (text: string, best: number): number => {
+      const searchRange = Math.min(
+        TEXT_PAGE_BREAK_SEARCH_MAX,
+        Math.max(TEXT_PAGE_BREAK_SEARCH_MIN, Math.floor(best * TEXT_PAGE_BREAK_SEARCH_RATIO))
+      );
+      const minBreak = Math.max(MIN_TEXT_PAGE_LENGTH, best - searchRange);
+
+      for (let index = best; index >= minBreak; index--) {
+        if (TEXT_PAGE_BREAK_CHARS.has(text[index - 1])) {
+          return index;
+        }
+      }
+
+      return best;
+    };
+
+    const pages: string[] = [];
+    let remaining = currentChapter.content;
+
+    while (remaining.length > 0) {
+      if (fitsPage(remaining)) {
+        pages.push(remaining);
+        break;
+      }
+
+      let low = MIN_TEXT_PAGE_LENGTH;
+      let high = remaining.length;
+      let best = EMPTY_TEXT_PAGE_INDEX;
+
+      while (low <= high) {
+        const mid = Math.floor((low + high) / 2);
+        if (fitsPage(remaining.slice(0, mid))) {
+          best = mid;
+          low = mid + 1;
+        } else {
+          high = mid - 1;
+        }
+      }
+
+      let splitAt = best > EMPTY_TEXT_PAGE_INDEX
+        ? findPreferredBreak(remaining, best)
+        : MIN_TEXT_PAGE_LENGTH;
+
+      while (splitAt > MIN_TEXT_PAGE_LENGTH && !fitsPage(remaining.slice(0, splitAt))) {
+        splitAt--;
+      }
+
+      pages.push(remaining.slice(0, splitAt));
+      remaining = remaining.slice(splitAt);
+    }
+
+    measureEl.removeAttribute('style');
+    measureEl.replaceChildren();
+
+    setTextPages(pages.length > 0 ? pages : ['']);
+    if (skipNextPageResetRef.current) {
+      skipNextPageResetRef.current = false;
+    } else {
+      setCurrentPageIndex(TEXT_PAGE_RESET_INDEX);
+    }
+  }, [
+    currentChapter,
+    textReadingMode,
+    fontSize,
+    lineHeight,
+    resolvedFontFamily,
+    themeStyles.color,
+    textAlign,
+    hasMultipleChapters,
+    firstLineIndent,
+    paginateContent,
+    isColumnsLayoutActive,
+  ]);
+
   // 当章节或模式变化时重新分页
   useEffect(() => {
     if (textReadingMode !== 'scroll' && currentChapter) {
       // 延迟一帧确保 DOM 已渲染
-      requestAnimationFrame(() => paginateContent());
+      requestAnimationFrame(() => paginateMeasuredContent());
     } else if (textReadingMode !== 'scroll' && !currentChapter && !isLoading) {
       // 分页模式下但没有章节且不在加载中，说明章节为空
       setTextPages([]);
     }
-  }, [textReadingMode, currentChapter, isLoading, paginateContent]);
+  }, [textReadingMode, currentChapter, isLoading, paginateMeasuredContent]);
 
   // 窗口大小变化时重新分页
   useEffect(() => {
     if (textReadingMode === 'scroll') return;
     const handleResize = () => {
-      requestAnimationFrame(() => paginateContent());
+      requestAnimationFrame(() => paginateMeasuredContent());
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [textReadingMode, paginateContent]);
+  }, [textReadingMode, paginateMeasuredContent]);
 
   // 翻页
   const goToPage = useCallback((index: number, direction: 'left' | 'right') => {
@@ -995,15 +1275,16 @@ export const TextReaderPage: React.FC = () => {
         setScrollPercent(0);
       }
     } else {
-      if (currentPageIndex < textPages.length - 1) {
-        goToPage(currentPageIndex + 1, 'left');
+      const targetPageIndex = Math.min(currentPageIndex + textPageStep, textPages.length - 1);
+      if (targetPageIndex !== currentPageIndex) {
+        goToPage(targetPageIndex, 'left');
       } else if (hasMultipleChapters && currentChapterIndex < chapters.length - 1) {
         setCurrentChapterIndex(currentChapterIndex + 1);
         setCurrentPageIndex(0);
         setScrollPercent(0);
       }
     }
-  }, [textReadingMode, isPageAnimating, currentPageIndex, textPages.length, currentChapterIndex, chapters.length, hasMultipleChapters, startFlip, completeFlip, goToPage]);
+  }, [textReadingMode, isPageAnimating, currentPageIndex, textPages.length, textPageStep, currentChapterIndex, chapters.length, hasMultipleChapters, startFlip, completeFlip, goToPage]);
 
   const goToPrevPage = useCallback(() => {
     if (textReadingMode === 'book') {
@@ -1018,15 +1299,16 @@ export const TextReaderPage: React.FC = () => {
         setScrollPercent(0);
       }
     } else {
-      if (currentPageIndex > 0) {
-        goToPage(currentPageIndex - 1, 'right');
+      const targetPageIndex = Math.max(currentPageIndex - textPageStep, 0);
+      if (targetPageIndex !== currentPageIndex) {
+        goToPage(targetPageIndex, 'right');
       } else if (hasMultipleChapters && currentChapterIndex > 0) {
         setCurrentChapterIndex(currentChapterIndex - 1);
         setCurrentPageIndex(0);
         setScrollPercent(0);
       }
     }
-  }, [textReadingMode, isPageAnimating, currentPageIndex, currentChapterIndex, hasMultipleChapters, startFlip, completeFlip, goToPage]);
+  }, [textReadingMode, isPageAnimating, currentPageIndex, textPageStep, currentChapterIndex, hasMultipleChapters, startFlip, completeFlip, goToPage]);
 
   // 触摸滑动处理
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -1059,12 +1341,21 @@ export const TextReaderPage: React.FC = () => {
   useEffect(() => {
     if (textReadingMode === 'scroll') return;
     if (textPages.length > 0) {
-      const progress = (currentPageIndex + 1) / textPages.length;
+      const visibleEndPage = Math.min(currentPageIndex + textPageStep, textPages.length);
+      const progress = visibleEndPage / textPages.length;
       setScrollPercent(Math.round(progress * 100));
       // 保存分页模式进度
       saveTextProgress(currentChapterIndex, currentPageIndex);
     }
-  }, [currentPageIndex, textPages.length, textReadingMode, currentChapterIndex, saveTextProgress]);
+  }, [currentPageIndex, textPages.length, textReadingMode, textPageStep, currentChapterIndex, saveTextProgress]);
+
+  useEffect(() => {
+    if (!isColumnsLayoutActive || currentPageIndex === 0) return;
+    const alignedPageIndex = currentPageIndex - (currentPageIndex % TEXT_COLUMNS_PAGE_STEP);
+    if (alignedPageIndex !== currentPageIndex) {
+      setCurrentPageIndex(alignedPageIndex);
+    }
+  }, [currentPageIndex, isColumnsLayoutActive]);
 
   // 键盘快捷键
   useEffect(() => {
@@ -1981,6 +2272,70 @@ export const TextReaderPage: React.FC = () => {
     );
   };
 
+  const renderPagedArticle = (pageIndex: number) => {
+    const articleStyle = {
+      fontSize: `${fontSize}px`,
+      lineHeight,
+      fontFamily: resolvedFontFamily,
+      color: themeStyles.color,
+      WebkitUserSelect: 'text' as const,
+      userSelect: 'text' as const,
+      WebkitTouchCallout: 'none' as const,
+    };
+
+    const articleClassName = cn(
+      'max-w-[680px] mx-auto px-6 py-16 md:py-24 h-full overflow-hidden',
+      textAlign === 'justify' ? 'text-justify' : 'text-left'
+    );
+
+    if (!isColumnsLayoutActive) {
+      return (
+        <article
+          data-reader-article
+          className={articleClassName}
+          style={articleStyle}
+        >
+          {renderArticleContent(textPages[pageIndex], pageIndex)}
+        </article>
+      );
+    }
+
+    const nextPageIndex = pageIndex + 1;
+
+    return (
+      <div className="h-full w-full flex gap-0 px-4 lg:px-8 py-10 lg:py-14">
+        {[pageIndex, nextPageIndex].map((spreadPageIndex) => (
+          <article
+            key={spreadPageIndex}
+            data-reader-article
+            className={cn(
+              'h-full min-w-0 flex-1 overflow-hidden px-6 lg:px-10',
+              spreadPageIndex === pageIndex && 'border-r border-outline-variant/30',
+              textAlign === 'justify' ? 'text-justify' : 'text-left'
+            )}
+            style={articleStyle}
+          >
+            {textPages[spreadPageIndex]
+              ? renderArticleContent(textPages[spreadPageIndex], spreadPageIndex)
+              : null}
+          </article>
+        ))}
+      </div>
+    );
+  };
+
+  const pageIndicatorText = (() => {
+    if (textPages.length === 0) return isEpub ? 'EPUB' : 'TXT';
+    if (!isColumnsLayoutActive) return `${currentPageIndex + 1}/${textPages.length}`;
+
+    const firstVisiblePage = currentPageIndex + 1;
+    const lastVisiblePage = Math.min(currentPageIndex + textPageStep, textPages.length);
+    return firstVisiblePage === lastVisiblePage
+      ? `${firstVisiblePage}/${textPages.length}`
+      : `${firstVisiblePage}-${lastVisiblePage}/${textPages.length}`;
+  })();
+  const isReaderNavigationVisible = uiVisible || isChapterEndPromptVisible;
+
   return (
     <div
       className="font-body min-h-screen relative overflow-hidden"
@@ -2078,24 +2433,7 @@ export const TextReaderPage: React.FC = () => {
                     zIndex: 3,
                   } : undefined}
                 >
-                  <article
-                    data-reader-article
-                    className={cn(
-                      'max-w-[680px] mx-auto px-6 py-16 md:py-24 h-full overflow-hidden',
-                      textAlign === 'justify' ? 'text-justify' : 'text-left'
-                    )}
-                    style={{
-                      fontSize: `${fontSize}px`,
-                      lineHeight,
-                      fontFamily: resolvedFontFamily,
-                      color: themeStyles.color,
-                      WebkitUserSelect: 'text',
-                      userSelect: 'text',
-                      WebkitTouchCallout: 'none',
-                    }}
-                  >
-                    {renderArticleContent(textPages[previousPageIndex], previousPageIndex)}
-                  </article>
+                  {renderPagedArticle(previousPageIndex)}
                   {/* 翻页阴影 */}
                   {textReadingMode === 'book' && (
                     <>
@@ -2125,24 +2463,7 @@ export const TextReaderPage: React.FC = () => {
                   zIndex: 2,
                 } : undefined}
               >
-                <article
-                  data-reader-article
-                  className={cn(
-                    'max-w-[680px] mx-auto px-6 py-16 md:py-24 h-full overflow-hidden',
-                    textAlign === 'justify' ? 'text-justify' : 'text-left'
-                  )}
-                  style={{
-                    fontSize: `${fontSize}px`,
-                    lineHeight,
-                    fontFamily: resolvedFontFamily,
-                    color: themeStyles.color,
-                    WebkitUserSelect: 'text',
-                    userSelect: 'text',
-                    WebkitTouchCallout: 'none',
-                  }}
-                >
-                  {renderArticleContent(textPages[Math.min(currentPageIndex, textPages.length - 1)], Math.min(currentPageIndex, textPages.length - 1))}
-                </article>
+                {renderPagedArticle(Math.min(currentPageIndex, textPages.length - 1))}
                 {/* 翻页阴影 */}
                 {textReadingMode === 'book' && isPageAnimating && (
                   <>
@@ -2206,10 +2527,27 @@ export const TextReaderPage: React.FC = () => {
       )}
 
       {/* UI overlay - 始终渲染，通过 opacity/pointer-events 控制可见性，确保返回按钮和点击区域始终可用 */}
+      {textReadingMode === 'scroll' && isChapterEndPromptVisible && currentChapterIndex < chapters.length - 1 && (
+        <div className="fixed inset-x-0 bottom-40 z-40 px-margin-mobile pointer-events-none">
+          <div className="max-w-max-width-content mx-auto flex items-center justify-between gap-3 rounded-full bg-surface/90 backdrop-blur-md border border-outline-variant/60 shadow-lg px-4 py-3 pointer-events-auto">
+            <span className="font-label text-label-sm text-on-surface-variant">
+              {TEXT_CHAPTER_END_PROMPT_LABELS.title}
+            </span>
+            <button
+              className="px-4 py-2 rounded-full bg-primary text-on-primary font-label text-label-sm hover:opacity-90 transition-opacity"
+              onClick={goToNextChapter}
+              data-ui-control
+            >
+              {TEXT_CHAPTER_END_PROMPT_LABELS.action}
+            </button>
+          </div>
+        </div>
+      )}
+
       <div
         className={cn(
           'fixed inset-0 z-50 flex flex-col justify-between transition-opacity duration-300',
-          uiVisible ? 'opacity-100 pointer-events-none' : 'opacity-0 pointer-events-none'
+          isReaderNavigationVisible ? 'opacity-100 pointer-events-none' : 'opacity-0 pointer-events-none'
         )}
       >
           {/* 顶栏 */}
@@ -2278,7 +2616,7 @@ export const TextReaderPage: React.FC = () => {
           <div
             className={cn(
               'w-full pointer-events-auto bg-surface/60 backdrop-blur-md pb-safe pt-4 px-margin-mobile transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]',
-              uiVisible ? 'translate-y-0' : 'translate-y-full'
+              isReaderNavigationVisible ? 'translate-y-0' : 'translate-y-full'
             )}
           >
             <div className="max-w-max-width-content mx-auto">
@@ -2358,9 +2696,7 @@ export const TextReaderPage: React.FC = () => {
                 <span className="font-label text-label-sm text-on-surface-variant">
                   {textReadingMode === 'scroll'
                     ? (isEpub ? 'EPUB' : 'TXT')
-                    : textPages.length > 0
-                      ? `${currentPageIndex + 1}/${textPages.length}`
-                      : (isEpub ? 'EPUB' : 'TXT')
+                    : pageIndicatorText
                   }
                 </span>
               </div>
@@ -2390,6 +2726,7 @@ export const TextReaderPage: React.FC = () => {
           textAlign={textAlign}
           firstLineIndent={firstLineIndent}
           tapZoneEnabled={tapZoneEnabled}
+          autoAdvanceTextChapter={autoAdvanceTextChapter}
           autoScrollSpeed={autoScrollSpeed}
           textReadingMode={textReadingMode}
           onFontSizeChange={(size) => setLocalFontSize(size)}
@@ -2403,6 +2740,7 @@ export const TextReaderPage: React.FC = () => {
           onTextAlignChange={(align) => useAppStore.getState().updateSettings({ textAlign: align })}
           onFirstLineIndentToggle={() => useAppStore.getState().updateSettings({ firstLineIndent: !firstLineIndent })}
           onTapZoneEnabledToggle={() => useAppStore.getState().updateSettings({ tapZoneEnabled: !tapZoneEnabled })}
+          onAutoAdvanceTextChapterToggle={() => useAppStore.getState().updateSettings({ autoAdvanceTextChapter: !autoAdvanceTextChapter })}
           onAutoScrollSpeedChange={(speed) => useAppStore.getState().updateSettings({ autoScrollSpeed: speed })}
           onTextReadingModeChange={(mode) => {
             useAppStore.getState().updateSettings({ textReadingMode: mode });
