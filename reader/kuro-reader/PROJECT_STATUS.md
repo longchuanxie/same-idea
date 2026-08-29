@@ -112,6 +112,7 @@ kuro-reader/
 │   │   │   └── tagRepo.ts        # 标签
 │   │   ├── archiveParser.ts    # 压缩包解析核心逻辑（双引擎 + 流式）
 │   │   ├── textContent.ts      # 文本内容加载（TXT/MD/EPUB → 章节）+ 章节定位
+│   │   ├── epubContent.ts      # EPUB 保真读取（XHTML→Markdown + 插图 object URL + NCX/nav 目录）
 │   │   ├── backHandler.ts      # Android 返回键处理器栈（浮层优先消费）
 │   │   ├── cloudStorage.ts     # 云存储客户端（WebDAV/FTP 工厂）
 │   │   ├── ftpClient.ts        # FTP 客户端（HTTP 代理模式）
@@ -224,7 +225,7 @@ kuro-reader/
 | Parser | 格式 | 要点 |
 |--------|------|------|
 | ComicArchiveParser | zip/cbz/rar/cbr | JSZip 优先，RAR/失败回退 libarchive.js；流式解析；动态超时；自然排序 |
-| EpubParser | epub | JSZip 解包；OPF spine 定序；NCX 提取章节标题；XHTML 转纯文本；提取元数据与封面 |
+| EpubParser | epub | JSZip 解包；OPF spine 定序；NCX/EPUB3 nav 提取章节标题；导入期 XHTML 转纯文本 + 封面 |
 | TextParser | txt/md/markdown | UTF-8/GBK 编码自动检测；导入时拆分章节；生成占位封面 |
 | PdfParser（预留） | pdf | `ParsedPdfBook` 类型与 `PDF_EXTENSIONS` 已定义，解析器未实现 |
 
@@ -320,7 +321,7 @@ IndexedDB（`kuro-reader-db`，**v6**），9 个 Object Store，由 [db.ts](src/
 
 ## 七、测试现状
 
-**25 个测试文件、226 个用例，全部通过**（`npm run test`，fake-indexeddb + jsdom 环境）。
+**26 个测试文件、235 个用例，全部通过**（`npm run test`，fake-indexeddb + jsdom 环境）。
 
 | 测试文件 | 覆盖范围 |
 |----------|----------|
@@ -348,6 +349,7 @@ IndexedDB（`kuro-reader-db`，**v6**），9 个 Object Store，由 [db.ts](src/
 | `stores/useReaderStore.test.ts` | 翻页边界 / 续读页码换算 / loadPage 竞态 / closeReader |
 | `storage/progressRepo.test.ts` | 进度仓库 CRUD（v6） |
 | `pages/CustomCloud/index.test.tsx` | 云端浏览全流程（连接/导航/下载导入/错误/断开） |
+| `services/epubContent.test.ts` | XHTML→Markdown 转换 / zip 路径解析 / 真实 EPUB 包集成（图片+目录） |
 
 测试基建：`src/test/setup.ts` 全局提供 fake-indexeddb 与 `URL.createObjectURL/revokeObjectURL` stub。覆盖重点在服务层、工具函数、Store 与阅读器子组件；**页面组件仍缺少测试**。
 

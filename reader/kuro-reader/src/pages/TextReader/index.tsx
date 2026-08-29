@@ -23,6 +23,7 @@ import { useEstimatedTimeLeft } from '@/hooks/useEstimatedTimeLeft';
 import { useLandscapeViewport } from '@/hooks/useLandscapeViewport';
 import { useReadingStats } from '@/hooks/useReadingStats';
 import { useWakeLock } from '@/hooks/useWakeLock';
+import { revokeEpubObjectUrls } from '@/services/epubContent';
 import { annotationRepo } from '@/services/storage/annotationRepo';
 import { bookmarkRepo } from '@/services/storage/bookmarkRepo';
 import { loadTextContent, resolveTextChapterIndex, type TextChapter } from '@/services/textContent';
@@ -289,6 +290,11 @@ export const TextReaderPage: React.FC = () => {
   // 屏幕常亮 / 自动滚动 / 剩余时间估算（共享 Hook）
   useWakeLock();
   const { isAutoScrolling, toggleAutoScroll } = useAutoScroll(scrollContainerRef, autoScrollSpeed);
+
+  // EPUB 插图 object URL 生命周期：离开阅读器时统一回收
+  useEffect(() => {
+    return () => revokeEpubObjectUrls();
+  }, []);
   const estimatedTimeLeft = useEstimatedTimeLeft(currentChapter?.content.length, scrollPercent);
 
   // 字体映射

@@ -1,9 +1,7 @@
-import JSZip from 'jszip';
-
+import { loadEpubChapters } from '@/services/epubContent';
 import {
   splitMarkdownIntoChapters,
   splitTextIntoChapters,
-  cleanHtmlToText,
 } from '@/services/parsers/utils';
 import { bookFileRepo } from '@/services/storage/bookFileRepo';
 import type { Chapter } from '@/types';
@@ -102,80 +100,9 @@ export async function loadTextContent(
     return { chapters, isEpub: false, isMarkdown };
   }
 
-  // EPUB：提取可读文本并保留章节结构
+  // EPUB：走保真管线（XHTML → Markdown + 图片 object URL），复用 Markdown 分页/渲染
   try {
-    const arrayBuffer = await blob.arrayBuffer();
-    const zip = await JSZip.loadAsync(arrayBuffer);
-
-    // 找到 OPF 获取阅读顺序
-    const containerXml = await zip.file('META-INF/container.xml')?.async('string');
-    if (!containerXml) return { chapters: [{ id: 'ch1', title: '正文', content: '无法解析 EPUB 包结构' }], isEpub: true, isMarkdown: false };
-
-    const opfMatch = containerXml.match(/full-path="([^"]+\.opf)"/);
-    if (!opfMatch) return { chapters: [{ id: 'ch1', title: '正文', content: '无法找到 OPF 文档' }], isEpub: true, isMarkdown: false };
-
-    const opfPath = opfMatch[1];
-    const opfDir = opfPath.includes('/') ? opfPath.substring(0, opfPath.lastIndexOf('/') + 1) : '';
-    const opfContent = await zip.file(opfPath)?.async('string');
-    if (!opfContent) return { chapters: [{ id: 'ch1', title: '正文', content: '无法读取 OPF 内容' }], isEpub: true, isMarkdown: false };
-
-    // 从 spine 提取阅读顺序
-    const spineMatches = [...opfContent.matchAll(/<itemref[^>]+idref="([^"]+)"/g)];
-    const spineIds = spineMatches.map(m => m[1]);
-
-    // 从 manifest 映射 id → href（支持任意属性顺序）
-    const manifestMap = new Map<string, string>();
-    const itemMatches = [...opfContent.matchAll(/<item\s+([^>]+)>/g)];
-    for (const m of itemMatches) {
-      const attrs = m[1];
-      const idMatch = attrs.match(/id="([^"]+)"/);
-      const hrefMatch = attrs.match(/href="([^"]+)"/);
-      if (idMatch && hrefMatch) {
-        manifestMap.set(idMatch[1], hrefMatch[1]);
-      }
-    }
-
-    // 从 ncx 获取章节标题
-    const titleMap = new Map<string, string>();
-    const ncxMatch = opfContent.match(/<item[^>]+href="([^"]+\.ncx)"[^>]+/i);
-    if (ncxMatch) {
-      const ncxPath = opfDir + ncxMatch[1];
-      const ncxContent = await zip.file(ncxPath)?.async('string');
-      if (ncxContent) {
-        const navPointMatches = [...ncxContent.matchAll(/<navPoint[^>]*>[\s\S]*?<navLabel>\s*<text>([^<]+)<\/text>[\s\S]*?<content\s+src="([^"]+)"/g)];
-        for (const m of navPointMatches) {
-          const [, navLabel, srcWithAnchor] = m;
-          const src = (srcWithAnchor ?? '').split('#')[0];
-          titleMap.set(src, navLabel.trim());
-        }
-      }
-    }
-
-    // 按 spine 顺序读取章节内容
-    const chapters: TextChapter[] = [];
-    let chapterIndex = 0;
-
-    for (const spineId of spineIds) {
-      const href = manifestMap.get(spineId);
-      if (!href) continue;
-
-      const filePath = opfDir + href;
-      const html = await zip.file(filePath)?.async('string');
-      if (!html) continue;
-
-      // 使用共享的 HTML 清理函数
-      const text = cleanHtmlToText(html);
-      if (text) {
-        chapterIndex++;
-        const title = titleMap.get(href) || `第${chapterIndex}章`;
-        chapters.push({ id: `ch${chapterIndex}`, title, content: text });
-      }
-    }
-
-    if (chapters.length === 0) {
-      return { chapters: [{ id: 'ch1', title: '正文', content: 'EPUB 内容为空' }], isEpub: true, isMarkdown: false };
-    }
-
+    const chapters = await loadEpubChapters(blob);
     return { chapters, isEpub: true, isMarkdown: false };
   } catch {
     return { chapters: [{ id: 'ch1', title: '正文', content: 'EPUB 解析失败' }], isEpub: true, isMarkdown: false };
