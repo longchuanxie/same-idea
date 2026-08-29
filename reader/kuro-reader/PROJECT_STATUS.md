@@ -64,7 +64,7 @@ kuro-reader/
 │   │   │                       # MarkdownCodeBlock, MarkdownMath, MarkdownReaderContent,
 │   │   │                       # ReaderBottomBar, SelectionFloatingButton, SubLibraryMenu,
 │   │   │                       # TextProgressHint, TextReaderBottomBar, TextReaderFooter,
-│   │   │                       # TextReaderHeader, UndoToast
+│   │   │                       # TextReaderHeader, UndoToast, OpdsBrowser, SpeechBadge
 │   │   ├── organisms/          # GestureLock（手势密码九宫格）
 │   │   └── layouts/            # MainLayout, PageTransition, AuthGuard
 │   ├── constants/
@@ -117,6 +117,7 @@ kuro-reader/
 │   │   ├── archiveParser.ts    # 压缩包解析核心逻辑（双引擎 + 流式）
 │   │   ├── textContent.ts      # 文本内容加载（TXT/MD/EPUB → 章节）+ 章节定位
 │   │   ├── epubContent.ts      # EPUB 保真读取（XHTML→Markdown + 插图 object URL + NCX/nav 目录）
+│   │   ├── opds.ts             # OPDS 目录解析（Atom）+ 认证拉取 + 出版物下载
 │   │   ├── backHandler.ts      # Android 返回键处理器栈（浮层优先消费）
 │   │   ├── cloudStorage.ts     # 云存储客户端（WebDAV/FTP 工厂）
 │   │   ├── ftpClient.ts        # FTP 客户端（HTTP 代理模式）
@@ -325,7 +326,7 @@ IndexedDB（`kuro-reader-db`，**v6**），9 个 Object Store，由 [db.ts](src/
 
 ## 七、测试现状
 
-**29 个测试文件、263 个用例，全部通过**（`npm run test`，fake-indexeddb + jsdom 环境）。
+**31 个测试文件、274 个用例，全部通过**（`npm run test`，fake-indexeddb + jsdom 环境）。
 
 | 测试文件 | 覆盖范围 |
 |----------|----------|
@@ -357,6 +358,8 @@ IndexedDB（`kuro-reader-db`，**v6**），9 个 Object Store，由 [db.ts](src/
 | `utils/annotationAnchor.test.ts` | 批注指纹锚点：表征变化重定位 / 同上下文消歧 / 三级回退 |
 | `utils/annotationExport.test.ts` | 批注导出 Markdown 构建 / 文件名清理 |
 | `hooks/useSpeech.test.tsx` | TTS 分块队列 / 会话失效 / 倍速 / 降级 |
+| `services/opds.test.ts` | OPDS Atom 解析 / 文件名推断 / Basic 认证 |
+| `components/OpdsBrowser.test.tsx` | OPDS 浏览（加载/下钻/下载导入/错误） |
 
 测试基建：`src/test/setup.ts` 全局提供 fake-indexeddb 与 `URL.createObjectURL/revokeObjectURL` stub。覆盖重点在服务层、工具函数、Store 与阅读器子组件；**页面组件仍缺少测试**。
 

@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 
 import { ROUTES, bookDetailPath, readerPathForBook } from '@/constants/routes';
 import { createCloudClient, type CloudFile, type CloudStorageClient } from '@/services/cloudStorage';
+import { fetchOpdsFeed } from '@/services/opds';
+import { OpdsBrowser } from '@/components/molecules/OpdsBrowser';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import type { CloudSourceConfig } from '@/types';
 import {
@@ -16,7 +18,7 @@ import { cn } from '@/utils/cn';
 import { isSupportedBookFile, guessBookMimeType } from '@/utils/fileType';
 
 interface ProtocolOption {
-  id: 'webdav' | 'smb' | 'ftp' | 'onedrive' | 'nas';
+  id: 'webdav' | 'smb' | 'ftp' | 'onedrive' | 'nas' | 'opds';
   label: string;
   icon: string;
   description: string;
@@ -25,6 +27,7 @@ interface ProtocolOption {
 const PROTOCOLS: ProtocolOption[] = [
   { id: 'webdav', label: 'WebDAV', icon: 'cloud_sync', description: '通用云存储标准协议' },
   { id: 'nas', label: 'NAS', icon: 'storage', description: '群晖 / QNAP / 威联通' },
+  { id: 'opds', label: 'OPDS', icon: 'rss_feed', description: 'Calibre / Komga / Kavita 书库目录' },
   { id: 'smb', label: 'SMB', icon: 'folder_open', description: 'Windows 文件共享（暂不支持浏览）' },
   { id: 'ftp', label: 'FTP', icon: 'transfer_within_a_station', description: '文件传输协议' },
   { id: 'onedrive', label: 'OneDrive', icon: 'cloud_download', description: '微软云存储 API（暂不支持浏览）' },
@@ -73,12 +76,32 @@ export const CustomCloudPage: React.FC = () => {
   const [busyFile, setBusyFile] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [importedBook, setImportedBook] = useState<{ id: string; title: string; format?: string } | null>(null);
+  // OPDS 浏览：连接成功标记（凭据经 state 传入 OpdsBrowser）
+  const [isOpdsConnected, setIsOpdsConnected] = useState(false);
+
+  const handleOpdsImportFile = useCallback(
+    async (file: File) => {
+      setActionError(null);
+      setImportedBook(null);
+      const book = await importFile(file);
+      if (book) {
+        setImportedBook({ id: book.id, title: book.title, format: book.format });
+        return book;
+      }
+      setActionError(useLibraryStore.getState().error || '导入失败');
+      return null;
+    },
+    [importFile]
+  );
+
 
   const currentProtocol = PROTOCOLS.find((p) => p.id === protocol)!;
   const placeholders = getPlaceholder();
 
   function getPlaceholder(): { server: string; port: string } {
     switch (protocol) {
+      case 'opds':
+        return { server: 'http://192.168.1.100:8083/opds', port: '' };
       case 'webdav':
         return { server: 'https://dav.example.com', port: '443' };
       case 'nas':
@@ -112,6 +135,15 @@ export const CustomCloudPage: React.FC = () => {
     setIsConnecting(true);
     setConnectError(null);
     try {
+      if (protocol === 'opds') {
+        await fetchOpdsFeed(serverAddress, { username, password });
+        setConnectedLabel(`OPDS · ${serverAddress}`);
+        setIsOpdsConnected(true);
+        setImportedBook(null);
+        setActionError(null);
+        return;
+      }
+
       const config: CloudSourceConfig = {
         protocol: protocol === 'nas' ? 'nas' : protocol,
         serverAddress,
@@ -140,6 +172,7 @@ export const CustomCloudPage: React.FC = () => {
 
   const handleDisconnect = () => {
     setClient(null);
+    setIsOpdsConnected(false);
     setFiles([]);
     setCurrentPath('/');
     setFilesError(null);
@@ -373,7 +406,7 @@ export const CustomCloudPage: React.FC = () => {
           <div className="flex flex-col md:flex-row gap-6">
             <div className="flex-grow flex flex-col gap-2">
               <label className="font-label text-label-sm text-on-surface-variant">
-                {protocol === 'nas' ? 'NAS 地址 / IP' : protocol === 'onedrive' ? '授权方式' : '服务器地址'}
+                {protocol === 'opds' ? '目录地址' : protocol === 'nas' ? 'NAS 地址 / IP' : protocol === 'onedrive' ? '授权方式' : '服务器地址'}
               </label>
               <input
                 className="w-full bg-transparent border-0 border-b border-outline-variant px-0 py-2 font-body text-body-md text-primary placeholder:text-on-tertiary-container focus:ring-0 focus:border-primary transition-all outline-none"
@@ -384,7 +417,7 @@ export const CustomCloudPage: React.FC = () => {
                 readOnly={protocol === 'onedrive'}
               />
             </div>
-            {protocol !== 'onedrive' && (
+            {protocol !== 'onedrive' && protocol !== 'opds' && (
               <div className="w-full md:w-32 flex flex-col gap-2">
                 <label className="font-label text-label-sm text-on-surface-variant">端口 (选填)</label>
                 <input
@@ -398,7 +431,7 @@ export const CustomCloudPage: React.FC = () => {
             )}
           </div>
 
-          {protocol !== 'onedrive' && (
+          {protocol !== 'onedrive' && protocol !== 'opds' && (
             <div className="flex flex-col gap-2">
               <label className="font-label text-label-sm text-on-surface-variant">路径 (选填)</label>
               <input
@@ -524,8 +557,8 @@ export const CustomCloudPage: React.FC = () => {
         <div className="flex items-center gap-4">
           <button
             className="text-primary hover:opacity-80 transition-opacity p-2 -ml-2"
-            onClick={() => (client ? handleDisconnect() : navigate(ROUTES.IMPORT))}
-            aria-label={client ? '返回连接页' : '返回'}
+            onClick={() => (client || isOpdsConnected ? handleDisconnect() : navigate(ROUTES.IMPORT))}
+            aria-label={client || isOpdsConnected ? '返回连接页' : '返回'}
           >
             <span className="material-symbols-outlined">arrow_back</span>
           </button>
@@ -536,7 +569,18 @@ export const CustomCloudPage: React.FC = () => {
         </button>
       </header>
 
-      {client ? renderBrowser() : renderForm()}
+      {isOpdsConnected ? (
+        <OpdsBrowser
+          catalogUrl={serverAddress}
+          username={username}
+          password={password}
+          onImportFile={handleOpdsImportFile}
+        />
+      ) : client ? (
+        renderBrowser()
+      ) : (
+        renderForm()
+      )}
     </div>
   );
 };
