@@ -1,11 +1,13 @@
 # Kuro Reader
 
-一款专注于本地漫画阅读体验的跨平台应用，支持 Web、Android 部署。采用 Material Design 3 设计体系，提供沉浸式的阅读体验和流畅的交互动画。
+一款专注于本地书籍阅读体验的跨平台应用，支持漫画（ZIP/CBZ/RAR/CBR）与文本（TXT/Markdown/EPUB）双模式阅读，可部署为 Web 应用或 Android App。采用 Material Design 3 设计体系，提供沉浸式的阅读体验和流畅的交互动画。
 
 ## 功能特性
 
 ### 核心阅读
-- 支持 ZIP/CBZ、RAR/CBR 等主流漫画压缩格式
+- 支持 ZIP/CBZ、RAR/CBR 漫画压缩格式，以及 TXT、Markdown、EPUB 文本阅读格式
+- Markdown 支持标题、强调、列表、引用、增强代码块、响应式表格、安全链接和 Mermaid 图表
+- 文本阅读支持宋体、楷体、仿宋、黑体、圆体、文学体、等宽和系统字体预设
 - 条漫/页漫双模式阅读，支持自适应缩放
 - 阅读进度自动保存与续读
 - 双页阅读模式支持
@@ -55,13 +57,13 @@ kuro-reader/
 ├── android/                  # Android 原生工程
 ├── src/
 │   ├── components/           # 组件层 (Atomic Design)
-│   │   ├── atoms/            # 原子组件 (BottomNavBar, TopAppBar, Collapsible)
-│   │   ├── molecules/        # 分子组件 (ConfirmDialog, FullscreenViewer, ...)
+│   │   ├── atoms/            # 原子组件 (BottomNavBar, TopAppBar, Collapsible, FormatBadge)
+│   │   ├── molecules/        # 分子组件 (ConfirmDialog, FullscreenViewer, MarkdownReaderContent, ...)
 │   │   ├── organisms/        # 有机体组件 (GestureLock)
 │   │   └── layouts/         # 布局组件 (MainLayout, PageTransition, AuthGuard)
 │   ├── constants/            # 常量与配置
 │   ├── hooks/                # 自定义 Hooks
-│   ├── pages/                # 页面组件 (14 个页面)
+│   ├── pages/                # 页面组件 (14 个页面，含 Reader 漫画阅读器与 TextReader 文本阅读器)
 │   ├── plugins/              # Capacitor 自定义插件
 │   ├── services/             # 服务层
 │   ├── stores/               # Zustand 状态管理

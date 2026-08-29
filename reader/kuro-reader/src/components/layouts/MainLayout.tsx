@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
+
 import { Outlet, useLocation } from 'react-router-dom';
-import { TopAppBar } from '@/components/atoms/TopAppBar';
+
 import { BottomNavBar } from '@/components/atoms/BottomNavBar';
-import { useAppStore } from '@/stores/useAppStore';
+import { TopAppBar } from '@/components/atoms/TopAppBar';
 import { useStatusBar } from '@/hooks/useStatusBar';
+import { useAppStore } from '@/stores/useAppStore';
 import type { NavItem } from '@/types';
 
 const PATH_TO_NAV: Record<string, NavItem> = {
@@ -14,7 +16,6 @@ const PATH_TO_NAV: Record<string, NavItem> = {
   '/profile': 'settings',
   '/stats': 'home',
   '/search': 'library',
-  '/batch': 'library',
 };
 
 const SYSTEM_DARK_QUERY = '(prefers-color-scheme: dark)';
@@ -51,9 +52,6 @@ const getAppBarConfig = (pathname: string): AppBarConfig => {
   }
   if (pathname === '/search') {
     return { variant: 'back', title: '搜索' };
-  }
-  if (pathname === '/batch') {
-    return { variant: 'back', title: '批量管理' };
   }
   return { variant: 'back' };
 };

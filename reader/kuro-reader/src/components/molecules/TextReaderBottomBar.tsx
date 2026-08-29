@@ -1,8 +1,9 @@
 import React from 'react';
 
+import { TEXT_READER_FONT_OPTIONS } from '@/constants/textReaderFonts';
+import type { PaperType, ReadingTheme, TextFontFamily, TextAlign, TextReadingMode } from '@/types';
 import { cn } from '@/utils/cn';
 import { getAllPaperTypes } from '@/utils/paperTexture';
-import type { PaperType, ReadingTheme, TextFontFamily, TextAlign, TextReadingMode } from '@/types';
 
 export interface TextReaderBottomBarProps {
   fontSize: number;
@@ -41,21 +42,20 @@ export interface TextReaderBottomBarProps {
   isFavorite?: boolean;
 }
 
+// 字号 / 行距预设值（数值即业务含义，故豁免魔数检查）
+// eslint-disable-next-line no-magic-numbers
 const FONT_SIZES = [14, 16, 18, 20, 22, 24, 28];
+// eslint-disable-next-line no-magic-numbers
 const LINE_HEIGHTS = [1.4, 1.6, 1.8, 2.0, 2.2];
+
+const LINE_HEIGHT_MATCH_EPSILON = 0.05;
+const COLOR_TEMP_WARM_THRESHOLD = 50;
 
 const READING_THEMES: { theme: ReadingTheme; label: string; bg: string; color: string }[] = [
   { theme: 'light', label: '白色', bg: '#ffffff', color: '#1a1a1a' },
   { theme: 'green', label: '护眼', bg: '#c7edcc', color: '#2d3a2d' },
   { theme: 'sepia', label: '羊皮纸', bg: '#f5e6c8', color: '#5b4636' },
   { theme: 'dark', label: '暗夜', bg: '#1a1a1a', color: '#b8b8b8' },
-];
-
-const TEXT_FONTS: { family: TextFontFamily; label: string }[] = [
-  { family: 'serif', label: '宋体' },
-  { family: 'kaiti', label: '楷体' },
-  { family: 'sans', label: '黑体' },
-  { family: 'system', label: '系统' },
 ];
 
 const READING_MODES: { mode: TextReadingMode; label: string; icon: string }[] = [
@@ -257,7 +257,7 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
                   key={lh}
                   className={cn(
                     'flex-1 h-9 rounded-lg border text-label-sm font-label transition-colors',
-                    Math.abs(lineHeight - lh) < 0.05
+                    Math.abs(lineHeight - lh) < LINE_HEIGHT_MATCH_EPSILON
                       ? 'bg-primary text-on-primary border-primary'
                       : 'bg-surface-container-high text-on-surface-variant border-outline-variant hover:border-primary/50'
                   )}
@@ -350,7 +350,7 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
                 <p className="font-label text-label-md text-on-surface">色温</p>
               </div>
               <span className="font-label text-label-sm text-on-surface-variant">
-                {colorTemperature === 0 ? '冷光' : colorTemperature <= 50 ? '暖白' : '暖光'}
+                {colorTemperature === 0 ? '冷光' : colorTemperature <= COLOR_TEMP_WARM_THRESHOLD ? '暖白' : '暖光'}
               </span>
             </div>
             <input
@@ -389,16 +389,17 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
           {/* 字体 */}
           <div className="py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant mb-4">
             <p className="font-label text-label-md text-on-surface mb-3">字体</p>
-            <div className="flex gap-2">
-              {TEXT_FONTS.map(({ family, label }) => (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {TEXT_READER_FONT_OPTIONS.map(({ family, label, fontFamily }) => (
                 <button
                   key={family}
                   className={cn(
-                    'flex-1 h-10 rounded-lg border text-label-sm font-label transition-colors',
+                    'h-12 rounded-lg border text-label-sm transition-colors',
                     textFontFamily === family
                       ? 'bg-primary text-on-primary border-primary'
                       : 'bg-surface-container-high text-on-surface-variant border-outline-variant hover:border-primary/50'
                   )}
+                  style={{ fontFamily }}
                   onClick={() => onTextFontFamilyChange(family)}
                 >
                   {label}

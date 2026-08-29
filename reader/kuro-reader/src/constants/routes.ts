@@ -11,7 +11,6 @@ export const ROUTES = {
   STATS: '/stats',
   PROFILE: '/profile',
   SEARCH: '/search',
-  BATCH: '/batch',
   TAGS: '/tags',
   AUTH: '/auth',
 } as const;

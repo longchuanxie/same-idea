@@ -1,9 +1,12 @@
 import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useLibraryStore } from '@/stores/useLibraryStore';
-import { ROUTES, bookDetailPath, readerPathForBook } from '@/constants/routes';
-import { FormatBadge } from '@/components/atoms/FormatBadge';
 
+import { useNavigate } from 'react-router-dom';
+
+import { FormatBadge } from '@/components/atoms/FormatBadge';
+import { ROUTES, bookDetailPath, readerPathForBook } from '@/constants/routes';
+import { useLibraryStore } from '@/stores/useLibraryStore';
+
+const HOME_FAVORITES_LIMIT = 6;
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const { coverUrls, readingProgress, loadBooks, getContinueReading, removeContinueReading, getFavorites } = useLibraryStore();
@@ -101,7 +104,7 @@ export const HomePage: React.FC = () => {
         </div>
         {favorites.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
-            {favorites.slice(0, 6).map((book) => (
+            {favorites.slice(0, HOME_FAVORITES_LIMIT).map((book) => (
               <article
                 key={book.id}
                 className="group cursor-pointer flex flex-col"

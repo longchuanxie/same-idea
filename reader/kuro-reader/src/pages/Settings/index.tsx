@@ -1,21 +1,29 @@
 import React, { useEffect, useState, useRef } from 'react';
 
+import { Collapsible } from '@/components/atoms/Collapsible';
+import { GestureLock } from '@/components/organisms/GestureLock';
+import { annotationRepo } from '@/services/storage/annotationRepo';
+import { bookmarkRepo } from '@/services/storage/bookmarkRepo';
+import { progressRepo } from '@/services/storage/progressRepo';
 import { useAppStore } from '@/stores/useAppStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
-import { GestureLock } from '@/components/organisms/GestureLock';
-import { Collapsible } from '@/components/atoms/Collapsible';
-import { getStorageUsage } from '@/utils/storage';
+import type { Annotation, Bookmark, PaperType, ReadingProgress } from '@/types';
 import { getAllPaperTypes } from '@/utils/paperTexture';
-import { STORAGE_KEYS } from '@/constants/storage';
-import type { PaperType } from '@/types';
+import { getStorageUsage } from '@/utils/storage';
 
-const LOCK_TIMEOUT_OPTIONS = [
-  { value: 60 * 1000, label: '1 分钟' },
-  { value: 3 * 60 * 1000, label: '3 分钟' },
-  { value: 5 * 60 * 1000, label: '5 分钟' },
-  { value: 15 * 60 * 1000, label: '15 分钟' },
-  { value: 30 * 60 * 1000, label: '30 分钟' },
-];
+/** 备份格式版本：v2 起包含书签与批注；导入时兼容 v1 */
+const BACKUP_VERSION = 2;
+const LEGACY_BACKUP_VERSION = 1;
+
+const TEXTURE_INTENSITY_WEAK_MAX = 33;
+const TEXTURE_INTENSITY_MEDIUM_MAX = 66;
+// 锁定超时预设（分钟，数值即业务含义）
+// eslint-disable-next-line no-magic-numbers
+const LOCK_TIMEOUT_MINUTES = [1, 3, 5, 15, 30] as const;
+const LOCK_TIMEOUT_OPTIONS = LOCK_TIMEOUT_MINUTES.map((minutes) => ({
+  value: minutes * 60 * 1000,
+  label: `${minutes} 分钟`,
+}));
 
 const MAX_ATTEMPTS_OPTIONS = [
   { value: 3, label: '3 次' },
@@ -48,15 +56,21 @@ export const SettingsPage: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { books, tags, subLibraries, readingProgress } = useLibraryStore();
 
-  const handleExportData = () => {
+  const handleExportData = async () => {
+    const [bookmarks, annotations] = await Promise.all([
+      bookmarkRepo.getAll(),
+      annotationRepo.getAll(),
+    ]);
     const data = {
-      version: 1,
+      version: BACKUP_VERSION,
       exportedAt: new Date().toISOString(),
       settings,
       books,
       tags,
       subLibraries,
       readingProgress,
+      bookmarks,
+      annotations,
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -71,17 +85,46 @@ export const SettingsPage: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
         const data = JSON.parse(event.target?.result as string);
-        if (data.version !== 1) {
+        if (data.version !== BACKUP_VERSION && data.version !== LEGACY_BACKUP_VERSION) {
           alert('不支持的备份文件版本');
           return;
         }
         if (!confirm('导入将覆盖当前所有数据，确定继续吗？')) return;
         if (data.settings) updateSettings(data.settings);
-        localStorage.setItem(STORAGE_KEYS.PROGRESS, JSON.stringify(data.readingProgress || {}));
-        alert('数据导入成功，请重启应用以生效');
+
+        // 阅读进度：覆盖写入 IndexedDB 并刷新内存状态
+        const importedProgress: Record<string, ReadingProgress> = data.readingProgress || {};
+        const existingProgress = await progressRepo.getAll();
+        await Promise.all(existingProgress.map((p) => progressRepo.remove(p.bookId)));
+        await Promise.all(Object.values(importedProgress).map((p) => progressRepo.save(p)));
+
+        // 书签与批注（v2 备份起包含）
+        if (Array.isArray(data.bookmarks)) {
+          await bookmarkRepo.deleteAll();
+          await Promise.all(
+            (data.bookmarks as Bookmark[]).map((b) =>
+              bookmarkRepo.add({ ...b, createdAt: new Date(b.createdAt) })
+            )
+          );
+        }
+        if (Array.isArray(data.annotations)) {
+          await annotationRepo.deleteAll();
+          await Promise.all(
+            (data.annotations as Annotation[]).map((a) =>
+              annotationRepo.add({
+                ...a,
+                createdAt: new Date(a.createdAt),
+                updatedAt: new Date(a.updatedAt),
+              })
+            )
+          );
+        }
+
+        await useLibraryStore.getState().loadBooks();
+        alert('数据导入成功');
       } catch {
         alert('备份文件格式错误');
       }
@@ -504,7 +547,7 @@ export const SettingsPage: React.FC = () => {
                   <h3 className="font-display text-headline-sm text-on-surface">纹理强度</h3>
                 </div>
                 <span className="font-label text-label-sm text-on-surface-variant">
-                  {settings.textureIntensity <= 33 ? '弱' : settings.textureIntensity <= 66 ? '中等' : '强'}
+                  {settings.textureIntensity <= TEXTURE_INTENSITY_WEAK_MAX ? '弱' : settings.textureIntensity <= TEXTURE_INTENSITY_MEDIUM_MAX ? '中等' : '强'}
                 </span>
               </div>
               <div className="px-2 pt-2">

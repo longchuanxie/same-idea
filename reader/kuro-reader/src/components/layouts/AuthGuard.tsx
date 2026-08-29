@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
+
 import { useNavigate, useLocation } from 'react-router-dom';
 
-import { useAppStore } from '@/stores/useAppStore';
 import { ROUTES } from '@/constants/routes';
+import { useAppStore } from '@/stores/useAppStore';
 
 export const AuthGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const navigate = useNavigate();
@@ -25,7 +26,7 @@ export const AuthGuard: React.FC<{ children: React.ReactNode }> = ({ children })
 
     setShouldRender(false);
     navigate(ROUTES.AUTH, { replace: true, state: { from: location.pathname } });
-  }, [isAuthenticated, settings.auth.isEnabled, checkAuthTimeout, navigate, location.pathname]);
+  }, [isAuthenticated, settings.auth, checkAuthTimeout, navigate, location.pathname]);
 
   useEffect(() => {
     const handleVisibility = () => {

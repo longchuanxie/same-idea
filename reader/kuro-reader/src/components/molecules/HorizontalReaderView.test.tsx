@@ -88,4 +88,29 @@ describe('HorizontalReaderView', () => {
     expect(onSurfaceTouchStart).toHaveBeenCalled();
     expect(onSurfaceTouchEnd).toHaveBeenCalled();
   });
+
+  it('should not emit a second page turn click after a swipe', () => {
+    const onSurfaceClick = vi.fn();
+    const onImageClick = vi.fn();
+    renderHorizontalReaderView({
+      onSurfaceClick,
+      onImageClick,
+    });
+
+    const surface = screen.getByTestId('horizontal-reader-surface');
+    const image = screen.getByRole('img', { name: 'Page 2' });
+    fireEvent.touchStart(surface, {
+      touches: [{ clientX: 240, clientY: 120 }],
+    });
+    fireEvent.touchMove(surface, {
+      touches: [{ clientX: 120, clientY: 120 }],
+    });
+    fireEvent.touchEnd(surface, {
+      changedTouches: [{ clientX: 120, clientY: 120 }],
+    });
+    fireEvent.click(image);
+
+    expect(onImageClick).not.toHaveBeenCalled();
+    expect(onSurfaceClick).not.toHaveBeenCalled();
+  });
 });

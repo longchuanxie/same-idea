@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+
 import { cn } from '@/utils/cn';
 
 export interface CollapsibleProps {

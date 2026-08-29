@@ -1,10 +1,10 @@
-import { getDB } from './db'
-import { STORE_NAMES } from './db'
+import { getDB , STORE_NAMES } from './db'
+
 
 const STORE_NAME = STORE_NAMES.bookFiles
 
 /**
- * Repository for storing original book files (e.g. TXT, EPUB) by bookId.
+ * Repository for storing original book files (e.g. TXT, Markdown, EPUB) by bookId.
  *
  * 使用 IndexedDB 的 bookFiles object store，以 bookId 为 key 存储原始文件 Blob。
  */

@@ -14,6 +14,8 @@ export const PDF_EXTENSIONS: ReadonlySet<string> = new Set(['.pdf'])
 
 export const TEXT_EXTENSIONS: ReadonlySet<string> = new Set(['.txt'])
 
+export const MARKDOWN_EXTENSIONS: ReadonlySet<string> = new Set(['.md', '.markdown'])
+
 export const EPUB_EXTENSIONS: ReadonlySet<string> = new Set(['.epub'])
 
 export function getFileExtension(name: string): string {
@@ -37,10 +39,14 @@ export function isTextFile(name: string): boolean {
   return TEXT_EXTENSIONS.has(getFileExtension(name))
 }
 
+export function isMarkdownFile(name: string): boolean {
+  return MARKDOWN_EXTENSIONS.has(getFileExtension(name))
+}
+
 export function isEpubFile(name: string): boolean {
   return EPUB_EXTENSIONS.has(getFileExtension(name))
 }
 
 export function isSupportedBookFile(name: string): boolean {
-  return isArchiveFile(name) || isPdfFile(name) || isTextFile(name) || isEpubFile(name)
+  return isArchiveFile(name) || isPdfFile(name) || isTextFile(name) || isMarkdownFile(name) || isEpubFile(name)
 }

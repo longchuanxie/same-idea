@@ -15,8 +15,8 @@ describe('getParserForFile', () => {
     expect(getParserForFile(new File([], 'a.epub'))).toBeInstanceOf(EpubParser)
   })
 
-  it('returns TextParser for .txt', () => {
-    expect(getParserForFile(new File([], 'a.txt'))).toBeInstanceOf(TextParser)
+  it.each(['a.txt', 'a.md', 'a.markdown'])('returns TextParser for %s', name => {
+    expect(getParserForFile(new File([], name))).toBeInstanceOf(TextParser)
   })
 
   it('returns null for unsupported format (.pdf)', () => {
@@ -27,6 +27,8 @@ describe('getParserForFile', () => {
   it('case insensitive', () => {
     expect(getParserForFile(new File([], 'A.ZIP'))).toBeInstanceOf(ComicArchiveParser)
     expect(getParserForFile(new File([], 'A.TXT'))).toBeInstanceOf(TextParser)
+    expect(getParserForFile(new File([], 'A.MD'))).toBeInstanceOf(TextParser)
+    expect(getParserForFile(new File([], 'A.MARKDOWN'))).toBeInstanceOf(TextParser)
     expect(getParserForFile(new File([], 'A.EPUB'))).toBeInstanceOf(EpubParser)
   })
 })

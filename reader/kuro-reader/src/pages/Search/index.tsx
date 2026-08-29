@@ -1,10 +1,13 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useLibraryStore } from '@/stores/useLibraryStore';
-import { ROUTES, bookDetailPath } from '@/constants/routes';
-import { cn } from '@/utils/cn';
-import { FormatBadge } from '@/components/atoms/FormatBadge';
 
+import { useNavigate } from 'react-router-dom';
+
+import { FormatBadge } from '@/components/atoms/FormatBadge';
+import { ROUTES, bookDetailPath } from '@/constants/routes';
+import { useLibraryStore } from '@/stores/useLibraryStore';
+import { cn } from '@/utils/cn';
+
+const SEARCH_RESULT_LIMIT = 6;
 export const SearchPage: React.FC = () => {
   const navigate = useNavigate();
   const { books, coverUrls, tags, loadBooks } = useLibraryStore();
@@ -35,7 +38,7 @@ export const SearchPage: React.FC = () => {
   const recentBooks = useMemo(() => {
     return [...books]
       .sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime())
-      .slice(0, 6);
+      .slice(0, SEARCH_RESULT_LIMIT);
   }, [books]);
 
   return (

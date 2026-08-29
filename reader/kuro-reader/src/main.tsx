@@ -1,13 +1,15 @@
 import React from 'react';
-import ReactDOM from 'react-dom/client';
+
+import { createRoot } from 'react-dom/client';
+
+import { initNativeFeatures } from '@/utils/capacitor';
 
 import App from './App';
-import { initNativeFeatures } from '@/utils/capacitor';
 import './index.css';
 
 initNativeFeatures();
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />
   </React.StrictMode>

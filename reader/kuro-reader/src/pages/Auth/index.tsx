@@ -1,10 +1,11 @@
 import React, { useState, useCallback, useEffect } from 'react';
+
 import { useNavigate } from 'react-router-dom';
 
 import { GestureLock } from '@/components/organisms/GestureLock';
-import { useAppStore } from '@/stores/useAppStore';
-import { isLockedUntilExpired } from '@/services/gestureAuth';
 import { ROUTES } from '@/constants/routes';
+import { isLockedUntilExpired } from '@/services/gestureAuth';
+import { useAppStore } from '@/stores/useAppStore';
 
 /** 预设安全问题列表 */
 const SECURITY_QUESTIONS = [

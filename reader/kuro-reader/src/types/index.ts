@@ -2,7 +2,7 @@
  * 书籍格式判别。
  * - 'comic'：传统漫画（图片序列，来自 zip/cbz/rar/cbr/散图）
  * - 'pdf'：PDF 文档
- * - 'text'：纯文本 / EPUB 等文本格式
+ * - 'text'：TXT / Markdown / EPUB 等文本格式
  */
 export type BookFormat = 'comic' | 'pdf' | 'text'
 
@@ -11,7 +11,7 @@ export type BookFormat = 'comic' | 'pdf' | 'text'
  * 渲染器根据 kind 分派到对应实现。
  * - 'image'：图片页（漫画）
  * - 'pdf-page'：PDF 页面
- * - 'text-content'：文本内容（纯文本/EPUB）
+ * - 'text-content'：文本内容（TXT/Markdown/EPUB）
  */
 export type PageRef =
   | { kind: 'image'; index: number }
@@ -74,6 +74,10 @@ export interface ReadingProgress {
   totalImages: number
   /** EPUB CFI 或其他富定位符。预留用。 */
   locator?: string
+  /** 按书记忆的文本阅读模式（未设置时使用全局设置） */
+  textReadingMode?: TextReadingMode
+  /** 按书记忆的阅读主题（未设置时使用全局设置） */
+  readingTheme?: ReadingTheme
 }
 
 export interface Collection {
@@ -89,7 +93,15 @@ export type PaperType = 'coated' | 'rice' | 'kraft' | 'newsprint' | 'matte' | 'e
 export type ReadingTheme = 'light' | 'green' | 'sepia' | 'dark'
 
 /** 文本字体族 */
-export type TextFontFamily = 'system' | 'serif' | 'kaiti' | 'sans'
+export type TextFontFamily =
+  | 'system'
+  | 'serif'
+  | 'kaiti'
+  | 'fangSong'
+  | 'sans'
+  | 'rounded'
+  | 'literata'
+  | 'monospace'
 
 /** 文本对齐方式 */
 export type TextAlign = 'left' | 'justify'

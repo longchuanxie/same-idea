@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { ReadingStats } from '@/types';
+
 import { STORAGE_KEYS } from '@/constants/storage';
+import type { ReadingStats } from '@/types';
 
 interface ReadingSession {
   date: string;
@@ -17,6 +18,10 @@ interface StatsState {
   getStats: () => ReadingStats;
   calculateWeeklyData: () => { day: string; hours: number }[];
 }
+
+const MS_PER_DAY = 86400000;
+const WEEK_WINDOW_DAYS = 7;
+const HOUR_ROUNDING_FACTOR = 100; // 保留两位小数
 
 const DEFAULT_STATS: ReadingStats = {
   totalHours: 0,
@@ -42,7 +47,7 @@ function calculateStreaks(dates: string[]) {
 
   const sortedDates = [...new Set(dates)].sort();
   const today = getDateString(new Date());
-  const yesterday = getDateString(new Date(Date.now() - 86400000));
+  const yesterday = getDateString(new Date(Date.now() - MS_PER_DAY));
 
   let longestStreak = 1;
   let currentStreak = 0;
@@ -133,7 +138,7 @@ export const useStatsStore = create<StatsState>()(
         const result: { day: string; hours: number }[] = [];
         const today = new Date();
 
-        for (let i = 6; i >= 0; i--) {
+        for (let i = WEEK_WINDOW_DAYS - 1; i >= 0; i--) {
           const d = new Date(today);
           d.setDate(d.getDate() - i);
           const dateStr = getDateString(d);
@@ -141,7 +146,7 @@ export const useStatsStore = create<StatsState>()(
           const dayMinutes = readingSessions
             .filter((s) => s.date === dateStr)
             .reduce((sum, s) => sum + s.minutes, 0);
-          result.push({ day: dayLabel, hours: Math.round((dayMinutes / 60) * 100) / 100 });
+          result.push({ day: dayLabel, hours: Math.round((dayMinutes / 60) * HOUR_ROUNDING_FACTOR) / HOUR_ROUNDING_FACTOR });
         }
 
         return result;

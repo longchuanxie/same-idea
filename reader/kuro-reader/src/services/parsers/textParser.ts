@@ -1,43 +1,56 @@
-import { isTextFile } from '@/utils/fileType'
+import { isMarkdownFile, isTextFile } from '@/utils/fileType'
+
 import type { BookParser, ParsedBook, ParsedTextBook, ParserProgressCallback } from './types'
-import { extractTitleFromFilename, splitTextIntoChapters } from './utils'
+import { extractTitleFromFilename, splitMarkdownIntoChapters, splitTextIntoChapters } from './utils'
 
 /**
  * 纯文本文件解析器（BookParser 适配器）。
  *
- * 支持 .txt 格式，自动检测 UTF-8/GBK 编码。
- * 导入时自动拆分章节（支持中英文常见章节格式）。
+ * 支持 .txt、.md、.markdown 格式，自动检测 UTF-8/GBK 编码。
+ * 导入时自动拆分章节（Markdown 使用一级/二级标题，TXT 使用常见章节格式）。
  * 生成纯色封面作为占位。
  */
+// 解析进度锚点（%）：与 parse 流程各阶段一一对应
+const PROGRESS = {
+  STARTED: 10,
+  BUFFER_READ: 30,
+  DECODED: 50,
+  CHAPTERS_SPLIT: 80,
+  COVER_GENERATED: 90,
+} as const;
+const COVER_LABEL_BOTTOM_MARGIN_PX = 30;
 export class TextParser implements BookParser {
   canParse(input: { name: string }): boolean {
-    return isTextFile(input.name)
+    return isTextFile(input.name) || isMarkdownFile(input.name)
   }
 
   async parse(file: File, onProgress?: ParserProgressCallback): Promise<ParsedBook> {
-    onProgress?.(10)
+    onProgress?.(PROGRESS.STARTED)
 
     const arrayBuffer = await file.arrayBuffer()
-    onProgress?.(30)
+    onProgress?.(PROGRESS.BUFFER_READ)
 
     const { text, encoding } = decodeWithFallback(arrayBuffer)
-    onProgress?.(50)
+    onProgress?.(PROGRESS.DECODED)
 
     const title = extractTitleFromFilename(file.name)
     onProgress?.(60)
 
-    // 导入时拆分章节
-    const chapters = splitTextIntoChapters(text)
-    onProgress?.(80)
+    const markdown = isMarkdownFile(file.name)
+    const chapters = markdown ? splitMarkdownIntoChapters(text) : splitTextIntoChapters(text)
+    onProgress?.(PROGRESS.CHAPTERS_SPLIT)
 
-    const coverBlob = await generateTextCover(title)
-    onProgress?.(90)
+    const formatLabel = markdown ? 'MD' : 'TXT'
+    const coverBlob = await generateTextCover(title, formatLabel)
+    onProgress?.(PROGRESS.COVER_GENERATED)
 
     const result: ParsedTextBook = {
       format: 'text',
       title,
       coverBlob,
-      textFile: new Blob([text], { type: 'text/plain;charset=' + encoding }),
+      textFile: new Blob([text], {
+        type: `${markdown ? 'text/markdown' : 'text/plain'};charset=${encoding}`,
+      }),
       textEncoding: encoding,
       chapters,
     }
@@ -74,7 +87,7 @@ function decodeWithFallback(buffer: ArrayBuffer): { text: string; encoding: stri
 /**
  * 生成纯文本封面（Canvas 绘制纯色背景 + 标题文字）。
  */
-async function generateTextCover(title: string): Promise<Blob> {
+async function generateTextCover(title: string, formatLabel: string): Promise<Blob> {
   const canvas = document.createElement('canvas')
   canvas.width = 300
   canvas.height = 450
@@ -106,10 +119,10 @@ async function generateTextCover(title: string): Promise<Blob> {
     ctx.fillText(line, canvas.width / 2, startY + i * lineHeight)
   })
 
-  // 底部 "TXT" 标记
+  // 底部格式标记
   ctx.font = '14px sans-serif'
   ctx.fillStyle = 'rgba(255,255,255,0.6)'
-  ctx.fillText('TXT', canvas.width / 2, canvas.height - 30)
+  ctx.fillText(formatLabel, canvas.width / 2, canvas.height - COVER_LABEL_BOTTOM_MARGIN_PX)
 
   return new Promise<Blob>((resolve) => {
     canvas.toBlob((blob) => {

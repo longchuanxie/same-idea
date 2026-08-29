@@ -1,10 +1,10 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-import type { NavItem, UserSettings, AuthConfig } from '@/types';
 import { APP_CONFIG } from '@/constants/config';
 import { setupGesture, verifyGesture, isLockedUntilExpired, calculateLockUntil, hashSecurityAnswer, verifySecurityAnswer } from '@/services/gestureAuth';
-import type { SecurityQuestion } from '@/types';
+import type { NavItem, UserSettings, AuthConfig , SecurityQuestion } from '@/types';
+
 
 interface AppState {
   theme: 'light' | 'dark' | 'auto';

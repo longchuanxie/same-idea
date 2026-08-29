@@ -1,8 +1,10 @@
 import React, { useRef } from 'react';
+
 import { useNavigate } from 'react-router-dom';
-import { cn } from '@/utils/cn';
-import type { NavItem } from '@/types';
+
 import { useAppStore } from '@/stores/useAppStore';
+import type { NavItem } from '@/types';
+import { cn } from '@/utils/cn';
 
 interface NavConfig {
   key: NavItem;

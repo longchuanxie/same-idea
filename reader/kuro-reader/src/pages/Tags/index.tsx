@@ -1,9 +1,13 @@
 import React, { useState, useRef } from 'react';
+
 import { useNavigate } from 'react-router-dom';
-import { useLibraryStore } from '@/stores/useLibraryStore';
-import { bookDetailPath } from '@/constants/routes';
-import { cn } from '@/utils/cn';
+
 import { FormatBadge } from '@/components/atoms/FormatBadge';
+import { bookDetailPath } from '@/constants/routes';
+import { useLibraryStore } from '@/stores/useLibraryStore';
+import { cn } from '@/utils/cn';
+
+const TAG_INPUT_FOCUS_DELAY_MS = 50; // 等待弹窗渲染完成后聚焦
 
 const TAG_COLORS = [
   '#E53935', '#D81B60', '#8E24AA', '#5E35B1', '#3949AB',
@@ -52,7 +56,7 @@ export const TagsPage: React.FC = () => {
     setEditingTagId(tag.id);
     setNewTagName(tag.name);
     setNewTagColor(tag.color);
-    setTimeout(() => inputRef.current?.focus(), 50);
+    setTimeout(() => inputRef.current?.focus(), TAG_INPUT_FOCUS_DELAY_MS);
   };
 
   return (
@@ -70,7 +74,7 @@ export const TagsPage: React.FC = () => {
             setEditingTagId(null);
             setNewTagName('');
             setNewTagColor(TAG_COLORS[0]);
-            setTimeout(() => inputRef.current?.focus(), 50);
+            setTimeout(() => inputRef.current?.focus(), TAG_INPUT_FOCUS_DELAY_MS);
           }}
         >
           <span className="material-symbols-outlined text-[20px]">add</span>

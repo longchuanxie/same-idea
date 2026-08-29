@@ -1,6 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
+
 import type { AnnotationStyle } from '../../types';
 
+const POPUP_EDGE_MARGIN_PX = 16;
+const POPUP_VERTICAL_OFFSET_PX = 8;
+const VIEWPORT_EDGE_MARGIN_PX = 8;
+const MAX_SELECTED_TEXT_CHARS = 150;
 interface AnnotationPopupProps {
   selectedText: string;
   position: { x: number; y: number } | null;
@@ -35,16 +40,16 @@ export const AnnotationPopup: React.FC<AnnotationPopupProps> = ({
   // 计算弹出位置，避免超出视口
   const popupWidth = 320;
   const popupMaxHeight = 280;
-  const left = Math.min(position.x, window.innerWidth - popupWidth - 16);
-  const top = position.y + 8;
+  const left = Math.min(position.x, window.innerWidth - popupWidth - POPUP_EDGE_MARGIN_PX);
+  const top = position.y + POPUP_VERTICAL_OFFSET_PX;
 
   return (
     <div className="fixed inset-0 z-[70]" onClick={onCancel}>
       <div
         className="absolute bg-surface rounded-xl shadow-2xl border border-outline-variant/50 overflow-hidden animate-fade-in"
         style={{
-          left: Math.max(8, left),
-          top: Math.min(top, window.innerHeight - popupMaxHeight - 16),
+          left: Math.max(VIEWPORT_EDGE_MARGIN_PX, left),
+          top: Math.min(top, window.innerHeight - popupMaxHeight - POPUP_EDGE_MARGIN_PX),
           width: popupWidth,
         }}
         onClick={(e) => e.stopPropagation()}
@@ -56,7 +61,7 @@ export const AnnotationPopup: React.FC<AnnotationPopupProps> = ({
             <span className="font-label text-label-sm text-primary">选中文本</span>
           </div>
           <p className="font-body text-body-sm text-on-surface line-clamp-3 pl-5 opacity-80">
-            {selectedText.length > 150 ? selectedText.slice(0, 150) + '...' : selectedText}
+            {selectedText.length > MAX_SELECTED_TEXT_CHARS ? selectedText.slice(0, MAX_SELECTED_TEXT_CHARS) + '...' : selectedText}
           </p>
         </div>
 

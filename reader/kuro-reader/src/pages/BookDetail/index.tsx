@@ -1,12 +1,16 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
+
 import { useNavigate, useParams } from 'react-router-dom';
-import { TopAppBar } from '@/components/atoms/TopAppBar';
+
 import { BottomNavBar } from '@/components/atoms/BottomNavBar';
-import { useLibraryStore } from '@/stores/useLibraryStore';
-import { ROUTES, readerPathForBook } from '@/constants/routes';
-import { cn } from '@/utils/cn';
 import { FormatBadge } from '@/components/atoms/FormatBadge';
+import { TopAppBar } from '@/components/atoms/TopAppBar';
+import { ROUTES, readerPathForBook } from '@/constants/routes';
+import { useLibraryStore } from '@/stores/useLibraryStore';
 import type { Book } from '@/types';
+import { cn } from '@/utils/cn';
+
+const TAG_INPUT_FOCUS_DELAY_MS = 50; // 等待弹窗渲染完成后聚焦
 
 type BookStatus = Book['status'];
 
@@ -242,7 +246,7 @@ export const BookDetailPage: React.FC = () => {
                     className="px-3 py-1 border border-dashed border-outline-variant rounded-full font-label text-label-sm text-on-surface-variant hover:border-primary hover:text-primary transition-colors"
                     onClick={() => {
                       setShowTagPanel(!showTagPanel);
-                      setTimeout(() => tagInputRef.current?.focus(), 50);
+                      setTimeout(() => tagInputRef.current?.focus(), TAG_INPUT_FOCUS_DELAY_MS);
                     }}
                   >
                     <span className="material-symbols-outlined text-[16px] align-text-bottom">add</span>

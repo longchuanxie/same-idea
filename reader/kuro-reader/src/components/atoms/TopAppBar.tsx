@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+
 import { useNavigate } from 'react-router-dom';
 
 import { APP_CONFIG } from '@/constants/config';
@@ -64,7 +65,7 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
             onClick={() => navigate(ROUTES.PROFILE)}
             aria-label="个人中心"
           >
-            <div className="w-10 h-10 rounded-full border border-outline-variant overflow-hidden bg-surface-container flex items-center justify-center hover:bg-surface-variant transition-colors">
+            <div className="w-11 h-11 rounded-full border border-outline-variant overflow-hidden bg-surface-container flex items-center justify-center hover:bg-surface-variant transition-colors">
               <span className="material-symbols-outlined text-on-surface-variant text-[20px]">
                 person
               </span>
@@ -78,14 +79,14 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
           <div className="flex-shrink-0 flex items-center gap-1">
             <button
               aria-label="搜索"
-              className="p-2 hover:bg-surface-variant rounded-full transition-colors text-on-surface-variant hover:text-primary"
+              className="w-11 h-11 flex items-center justify-center hover:bg-surface-variant rounded-full transition-colors text-on-surface-variant hover:text-primary"
               onClick={onSearch ?? (() => navigate(ROUTES.SEARCH))}
             >
               <span className="material-symbols-outlined text-[24px]">search</span>
             </button>
             <button
               aria-label="通知"
-              className="p-2 hover:bg-surface-variant rounded-full transition-colors text-on-surface-variant hover:text-primary relative"
+              className="w-11 h-11 flex items-center justify-center hover:bg-surface-variant rounded-full transition-colors text-on-surface-variant hover:text-primary relative"
               onClick={() => navigate(ROUTES.STATS)}
             >
               <span className="material-symbols-outlined text-[24px]">notifications</span>
@@ -93,7 +94,7 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
             <div className="relative" ref={menuRef}>
               <button
                 aria-label="更多"
-                className="p-2 hover:bg-surface-variant rounded-full transition-colors text-on-surface-variant hover:text-primary"
+                className="w-11 h-11 flex items-center justify-center hover:bg-surface-variant rounded-full transition-colors text-on-surface-variant hover:text-primary"
                 onClick={() => setMenuOpen(!menuOpen)}
               >
                 <span className="material-symbols-outlined text-[24px]">more_vert</span>
@@ -181,7 +182,7 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
             onClick={() => navigate(ROUTES.PROFILE)}
             aria-label="个人中心"
           >
-            <div className="w-10 h-10 rounded-full border border-outline-variant overflow-hidden bg-surface-container flex items-center justify-center hover:bg-surface-variant transition-colors">
+            <div className="w-11 h-11 rounded-full border border-outline-variant overflow-hidden bg-surface-container flex items-center justify-center hover:bg-surface-variant transition-colors">
               <span className="material-symbols-outlined text-on-surface-variant text-[20px]">
                 person
               </span>
@@ -193,7 +194,7 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
             </h1>
           </div>
           <button
-            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-variant transition-colors text-on-surface-variant hover:text-primary"
+            className="w-11 h-11 flex items-center justify-center rounded-full hover:bg-surface-variant transition-colors text-on-surface-variant hover:text-primary"
             onClick={onSearch ?? (() => navigate(ROUTES.SEARCH))}
           >
             <span className="material-symbols-outlined">search</span>

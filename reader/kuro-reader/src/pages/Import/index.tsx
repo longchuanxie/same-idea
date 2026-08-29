@@ -1,12 +1,13 @@
 import React, { useRef, useState, useCallback } from 'react';
+
+import { Capacitor } from '@capacitor/core';
 import { useNavigate } from 'react-router-dom';
 
-import { useLibraryStore } from '@/stores/useLibraryStore';
 import { APP_CONFIG } from '@/constants/config';
 import { ROUTES, bookDetailPath, customCloudPath, subLibraryPath } from '@/constants/routes';
-import { Capacitor } from '@capacitor/core';
-import { isNativePlatform } from '@/utils/capacitor';
 import { FilePicker } from '@/plugins/FilePickerPlugin';
+import { useLibraryStore } from '@/stores/useLibraryStore';
+import { isNativePlatform } from '@/utils/capacitor';
 
 const SUPPORTED_EXTENSIONS = APP_CONFIG.supportedFormats;
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.img'];
@@ -133,6 +134,8 @@ export const ImportPage: React.FC = () => {
           'application/x-cbr',
           'application/x-cbz',
           'text/plain',
+          'text/markdown',
+          'text/x-markdown',
           'application/epub+zip',
         ],
       });
@@ -202,7 +205,7 @@ export const ImportPage: React.FC = () => {
     } catch {
       // User cancelled or error
     }
-  }, [importFolder, importArchivesAsSubLibrary]);
+  }, [importFolder, importArchivesAsSubLibrary, importResult]);
 
   const formatList = APP_CONFIG.supportedFormats.join(', ').toUpperCase();
 
@@ -218,7 +221,7 @@ export const ImportPage: React.FC = () => {
       <input
         ref={folderInputRef}
         type="file"
-        accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.zip,.cbz,.rar,.cbr,.txt,.epub"
+        accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.zip,.cbz,.rar,.cbr,.txt,.md,.markdown,.epub"
         onChange={handleFolderSelect}
         {...({ webkitdirectory: '', directory: '' } as Record<string, string>)}
         className="hidden"

@@ -1,8 +1,8 @@
 import type { Book } from '@/types'
 
+import { bookFileRepo } from './bookFileRepo'
 import { getDB, STORE_NAMES } from './db'
 import { pageRepo } from './pageRepo'
-import { bookFileRepo } from './bookFileRepo'
 
 export const bookRepo = {
   async save(book: Book): Promise<void> {

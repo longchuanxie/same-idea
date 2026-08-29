@@ -9,6 +9,32 @@
     color: inherit;
   }
 
+  .markdown-code-highlight .hljs-keyword,
+  .markdown-code-highlight .hljs-selector-tag,
+  .markdown-code-highlight .hljs-literal {
+    color: color-mix(in srgb, currentColor 55%, #8b5cf6);
+    font-weight: 600;
+  }
+
+  .markdown-code-highlight .hljs-string,
+  .markdown-code-highlight .hljs-attr,
+  .markdown-code-highlight .hljs-template-variable {
+    color: color-mix(in srgb, currentColor 45%, #16a34a);
+  }
+
+  .markdown-code-highlight .hljs-number,
+  .markdown-code-highlight .hljs-built_in,
+  .markdown-code-highlight .hljs-title,
+  .markdown-code-highlight .hljs-function {
+    color: color-mix(in srgb, currentColor 45%, #2563eb);
+  }
+
+  .markdown-code-highlight .hljs-comment,
+  .markdown-code-highlight .hljs-quote {
+    color: color-mix(in srgb, currentColor 55%, transparent);
+    font-style: italic;
+  }
+
   :root {
     --color-background: #fdf8f8;
     --color-on-background: #1c1b1c;

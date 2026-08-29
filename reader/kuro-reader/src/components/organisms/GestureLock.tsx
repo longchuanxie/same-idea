@@ -3,6 +3,12 @@ import React, { useState, useCallback, useRef } from 'react';
 import { APP_CONFIG } from '@/constants/config';
 import { cn } from '@/utils/cn';
 
+const ERROR_MIN_POINTS_RESET_DELAY_MS = 600;
+const VERIFY_RESET_DELAY_MS = 300;
+const SETUP_FEEDBACK_DURATION_MS = 400;
+const SETUP_FEEDBACK_RESET_DELAY_MS = 400;
+const SETUP_SUCCESS_RESET_DELAY_MS = 600;
+const SETUP_MISMATCH_RESET_DELAY_MS = 800;
 export type GestureLockMode = 'setup' | 'verify' | 'change';
 
 export interface GestureLockProps {
@@ -135,13 +141,13 @@ export const GestureLock: React.FC<GestureLockProps> = ({
     if (selectedPoints.length < APP_CONFIG.auth.minGesturePoints) {
       showFeedback('error');
       onError?.(`至少需要连接 ${APP_CONFIG.auth.minGesturePoints} 个点`);
-      setTimeout(resetPattern, 600);
+      setTimeout(resetPattern, ERROR_MIN_POINTS_RESET_DELAY_MS);
       return;
     }
 
     if (mode === 'verify') {
       onComplete(selectedPoints);
-      setTimeout(resetPattern, 300);
+      setTimeout(resetPattern, VERIFY_RESET_DELAY_MS);
       return;
     }
 
@@ -149,8 +155,8 @@ export const GestureLock: React.FC<GestureLockProps> = ({
       if (setupStep === 'first') {
         setFirstPattern(selectedPoints);
         setSetupStep('confirm');
-        showFeedback('success', 400);
-        setTimeout(resetPattern, 400);
+        showFeedback('success', SETUP_FEEDBACK_DURATION_MS);
+        setTimeout(resetPattern, SETUP_FEEDBACK_RESET_DELAY_MS);
       } else {
         const isMatch =
           firstPattern !== null &&
@@ -164,7 +170,7 @@ export const GestureLock: React.FC<GestureLockProps> = ({
             resetPattern();
             setSetupStep('first');
             setFirstPattern(null);
-          }, 600);
+          }, SETUP_SUCCESS_RESET_DELAY_MS);
         } else {
           showFeedback('error');
           onError?.('两次手势不一致，请重新设置');
@@ -172,7 +178,7 @@ export const GestureLock: React.FC<GestureLockProps> = ({
             resetPattern();
             setSetupStep('first');
             setFirstPattern(null);
-          }, 800);
+          }, SETUP_MISMATCH_RESET_DELAY_MS);
         }
       }
     }

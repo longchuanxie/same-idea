@@ -1,24 +1,28 @@
 import React, { useEffect } from 'react';
+
+import { App as CapacitorApp } from '@capacitor/app';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
-import { MainLayout } from '@/components/layouts/MainLayout';
 import { AuthGuard } from '@/components/layouts/AuthGuard';
-import { HomePage } from '@/pages/Home';
-import { LibraryPage } from '@/pages/Library';
-import { SubLibraryPage } from '@/pages/SubLibrary';
+import { MainLayout } from '@/components/layouts/MainLayout';
+import { ROUTES } from '@/constants/routes';
+import { AuthPage } from '@/pages/Auth';
 import { BookDetailPage } from '@/pages/BookDetail';
-import { ReaderPage } from '@/pages/Reader';
-import { TextReaderPage } from '@/pages/TextReader';
-import { ImportPage } from '@/pages/Import';
 import { CustomCloudPage } from '@/pages/CustomCloud';
+import { HomePage } from '@/pages/Home';
+import { ImportPage } from '@/pages/Import';
+import { LibraryPage } from '@/pages/Library';
+import { ProfilePage } from '@/pages/Profile';
+import { ReaderPage } from '@/pages/Reader';
+import { SearchPage } from '@/pages/Search';
 import { SettingsPage } from '@/pages/Settings';
 import { StatsPage } from '@/pages/Stats';
-import { ProfilePage } from '@/pages/Profile';
-import { SearchPage } from '@/pages/Search';
+import { SubLibraryPage } from '@/pages/SubLibrary';
 import { TagsPage } from '@/pages/Tags';
-import { AuthPage } from '@/pages/Auth';
-import { ROUTES } from '@/constants/routes';
+import { TextReaderPage } from '@/pages/TextReader';
+import { consumeBackPress } from '@/services/backHandler';
 import { useAppStore } from '@/stores/useAppStore';
+import { isNativePlatform } from '@/utils/capacitor';
 
 const SYSTEM_DARK_QUERY = '(prefers-color-scheme: dark)';
 const FONT_SCALE_BASE = 16;
@@ -31,6 +35,26 @@ const getBodyFontFamily = (fontFamily: 'literata' | 'inter'): string =>
 
 const App: React.FC = () => {
   const { theme, settings } = useAppStore();
+
+  // Android 硬件返回键：浮层优先关闭 → 路由后退 → 退出应用
+  useEffect(() => {
+    if (!isNativePlatform()) return;
+    let removeListener: (() => void) | undefined;
+
+    CapacitorApp.addListener('backButton', () => {
+      if (consumeBackPress()) return;
+      // react-router v6 在 history.state.idx 记录栈内位置
+      if (window.history.state?.idx > 0) {
+        window.history.back();
+      } else {
+        CapacitorApp.exitApp();
+      }
+    }).then((listener) => {
+      removeListener = () => listener.remove();
+    });
+
+    return () => removeListener?.();
+  }, []);
 
   useEffect(() => {
     const root = document.documentElement;

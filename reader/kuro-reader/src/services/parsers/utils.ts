@@ -123,6 +123,46 @@ export function splitTextIntoChapters(text: string): ParsedTextChapter[] {
 }
 
 /**
+ * 按 Markdown 的一级、二级 ATX 标题拆分章节。
+ * 标题标记不会进入正文；没有 Markdown 标题时回退到普通文本章节识别。
+ */
+export function splitMarkdownIntoChapters(markdown: string): ParsedTextChapter[] {
+  const headingPattern = /^\s{0,3}#{1,2}\s+(.+?)(?:\s+#+)?\s*$/
+  const lines = markdown.split('\n')
+  const chapters: ParsedTextChapter[] = []
+  let currentTitle = ''
+  let currentContent: string[] = []
+  let foundHeading = false
+
+  const saveChapter = () => {
+    const content = currentContent.join('\n').trim()
+    if (!content) return
+    chapters.push({
+      title: currentTitle || (foundHeading ? '' : '前言'),
+      content,
+    })
+  }
+
+  for (const line of lines) {
+    const headingMatch = line.match(headingPattern)
+    if (!headingMatch) {
+      currentContent.push(line)
+      continue
+    }
+
+    saveChapter()
+    foundHeading = true
+    currentTitle = headingMatch[1].trim()
+    currentContent = []
+  }
+
+  saveChapter()
+
+  if (!foundHeading) return splitTextIntoChapters(markdown)
+  return chapters
+}
+
+/**
  * 清理 HTML 标签，保留段落结构。
  * 用于 EPUB XHTML 内容提取。
  */

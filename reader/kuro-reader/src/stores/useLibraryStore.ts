@@ -1,12 +1,13 @@
 import { create } from 'zustand';
 
 import { STORAGE_KEYS } from '@/constants/storage';
-import { ComicArchiveParser } from '@/services/parsers/comicArchiveParser';
 import { getParserForFile } from '@/services/parsers';
+import { ComicArchiveParser } from '@/services/parsers/comicArchiveParser';
 import type { ParsedBook } from '@/services/parsers/types';
-import { bookRepo } from '@/services/storage/bookRepo';
 import { bookFileRepo } from '@/services/storage/bookFileRepo';
+import { bookRepo } from '@/services/storage/bookRepo';
 import { pageRepo } from '@/services/storage/pageRepo';
+import { progressRepo } from '@/services/storage/progressRepo';
 import { subLibraryRepo } from '@/services/storage/subLibraryRepo';
 import { tagRepo } from '@/services/storage/tagRepo';
 import type { Book, Chapter, ReadingProgress, SubLibrary, Tag } from '@/types';
@@ -70,8 +71,45 @@ function getRandomColor(): string {
   return TAG_COLORS[Math.floor(Math.random() * TAG_COLORS.length)];
 }
 
+/**
+ * 读取全部阅读进度。
+ * 旧版本进度存于 localStorage：IndexedDB 为空时执行一次性迁移后清除旧键。
+ */
+async function loadProgressWithMigration(): Promise<Record<string, ReadingProgress>> {
+  let progressList = await progressRepo.getAll();
+  if (progressList.length === 0) {
+    const stored = localStorage.getItem(STORAGE_KEYS.PROGRESS);
+    if (stored) {
+      try {
+        const legacy = JSON.parse(stored) as Record<string, ReadingProgress>;
+        progressList = Object.values(legacy);
+        await Promise.all(progressList.map((p) => progressRepo.save(p)));
+      } catch {
+        // 损坏的旧数据直接丢弃
+      }
+      localStorage.removeItem(STORAGE_KEYS.PROGRESS);
+    }
+  }
+  const readingProgress: Record<string, ReadingProgress> = {};
+  for (const p of progressList) {
+    readingProgress[p.bookId] = p;
+  }
+  return readingProgress;
+}
+
 const STREAMING_THRESHOLD_MB = 50;
 const BYTES_PER_MB = 1024 * 1024;
+// id 随机段：base36 串，跳过 "0." 前缀取 6 位
+const RANDOM_ID_RADIX = 36;
+const RANDOM_ID_SUBSTRING_START = 2;
+const RANDOM_ID_SUBSTRING_LENGTH = 8;
+// 导入进度锚点（%）
+const IMPORT_PROGRESS_PARSING_BASE = 20;
+const IMPORT_PROGRESS_PARSING_SPAN = 0.4;
+const IMPORT_PROGRESS_BATCH_BASE = 90;
+// 派生列表
+const RECENTLY_READ_LIMIT = 6;
+const PERCENT_MULTIPLIER = 100;
 
 /** 将 ParsedBook 转换为 Book + Chapter 实体 */
 function buildBookFromParsed(parsed: ParsedBook, bookId: string): { book: Book; chapter: Chapter } {
@@ -172,8 +210,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
           coverUrls[book.id] = URL.createObjectURL(blob);
         }
       }
-      const stored = localStorage.getItem(STORAGE_KEYS.PROGRESS);
-      const readingProgress = stored ? JSON.parse(stored) : {};
+      const readingProgress = await loadProgressWithMigration();
 
       const subLibraries = await subLibraryRepo.getAll();
       const tags = await tagRepo.getAll();
@@ -208,9 +245,9 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
         return null;
       }
 
-      set({ importProgress: 20 });
+      set({ importProgress: IMPORT_PROGRESS_PARSING_BASE });
 
-      const bookId = `book-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+      const bookId = `book-${Date.now()}-${Math.random().toString(RANDOM_ID_RADIX).substring(RANDOM_ID_SUBSTRING_START, RANDOM_ID_SUBSTRING_LENGTH)}`;
       const chapterId = `${bookId}-ch1`;
 
       const useStreaming = file.size > STREAMING_THRESHOLD_MB * BYTES_PER_MB;
@@ -219,11 +256,11 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
 
       if (useStreaming && parser.parseStreaming) {
         parsed = await parser.parseStreaming(file, (pct) => {
-          set({ importProgress: 20 + Math.round(pct * 0.4) });
+          set({ importProgress: IMPORT_PROGRESS_PARSING_BASE + Math.round(pct * IMPORT_PROGRESS_PARSING_SPAN) });
         });
       } else {
         parsed = await parser.parse(file, (pct) => {
-          set({ importProgress: 20 + Math.round(pct * 0.4) });
+          set({ importProgress: IMPORT_PROGRESS_PARSING_BASE + Math.round(pct * IMPORT_PROGRESS_PARSING_SPAN) });
         });
       }
 
@@ -275,7 +312,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
   importFolder: async (files: File[], folderName: string) => {
     set({ isImporting: true, importProgress: 0, error: null });
     try {
-      set({ importProgress: 20 });
+      set({ importProgress: IMPORT_PROGRESS_PARSING_BASE });
 
       // 检查是否已存在相同名称的书籍（避免重复导入）
       const existingBook = get().books.find(b => b.title === folderName);
@@ -297,7 +334,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
 
       set({ importProgress: 50 });
 
-      const bookId = `book-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+      const bookId = `book-${Date.now()}-${Math.random().toString(RANDOM_ID_RADIX).substring(RANDOM_ID_SUBSTRING_START, RANDOM_ID_SUBSTRING_LENGTH)}`;
       const { book, chapter } = buildBookFromParsed(parsed, bookId);
 
       await bookRepo.saveCover(bookId, parsed.coverBlob);
@@ -361,7 +398,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
         set({
           batchImportCurrent: i + 1,
           batchImportCurrentFile: file.name,
-          importProgress: Math.round(((i + 1) / files.length) * 90),
+          importProgress: Math.round(((i + 1) / files.length) * IMPORT_PROGRESS_BATCH_BASE),
         });
 
         try {
@@ -372,7 +409,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
             continue;
           }
 
-          const bookId = `book-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+          const bookId = `book-${Date.now()}-${Math.random().toString(RANDOM_ID_RADIX).substring(RANDOM_ID_SUBSTRING_START, RANDOM_ID_SUBSTRING_LENGTH)}`;
           const chapterId = `${bookId}-ch1`;
 
           // 根据文件类型选择合适的 parser
@@ -432,7 +469,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
 
       const now = new Date();
       const subLibrary: SubLibrary = {
-        id: `sublib-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
+        id: `sublib-${Date.now()}-${Math.random().toString(RANDOM_ID_RADIX).substring(RANDOM_ID_SUBSTRING_START, RANDOM_ID_SUBSTRING_LENGTH)}`,
         name: folderName,
         bookIds: importedBookIds,
         createdAt: now,
@@ -491,11 +528,11 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
   },
 
   updateProgress: (bookId, progress) => {
-    set((state) => {
-      const readingProgress = { ...state.readingProgress, [bookId]: progress };
-      localStorage.setItem(STORAGE_KEYS.PROGRESS, JSON.stringify(readingProgress));
-      return { readingProgress };
-    });
+    set((state) => ({
+      readingProgress: { ...state.readingProgress, [bookId]: progress },
+    }));
+    // 持久化到 IndexedDB（fire-and-forget，与书籍元数据保存策略一致）
+    progressRepo.save(progress);
     const book = get().books.find((b) => b.id === bookId);
     if (book) {
       const updatedBook = { ...book, lastReadAt: new Date() };
@@ -568,7 +605,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
   getContinueReading: () => {
     const { books, readingProgress } = get();
     return books
-      .filter((b) => readingProgress[b.id] && readingProgress[b.id].percentage < 100)
+      .filter((b) => readingProgress[b.id] && readingProgress[b.id].percentage < PERCENT_MULTIPLIER)
       .sort((a, b) => (b.lastReadAt ? new Date(b.lastReadAt).getTime() : 0) - (a.lastReadAt ? new Date(a.lastReadAt).getTime() : 0));
   },
 
@@ -576,7 +613,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     const { readingProgress } = get();
     if (!readingProgress[bookId]) return;
     const { [bookId]: _, ...rest } = readingProgress;
-    localStorage.setItem(STORAGE_KEYS.PROGRESS, JSON.stringify(rest));
+    progressRepo.remove(bookId);
     set({ readingProgress: rest as Record<string, ReadingProgress> });
   },
 
@@ -585,7 +622,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     return books
       .filter((b) => b.lastReadAt)
       .sort((a, b) => new Date(b.lastReadAt!).getTime() - new Date(a.lastReadAt!).getTime())
-      .slice(0, 6);
+      .slice(0, RECENTLY_READ_LIMIT);
   },
 
   getFavorites: () => {
@@ -605,7 +642,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
   createSubLibrary: async (name: string, bookIds: string[] = []) => {
     const now = new Date();
     const subLibrary: SubLibrary = {
-      id: `sublib-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
+      id: `sublib-${Date.now()}-${Math.random().toString(RANDOM_ID_RADIX).substring(RANDOM_ID_SUBSTRING_START, RANDOM_ID_SUBSTRING_LENGTH)}`,
       name,
       bookIds,
       createdAt: now,
@@ -757,7 +794,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
 
   createTag: async (name: string, color?: string) => {
     const tag: Tag = {
-      id: `tag-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
+      id: `tag-${Date.now()}-${Math.random().toString(RANDOM_ID_RADIX).substring(RANDOM_ID_SUBSTRING_START, RANDOM_ID_SUBSTRING_LENGTH)}`,
       name: name.trim(),
       color: color || getRandomColor(),
       bookIds: [],

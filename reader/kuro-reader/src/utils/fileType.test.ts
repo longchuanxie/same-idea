@@ -5,10 +5,12 @@ import {
   isImageFile,
   isArchiveFile,
   isPdfFile,
+  isMarkdownFile,
   isSupportedBookFile,
   IMAGE_EXTENSIONS,
   ARCHIVE_EXTENSIONS,
   PDF_EXTENSIONS,
+  MARKDOWN_EXTENSIONS,
 } from '@/utils/fileType'
 
 describe('getFileExtension', () => {
@@ -54,10 +56,22 @@ describe('isPdfFile', () => {
   })
 })
 
+describe('isMarkdownFile', () => {
+  it.each(['notes.md', 'book.MD', 'guide.markdown', 'GUIDE.MARKDOWN'])(
+    'recognizes %s as markdown',
+    name => expect(isMarkdownFile(name)).toBe(true)
+  )
+  it.each(['book.txt', 'book.epub', 'README'])('rejects %s', name =>
+    expect(isMarkdownFile(name)).toBe(false)
+  )
+})
+
 describe('isSupportedBookFile', () => {
-  it('accepts archives and pdf', () => {
+  it('accepts archives, pdf and markdown', () => {
     expect(isSupportedBookFile('a.zip')).toBe(true)
     expect(isSupportedBookFile('a.pdf')).toBe(true)
+    expect(isSupportedBookFile('a.md')).toBe(true)
+    expect(isSupportedBookFile('a.markdown')).toBe(true)
   })
   it('rejects standalone images', () => {
     expect(isSupportedBookFile('a.jpg')).toBe(false)
@@ -69,5 +83,7 @@ describe('extension constants', () => {
     expect(IMAGE_EXTENSIONS.has('.jpg')).toBe(true)
     expect(ARCHIVE_EXTENSIONS.has('.zip')).toBe(true)
     expect(PDF_EXTENSIONS.has('.pdf')).toBe(true)
+    expect(MARKDOWN_EXTENSIONS.has('.md')).toBe(true)
+    expect(MARKDOWN_EXTENSIONS.has('.markdown')).toBe(true)
   })
 })

@@ -1,14 +1,15 @@
 import React, { useEffect, useState, useCallback } from 'react';
+
 import { useNavigate, useLocation } from 'react-router-dom';
 
+import { FormatBadge } from '@/components/atoms/FormatBadge';
 import { BookEditDialog } from '@/components/molecules/BookEditDialog';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
 import { SubLibraryMenu } from '@/components/molecules/SubLibraryMenu';
 import { ROUTES, bookDetailPath, subLibraryPath } from '@/constants/routes';
 import { useLibraryStore } from '@/stores/useLibraryStore';
-import { cn } from '@/utils/cn';
-import { FormatBadge } from '@/components/atoms/FormatBadge';
 import type { Book } from '@/types';
+import { cn } from '@/utils/cn';
 
 
 export const LibraryPage: React.FC = () => {
@@ -349,6 +350,14 @@ export const LibraryPage: React.FC = () => {
         ) : (
           <div className="flex items-center gap-3">
             <span className="font-label text-label-sm text-on-surface-variant">{displayedBooks.length} 本</span>
+            <button
+              className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1 py-2"
+              onClick={() => setIsSelectMode(true)}
+              aria-label="批量管理"
+            >
+              <span className="material-symbols-outlined text-[18px]">checklist</span>
+              批量管理
+            </button>
             <div className="relative">
               <button
                 className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1"

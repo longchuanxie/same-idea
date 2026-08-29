@@ -1,14 +1,17 @@
 import React, { useEffect, useCallback, useRef, useState, useMemo } from 'react';
+
 import { useNavigate, useParams } from 'react-router-dom';
 
+import { ChapterListDrawer } from '@/components/molecules/ChapterListDrawer';
 import { FullscreenViewer } from '@/components/molecules/FullscreenViewer';
 import { HorizontalReaderView } from '@/components/molecules/HorizontalReaderView';
 import { ReaderBottomBar } from '@/components/molecules/ReaderBottomBar';
+import { useBackHandler } from '@/hooks/useBackHandler';
+import { useReadingStats } from '@/hooks/useReadingStats';
+import { useSmoothScroll } from '@/hooks/useSmoothScroll';
+import { useAppStore } from '@/stores/useAppStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import { useReaderStore } from '@/stores/useReaderStore';
-import { useStatsStore } from '@/stores/useStatsStore';
-import { useAppStore } from '@/stores/useAppStore';
-import { useSmoothScroll } from '@/hooks/useSmoothScroll';
 import { cn } from '@/utils/cn';
 import { getPaperConfig } from '@/utils/paperTexture';
 import {
@@ -26,16 +29,18 @@ import {
 const LONG_PRESS_DURATION = 500;
 const UI_ANIMATION_DURATION = 300;
 const PERCENT_MULTIPLIER = 100;
+const READER_SEPIA_MAX_INTENSITY = 0.4; // 色温滤镜最大 sepia 强度
 const TOUCH_MOVE_THRESHOLD = 10;
 const SWIPE_THRESHOLD = 50;
-const STATS_RECORD_INTERVAL = 60000;
-const MS_PER_MINUTE = 60000;
+
 const SWIPE_TIMEOUT = 500;
 const SCROLL_RETRY_INTERVAL = 150;
 const LAYOUT_STABLE_DELAY = 100;
 const INITIAL_SCROLL_SETTLE_DELAY = 600;
 const INTERSECTION_ROOT_MARGIN = '800px 0px';
 const DOUBLE_CLICK_THRESHOLD = 300;
+// 双击判定距离（px）：两次点击需足够接近才视为双击缩放
+const DOUBLE_TAP_PROXIMITY_PX = 48;
 const PROGRESS_SAVE_DEBOUNCE = 300;
 const VERTICAL_RESTORE_PRELOAD_COUNT = 8;
 const VERTICAL_PREPEND_BATCH_SIZE = 6;
@@ -74,8 +79,6 @@ export const ReaderPage: React.FC = () => {
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLongPressRef = useRef(false);
-  const readingStartTimeRef = useRef<number>(0);
-  const lastStatsRecordRef = useRef<number>(0);
   const progressRef = useRef({
     bookId: '',
     chapterId: '',
@@ -99,7 +102,10 @@ export const ReaderPage: React.FC = () => {
   const verticalTouchStartYRef = useRef(DEFAULT_PAGE_SCROLL_RATIO);
   const lastClickTimeRef = useRef<number>(0);
   const lastClickPageIndexRef = useRef<number>(-1);
-  const singleClickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastClickXRef = useRef<number>(0);
+  const lastClickYRef = useRef<number>(0);
+  // 上一次单击的可回滚动作：双击时先回滚再缩放（单击零延迟方案）
+  const lastClickRevertRef = useRef<(() => void) | null>(null);
   const progressTrackRef = useRef<HTMLDivElement>(null);
   const isDraggingProgressRef = useRef(false);
   const dragPageRef = useRef<number | null>(null);
@@ -155,7 +161,6 @@ export const ReaderPage: React.FC = () => {
     isActive: !isLoading,
   });
   const { updateProgress, getBookById, toggleFavorite } = useLibraryStore();
-  const { addReadingSession } = useStatsStore();
   const { settings } = useAppStore();
   const readingDirection = settings.readingDirection;
   const pageTurnGestures = settings.pageTurnGestures;
@@ -169,7 +174,7 @@ export const ReaderPage: React.FC = () => {
     const filters: string[] = [];
     if (brightness < 100) filters.push(`brightness(${brightness / 100})`);
     if (colorTemperature > 0) {
-      const sepiaValue = colorTemperature / 100 * 0.4;
+      const sepiaValue = (colorTemperature / PERCENT_MULTIPLIER) * READER_SEPIA_MAX_INTENSITY;
       filters.push(`sepia(${sepiaValue})`);
     }
     return filters.length > 0 ? filters.join(' ') : undefined;
@@ -272,6 +277,15 @@ export const ReaderPage: React.FC = () => {
     }
   }, [isUiVisible]);
 
+  // Android 返回键：从最上层浮层开始逐层关闭
+  useBackHandler(() => {
+    if (fullscreenImageUrl) { closeFullscreen(); return true; }
+    if (isBottomBarVisible) { setBottomBarVisible(false); return true; }
+    if (showChapterList) { setShowChapterList(false); return true; }
+    if (isUiVisible) { toggleUi(); return true; }
+    return false;
+  });
+
   useEffect(() => {
     if (bookId) {
       const progress = useLibraryStore.getState().readingProgress[bookId];
@@ -296,32 +310,9 @@ export const ReaderPage: React.FC = () => {
         setPageLayout(progress.pageLayout);
       }
       openBook(bookId, chapterId);
-      readingStartTimeRef.current = Date.now();
-      lastStatsRecordRef.current = Date.now();
     }
 
-    const statsTimer = setInterval(() => {
-      if (bookId && lastStatsRecordRef.current > 0) {
-        const now = Date.now();
-        const elapsed = now - lastStatsRecordRef.current;
-        if (elapsed >= MS_PER_MINUTE) {
-          const minutes = Math.round(elapsed / MS_PER_MINUTE);
-          addReadingSession(bookId, minutes);
-          lastStatsRecordRef.current = now;
-        }
-      }
-    }, STATS_RECORD_INTERVAL);
-
     return () => {
-      clearInterval(statsTimer);
-      if (readingStartTimeRef.current > 0 && bookId) {
-        const now = Date.now();
-        const elapsedSinceLastRecord = now - lastStatsRecordRef.current;
-        if (elapsedSinceLastRecord >= MS_PER_MINUTE * 0.5) {
-          const minutes = Math.max(1, Math.round(elapsedSinceLastRecord / MS_PER_MINUTE));
-          addReadingSession(bookId, minutes);
-        }
-      }
       const lastProgress = progressRef.current;
       if (lastProgress.bookId && lastProgress.currentPage > 0 && lastProgress.totalPages > 0 && lastProgress.chapterId) {
         updateProgress(lastProgress.bookId, {
@@ -340,7 +331,10 @@ export const ReaderPage: React.FC = () => {
       }
       closeReader();
     };
-  }, [bookId, chapterId, openBook, closeReader, addReadingSession, updateProgress, setDirection, setPageLayout]);
+  }, [bookId, chapterId, openBook, closeReader, updateProgress, setDirection, setPageLayout]);
+
+  // 阅读时长统计（与 TextReader 共用）
+  useReadingStats(bookId);
 
   useEffect(() => {
     if (bookId && currentPage > 0 && totalPages > 0 && currentChapterId) {
@@ -815,18 +809,21 @@ export const ReaderPage: React.FC = () => {
       e.stopPropagation();
 
       const now = Date.now();
-      const isDoubleClick =
+      const isDoubleTap =
         now - lastClickTimeRef.current < DOUBLE_CLICK_THRESHOLD &&
-        lastClickPageIndexRef.current === pageIndex;
+        lastClickPageIndexRef.current === pageIndex &&
+        Math.abs(e.clientX - lastClickXRef.current) < DOUBLE_TAP_PROXIMITY_PX &&
+        Math.abs(e.clientY - lastClickYRef.current) < DOUBLE_TAP_PROXIMITY_PX;
 
       lastClickTimeRef.current = now;
       lastClickPageIndexRef.current = pageIndex;
+      lastClickXRef.current = e.clientX;
+      lastClickYRef.current = e.clientY;
 
-      if (isDoubleClick) {
-        if (singleClickTimerRef.current) {
-          clearTimeout(singleClickTimerRef.current);
-          singleClickTimerRef.current = null;
-        }
+      if (isDoubleTap) {
+        // 双击：先回滚上一次单击的效果（如 UI 切换），再执行缩放
+        lastClickRevertRef.current?.();
+        lastClickRevertRef.current = null;
         if (zoomScale > 1) {
           setZoomScale(1);
         } else {
@@ -836,31 +833,27 @@ export const ReaderPage: React.FC = () => {
         return;
       }
 
+      // 单击：立即执行，不再等待双击窗口
       if (direction === 'horizontal') {
         if (zoomScale > 1) {
-          singleClickTimerRef.current = setTimeout(() => {
-            singleClickTimerRef.current = null;
-            toggleUi();
-          }, DOUBLE_CLICK_THRESHOLD);
+          toggleUi();
+          lastClickRevertRef.current = toggleUi;
           return;
         }
 
         const tapZone = getTapZone(e.clientX, window.innerWidth);
         const pageTurn = getPageTurnForTapZone(tapZone, readingDirection);
-
-        singleClickTimerRef.current = setTimeout(() => {
-          singleClickTimerRef.current = null;
-          if (!pageTurn) {
-            toggleUi();
-            return;
-          }
-          goReaderPageTurn(pageTurn);
-        }, DOUBLE_CLICK_THRESHOLD);
-      } else {
-        singleClickTimerRef.current = setTimeout(() => {
-          singleClickTimerRef.current = null;
+        if (!pageTurn) {
           toggleUi();
-        }, DOUBLE_CLICK_THRESHOLD);
+          lastClickRevertRef.current = toggleUi;
+        } else {
+          goReaderPageTurn(pageTurn);
+          // 边缘翻页不做双击回滚：快速连点视为连续翻页（跨章边界回滚过于复杂）
+          lastClickRevertRef.current = null;
+        }
+      } else {
+        toggleUi();
+        lastClickRevertRef.current = toggleUi;
       }
     },
     [toggleUi, direction, readingDirection, goReaderPageTurn, zoomScale]
@@ -1282,9 +1275,7 @@ export const ReaderPage: React.FC = () => {
   useEffect(() => {
     return () => {
       clearLongPress();
-      if (singleClickTimerRef.current) {
-        clearTimeout(singleClickTimerRef.current);
-      }
+      lastClickRevertRef.current = null;
       if (firstPageNoticeTimerRef.current) {
         clearTimeout(firstPageNoticeTimerRef.current);
       }
@@ -1505,7 +1496,7 @@ export const ReaderPage: React.FC = () => {
           >
             <div className="max-w-max-width-content mx-auto flex justify-between items-center">
               <button
-                className="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-variant/50"
+                className="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center w-11 h-11 rounded-full hover:bg-surface-variant/50"
                 onClick={() => navigate(-1)}
                 data-ui-control
               >
@@ -1516,7 +1507,7 @@ export const ReaderPage: React.FC = () => {
               </h1>
               <div className="flex items-center gap-1">
                 <button
-                  className={`${book?.isFavorite ? 'text-primary' : 'text-on-surface-variant'} hover:text-primary transition-colors flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-variant/50`}
+                  className={`${book?.isFavorite ? 'text-primary' : 'text-on-surface-variant'} hover:text-primary transition-colors flex items-center justify-center w-11 h-11 rounded-full hover:bg-surface-variant/50`}
                   onClick={() => {
                     if (bookId) toggleFavorite(bookId);
                   }}
@@ -1528,7 +1519,7 @@ export const ReaderPage: React.FC = () => {
                   </span>
                 </button>
                 <button
-                  className="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-variant/50"
+                  className="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center w-11 h-11 rounded-full hover:bg-surface-variant/50"
                   onClick={() => setShowChapterList(!showChapterList)}
                   data-ui-control
                   aria-label="章节目录"
@@ -1536,7 +1527,7 @@ export const ReaderPage: React.FC = () => {
                   <span className="material-symbols-outlined text-headline-md">list</span>
                 </button>
                 <button
-                  className="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-variant/50"
+                  className="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center w-11 h-11 rounded-full hover:bg-surface-variant/50"
                   onClick={() => setBottomBarVisible(true)}
                   data-ui-control
                   aria-label="设置"
@@ -1664,56 +1655,12 @@ export const ReaderPage: React.FC = () => {
       )}
 
       {showChapterList && chapters.length > 0 && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          <div
-            className="absolute inset-0 bg-on-background/40 animate-fade-in"
-            onClick={() => setShowChapterList(false)}
-          />
-          <div className="relative w-[280px] max-w-[80vw] h-full bg-surface-bright shadow-2xl animate-slide-left flex flex-col">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-outline-variant">
-              <h3 className="font-display text-headline-sm text-primary">章节目录</h3>
-              <button
-                className="text-on-surface-variant hover:text-primary transition-colors w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-variant/50"
-                onClick={() => setShowChapterList(false)}
-                data-ui-control
-              >
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              {chapters.map((chapter, idx) => {
-                const isCurrentChapter = chapter.id === currentChapterId;
-                return (
-                  <button
-                    key={chapter.id}
-                    className={cn(
-                      'w-full text-left px-4 py-3 border-b border-outline-variant/30 transition-colors',
-                      isCurrentChapter
-                        ? 'bg-primary/10 border-l-2 border-l-primary'
-                        : 'hover:bg-surface-container'
-                    )}
-                    onClick={() => {
-                      openChapter(chapter.id);
-                      setShowChapterList(false);
-                    }}
-                    data-ui-control
-                  >
-                    <p className={cn(
-                      'font-body text-body-md',
-                      isCurrentChapter ? 'text-primary font-medium' : 'text-on-surface'
-                    )}>
-                      {chapter.title || `第${idx + 1}话`}
-                    </p>
-                    <p className="font-label text-label-sm text-on-surface-variant mt-0.5">
-                      {chapter.pages.length} 页
-                      {isCurrentChapter && ' · 当前'}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+        <ChapterListDrawer
+          chapters={chapters}
+          currentChapterId={currentChapterId}
+          onSelect={openChapter}
+          onClose={() => setShowChapterList(false)}
+        />
       )}
 
       {fullscreenImageUrl && (

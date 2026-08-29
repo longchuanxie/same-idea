@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
+
+import type { TextChapter } from '@/services/textContent';
 import { cn } from '@/utils/cn';
-import type { TextChapter } from '@/pages/TextReader';
 
 interface ChapterDrawerProps {
   chapters: TextChapter[];
@@ -52,7 +53,7 @@ export const ChapterDrawer: React.FC<ChapterDrawerProps> = ({
         <div className="flex items-center justify-between px-4 py-3 border-b border-outline-variant/50">
           <h2 className="font-display text-title-md text-on-surface">章节目录</h2>
           <button
-            className="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-variant transition-colors"
+            className="w-11 h-11 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-variant transition-colors"
             onClick={onClose}
             aria-label="关闭"
           >

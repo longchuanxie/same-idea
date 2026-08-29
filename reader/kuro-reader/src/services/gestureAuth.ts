@@ -1,9 +1,9 @@
 import { APP_CONFIG } from '@/constants/config';
 
 async function generateSalt(): Promise<string> {
-  const array = new Uint8Array(16);
+  const array = new Uint8Array(SALT_LENGTH_BYTES);
   crypto.getRandomValues(array);
-  return Array.from(array, (b) => b.toString(16).padStart(2, '0')).join('');
+  return Array.from(array, (b) => b.toString(HEX_RADIX).padStart(2, '0')).join('');
 }
 
 async function hashGesture(points: number[], salt: string): Promise<string> {
@@ -12,7 +12,7 @@ async function hashGesture(points: number[], salt: string): Promise<string> {
   const dataBuffer = encoder.encode(data);
   const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+  return hashArray.map((b) => b.toString(HEX_RADIX).padStart(2, '0')).join('');
 }
 
 function timingSafeEqual(a: string, b: string): boolean {
@@ -24,6 +24,8 @@ function timingSafeEqual(a: string, b: string): boolean {
   return result === 0;
 }
 
+const SALT_LENGTH_BYTES = 16;
+const HEX_RADIX = 16;
 export async function setupGesture(points: number[]): Promise<{ hash: string; salt: string }> {
   if (points.length < APP_CONFIG.auth.minGesturePoints) {
     throw new Error(`至少需要连接 ${APP_CONFIG.auth.minGesturePoints} 个点`);
@@ -63,7 +65,7 @@ export async function hashSecurityAnswer(
   const dataBuffer = encoder.encode(answer + ':' + salt);
   const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const answerHash = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+  const answerHash = hashArray.map((b) => b.toString(HEX_RADIX).padStart(2, '0')).join('');
   return { answerHash, answerSalt: salt };
 }
 
@@ -77,6 +79,6 @@ export async function verifySecurityAnswer(
   const dataBuffer = encoder.encode(answer + ':' + salt);
   const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const answerHash = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+  const answerHash = hashArray.map((b) => b.toString(HEX_RADIX).padStart(2, '0')).join('');
   return timingSafeEqual(answerHash, storedHash);
 }

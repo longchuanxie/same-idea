@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
-import { useStatsStore } from '@/stores/useStatsStore';
-import { useLibraryStore } from '@/stores/useLibraryStore';
+
 import { FormatBadge } from '@/components/atoms/FormatBadge';
+import { useLibraryStore } from '@/stores/useLibraryStore';
+import { useStatsStore } from '@/stores/useStatsStore';
 
 export const StatsPage: React.FC = () => {
   const { getStats } = useStatsStore();

@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import type { FC, MouseEvent, TouchEvent } from 'react';
 
 import { cn } from '@/utils/cn';
@@ -31,6 +32,8 @@ const DOUBLE_IMAGE_CLASSES = 'max-w-full max-h-full object-contain cursor-pointe
 const SINGLE_IMAGE_CLASSES = 'max-w-full max-h-full object-contain cursor-pointer animate-page-fade';
 const LOADING_SLOT_CLASSES = 'h-full w-full max-w-max-width-content flex items-center justify-center bg-surface-container';
 const LOADING_FALLBACK_CLASSES = 'flex flex-col items-center gap-2';
+const TOUCH_CLICK_SUPPRESSION_DISTANCE = 10;
+const TOUCH_CLICK_SUPPRESSION_DURATION = 700;
 
 export const HorizontalReaderView: FC<HorizontalReaderViewProps> = ({
   pageLayout,
@@ -49,6 +52,9 @@ export const HorizontalReaderView: FC<HorizontalReaderViewProps> = ({
   onSurfaceTouchEnd,
   onImageClick,
 }) => {
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const suppressClickUntilRef = useRef(0);
+
   const imageStyle = {
     ...(paperConfig ? { filter: paperConfig.imageFilter } : {}),
     willChange: 'transform',
@@ -61,14 +67,68 @@ export const HorizontalReaderView: FC<HorizontalReaderViewProps> = ({
       }
     : {};
 
+  const handleTouchStart = (event: TouchEvent) => {
+    const touch = event.touches[0];
+    if (touch) {
+      touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    }
+    onSurfaceTouchStart(event);
+  };
+
+  const handleTouchMove = (event: TouchEvent) => {
+    onSurfaceTouchMove(event);
+  };
+
+  const handleTouchEnd = (event: TouchEvent) => {
+    const touchStart = touchStartRef.current;
+    const touch = event.changedTouches[0];
+    touchStartRef.current = null;
+
+    if (
+      touchStart &&
+      touch &&
+      (
+        Math.abs(touch.clientX - touchStart.x) > TOUCH_CLICK_SUPPRESSION_DISTANCE ||
+        Math.abs(touch.clientY - touchStart.y) > TOUCH_CLICK_SUPPRESSION_DISTANCE
+      )
+    ) {
+      suppressClickUntilRef.current = Date.now() + TOUCH_CLICK_SUPPRESSION_DURATION;
+    }
+
+    onSurfaceTouchEnd(event);
+  };
+
+  const shouldSuppressClick = (event: MouseEvent): boolean => {
+    if (Date.now() > suppressClickUntilRef.current) return false;
+    suppressClickUntilRef.current = 0;
+    event.preventDefault();
+    event.stopPropagation();
+    return true;
+  };
+
+  const handleSurfaceClick = (event: MouseEvent) => {
+    if (!shouldSuppressClick(event)) {
+      onSurfaceClick(event);
+    }
+  };
+
+  const handleImageClick = (pageIndex: number, event: MouseEvent) => {
+    if (!shouldSuppressClick(event)) {
+      onImageClick(pageIndex, event);
+    }
+  };
+
   return (
     <div
       data-testid="horizontal-reader-surface"
       className={HORIZONTAL_VIEW_CLASSES}
-      onClick={onSurfaceClick}
-      onTouchStart={onSurfaceTouchStart}
-      onTouchMove={onSurfaceTouchMove}
-      onTouchEnd={onSurfaceTouchEnd}
+      onClick={handleSurfaceClick}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={() => {
+        touchStartRef.current = null;
+      }}
     >
       {pageLayout === 'double' && horizontalPageSpread.length > 1 ? (
         <div className={DOUBLE_SPREAD_CLASSES}>
@@ -84,7 +144,7 @@ export const HorizontalReaderView: FC<HorizontalReaderViewProps> = ({
                     style={imageStyle}
                     loading="eager"
                     draggable={false}
-                    onClick={(event) => onImageClick(pageNumber - 1, event)}
+                    onClick={(event) => handleImageClick(pageNumber - 1, event)}
                   />
                 ) : (
                   <div className={LOADING_SLOT_CLASSES}>
@@ -110,7 +170,7 @@ export const HorizontalReaderView: FC<HorizontalReaderViewProps> = ({
           }}
           loading="eager"
           draggable={false}
-          onClick={(event) => onImageClick(currentPage - 1, event)}
+          onClick={(event) => handleImageClick(currentPage - 1, event)}
         />
       ) : (
         <div className={LOADING_FALLBACK_CLASSES}>

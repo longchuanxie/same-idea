@@ -32,7 +32,7 @@ export interface ParsedPdfBook extends ParsedBookBase {
 
 /**
  * 文本分支：原始文本文件与编码信息必填。
- * 适用于 .txt 和 .epub 格式。
+ * 适用于 .txt、.md、.markdown 和 .epub 格式。
  * chapters 可选：若解析器能拆分章节，则填充此字段。
  */
 export interface ParsedTextChapter {

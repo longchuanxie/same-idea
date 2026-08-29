@@ -11,10 +11,11 @@ const DB_NAME = 'kuro-reader-db'
  * 升级历史：
  * - v1: 初始版本（comics / pages / covers / sublibraries）
  * - v3: 新增 tags store
- * - v4: 新增 bookFiles store（存储原始文本/EPUB文件）
+ * - v4: 新增 bookFiles store（存储原始 TXT/Markdown/EPUB 文件）
  * - v5: 新增 bookmarks / annotations store
+ * - v6: 新增 readingProgress store（阅读进度从 localStorage 迁入）
  */
-const DB_VERSION = 5
+const DB_VERSION = 6
 
 /**
  * v3 版本号常量（用于 upgrade 回调中的 oldVersion 比较）
@@ -36,6 +37,13 @@ const V4_BOOKFILES_INTRODUCED = 4
 const V5_BOOKMARKS_ANNOTATIONS = 5
 
 /**
+ * v6 版本号常量
+ *
+ * 当 oldVersion < V6_READING_PROGRESS 时表示数据库尚未包含 readingProgress store，需要创建。
+ */
+const V6_READING_PROGRESS = 6
+
+/**
  * 对象存储（object store）名称常量
  *
  * 所有 storage 子模块应通过此对象引用 store 名称，
@@ -53,6 +61,7 @@ export const STORE_NAMES = {
   bookFiles: 'bookFiles',
   bookmarks: 'bookmarks',
   annotations: 'annotations',
+  readingProgress: 'readingProgress',
 } as const
 
 /**
@@ -98,6 +107,9 @@ export function getDB(): Promise<IDBPDatabase> {
             const annStore = db.createObjectStore(STORE_NAMES.annotations, { keyPath: 'id' })
             annStore.createIndex('bookId', 'bookId', { unique: false })
           }
+        }
+        if (oldVersion < V6_READING_PROGRESS && !db.objectStoreNames.contains(STORE_NAMES.readingProgress)) {
+          db.createObjectStore(STORE_NAMES.readingProgress, { keyPath: 'bookId' })
         }
       },
     })

@@ -1,5 +1,7 @@
 import JSZip from 'jszip'
+
 import { isEpubFile } from '@/utils/fileType'
+
 import type { BookParser, ParsedBook, ParsedTextBook, ParsedTextChapter, ParserProgressCallback } from './types'
 import { extractTitleFromFilename, cleanHtmlToText } from './utils'
 
@@ -9,26 +11,37 @@ import { extractTitleFromFilename, cleanHtmlToText } from './utils'
  * 使用 JSZip 解压 EPUB，提取元数据、封面图、章节结构。
  * 解析 OPF spine 顺序，从 NCX 提取章节标题，从 XHTML 文件提取正文内容。
  */
+// 解析进度锚点（%）：与 parse 流程各阶段一一对应
+const PROGRESS = {
+  STARTED: 10,
+  BUFFER_READ: 20,
+  ZIP_LOADED: 35,
+  OPF_LOCATED: 40,
+  OPF_PARSED: 50,
+  TOC_EXTRACTED: 55,
+  CHAPTERS_EXTRACTED: 75,
+  COVER_EXTRACTED: 90,
+} as const;
 export class EpubParser implements BookParser {
   canParse(input: { name: string }): boolean {
     return isEpubFile(input.name)
   }
 
   async parse(file: File, onProgress?: ParserProgressCallback): Promise<ParsedBook> {
-    onProgress?.(10)
+    onProgress?.(PROGRESS.STARTED)
 
     const arrayBuffer = await file.arrayBuffer()
-    onProgress?.(20)
+    onProgress?.(PROGRESS.BUFFER_READ)
 
     const zip = await JSZip.loadAsync(arrayBuffer)
-    onProgress?.(35)
+    onProgress?.(PROGRESS.ZIP_LOADED)
 
     // 1. 找到 OPF 文件路径
     const opfPath = await findOpfPath(zip)
     if (!opfPath) {
       throw new Error('无法找到 EPUB 包文档（OPF）')
     }
-    onProgress?.(40)
+    onProgress?.(PROGRESS.OPF_LOCATED)
 
     // 2. 解析 OPF 提取元数据和 spine
     const opfContent = await zip.file(opfPath)?.async('string')
@@ -40,19 +53,19 @@ export class EpubParser implements BookParser {
     const metadata = parseOpfMetadata(opfContent)
     const spineItems = parseSpine(opfContent)
     const manifestItems = parseManifest(opfContent)
-    onProgress?.(50)
+    onProgress?.(PROGRESS.OPF_PARSED)
 
     // 3. 提取 NCX 目录结构（用于章节标题）
     const ncxToc = await extractNcxToc(zip, opfContent, opfDir)
-    onProgress?.(55)
+    onProgress?.(PROGRESS.TOC_EXTRACTED)
 
     // 4. 按 spine 顺序提取章节内容
     const chapters = await extractChapters(zip, spineItems, manifestItems, ncxToc, opfDir)
-    onProgress?.(75)
+    onProgress?.(PROGRESS.CHAPTERS_EXTRACTED)
 
     // 5. 提取封面图
     const coverBlob = await extractCoverImage(zip, opfContent, opfPath)
-    onProgress?.(90)
+    onProgress?.(PROGRESS.COVER_EXTRACTED)
 
     // 6. 将原始文件保存为 textFile
     const textFile = new Blob([arrayBuffer], { type: 'application/epub+zip' })

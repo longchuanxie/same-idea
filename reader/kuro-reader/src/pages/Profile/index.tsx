@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
+
+import { APP_CONFIG } from '@/constants/config';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import { getStorageUsage } from '@/utils/storage';
-import { APP_CONFIG } from '@/constants/config';
 
 export const ProfilePage: React.FC = () => {
   const { books, loadBooks } = useLibraryStore();
