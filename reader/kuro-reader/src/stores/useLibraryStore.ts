@@ -12,6 +12,7 @@ import { subLibraryRepo } from '@/services/storage/subLibraryRepo';
 import { tagRepo } from '@/services/storage/tagRepo';
 import type { Book, Chapter, ReadingProgress, SubLibrary, Tag } from '@/types';
 import { extractTitleFromFileName } from '@/utils/extractTitle';
+import { deriveMergedBookTitle, extractArchiveChapterInfo } from '@/utils/comicChapterSplit';
 
 interface LibraryState {
   books: Book[];
@@ -31,6 +32,7 @@ interface LibraryState {
   importFile: (file: File) => Promise<Book | null>;
   importFolder: (files: File[], folderName: string) => Promise<Book | null>;
   importArchivesAsSubLibrary: (files: File[], folderName: string) => Promise<SubLibrary | null>;
+  importArchivesAsBook: (files: File[], fallbackTitle: string) => Promise<Book | null>;
   removeBook: (id: string) => Promise<void>;
   updateProgress: (bookId: string, progress: ReadingProgress) => void;
   toggleFavorite: (id: string) => Promise<void>;
@@ -380,6 +382,109 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
 
       const coverUrl = URL.createObjectURL(parsed.coverBlob);
 
+      set((state) => ({
+        books: [...state.books, { ...book, tags: [] }],
+        coverUrls: { ...state.coverUrls, [bookId]: coverUrl },
+        isImporting: false,
+        importProgress: 100,
+      }));
+
+      return { ...book, tags: [] };
+    } catch (e) {
+      set({ error: (e as Error).message, isImporting: false, importProgress: 0 });
+      return null;
+    }
+  },
+
+  importArchivesAsBook: async (files: File[], fallbackTitle: string) => {
+    set({ isImporting: true, importProgress: 0, error: null });
+    try {
+      // 按文件名中的章节序号排序（无序号的排最后）
+      const sorted = [...files]
+        .map((file) => ({ file, info: extractArchiveChapterInfo(file.name) }))
+        .sort((a, b) => {
+          const an = a.info?.number ?? Number.MAX_SAFE_INTEGER;
+          const bn = b.info?.number ?? Number.MAX_SAFE_INTEGER;
+          return an !== bn ? an - bn : a.file.name.localeCompare(b.file.name);
+        });
+
+      const bookId = `book-${Date.now()}-${Math.random().toString(RANDOM_ID_RADIX).substring(RANDOM_ID_SUBSTRING_START, RANDOM_ID_SUBSTRING_LENGTH)}`;
+      const chapterPayloads: { chapter: Chapter; pages: Blob[] }[] = [];
+      let coverBlob: Blob | null = null;
+
+      for (let i = 0; i < sorted.length; i++) {
+        set({ importProgress: IMPORT_PROGRESS_PARSING_BASE + Math.round(((i + 1) / sorted.length) * IMPORT_PROGRESS_PARSING_SPAN * PERCENT_MULTIPLIER) });
+        const parser = getParserForFile(sorted[i].file);
+        if (!parser) continue;
+        try {
+          const parsed = await parser.parse(sorted[i].file);
+          // 合并仅支持图片型档案（文本类原始文件存储模型为单文件一书）
+          if (parsed.format !== 'comic') continue;
+          if (!coverBlob) coverBlob = parsed.coverBlob;
+
+          // 文件内部已识别出多章时按章并入；否则整个文件为一章
+          const groups =
+            parsed.chapters && parsed.chapters.length > 0
+              ? parsed.chapters
+              : [{ title: sorted[i].info?.title ?? parsed.title, imagePages: parsed.imagePages, imagePageNames: parsed.imagePageNames }];
+          for (const group of groups) {
+            const number = chapterPayloads.length + 1;
+            const id = `${bookId}-ch${number}`;
+            chapterPayloads.push({
+              chapter: {
+                id,
+                bookId,
+                number,
+                title: group.title,
+                pages: group.imagePageNames,
+                status: 'unread' as const,
+              },
+              pages: group.imagePages,
+            });
+          }
+        } catch {
+          continue;
+        }
+      }
+
+      if (chapterPayloads.length === 0 || !coverBlob) {
+        set({ error: '所有压缩包解析失败', isImporting: false, importProgress: 0 });
+        return null;
+      }
+
+      const title = deriveMergedBookTitle(files.map((f) => f.name), fallbackTitle);
+      const existing = get().books.find((b) => b.title === title);
+      if (existing) {
+        set({ error: `「${existing.title}」已存在于书架中`, isImporting: false, importProgress: 0 });
+        return null;
+      }
+
+      const book: Book = {
+        id: bookId,
+        title,
+        author: '',
+        cover: '',
+        genres: [],
+        tags: [],
+        description: '',
+        status: 'ongoing',
+        totalChapters: chapterPayloads.length,
+        chapters: chapterPayloads.map((c) => c.chapter),
+        addedAt: new Date(),
+        isFavorite: false,
+        format: 'comic',
+      };
+
+      await bookRepo.saveCover(bookId, coverBlob);
+      for (const { chapter, pages } of chapterPayloads) {
+        await pageRepo.saveAllPages(bookId, chapter.id, pages);
+      }
+
+      set({ importProgress: IMPORT_PROGRESS_BATCH_BASE });
+
+      await bookRepo.save({ ...book, tags: [] });
+
+      const coverUrl = URL.createObjectURL(coverBlob);
       set((state) => ({
         books: [...state.books, { ...book, tags: [] }],
         coverUrls: { ...state.coverUrls, [bookId]: coverUrl },

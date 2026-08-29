@@ -8,6 +8,7 @@ import { ComicArchiveParser } from '@/services/parsers/comicArchiveParser'
 import { TextParser } from '@/services/parsers/textParser'
 import { EpubParser } from '@/services/parsers/epubParser'
 import { loadPdfDocument } from '@/services/parsers/pdfParser'
+import { deriveMergedBookTitle, extractArchiveChapterInfo } from '@/utils/comicChapterSplit'
 import { loadEpubChapters } from '@/services/epubContent'
 import type { ParsedComicBook, ParsedTextBook } from '@/services/parsers/types'
 
@@ -128,6 +129,24 @@ describe('漫画压缩包边界', () => {
       await expect(parseComic(rel)).rejects.toThrow(/未找到任何图片/)
     }
   )
+})
+
+describe('多文件合并导入（multi-archive/）', () => {
+  const MERGE_FILES = ['multi-archive/夜航 第01话.cbz', 'multi-archive/夜航 第02话.cbz', 'multi-archive/夜航 第03话.cbz'];
+
+  it('全部文件名命中章节模式，书名推导为公共前缀', () => {
+    const infos = MERGE_FILES.map((rel) => extractArchiveChapterInfo(rel.split('/').pop()!));
+    expect(infos.every((i) => i !== null)).toBe(true)
+    expect(infos.map((i) => i!.number)).toEqual([1, 2, 3])
+    expect(deriveMergedBookTitle(MERGE_FILES.map((r) => r.split('/').pop()!), '我的文件夹')).toBe('夜航')
+  })
+
+  it('各档案解析出页面且（无内部结构）保持单章 → 合并为 3 章 6 页', async () => {
+    const parsedList = await Promise.all(MERGE_FILES.map((rel) => parseComic(rel)))
+    // 各文件无目录结构 → 单章（chapters undefined）
+    expect(parsedList.every((p) => p.chapters === undefined)).toBe(true)
+    expect(parsedList.map((p) => p.imagePages.length)).toEqual([2, 3, 1])
+  })
 })
 
 describe('TXT 编码与结构边界', () => {

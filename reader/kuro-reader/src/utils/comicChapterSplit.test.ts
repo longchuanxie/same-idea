@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 
 import {
+  deriveMergedBookTitle,
+  extractArchiveChapterInfo,
   naturalCompare,
   matchChapterNumber,
   splitByDirectories,
@@ -157,5 +159,36 @@ describe('splitComicChapters chain', () => {
 
   it('returns null when no layer matches', () => {
     expect(splitComicChapters(['001.jpg', '002.jpg', '003.jpg'])).toBeNull()
+  })
+})
+
+describe('extractArchiveChapterInfo', () => {
+  it('extracts chapter number and keeps stem as title', () => {
+    expect(extractArchiveChapterInfo('第01话.cbz')).toEqual({ number: 1, title: '第01话' })
+    expect(extractArchiveChapterInfo('夜航 第12话.cbz')).toEqual({ number: 12, title: '夜航 第12话' })
+    expect(extractArchiveChapterInfo('Chapter 3.zip')).toEqual({ number: 3, title: 'Chapter 3' })
+    expect(extractArchiveChapterInfo('12.rar')).toEqual({ number: 12, title: '12' })
+  })
+
+  it('returns null without a chapter pattern', () => {
+    expect(extractArchiveChapterInfo('夜航合集.cbz')).toBeNull()
+    expect(extractArchiveChapterInfo('random.zip')).toBeNull()
+  })
+})
+
+describe('deriveMergedBookTitle', () => {
+  it('derives common prefix and strips trailing separators', () => {
+    expect(
+      deriveMergedBookTitle(['夜航 第01话.cbz', '夜航 第02话.cbz', '夜航 第10话.cbz'], 'fallback')
+    ).toBe('夜航')
+    expect(
+      deriveMergedBookTitle(['火影_第1话.zip', '火影_第2话.zip'], 'fallback')
+    ).toBe('火影')
+  })
+
+  it('falls back when there is no meaningful common prefix', () => {
+    expect(deriveMergedBookTitle(['第01话.cbz', '第02话.cbz'], '我的文件夹')).toBe('我的文件夹')
+    expect(deriveMergedBookTitle(['abc.cbz', 'xyz.cbz'], '我的文件夹')).toBe('我的文件夹')
+    expect(deriveMergedBookTitle([], '我的文件夹')).toBe('我的文件夹')
   })
 })

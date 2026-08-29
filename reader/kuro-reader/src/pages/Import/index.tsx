@@ -4,6 +4,7 @@ import { Capacitor } from '@capacitor/core';
 import { useNavigate } from 'react-router-dom';
 
 import { APP_CONFIG } from '@/constants/config';
+import { extractArchiveChapterInfo } from '@/utils/comicChapterSplit';
 import { ROUTES, bookDetailPath, customCloudPath, subLibraryPath } from '@/constants/routes';
 import { FilePicker } from '@/plugins/FilePickerPlugin';
 import { useLibraryStore } from '@/stores/useLibraryStore';
@@ -42,6 +43,7 @@ export const ImportPage: React.FC = () => {
   const {
     importFile,
     importFolder,
+    importArchivesAsBook,
     importArchivesAsSubLibrary,
     isImporting,
     importProgress,
@@ -97,6 +99,17 @@ export const ImportPage: React.FC = () => {
     if (bookFiles.length > 0 && bookFiles.length >= imageFiles.length) {
       const validArchives = bookFiles.filter((f) => f.size <= APP_CONFIG.maxFileSize);
       if (validArchives.length === 0) return;
+
+      // 文件名全部命中章节模式（第01话.cbz…）→ 合并为一本书多章
+      const mergeable =
+        validArchives.length >= 2 &&
+        validArchives.every((f) => extractArchiveChapterInfo(f.name) !== null);
+
+      if (mergeable) {
+        const book = await importArchivesAsBook(validArchives, folderName);
+        if (book) setImportResult({ type: 'book', title: book.title, id: book.id });
+        return;
+      }
 
       const subLibrary = await importArchivesAsSubLibrary(validArchives, folderName);
       if (subLibrary) {
@@ -206,7 +219,7 @@ export const ImportPage: React.FC = () => {
     } catch {
       // User cancelled or error
     }
-  }, [importFolder, importArchivesAsSubLibrary, importResult]);
+  }, [importFolder, importArchivesAsBook, importArchivesAsSubLibrary, importResult]);
 
   const formatList = APP_CONFIG.supportedFormats.join(', ').toUpperCase();
 

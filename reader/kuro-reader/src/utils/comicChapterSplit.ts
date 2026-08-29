@@ -252,3 +252,53 @@ export function splitByImageAspect(
 export function splitComicChapters(paths: string[]): ComicChapterDraft[] | null {
   return splitByDirectories(paths) ?? splitByFilenameSequence(paths);
 }
+
+export interface ArchiveChapterInfo {
+  number: number;
+  /** 章节标题 = 文件名词干（保留用户命名，如「第01话 起飞」） */
+  title: string;
+}
+
+/**
+ * 从压缩包文件名提取章节信息（多文件合并导入用）。
+ * 「夜航 第01话.cbz」→ { number: 1, title: '夜航 第01话' }；无章节模式返回 null。
+ */
+export function extractArchiveChapterInfo(fileName: string): ArchiveChapterInfo | null {
+  const stem = fileName.replace(/\.[^.]+$/, '').trim();
+  const number = matchChapterNumber(stem);
+  if (number === null) return null;
+  return { number, title: stem };
+}
+
+/** 公共前缀后的分隔符/空白尾巴（「夜航 」→「夜航」） */
+const TITLE_TRAILING_SEPARATORS = /[\s_.·#\-—]+$/;
+/** 章节模式在公共前缀里的残留尾巴（「夜航 第」→「夜航」、「第0」→「」） */
+const TITLE_TRAILING_CHAPTER_REMAINDER = /第?\s*\d*\s*[话話章回卷巻]?$/;
+
+/**
+ * 从一组章节化文件名推导合并后的书名：取全部词干的公共前缀，
+ * 循环剥离尾部分隔符与章节模式残留（数字/「第」/单位）；
+ * 无有效公共前缀时返回 fallback（通常是文件夹名）。
+ */
+export function deriveMergedBookTitle(fileNames: string[], fallback: string): string {
+  const stems = fileNames.map((n) => n.replace(/\.[^.]+$/, ''));
+  if (stems.length === 0) return fallback;
+  let prefix = stems[0];
+  for (const stem of stems) {
+    let i = 0;
+    const end = Math.min(prefix.length, stem.length);
+    while (i < end && prefix[i] === stem[i]) i++;
+    prefix = prefix.slice(0, i);
+  }
+  let cleaned = prefix;
+  let previous = '';
+  while (cleaned !== previous) {
+    previous = cleaned;
+    cleaned = cleaned
+      .replace(TITLE_TRAILING_SEPARATORS, '')
+      .replace(TITLE_TRAILING_CHAPTER_REMAINDER, '')
+      .replace(TITLE_TRAILING_SEPARATORS, '')
+      .trim();
+  }
+  return cleaned.length > 0 ? cleaned : fallback;
+}

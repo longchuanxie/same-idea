@@ -293,7 +293,18 @@ async function main() {
   // 截断损坏：应解析失败而非挂起
   write('pdf/truncated-corrupt.pdf', buildMinimalPdf(2).subarray(0, 120));
 
-  // ============ 散图文件夹（文件夹导入手动测试） ============
+  // ============ 多文件合并（一话一文件，手动测试） ============
+  await write('multi-archive/夜航 第01话.cbz', await zipOf({
+    '001.jpg': PNG_1X1, '002.jpg': PNG_1X1,
+  }));
+  await write('multi-archive/夜航 第02话.cbz', await zipOf({
+    '001.jpg': PNG_1X1, '002.jpg': PNG_1X1, '003.jpg': PNG_1X1,
+  }));
+  await write('multi-archive/夜航 第03话.cbz', await zipOf({
+    '001.jpg': PNG_1X1,
+  }));
+
+// ============ 散图文件夹（文件夹导入手动测试） ============
   write('loose-images/划水的猫 01.png', PNG_1X1);
   write('loose-images/划水的猫 02.png', PNG_1X1);
   write('loose-images/划水的猫 03.png', PNG_1X1);

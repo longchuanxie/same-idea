@@ -491,6 +491,58 @@ describe('importFile', () => {
     )
   })
 
+  it('importArchivesAsBook merges chaptered archives into one multi-chapter book', async () => {
+    const fileA: ParsedBook = {
+      format: 'comic', title: '夜航 第01话', coverBlob: new Blob(['cover']),
+      imagePages: [new Blob(['a1']), new Blob(['a2'])], imagePageNames: ['a1.jpg', 'a2.jpg'],
+    }
+    const fileB: ParsedBook = {
+      format: 'comic', title: '夜航 第02话', coverBlob: new Blob(['cover-b']),
+      imagePages: [new Blob(['b1']), new Blob(['b2'])], imagePageNames: ['b1.jpg', 'b2.jpg'],
+    }
+    getParserForFileMock.mockImplementation(({ name }: { name: string }) => ({
+      canParse: () => true,
+      parse: vi.fn().mockResolvedValue(name.includes('第02话') ? fileB : fileA),
+    }))
+    bookRepoMock.saveCover.mockResolvedValue(undefined)
+    pageRepoMock.saveAllPages.mockResolvedValue(undefined)
+    bookRepoMock.save.mockResolvedValue(undefined)
+
+    const book = await useLibraryStore.getState().importArchivesAsBook(
+      [new File(['x'], '夜航 第02话.cbz'), new File(['x'], '夜航 第01话.cbz')],
+      '我的文件夹'
+    )
+
+    // 书名取公共前缀，乱序文件按章节序号排序
+    expect(book).not.toBeNull()
+    expect(book?.title).toBe('夜航')
+    expect(book?.format).toBe('comic')
+    expect(book?.totalChapters).toBe(2)
+    expect(book?.chapters.map((c) => c.title)).toEqual(['夜航 第01话', '夜航 第02话'])
+    expect(book?.chapters[0].pages).toEqual(['a1.jpg', 'a2.jpg'])
+
+    // 每章独立存储
+    expect(pageRepoMock.saveAllPages).toHaveBeenCalledTimes(2)
+    expect(pageRepoMock.saveAllPages).toHaveBeenNthCalledWith(1, book!.id, `${book!.id}-ch1`, fileA.imagePages)
+    expect(pageRepoMock.saveAllPages).toHaveBeenNthCalledWith(2, book!.id, `${book!.id}-ch2`, fileB.imagePages)
+  })
+
+  it('importArchivesAsBook fails cleanly when all archives fail to parse', async () => {
+    getParserForFileMock.mockReturnValue({
+      canParse: () => true,
+      parse: vi.fn().mockRejectedValue(new Error('坏包')),
+    })
+
+    const book = await useLibraryStore.getState().importArchivesAsBook(
+      [new File(['x'], '第01话.cbz'), new File(['x'], '第02话.cbz')],
+      '我的文件夹'
+    )
+
+    expect(book).toBeNull()
+    expect(useLibraryStore.getState().error).toBe('所有压缩包解析失败')
+    expect(useLibraryStore.getState().isImporting).toBe(false)
+  })
+
   it('uses streaming parse for files above 50MB when available', async () => {
     const parse = vi.fn()
     const parseStreaming = vi.fn().mockResolvedValue(comicParsed)
