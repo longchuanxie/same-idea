@@ -70,7 +70,7 @@
 | 3-1 | OPDS 客户端 ✅ | Atom 目录解析（subsection/acquisition/image/next 链接）+ Basic 认证；CustomCloud 新增 OPDS 协议：目录面包屑导航、出版物点击下载导入（MIME→扩展名）、加载更多。封面缩略图留后续 | 中-大 |
 | 3-2 | 批注导出 Markdown ✅ | 按书导出「章节分组 + 引用 blockquote + 笔记 + 样式/时间」，.md 下载；阅读器批注面板与书籍详情页双入口 | 小-中 |
 | 3-3 | TTS 听书 ✅ | useSpeech：分句分块顺序播报 + 会话令牌防串音；底栏开关 + 悬浮控制（倍速/暂停/停止）；从当前阅读位置起播，章末自动续播下一章；Markdown 章节朗读纯文本 | 中 |
-| 3-4 | cloudSync 落地 | 进度/批注/书签 WebDAV 同步，多端接 NAS 的自然延伸 | 中-大 |
+| 3-4 | cloudSync 落地 ✅ | WebDAV 单文件载荷（GET→逐条 LWW 合并→PUT）：进度按 bookId+updatedAt、批注/书签按 id；设置页「云端同步」区（凭据持久化 + 立即同步 + 上次同步时间）。自动后台同步与冲突 UI 留后续 | 中-大 |
 | 3-5 | 竖排模式 | 日文小说/古典中文场景，writing-mode 方案 | 中-大 |
 | 3-6 | 统计深化 | 日历热力图、阅读目标、年度报告 | 小 |
 

@@ -2,9 +2,11 @@ import React, { useEffect, useState, useRef } from 'react';
 
 import { Collapsible } from '@/components/atoms/Collapsible';
 import { GestureLock } from '@/components/organisms/GestureLock';
+import { STORAGE_KEYS } from '@/constants/storage';
 import { annotationRepo } from '@/services/storage/annotationRepo';
 import { bookmarkRepo } from '@/services/storage/bookmarkRepo';
 import { progressRepo } from '@/services/storage/progressRepo';
+import { runCloudSync, type SyncCredentials, type SyncPayload } from '@/services/cloudSync';
 import { useAppStore } from '@/stores/useAppStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import type { Annotation, Bookmark, PaperType, ReadingProgress } from '@/types';
@@ -53,6 +55,14 @@ export const SettingsPage: React.FC = () => {
     disableGestureLock,
   } = useAppStore();
   const [storageInfo, setStorageInfo] = useState<{ used: number; quota: number }>({ used: 0, quota: 0 });
+
+  // 云端同步状态
+  const [syncServer, setSyncServer] = useState('');
+  const [syncUsername, setSyncUsername] = useState('');
+  const [syncPassword, setSyncPassword] = useState('');
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { books, tags, subLibraries, readingProgress } = useLibraryStore();
 
@@ -149,6 +159,75 @@ export const SettingsPage: React.FC = () => {
   useEffect(() => {
     getStorageUsage().then(setStorageInfo);
   }, []);
+
+  // 读取已保存的同步配置与上次同步时间
+  useEffect(() => {
+    setLastSyncedAt(localStorage.getItem(STORAGE_KEYS.CLOUD_SYNC_LAST));
+    const saved = localStorage.getItem(STORAGE_KEYS.CLOUD_SYNC);
+    if (!saved) return;
+    try {
+      const config = JSON.parse(saved) as SyncCredentials;
+      setSyncServer(config.serverAddress ?? '');
+      setSyncUsername(config.username ?? '');
+      setSyncPassword(config.password ?? '');
+    } catch {
+      // 损坏配置忽略
+    }
+  }, []);
+
+  const persistSyncConfig = (server: string, user: string, pass: string) => {
+    localStorage.setItem(
+      STORAGE_KEYS.CLOUD_SYNC,
+      JSON.stringify({ serverAddress: server, username: user, password: pass } satisfies SyncCredentials)
+    );
+  };
+
+  const handleSyncNow = async () => {
+    if (!syncServer.trim()) {
+      setSyncMessage({ ok: false, text: '请先填写 WebDAV 地址' });
+      return;
+    }
+    persistSyncConfig(syncServer, syncUsername, syncPassword);
+    setIsSyncing(true);
+    setSyncMessage(null);
+    try {
+      const credentials: SyncCredentials = {
+        serverAddress: syncServer,
+        username: syncUsername || undefined,
+        password: syncPassword || undefined,
+      };
+      const [progressList, bookmarks, annotations] = await Promise.all([
+        progressRepo.getAll(),
+        bookmarkRepo.getAll(),
+        annotationRepo.getAll(),
+      ]);
+      const readingProgress: Record<string, ReadingProgress> = {};
+      for (const p of progressList) readingProgress[p.bookId] = p;
+
+      const localPayload: SyncPayload = {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        readingProgress,
+        bookmarks,
+        annotations,
+      };
+      const result = await runCloudSync(credentials, localPayload);
+
+      localStorage.setItem(STORAGE_KEYS.CLOUD_SYNC_LAST, result.exportedAt);
+      setLastSyncedAt(result.exportedAt);
+      setSyncMessage({
+        ok: true,
+        text:
+          result.direction === 'merged'
+            ? `已合并同步：进度 ${result.counts.progress} 本 · 批注 ${result.counts.annotations} 条 · 书签 ${result.counts.bookmarks} 条`
+            : `已上传：进度 ${result.counts.progress} 本 · 批注 ${result.counts.annotations} 条 · 书签 ${result.counts.bookmarks} 条`,
+      });
+    } catch (e) {
+      setSyncMessage({ ok: false, text: (e as Error).message || '同步失败' });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const formatBytes = (bytes: number): string => {
     if (bytes === 0) return '0 B';
@@ -742,6 +821,63 @@ export const SettingsPage: React.FC = () => {
               </div>
               <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">chevron_right</span>
             </button>
+            <div className="border-t border-outline-variant" />
+            <div className="p-6 bg-surface-container-lowest">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant">
+                  <span className="material-symbols-outlined">cloud_sync</span>
+                </div>
+                <div>
+                  <h3 className="font-display text-headline-sm text-on-surface">云端同步</h3>
+                  <p className="font-body text-body-md text-on-surface-variant text-sm leading-tight mt-1">
+                    通过 WebDAV 在多台设备间同步进度、批注与书签
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-3 mb-4">
+                <input
+                  className="w-full bg-transparent border border-outline-variant/50 rounded-lg px-3 py-2 font-body text-body-sm text-primary focus:outline-none focus:border-primary transition-colors"
+                  placeholder="WebDAV 地址，如 http://nas:5005/dav"
+                  value={syncServer}
+                  onChange={(e) => { setSyncServer(e.target.value); persistSyncConfig(e.target.value, syncUsername, syncPassword); }}
+                />
+                <div className="flex gap-3">
+                  <input
+                    className="flex-1 bg-transparent border border-outline-variant/50 rounded-lg px-3 py-2 font-body text-body-sm text-primary focus:outline-none focus:border-primary transition-colors"
+                    placeholder="用户名"
+                    value={syncUsername}
+                    onChange={(e) => { setSyncUsername(e.target.value); persistSyncConfig(syncServer, e.target.value, syncPassword); }}
+                  />
+                  <input
+                    className="flex-1 bg-transparent border border-outline-variant/50 rounded-lg px-3 py-2 font-body text-body-sm text-primary focus:outline-none focus:border-primary transition-colors"
+                    placeholder="密码"
+                    type="password"
+                    value={syncPassword}
+                    onChange={(e) => { setSyncPassword(e.target.value); persistSyncConfig(syncServer, syncUsername, e.target.value); }}
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  className="flex-1 bg-primary text-on-primary font-label text-label-md py-3 px-4 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+                  onClick={handleSyncNow}
+                  disabled={isSyncing || !syncServer.trim()}
+                >
+                  {isSyncing && <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>}
+                  {isSyncing ? '正在同步...' : '立即同步'}
+                </button>
+                {lastSyncedAt && (
+                  <span className="font-label text-label-sm text-on-surface-variant">
+                    上次同步：{new Date(lastSyncedAt).toLocaleString()}
+                  </span>
+                )}
+              </div>
+              {syncMessage && (
+                <p className={`font-body text-body-sm mt-3 ${syncMessage.ok ? 'text-primary' : 'text-error'}`}>
+                  {syncMessage.text}
+                </p>
+              )}
+            </div>
             <div className="border-t border-outline-variant" />
             <div className="p-6 bg-surface-container-lowest">
               <div className="flex items-center gap-4 mb-4">

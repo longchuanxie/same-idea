@@ -78,6 +78,8 @@ export interface ReadingProgress {
   textReadingMode?: TextReadingMode
   /** 按书记忆的阅读主题（未设置时使用全局设置） */
   readingTheme?: ReadingTheme
+  /** 最近更新时间戳（ms），云端同步合并用 */
+  updatedAt?: number
 }
 
 export interface Collection {

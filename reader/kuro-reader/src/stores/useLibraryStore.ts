@@ -537,11 +537,13 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
   },
 
   updateProgress: (bookId, progress) => {
+    // 中央打点：云端同步按 updatedAt 做逐条合并
+    const stamped: ReadingProgress = { ...progress, updatedAt: Date.now() };
     set((state) => ({
-      readingProgress: { ...state.readingProgress, [bookId]: progress },
+      readingProgress: { ...state.readingProgress, [bookId]: stamped },
     }));
     // 持久化到 IndexedDB（fire-and-forget，与书籍元数据保存策略一致）
-    progressRepo.save(progress);
+    progressRepo.save(stamped);
     const book = get().books.find((b) => b.id === bookId);
     if (book) {
       const updatedBook = { ...book, lastReadAt: new Date() };

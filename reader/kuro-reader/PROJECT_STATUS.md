@@ -120,6 +120,7 @@ kuro-reader/
 │   │   ├── textContent.ts      # 文本内容加载（TXT/MD/EPUB → 章节）+ 章节定位
 │   │   ├── epubContent.ts      # EPUB 保真读取（XHTML→Markdown + 插图 object URL + NCX/nav 目录）
 │   │   ├── opds.ts             # OPDS 目录解析（Atom）+ 认证拉取 + 出版物下载
+│   │   ├── cloudSync.ts        # 云端同步（WebDAV 单文件载荷 + 逐条 LWW 合并）
 │   │   ├── backHandler.ts      # Android 返回键处理器栈（浮层优先消费）
 │   │   ├── cloudStorage.ts     # 云存储客户端（WebDAV/FTP 工厂）
 │   │   ├── ftpClient.ts        # FTP 客户端（HTTP 代理模式）
@@ -270,7 +271,11 @@ IndexedDB（`kuro-reader-db`，**v6**），9 个 Object Store，由 [db.ts](src/
 
 [useStatsStore](src/stores/useStatsStore.ts)：总阅读时长、连续天数、近 7 天数据、会话记录（每分钟采样）、localStorage 持久化。
 
-### 4.10 设置
+### 4.10 云端同步与设置
+
+[cloudSync.ts](src/services/cloudSync.ts)：阅读进度（按 bookId+updatedAt）、批注与书签（按 id+时间戳）合并为单文件 JSON 载荷，经 WebDAV GET→合并→PUT 完成多端同步。设置页提供凭据配置、立即同步与上次同步时间。
+
+### 4.11 设置
 
 [Settings](src/pages/Settings/index.tsx)：主题、纸张模式、阅读方向、滑动翻页开关、字体字号、文本阅读专属设置（阅读主题/字体/对齐/行高/自动滚动等）、应用锁、存储用量、数据备份导出/导入（JSON）。
 
@@ -328,7 +333,7 @@ IndexedDB（`kuro-reader-db`，**v6**），9 个 Object Store，由 [db.ts](src/
 
 ## 七、测试现状
 
-**32 个测试文件、305 个用例，全部通过**（`npm run test`，fake-indexeddb + jsdom 环境）。
+**33 个测试文件、313 个用例，全部通过**（`npm run test`，fake-indexeddb + jsdom 环境）。
 
 | 测试文件 | 覆盖范围 |
 |----------|----------|
@@ -363,6 +368,7 @@ IndexedDB（`kuro-reader-db`，**v6**），9 个 Object Store，由 [db.ts](src/
 | `services/opds.test.ts` | OPDS Atom 解析 / 文件名推断 / Basic 认证 |
 | `components/OpdsBrowser.test.tsx` | OPDS 浏览（加载/下钻/下载导入/错误） |
 | `parsers/boundaryFixtures.test.ts` | 边界矩阵回归：以 `test-fixtures/` 真实文件驱动真实解析管线（31 用例） |
+| `services/cloudSync.test.ts` | 同步载荷合并（逐条 LWW）/ 同步 URL / GET-MERGE-PUT 流程 |
 
 测试基建：`src/test/setup.ts` 全局提供 fake-indexeddb 与 `URL.createObjectURL/revokeObjectURL` stub。覆盖重点在服务层、工具函数、Store 与阅读器子组件；**页面组件仍缺少测试**。
 
