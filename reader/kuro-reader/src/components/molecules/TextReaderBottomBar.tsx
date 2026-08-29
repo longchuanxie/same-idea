@@ -30,6 +30,8 @@ export interface TextReaderBottomBarProps {
   onTextFontFamilyChange: (family: TextFontFamily) => void;
   onTextAlignChange: (align: TextAlign) => void;
   onFirstLineIndentToggle: () => void;
+  verticalWriting: boolean;
+  onVerticalWritingToggle: () => void;
   onTapZoneEnabledToggle: () => void;
   onAutoAdvanceTextChapterToggle: () => void;
   onAutoScrollSpeedChange: (speed: number) => void;
@@ -98,6 +100,8 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
   onTextFontFamilyChange,
   onTextAlignChange,
   onFirstLineIndentToggle,
+  verticalWriting,
+  onVerticalWritingToggle,
   onTapZoneEnabledToggle,
   onAutoAdvanceTextChapterToggle,
   onAutoScrollSpeedChange,
@@ -462,6 +466,36 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
                 className={cn(
                   'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full toggle-thumb-spring border',
                   firstLineIndent
+                    ? 'translate-x-5 border-primary'
+                    : 'border-outline-variant'
+                )}
+              />
+            </button>
+          </div>
+
+          {/* 竖排书写 */}
+          <div className="flex items-center justify-between py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant mb-4">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-on-surface-variant">view_agenda</span>
+              <div>
+                <p className="font-label text-label-md text-on-surface">竖排书写</p>
+                <p className="font-body text-body-sm text-on-surface-variant">
+                  {verticalWriting ? '已开启（滚动模式）' : '已关闭'}
+                </p>
+              </div>
+            </div>
+            <button
+              className={cn(
+                'relative inline-block w-11 h-6 rounded-full toggle-spring',
+                verticalWriting ? 'bg-primary' : 'bg-surface-variant'
+              )}
+              onClick={onVerticalWritingToggle}
+              aria-label={verticalWriting ? '关闭竖排书写' : '开启竖排书写'}
+            >
+              <span
+                className={cn(
+                  'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full toggle-thumb-spring border',
+                  verticalWriting
                     ? 'translate-x-5 border-primary'
                     : 'border-outline-variant'
                 )}

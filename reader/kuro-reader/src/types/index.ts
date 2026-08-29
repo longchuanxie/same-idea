@@ -134,6 +134,8 @@ export interface UserSettings {
   autoAdvanceTextChapter: boolean
   autoScrollSpeed: number
   textReadingMode: TextReadingMode
+  /** 竖排书写（滚动模式下生效，日文/古典中文场景） */
+  verticalWriting: boolean
 }
 
 export interface SecurityQuestion {

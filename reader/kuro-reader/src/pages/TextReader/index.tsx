@@ -328,6 +328,8 @@ export const TextReaderPage: React.FC = () => {
   const brightness = settings.brightness;
   const colorTemperature = settings.colorTemperature;
   const isColumnsReadingMode = textReadingMode === 'columns';
+  // 竖排书写仅在滚动模式生效（分页引擎为横向测量，不与竖排混用）
+  const verticalWriting = settings.verticalWriting && textReadingMode === 'scroll';
   const isColumnsLayoutActive = isColumnsReadingMode && isLandscapeViewport;
   const textPageStep = isColumnsLayoutActive ? TEXT_COLUMNS_PAGE_STEP : 1;
 
@@ -338,7 +340,7 @@ export const TextReaderPage: React.FC = () => {
 
   // 屏幕常亮 / 自动滚动 / 剩余时间估算（共享 Hook）
   useWakeLock();
-  const { isAutoScrolling, toggleAutoScroll } = useAutoScroll(scrollContainerRef, autoScrollSpeed);
+  const { isAutoScrolling, toggleAutoScroll } = useAutoScroll(scrollContainerRef, autoScrollSpeed, verticalWriting ? 'x' : 'y');
 
   // EPUB 插图 object URL 生命周期：离开阅读器时统一回收
   useEffect(() => {
@@ -455,12 +457,11 @@ export const TextReaderPage: React.FC = () => {
       }
       const ratio = locatorData?.scrollRatio ?? progress.pageScrollRatio ?? 0;
       if (ratio > 0) {
-        // 延迟等待 DOM 渲染完成
         requestAnimationFrame(() => {
           const container = scrollContainerRef.current;
           if (container) {
-            const targetScroll = ratio * (container.scrollHeight - container.clientHeight);
-            container.scrollTop = targetScroll;
+            const targetScroll = ratio * (container.scrollWidth - container.clientWidth);
+            container.scrollLeft = -targetScroll;
           }
         });
       }
@@ -535,8 +536,15 @@ export const TextReaderPage: React.FC = () => {
     if (textReadingMode === 'scroll') {
       const container = scrollContainerRef.current;
       if (container) {
-        const scrollable = container.scrollHeight - container.clientHeight;
-        container.scrollTo({ top: ratio * scrollable, behavior: 'smooth' });
+        const scrollable = verticalWriting
+          ? container.scrollWidth - container.clientWidth
+          : container.scrollHeight - container.clientHeight;
+        const target = ratio * scrollable;
+        if (verticalWriting) {
+          container.scrollTo({ left: -target, behavior: 'smooth' });
+        } else {
+          container.scrollTo({ top: target, behavior: 'smooth' });
+        }
       }
       saveTextProgress(currentChapterIndex, undefined, ratio);
     } else {
@@ -555,23 +563,31 @@ export const TextReaderPage: React.FC = () => {
     }
     setScrollPercent(dragPercent);
     showProgressHint();
-  }, [dragPercent, textReadingMode, currentChapterIndex, textPages.length, currentPageIndex, saveTextProgress, showProgressHint]);
+  }, [dragPercent, textReadingMode, currentChapterIndex, textPages.length, currentPageIndex, saveTextProgress, showProgressHint, verticalWriting]);
 
   // 滚动进度追踪
   const handleScroll = useCallback(() => {
     const container = scrollContainerRef.current;
     if (!container || !bookId) return;
-    const scrollable = container.scrollHeight - container.clientHeight;
+    // 竖排：内容向左延伸，scrollLeft 为负方向，取绝对值计算进度
+    const scrollable = verticalWriting
+      ? container.scrollWidth - container.clientWidth
+      : container.scrollHeight - container.clientHeight;
     if (scrollable <= 0) return;
-    const ratio = container.scrollTop / scrollable;
+    const position = verticalWriting ? Math.abs(container.scrollLeft) : container.scrollTop;
+    const ratio = position / scrollable;
     if (!isProgressDragging) {
       setScrollPercent(Math.round(ratio * PERCENT_MULTIPLIER));
     }
     showProgressHint();
 
     const hasNextChapter = currentChapterIndex < chapters.length - 1;
+    const endPosition = verticalWriting
+      ? Math.abs(container.scrollLeft) + container.clientWidth
+      : container.scrollTop + container.clientHeight;
+    const contentSize = verticalWriting ? container.scrollWidth : container.scrollHeight;
     const isAtChapterEnd = ratio >= TEXT_SCROLL_END_THRESHOLD ||
-      container.scrollTop + container.clientHeight >= container.scrollHeight - TEXT_SCROLL_END_EPSILON_PX;
+      endPosition >= contentSize - TEXT_SCROLL_END_EPSILON_PX;
     if (hasNextChapter && isAtChapterEnd) {
       if (autoAdvanceTextChapter) {
         if (autoAdvancedChapterRef.current !== currentChapterIndex) {
@@ -598,7 +614,7 @@ export const TextReaderPage: React.FC = () => {
     progressSaveTimerRef.current = setTimeout(() => {
       saveTextProgress(currentChapterIndex, undefined, ratio);
     }, PROGRESS_SAVE_DEBOUNCE);
-  }, [bookId, currentChapterIndex, chapters.length, autoAdvanceTextChapter, saveTextProgress, isProgressDragging, showProgressHint]);
+  }, [bookId, currentChapterIndex, chapters.length, autoAdvanceTextChapter, saveTextProgress, isProgressDragging, showProgressHint, verticalWriting]);
 
   // 离开时保存最终进度 + 清理 UI 定时器 + 持久化阅读设置
   useEffect(() => {
@@ -810,6 +826,20 @@ export const TextReaderPage: React.FC = () => {
       return;
     }
 
+    // 竖排：左右区域横向翻卷（左=前进，右=后退）
+    if (verticalWriting) {
+      if (x < width * TAP_ZONE_CENTER_RATIO) {
+        scrollContainerRef.current?.scrollBy({ left: -width * TAP_ZONE_PAGE_SCROLL_RATIO, behavior: 'smooth' });
+        return;
+      }
+      if (x > width * TAP_ZONE_EDGE_RATIO) {
+        scrollContainerRef.current?.scrollBy({ left: width * TAP_ZONE_PAGE_SCROLL_RATIO, behavior: 'smooth' });
+        return;
+      }
+      toggleUi();
+      return;
+    }
+
     // 上方/左方区域向上翻页
     if (y < height * TAP_ZONE_CENTER_RATIO || x < width * TAP_ZONE_CENTER_RATIO) {
       scrollContainerRef.current?.scrollBy({ top: -height * TAP_ZONE_PAGE_SCROLL_RATIO, behavior: 'smooth' });
@@ -821,7 +851,7 @@ export const TextReaderPage: React.FC = () => {
       scrollContainerRef.current?.scrollBy({ top: height * TAP_ZONE_PAGE_SCROLL_RATIO, behavior: 'smooth' });
       return;
     }
-  }, [tapZoneEnabled, toggleUi]);
+  }, [tapZoneEnabled, toggleUi, verticalWriting]);
 
   // 分页引擎：将文本按视口高度拆分为多页
   const paginateContent = useCallback(() => {
@@ -2130,8 +2160,15 @@ export const TextReaderPage: React.FC = () => {
           const ratio = ann.startOffset / chapter.content.length;
           const container = scrollContainerRef.current;
           if (container) {
-            const scrollable = container.scrollHeight - container.clientHeight;
-            container.scrollTo({ top: ratio * scrollable, behavior: 'smooth' });
+            const scrollable = verticalWriting
+              ? container.scrollWidth - container.clientWidth
+              : container.scrollHeight - container.clientHeight;
+            const target = ratio * scrollable;
+            if (verticalWriting) {
+              container.scrollTo({ left: -target, behavior: 'smooth' });
+            } else {
+              container.scrollTo({ top: target, behavior: 'smooth' });
+            }
           }
         }
       } else {
@@ -2510,9 +2547,10 @@ export const TextReaderPage: React.FC = () => {
       {textReadingMode === 'scroll' && (
         <main
           ref={scrollContainerRef}
-          className="w-full h-screen overflow-y-auto"
+          className={cn('w-full h-screen', verticalWriting ? 'overflow-x-auto overflow-y-hidden' : 'overflow-y-auto')}
           style={{
             WebkitOverflowScrolling: 'touch',
+            ...(verticalWriting ? { writingMode: 'vertical-rl' as const } : {}),
             ...(displayFilter ? { filter: displayFilter } : {}),
           }}
           onClick={handleTapZoneClick}
@@ -2788,6 +2826,8 @@ export const TextReaderPage: React.FC = () => {
           onTextFontFamilyChange={(family) => useAppStore.getState().updateSettings({ textFontFamily: family })}
           onTextAlignChange={(align) => useAppStore.getState().updateSettings({ textAlign: align })}
           onFirstLineIndentToggle={() => useAppStore.getState().updateSettings({ firstLineIndent: !firstLineIndent })}
+          verticalWriting={verticalWriting}
+          onVerticalWritingToggle={() => useAppStore.getState().updateSettings({ verticalWriting: !settings.verticalWriting })}
           onTapZoneEnabledToggle={() => useAppStore.getState().updateSettings({ tapZoneEnabled: !tapZoneEnabled })}
           onAutoAdvanceTextChapterToggle={() => useAppStore.getState().updateSettings({ autoAdvanceTextChapter: !autoAdvanceTextChapter })}
           onAutoScrollSpeedChange={(speed) => useAppStore.getState().updateSettings({ autoScrollSpeed: speed })}

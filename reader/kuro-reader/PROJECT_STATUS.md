@@ -201,6 +201,7 @@ kuro-reader/
 - 书签系统（[BookmarkPanel](src/components/molecules/BookmarkPanel.tsx)）与批注系统（[AnnotationPopup](src/components/molecules/AnnotationPopup.tsx) / [AnnotationList](src/components/molecules/AnnotationList.tsx)，支持高亮/下划线/波浪线三种样式）
 - 章节抽屉（[ChapterDrawer](src/components/molecules/ChapterDrawer.tsx)）
 - 自动滚动（可调速度）、点按区翻页（可开关）、自动进入下一章
+- 竖排书写（滚动模式 writing-mode: vertical-rl，滚动/进度/点按/自动滚动全链路轴向感知）
 - 8 种字体预设（宋体/楷体/仿宋/黑体/圆体/文学体/等宽/系统，[textReaderFonts](src/constants/textReaderFonts.ts)）
 - 阅读主题（浅色/护眼绿/羊皮纸/深色）、字号、行高、对齐、首行缩进设置
 

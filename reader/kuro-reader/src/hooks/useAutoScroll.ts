@@ -9,12 +9,14 @@ export interface AutoScrollController {
 }
 
 /**
- * 文本阅读自动滚动：按固定间隔递增容器 scrollTop。
- * 拥有 isAutoScrolling 状态与定时器生命周期。
+ * 文本阅读自动滚动：按固定间隔递增容器滚动位置。
+ * axis='y' 为常规纵向滚动；'x' 用于竖排（writing-mode: vertical-rl，
+ * 内容向左延伸，故 scrollLeft 递减）。拥有状态与定时器生命周期。
  */
 export function useAutoScroll(
   scrollContainerRef: RefObject<HTMLElement | null>,
-  speed: number
+  speed: number,
+  axis: 'y' | 'x' = 'y'
 ): AutoScrollController {
   const [isAutoScrolling, setIsAutoScrolling] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -24,7 +26,11 @@ export function useAutoScroll(
       timerRef.current = setInterval(() => {
         const container = scrollContainerRef.current;
         if (container) {
-          container.scrollTop += speed;
+          if (axis === 'x') {
+            container.scrollLeft -= speed;
+          } else {
+            container.scrollTop += speed;
+          }
         }
       }, AUTO_SCROLL_INTERVAL);
     } else if (timerRef.current) {
@@ -36,7 +42,7 @@ export function useAutoScroll(
         clearInterval(timerRef.current);
       }
     };
-  }, [isAutoScrolling, speed, scrollContainerRef]);
+  }, [isAutoScrolling, speed, axis, scrollContainerRef]);
 
   const toggleAutoScroll = useCallback(() => {
     setIsAutoScrolling((prev) => !prev);

@@ -52,6 +52,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   autoAdvanceTextChapter: false,
   autoScrollSpeed: 2,
   textReadingMode: 'scroll',
+  verticalWriting: false,
   auth: {
     isEnabled: false,
     method: 'auto',
