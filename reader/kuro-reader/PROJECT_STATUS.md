@@ -73,6 +73,7 @@ kuro-reader/
 │   │   ├── storage.ts          # localStorage 键名常量
 │   │   └── textReaderFonts.ts  # 文本阅读器 8 种字体预设
 │   │   ├── cloudPath.ts        # 云端路径纯工具（规范化/拼接/面包屑/排序）
+│   ├── utils/annotationAnchor.ts # 批注稳定锚点（指纹+occurrence）与自愈解析
 │   ├── hooks/                  # useAutoScroll / useBackHandler（返回键）/ useEstimatedTimeLeft
 │   │                           # useLandscapeViewport / useReadingStats（双阅读器共用）
 │   │                           # useSafeArea / useSmoothScroll / useStatusBar / useWakeLock
@@ -322,7 +323,7 @@ IndexedDB（`kuro-reader-db`，**v6**），9 个 Object Store，由 [db.ts](src/
 
 ## 七、测试现状
 
-**26 个测试文件、237 个用例，全部通过**（`npm run test`，fake-indexeddb + jsdom 环境）。
+**27 个测试文件、245 个用例，全部通过**（`npm run test`，fake-indexeddb + jsdom 环境）。
 
 | 测试文件 | 覆盖范围 |
 |----------|----------|
@@ -351,6 +352,7 @@ IndexedDB（`kuro-reader-db`，**v6**），9 个 Object Store，由 [db.ts](src/
 | `storage/progressRepo.test.ts` | 进度仓库 CRUD（v6） |
 | `pages/CustomCloud/index.test.tsx` | 云端浏览全流程（连接/导航/下载导入/错误/断开） |
 | `services/epubContent.test.ts` | XHTML→Markdown 转换 / zip 路径解析 / 真实 EPUB 包集成（图片+目录） |
+| `utils/annotationAnchor.test.ts` | 批注指纹锚点：表征变化重定位 / 同上下文消歧 / 三级回退 |
 
 测试基建：`src/test/setup.ts` 全局提供 fake-indexeddb 与 `URL.createObjectURL/revokeObjectURL` stub。覆盖重点在服务层、工具函数、Store 与阅读器子组件；**页面组件仍缺少测试**。
 
@@ -375,6 +377,7 @@ IndexedDB（`kuro-reader-db`，**v6**），9 个 Object Store，由 [db.ts](src/
 - ~~WebDAV/FTP 云端导入断头路~~ → 浏览模式 + 下载导入（969b1e6）
 - ~~EPUB 丢图丢结构~~ → XHTML→Markdown 保真管线 + NCX/nav 目录（cddf9fc）
 - ~~PDF 仅类型预留~~ → pdfjs 逐页渲染复用漫画阅读器
+- ~~批注锚点脆弱~~ → 指纹锚点 + 自愈解析，内容表示变化后可重定位
 
 **阶段 1「信任与手感」（2026-08-29，详见 ROADMAP.md）**：
 - ~~备份导出遗漏书签/批注~~ → 备份格式 v2 含全部数据，导入兼容 v1 并覆盖写入

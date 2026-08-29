@@ -43,6 +43,7 @@ import {
   getNextTextPageIndex,
   getPaginatedTapAction,
 } from '@/utils/textReaderNavigation';
+import { computeAnnotationAnchor, resolveAnnotationOffsets } from '@/utils/annotationAnchor';
 
 const PROGRESS_SAVE_DEBOUNCE = 500;
 const PROGRESS_HINT_AUTO_HIDE_MS = 1400;
@@ -1633,10 +1634,17 @@ export const TextReaderPage: React.FC = () => {
     annotationRepo.getByBookId(bookId).then(setAnnotations);
   }, [bookId]);
 
-  // 当前章节的批注
+  // 当前章节的批注：按当前章节内容重新解析锚点（内容表示变化后自愈），不可定位的隐藏
   const currentChapterAnnotations = useMemo(() => {
-    return annotations.filter((a) => a.chapterIndex === currentChapterIndex);
-  }, [annotations, currentChapterIndex]);
+    const content = chapters[currentChapterIndex]?.content ?? '';
+    return annotations
+      .filter((a) => a.chapterIndex === currentChapterIndex)
+      .map((a) => {
+        const resolved = resolveAnnotationOffsets(content, a);
+        return resolved ? { ...a, startOffset: resolved.startOffset, endOffset: resolved.endOffset } : null;
+      })
+      .filter((a): a is Annotation => a !== null);
+  }, [annotations, currentChapterIndex, chapters]);
 
   // 文本选中检测
   useEffect(() => {
@@ -2013,6 +2021,11 @@ export const TextReaderPage: React.FC = () => {
       note,
       startOffset: startOffset >= 0 ? startOffset : 0,
       endOffset,
+      // 稳定锚点：内容表示变化后仍可重定位
+      anchor:
+        startOffset >= 0 && endOffset > startOffset
+          ? computeAnnotationAnchor(content, startOffset, endOffset)
+          : undefined,
       style,
       createdAt: new Date(),
       updatedAt: new Date(),

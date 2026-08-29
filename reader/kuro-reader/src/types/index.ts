@@ -204,6 +204,16 @@ export interface Bookmark {
 /** 批注样式类型 */
 export type AnnotationStyle = 'underline' | 'wavy' | 'highlight'
 
+/** 批注稳定锚点：选中文本前后的上下文指纹 + 出现序号，内容表示变化后仍可重定位 */
+export interface AnnotationAnchor {
+  /** 选中文本前紧邻的上下文片段（已折叠空白，≤16 字符） */
+  before: string
+  /** 选中文本后紧邻的上下文片段（已折叠空白，≤16 字符） */
+  after: string
+  /** 全文中满足上下文指纹的第几次出现（0-based），消歧重复文本 */
+  occurrence: number
+}
+
 /** 批注 */
 export interface Annotation {
   id: string
@@ -214,6 +224,8 @@ export interface Annotation {
   note: string
   startOffset: number
   endOffset: number
+  /** 稳定锚点（可选；旧数据无此字段时按偏移回退解析） */
+  anchor?: AnnotationAnchor
   style?: AnnotationStyle // 默认 'highlight'
   createdAt: Date
   updatedAt: Date
