@@ -413,6 +413,41 @@ describe('importFile', () => {
     expect(pageRepoMock.saveAllPages).not.toHaveBeenCalled()
   })
 
+  it('imports pdf: saves rendered pages and the original file', async () => {
+    const pdfParsed: ParsedBook = {
+      format: 'pdf',
+      title: '测试文档',
+      coverBlob: new Blob(['cover']),
+      pdfFile: new Blob(['pdf-bytes']),
+      pdfTotalPages: 3,
+      imagePages: [new Blob(['p1']), new Blob(['p2']), new Blob(['p3'])],
+      imagePageNames: ['page-1.jpg', 'page-2.jpg', 'page-3.jpg'],
+    }
+    getParserForFileMock.mockReturnValue({
+      canParse: () => true,
+      parse: vi.fn().mockResolvedValue(pdfParsed),
+    })
+    bookRepoMock.saveCover.mockResolvedValue(undefined)
+    pageRepoMock.saveAllPages.mockResolvedValue(undefined)
+    bookFileRepoMock.save.mockResolvedValue(undefined)
+    bookRepoMock.save.mockResolvedValue(undefined)
+
+    const result = await useLibraryStore.getState().importFile(new File(['x'], '文档.pdf'))
+
+    expect(result).not.toBeNull()
+    expect(result?.format).toBe('pdf')
+    expect(result?.totalChapters).toBe(1)
+    expect(result?.chapters[0].pages).toEqual(pdfParsed.imagePageNames)
+
+    // 渲染页进 pageRepo；原始 PDF 保留在 bookFileRepo
+    expect(pageRepoMock.saveAllPages).toHaveBeenCalledWith(
+      result!.id,
+      `${result!.id}-ch1`,
+      pdfParsed.imagePages
+    )
+    expect(bookFileRepoMock.save).toHaveBeenCalledWith(result!.id, pdfParsed.pdfFile)
+  })
+
   it('uses streaming parse for files above 50MB when available', async () => {
     const parse = vi.fn()
     const parseStreaming = vi.fn().mockResolvedValue(comicParsed)

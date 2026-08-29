@@ -1,5 +1,6 @@
 import { ComicArchiveParser } from './comicArchiveParser'
 import { EpubParser } from './epubParser'
+import { PdfParser } from './pdfParser'
 import { TextParser } from './textParser'
 import type { BookParser } from './types'
 
@@ -10,6 +11,7 @@ import type { BookParser } from './types'
  */
 const parsers: BookParser[] = [
   new ComicArchiveParser(),
+  new PdfParser(),
   new EpubParser(),
   new TextParser(),
 ]
@@ -27,4 +29,5 @@ export function getParserForFile(input: { name: string }): BookParser | null {
 export type { BookParser, ParsedBook, ParsedTextBook, ParserProgressCallback } from './types'
 export { ComicArchiveParser } from './comicArchiveParser'
 export { EpubParser } from './epubParser'
+export { PdfParser } from './pdfParser'
 export { TextParser } from './textParser'

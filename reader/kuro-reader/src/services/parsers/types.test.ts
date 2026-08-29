@@ -34,13 +34,15 @@ describe('ParsedBook shape', () => {
     expect(p.imagePageNames.length).toBe(1)
   })
 
-  it('pdf branch requires pdfFile and pdfTotalPages', () => {
+  it('pdf branch requires pdfFile, pdfTotalPages and rendered pages', () => {
     const p: ParsedPdfBook = {
       format: 'pdf',
       title: 't',
       coverBlob: new Blob(),
       pdfFile: new Blob(),
       pdfTotalPages: 100,
+      imagePages: [new Blob()],
+      imagePageNames: ['page-1.jpg'],
       pageRefs: [{ kind: 'pdf-page', pageNumber: 1 }],
     }
     expect(p.pdfTotalPages).toBe(100)

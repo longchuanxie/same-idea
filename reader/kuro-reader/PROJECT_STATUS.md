@@ -25,6 +25,7 @@
 | 移动端桥接 | Capacitor | 8.x |
 | 本地存储 | IndexedDB (idb) | 8.0.3 |
 | 压缩包解析 | JSZip + libarchive.js | 3.10 / 2.0 |
+| PDF 渲染 | pdfjs-dist | 6.2 |
 | Markdown 渲染 | marked | 18.0 |
 | 数学公式 | KaTeX | 0.16 |
 | 代码高亮 | highlight.js | 11.11 |
@@ -227,7 +228,7 @@ kuro-reader/
 | ComicArchiveParser | zip/cbz/rar/cbr | JSZip 优先，RAR/失败回退 libarchive.js；流式解析；动态超时；自然排序 |
 | EpubParser | epub | JSZip 解包；OPF spine 定序；NCX/EPUB3 nav 提取章节标题；导入期 XHTML 转纯文本 + 封面 |
 | TextParser | txt/md/markdown | UTF-8/GBK 编码自动检测；导入时拆分章节；生成占位封面 |
-| PdfParser（预留） | pdf | `ParsedPdfBook` 类型与 `PDF_EXTENSIONS` 已定义，解析器未实现 |
+| PdfParser | pdf | pdfjs-dist 逐页渲染为图片（≤1400px 宽 / 2x 上限，JPEG），复用漫画阅读器；原始文件存 bookFiles |
 
 [archiveParser.ts](src/services/archiveParser.ts) 为压缩包解析核心：双引擎策略、流式解析（逐页回调避免内存峰值）、超时保护（基础 30s + 每MB 200ms）、2GB 上限、文件名自然排序。
 
@@ -321,7 +322,7 @@ IndexedDB（`kuro-reader-db`，**v6**），9 个 Object Store，由 [db.ts](src/
 
 ## 七、测试现状
 
-**26 个测试文件、235 个用例，全部通过**（`npm run test`，fake-indexeddb + jsdom 环境）。
+**26 个测试文件、237 个用例，全部通过**（`npm run test`，fake-indexeddb + jsdom 环境）。
 
 | 测试文件 | 覆盖范围 |
 |----------|----------|
@@ -364,15 +365,16 @@ IndexedDB（`kuro-reader-db`，**v6**），9 个 Object Store，由 [db.ts](src/
 
 仍内联的高耦合块（后续深度拆分候选）：TextReader 分页引擎（paginateMeasuredContent）、翻书动画状态、约 350 行文本选区 effect、进度保存/镜像 ref 体系；Reader 垂直虚拟窗口与滚动恢复。
 
-### 8.2 PDF 支持预留但未实现
-
-`BookFormat` 含 `'pdf'`、`ParsedPdfBook` 已定义、`bookFileRepo` 可存原始文件、`PDF_EXTENSIONS` 已定义，但 PDF 解析器未注册、渲染未实现。（按决策本轮跳过，后续作为独立功能实施）
-
-### 8.3 页面组件测试缺失
+### 8.2 页面组件测试缺失
 
 14 个页面组件无测试（阅读器子组件除外）；云存储/FTP 客户端无测试；认证流程无集成测试。
 
-### 8.4 已解决（历史问题存档）
+### 8.3 已解决（历史问题存档）
+
+**阶段 2「内容闭环」（进行中，详见 ROADMAP.md）**：
+- ~~WebDAV/FTP 云端导入断头路~~ → 浏览模式 + 下载导入（969b1e6）
+- ~~EPUB 丢图丢结构~~ → XHTML→Markdown 保真管线 + NCX/nav 目录（cddf9fc）
+- ~~PDF 仅类型预留~~ → pdfjs 逐页渲染复用漫画阅读器
 
 **阶段 1「信任与手感」（2026-08-29，详见 ROADMAP.md）**：
 - ~~备份导出遗漏书签/批注~~ → 备份格式 v2 含全部数据，导入兼容 v1 并覆盖写入

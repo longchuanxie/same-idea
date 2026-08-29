@@ -138,6 +138,11 @@ function buildBookFromParsed(parsed: ParsedBook, bookId: string): { book: Book; 
     pages = parsed.imagePageNames;
   }
 
+  // PDF：导入时已逐页渲染为图片，复用漫画阅读器
+  if (parsed.format === 'pdf') {
+    pages = parsed.imagePageNames;
+  }
+
   // 文本格式：支持多章节
   if (parsed.format === 'text') {
     // 提取作者（如果解析器提供了）
@@ -285,6 +290,10 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
       // Save format-specific content
       if (parsed.format === 'comic') {
         await pageRepo.saveAllPages(bookId, chapterId, parsed.imagePages);
+      } else if (parsed.format === 'pdf') {
+        // 渲染页供阅读器使用；原始 PDF 一并保留
+        await pageRepo.saveAllPages(bookId, chapterId, parsed.imagePages);
+        await bookFileRepo.save(bookId, parsed.pdfFile);
       } else if (parsed.format === 'text') {
         await bookFileRepo.save(bookId, parsed.textFile);
       }

@@ -23,11 +23,14 @@ export interface ParsedComicBook extends ParsedBookBase {
 
 /**
  * PDF 分支：原始 PDF 文件与总页数必填。
+ * imagePages 为导入时逐页渲染出的图片（复用漫画阅读器阅读），pdfFile 保留原始文件。
  */
 export interface ParsedPdfBook extends ParsedBookBase {
   format: 'pdf'
   pdfFile: Blob
   pdfTotalPages: number
+  imagePages: Blob[]
+  imagePageNames: string[]
 }
 
 /**

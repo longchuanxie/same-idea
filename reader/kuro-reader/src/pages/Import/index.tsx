@@ -133,6 +133,7 @@ export const ImportPage: React.FC = () => {
           'application/vnd.rar',
           'application/x-cbr',
           'application/x-cbz',
+          'application/pdf',
           'text/plain',
           'text/markdown',
           'text/x-markdown',
@@ -221,7 +222,7 @@ export const ImportPage: React.FC = () => {
       <input
         ref={folderInputRef}
         type="file"
-        accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.zip,.cbz,.rar,.cbr,.txt,.md,.markdown,.epub"
+        accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.zip,.cbz,.rar,.cbr,.pdf,.txt,.md,.markdown,.epub"
         onChange={handleFolderSelect}
         {...({ webkitdirectory: '', directory: '' } as Record<string, string>)}
         className="hidden"
