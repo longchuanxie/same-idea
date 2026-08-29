@@ -71,6 +71,7 @@ kuro-reader/
 │   │   ├── routes.ts           # 路由定义与路径辅助函数（readerPathForBook 按格式分派）
 │   │   ├── storage.ts          # localStorage 键名常量
 │   │   └── textReaderFonts.ts  # 文本阅读器 8 种字体预设
+│   │   ├── cloudPath.ts        # 云端路径纯工具（规范化/拼接/面包屑/排序）
 │   ├── hooks/                  # useAutoScroll / useBackHandler（返回键）/ useEstimatedTimeLeft
 │   │                           # useLandscapeViewport / useReadingStats（双阅读器共用）
 │   │                           # useSafeArea / useSmoothScroll / useStatusBar / useWakeLock
@@ -214,7 +215,7 @@ kuro-reader/
 ### 4.4 文件导入
 
 1. **本地导入** ([Import](src/pages/Import/index.tsx)): ZIP/CBZ/RAR/CBR 漫画 + TXT/Markdown/EPUB 文本；散图文件夹导入；文件夹批量导入；大文件流式解析（>50MB）
-2. **云端导入** ([CustomCloud](src/pages/CustomCloud/index.tsx)): WebDAV/NAS 浏览下载、FTP（HTTP 代理）
+2. **云端导入** ([CustomCloud](src/pages/CustomCloud/index.tsx)): WebDAV/NAS/FTP 连接后进入浏览模式（面包屑 + 目录导航），支持的书籍格式点击即下载导入；SMB/OneDrive 仅连接测试
 
 ### 4.5 解析器（策略模式）
 
@@ -319,7 +320,7 @@ IndexedDB（`kuro-reader-db`，**v6**），9 个 Object Store，由 [db.ts](src/
 
 ## 七、测试现状
 
-**23 个测试文件、211 个用例，全部通过**（`npm run test`，fake-indexeddb + jsdom 环境）。
+**25 个测试文件、226 个用例，全部通过**（`npm run test`，fake-indexeddb + jsdom 环境）。
 
 | 测试文件 | 覆盖范围 |
 |----------|----------|
@@ -346,6 +347,7 @@ IndexedDB（`kuro-reader-db`，**v6**），9 个 Object Store，由 [db.ts](src/
 | `stores/useLibraryStore.test.ts` | 选择器 / 进度持久化 / 删除联动 / importFile 六分支（mock repo+parser） |
 | `stores/useReaderStore.test.ts` | 翻页边界 / 续读页码换算 / loadPage 竞态 / closeReader |
 | `storage/progressRepo.test.ts` | 进度仓库 CRUD（v6） |
+| `pages/CustomCloud/index.test.tsx` | 云端浏览全流程（连接/导航/下载导入/错误/断开） |
 
 测试基建：`src/test/setup.ts` 全局提供 fake-indexeddb 与 `URL.createObjectURL/revokeObjectURL` stub。覆盖重点在服务层、工具函数、Store 与阅读器子组件；**页面组件仍缺少测试**。
 

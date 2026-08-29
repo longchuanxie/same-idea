@@ -31,3 +31,6 @@ android/app/.project
 android/app/.settings/
 # ZCode workspace metadata
 .zcode/
+
+# WebDAV 本地测试夹具
+.webdav-fixture/

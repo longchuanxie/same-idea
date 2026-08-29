@@ -50,3 +50,30 @@ export function isEpubFile(name: string): boolean {
 export function isSupportedBookFile(name: string): boolean {
   return isArchiveFile(name) || isPdfFile(name) || isTextFile(name) || isMarkdownFile(name) || isEpubFile(name)
 }
+
+/**
+ * 猜测书籍文件的 MIME 类型（云端下载导入用）。
+ * 文本类类型的准确性很重要：TextReader 依赖 blob.type 区分 TXT/Markdown/EPUB。
+ */
+export function guessBookMimeType(name: string): string {
+  const ext = getFileExtension(name)
+  switch (ext) {
+    case '.epub':
+      return 'application/epub+zip'
+    case '.md':
+    case '.markdown':
+      return 'text/markdown'
+    case '.txt':
+      return 'text/plain'
+    case '.zip':
+    case '.cbz':
+      return 'application/zip'
+    case '.rar':
+    case '.cbr':
+      return 'application/vnd.rar'
+    case '.pdf':
+      return 'application/pdf'
+    default:
+      return ''
+  }
+}
