@@ -6,6 +6,7 @@ import { AnnotationDetailModal } from '@/components/molecules/AnnotationDetailMo
 import { AnnotationList } from '@/components/molecules/AnnotationList';
 import { AnnotationPopup } from '@/components/molecules/AnnotationPopup';
 import { AutoScrollBadge } from '@/components/molecules/AutoScrollBadge';
+import { SpeechBadge } from '@/components/molecules/SpeechBadge';
 import { BookmarkPanel } from '@/components/molecules/BookmarkPanel';
 import { ChapterDrawer } from '@/components/molecules/ChapterDrawer';
 import { ChapterEndPrompt } from '@/components/molecules/ChapterEndPrompt';
@@ -22,6 +23,7 @@ import { useBackHandler } from '@/hooks/useBackHandler';
 import { useEstimatedTimeLeft } from '@/hooks/useEstimatedTimeLeft';
 import { useLandscapeViewport } from '@/hooks/useLandscapeViewport';
 import { useReadingStats } from '@/hooks/useReadingStats';
+import { useSpeech } from '@/hooks/useSpeech';
 import { useWakeLock } from '@/hooks/useWakeLock';
 import { revokeEpubObjectUrls } from '@/services/epubContent';
 import { annotationRepo } from '@/services/storage/annotationRepo';
@@ -174,6 +176,7 @@ export const TextReaderPage: React.FC = () => {
   const [scrollPercent, setScrollPercent] = useState(0);
   const [isProgressHintVisible, setIsProgressHintVisible] = useState(false);
   const [isChapterEndPromptVisible, setIsChapterEndPromptVisible] = useState(false);
+  const [ttsActive, setTtsActive] = useState(false);
   const [isProgressDragging, setIsProgressDragging] = useState(false);
   const [dragPercent, setDragPercent] = useState(0);
   const isLandscapeViewport = useLandscapeViewport(TEXT_READER_COLUMNS_MEDIA_QUERY);
@@ -724,10 +727,47 @@ export const TextReaderPage: React.FC = () => {
   const goToNextChapter = useCallback(() => {
     goToChapter(currentChapterIndex + 1);
   }, [currentChapterIndex, goToChapter]);
+  const goToNextChapterRef = useRef<(() => void) | null>(null);
+  goToNextChapterRef.current = goToNextChapter;
 
   const goToPrevChapter = useCallback(() => {
     goToChapter(currentChapterIndex - 1);
   }, [currentChapterIndex, goToChapter]);
+
+  // ========== 听书（Web Speech API） ==========
+  const speech = useSpeech(useCallback(() => {
+    // 当前章播完：自动续播下一章；全书结束则停止
+    if (currentChapterIndexRef.current < chaptersRef.current.length - 1) {
+      goToNextChapterRef.current?.();
+    } else {
+      setTtsActive(false);
+    }
+  }, []));
+
+  const handleToggleTTS = useCallback(() => {
+    if (ttsActive) {
+      setTtsActive(false);
+      speech.stop();
+    } else {
+      setTtsActive(true);
+    }
+  }, [ttsActive, speech]);
+
+  // 听书开启/换章时：从当前阅读位置起播（按进度比例换算字符偏移，向前对齐句首）
+  const chapterSpeechText = currentChapter
+    ? currentChapter.markdownDocument?.text ?? currentChapter.content
+    : '';
+  const { start: speechStart, stop: speechStop } = speech;
+  useEffect(() => {
+    if (!ttsActive || !chapterSpeechText) return;
+    const ratio = scrollPercentRef.current / PERCENT_MULTIPLIER;
+    const startChar =
+      ratio > 0 && ratio < 1 ? Math.floor(ratio * chapterSpeechText.length) : 0;
+    let slice = chapterSpeechText.slice(startChar);
+    if (!slice.trim()) slice = chapterSpeechText;
+    speechStart(slice);
+    return () => speechStop();
+  }, [ttsActive, currentChapterIndex, chapterSpeechText, speechStart, speechStop]);
 
   // 点击区域翻页
   const handleTapZoneClick = useCallback((e: React.MouseEvent) => {
@@ -2644,6 +2684,17 @@ export const TextReaderPage: React.FC = () => {
       {/* 自动滚动指示器 */}
       {isAutoScrolling && <AutoScrollBadge />}
 
+      {/* 听书悬浮控制 */}
+      {ttsActive && speech.supported && (
+        <SpeechBadge
+          rate={speech.rate}
+          paused={speech.paused}
+          onCycleRate={speech.cycleRate}
+          onPauseResume={() => (speech.paused ? speech.resume() : speech.pause())}
+          onStop={handleToggleTTS}
+        />
+      )}
+
       {/* UI overlay - 始终渲染，通过 opacity/pointer-events 控制可见性，确保返回按钮和点击区域始终可用 */}
       {textReadingMode === 'scroll' && isChapterEndPromptVisible && currentChapterIndex < chapters.length - 1 && (
         <ChapterEndPrompt
@@ -2682,6 +2733,9 @@ export const TextReaderPage: React.FC = () => {
             onNextChapter={goToNextChapter}
             isAutoScrolling={isAutoScrolling}
             onToggleAutoScroll={toggleAutoScroll}
+            ttsSupported={speech.supported}
+            ttsActive={ttsActive}
+            onToggleTTS={handleToggleTTS}
             scrollPercent={scrollPercent}
             dragPercent={dragPercent}
             isDragging={isProgressDragging}

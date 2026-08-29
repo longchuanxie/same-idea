@@ -12,6 +12,9 @@ interface TextReaderFooterProps {
   onNextChapter: () => void;
   isAutoScrolling: boolean;
   onToggleAutoScroll: () => void;
+  ttsSupported: boolean;
+  ttsActive: boolean;
+  onToggleTTS: () => void;
   scrollPercent: number;
   dragPercent: number;
   isDragging: boolean;
@@ -31,6 +34,9 @@ export const TextReaderFooter: React.FC<TextReaderFooterProps> = ({
   onNextChapter,
   isAutoScrolling,
   onToggleAutoScroll,
+  ttsSupported,
+  ttsActive,
+  onToggleTTS,
   scrollPercent,
   dragPercent,
   isDragging,
@@ -84,6 +90,21 @@ export const TextReaderFooter: React.FC<TextReaderFooterProps> = ({
       )}
       {/* 进度条 */}
       <div className="flex items-center gap-3">
+        {ttsSupported && (
+          <button
+            className={cn(
+              'w-11 h-11 rounded-full flex items-center justify-center transition-colors',
+              ttsActive
+                ? 'bg-primary text-on-primary'
+                : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'
+            )}
+            onClick={onToggleTTS}
+            data-ui-control
+            aria-label={ttsActive ? '停止听书' : '开始听书'}
+          >
+            <span className="material-symbols-outlined text-[18px]">volume_up</span>
+          </button>
+        )}
         <button
           className={cn(
             'w-11 h-11 rounded-full flex items-center justify-center transition-colors',
