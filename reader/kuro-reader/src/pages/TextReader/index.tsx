@@ -70,8 +70,6 @@ const TEXT_SEPIA_MAX_INTENSITY = 0.4; // 色温滤镜最大 sepia 强度
 const HALF_DIVISOR = 2; // 二分查找中点 / 选区弹窗中心点 / 页边距均分
 // UI 时序
 const UI_AUTO_HIDE_AFTER_LOAD_MS = 3000;
-const PAGINATION_RESTORE_DELAY_MS = 150;
-const PENDING_NAV_ALIGN_DELAY_MS = 350;
 const SELECTION_CHANGE_DEBOUNCE_MS = 100;
 const SELECTION_POPUP_MISCLICK_GUARD_MS = 400;
 // 触摸翻页与点按区
@@ -220,17 +218,14 @@ export const TextReaderPage: React.FC = () => {
     scrollRatio?: number;
     pageIndex?: number;
   } | null>(null);
-  // 分页完成后跳过重置到第 0 页（用于跨章节导航时保留目标页）
+  // 分页完成后跳过重置到第 0 页（用于媒体加载重分页时保留当前页）
   const skipNextPageResetRef = useRef(false);
-  // 跨章节分页导航的定时器（防止重复触发时旧定时器干扰）
-  const pendingNavTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // 组件卸载时清理导航定时器，避免在已卸载组件上执行状态更新
-  useEffect(() => {
-    return () => {
-      if (pendingNavTimerRef.current) clearTimeout(pendingNavTimerRef.current);
-    };
-  }, []);
+  // 分页定位请求：跨章节跳转/进度恢复把目标页排队，分页完成时同步消费，
+  // 替代「定时器赌分页完成」的时序写法
+  type PageRequest = { pageIndex?: number; ratio?: number };
+  const pendingPageRequestRef = useRef<PageRequest | null>(null);
+  // 最近一次完成分页的章节下标（判断现有 textPages 是否对当前章节有效）
+  const paginatedChapterIndexRef = useRef(-1);
 
   const { getBookById, updateProgress } = useLibraryStore();
   const { settings } = useAppStore();
@@ -247,6 +242,56 @@ export const TextReaderPage: React.FC = () => {
   currentPageIndexRef.current = currentPageIndex;
   const scrollPercentRef = useRef(scrollPercent);
   scrollPercentRef.current = scrollPercent;
+
+  /**
+   * 请求某次分页完成后跳页。当前章节分页已就绪则立即消费（零等待），
+   * 否则排队，由分页完成点消费（慢设备不再依赖固定延时）。
+   */
+  const requestPageAfterPagination = useCallback(
+    (target: number | { ratio: number }) => {
+      const request: PageRequest = typeof target === 'number' ? { pageIndex: target } : target;
+      const ready =
+        paginatedChapterIndexRef.current === currentChapterIndexRef.current &&
+        textPagesLengthRef.current > 0;
+      if (ready) {
+        const totalPages = textPagesLengthRef.current;
+        const desired =
+          request.pageIndex ?? Math.floor((request.ratio ?? 0) * totalPages);
+        setCurrentPageIndex(Math.max(0, Math.min(desired, totalPages - 1)));
+        return;
+      }
+      pendingPageRequestRef.current = request;
+    },
+    []
+  );
+
+  /** 分页完成点消费定位请求；返回是否消费了请求 */
+  const consumePendingPageIndex = useCallback((totalPages: number): boolean => {
+    const request = pendingPageRequestRef.current;
+    if (!request) return false;
+    pendingPageRequestRef.current = null;
+    let desired = request.pageIndex ?? 0;
+    if (request.pageIndex == null && request.ratio != null) {
+      desired = Math.floor(request.ratio * totalPages);
+    }
+    setCurrentPageIndex(totalPages > 0 ? Math.max(0, Math.min(desired, totalPages - 1)) : 0);
+    return true;
+  }, []);
+
+  /** 分页引擎统一收尾：消费定位请求 → 保留当前页 → 重置到第 0 页 */
+  const applyPaginationResult = useCallback(
+    (pages: string[]) => {
+      setTextPages(pages);
+      paginatedChapterIndexRef.current = currentChapterIndexRef.current;
+      if (consumePendingPageIndex(pages.length)) return;
+      if (skipNextPageResetRef.current) {
+        skipNextPageResetRef.current = false;
+      } else {
+        setCurrentPageIndex(TEXT_PAGE_RESET_INDEX);
+      }
+    },
+    [consumePendingPageIndex]
+  );
 
   const showProgressHint = useCallback(() => {
     setIsProgressHintVisible(true);
@@ -423,17 +468,8 @@ export const TextReaderPage: React.FC = () => {
       }
       const pageIndex = locatorData?.pageIndex ?? 0;
       if (pageIndex > 0) {
-        // 需要等待分页引擎重新计算后再设置页索引
-        // 使用 ref 获取最新的 textPages.length，避免闭包捕获旧值
-        const timer = setTimeout(() => {
-          const totalPages = textPagesLengthRef.current;
-          // 将页索引限制在有效范围内，避免越界导致空白页
-          const safeIndex = totalPages > 0 ? Math.min(pageIndex, totalPages - 1) : 0;
-          if (safeIndex > 0) {
-            setCurrentPageIndex(safeIndex);
-          }
-        }, PAGINATION_RESTORE_DELAY_MS);
-        return () => clearTimeout(timer);
+        // 排队定位请求，分页完成时消费（已就绪则立即生效）
+        requestPageAfterPagination(pageIndex);
       }
     }
   }, [bookId, chapterId, isLoading, textReadingMode, chapters, book?.chapters]);
@@ -853,13 +889,8 @@ export const TextReaderPage: React.FC = () => {
     measureEl.style.visibility = '';
     measureEl.textContent = '';
 
-    setTextPages(pages);
-    if (skipNextPageResetRef.current) {
-      skipNextPageResetRef.current = false;
-    } else {
-      setCurrentPageIndex(0); // 重置到第一页
-    }
-  }, [currentChapter, textReadingMode, fontSize, lineHeight, resolvedFontFamily, firstLineIndent]);
+    applyPaginationResult(pages);
+  }, [currentChapter, textReadingMode, fontSize, lineHeight, resolvedFontFamily, firstLineIndent, applyPaginationResult]);
 
   const paginateMeasuredContent = useCallback(() => {
     if (!currentChapter || textReadingMode === 'scroll') {
@@ -1025,12 +1056,7 @@ export const TextReaderPage: React.FC = () => {
         });
 
         pushPage(paginationEnd);
-        setTextPages(pages.length > 0 ? pages : ['']);
-        if (skipNextPageResetRef.current) {
-          skipNextPageResetRef.current = false;
-        } else {
-          setCurrentPageIndex(TEXT_PAGE_RESET_INDEX);
-        }
+        applyPaginationResult(pages.length > 0 ? pages : ['']);
         return;
       }
     }
@@ -1078,12 +1104,7 @@ export const TextReaderPage: React.FC = () => {
     measureEl.removeAttribute('style');
     measureEl.replaceChildren();
 
-    setTextPages(pages.length > 0 ? pages : ['']);
-    if (skipNextPageResetRef.current) {
-      skipNextPageResetRef.current = false;
-    } else {
-      setCurrentPageIndex(TEXT_PAGE_RESET_INDEX);
-    }
+    applyPaginationResult(pages.length > 0 ? pages : ['']);
   }, [
     currentChapter,
     textReadingMode,
@@ -1096,6 +1117,7 @@ export const TextReaderPage: React.FC = () => {
     firstLineIndent,
     paginateContent,
     isColumnsLayoutActive,
+    applyPaginationResult,
   ]);
 
   // 当章节或模式变化时重新分页
@@ -1575,9 +1597,6 @@ export const TextReaderPage: React.FC = () => {
         scrollRatio: bm.scrollRatio,
         pageIndex: bm.pageIndex,
       };
-      if (textReadingMode !== 'scroll' && bm.pageIndex != null) {
-        skipNextPageResetRef.current = true;
-      }
       setCurrentChapterIndex(bm.chapterIndex);
       setCurrentPageIndex(0);
 
@@ -1596,21 +1615,12 @@ export const TextReaderPage: React.FC = () => {
             pendingNavRef.current = null;
           });
         });
-      } else {
-        // 分页模式：等分页计算完成后定位（skipNextPageResetRef 已阻止重置）
-        if (pendingNavTimerRef.current) clearTimeout(pendingNavTimerRef.current);
-        pendingNavTimerRef.current = setTimeout(() => {
-          pendingNavTimerRef.current = null;
-          const nav = pendingNavRef.current;
-          if (nav && nav.pageIndex != null) {
-            const safeIndex = Math.min(nav.pageIndex, textPagesLengthRef.current - 1);
-            if (safeIndex >= 0) setCurrentPageIndex(safeIndex);
-          }
-          pendingNavRef.current = null;
-        }, PENDING_NAV_ALIGN_DELAY_MS);
+      } else if (bm.pageIndex != null) {
+        // 分页模式：排队定位请求，新章节分页完成时消费（已就绪则立即生效）
+        requestPageAfterPagination(bm.pageIndex);
       }
     }
-  }, [currentChapterIndex, textReadingMode]);
+  }, [currentChapterIndex, textReadingMode, requestPageAfterPagination]);
 
   // 书签删除
   const handleBookmarkDelete = useCallback(async (id: string) => {
@@ -2128,30 +2138,14 @@ export const TextReaderPage: React.FC = () => {
           });
         });
       } else {
-        // 分页模式：等分页计算完成后定位到包含批注的页
-        skipNextPageResetRef.current = true;
-        if (pendingNavTimerRef.current) clearTimeout(pendingNavTimerRef.current);
-        pendingNavTimerRef.current = setTimeout(() => {
-          pendingNavTimerRef.current = null;
-          const nav = pendingNavRef.current;
-          if (nav) {
-            const chapter = chaptersRef.current[ann.chapterIndex];
-            const pages = textPagesLengthRef.current;
-            if (chapter && pages > 0) {
-              // 用 startOffset 占比估算页码
-              const ratio = ann.startOffset / chapter.content.length;
-              const targetPage = Math.min(
-                Math.floor(ratio * pages),
-                pages - 1
-              );
-              setCurrentPageIndex(Math.max(0, targetPage));
-            }
-          }
-          pendingNavRef.current = null;
-        }, PENDING_NAV_ALIGN_DELAY_MS);
+        // 分页模式：按批注偏移占比排队定位请求，分页完成时消费
+        const chapter = chaptersRef.current[ann.chapterIndex];
+        if (chapter && chapter.content.length > 0) {
+          requestPageAfterPagination({ ratio: ann.startOffset / chapter.content.length });
+        }
       }
     }
-  }, [currentChapterIndex, currentChapter, textReadingMode, textPages, chapters]);
+  }, [currentChapterIndex, currentChapter, textReadingMode, textPages, chapters, requestPageAfterPagination]);
 
   if (isLoading) {
     return (
