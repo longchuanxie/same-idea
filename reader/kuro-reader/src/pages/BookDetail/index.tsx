@@ -6,8 +6,10 @@ import { BottomNavBar } from '@/components/atoms/BottomNavBar';
 import { FormatBadge } from '@/components/atoms/FormatBadge';
 import { TopAppBar } from '@/components/atoms/TopAppBar';
 import { ROUTES, readerPathForBook } from '@/constants/routes';
+import { annotationRepo } from '@/services/storage/annotationRepo';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import type { Book } from '@/types';
+import { exportAnnotationsToMarkdown } from '@/utils/annotationExport';
 import { cn } from '@/utils/cn';
 
 const TAG_INPUT_FOCUS_DELAY_MS = 50; // 等待弹窗渲染完成后聚焦
@@ -348,10 +350,26 @@ export const BookDetailPage: React.FC = () => {
                       book.isFavorite ? 'text-primary' : 'text-on-surface-variant'
                     }`}
                     onClick={() => toggleFavorite(book.id)}
+                    aria-label="收藏"
                   >
                     <span className="material-symbols-outlined" style={book.isFavorite ? { fontVariationSettings: "'FILL' 1" } : undefined}>
                       {book.isFavorite ? 'bookmark' : 'bookmark_add'}
                     </span>
+                  </button>
+                  <button
+                    className="border border-outline-variant font-label text-label-md px-4 py-3 rounded hover:bg-surface-variant transition-colors flex items-center justify-center text-on-surface-variant"
+                    onClick={async () => {
+                      const bookAnnotations = await annotationRepo.getByBookId(book.id);
+                      if (bookAnnotations.length === 0) {
+                        alert('这本书还没有批注');
+                        return;
+                      }
+                      exportAnnotationsToMarkdown(book.title, book.author || undefined, bookAnnotations);
+                    }}
+                    aria-label="导出批注为 Markdown"
+                    title="导出批注为 Markdown"
+                  >
+                    <span className="material-symbols-outlined">ios_share</span>
                   </button>
                 </div>
               </>

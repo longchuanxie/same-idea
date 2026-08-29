@@ -2781,6 +2781,7 @@ export const TextReaderPage: React.FC = () => {
       {isAnnotationListOpen && (
         <AnnotationList
           annotations={annotations}
+          bookTitle={title}
           onEdit={handleAnnotationEdit}
           onDelete={handleAnnotationDelete}
           onNavigate={handleAnnotationNavigate}

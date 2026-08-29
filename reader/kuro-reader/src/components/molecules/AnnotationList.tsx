@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 
 import type { Annotation, AnnotationStyle } from '@/types';
+import { exportAnnotationsToMarkdown } from '@/utils/annotationExport';
 import { cn } from '@/utils/cn';
 
 interface AnnotationListProps {
   annotations: Annotation[];
+  bookTitle: string;
   onEdit: (annotation: Annotation) => void;
   onDelete: (annotationId: string) => void;
   onNavigate: (annotation: Annotation) => void;
@@ -13,6 +15,7 @@ interface AnnotationListProps {
 
 export const AnnotationList: React.FC<AnnotationListProps> = ({
   annotations,
+  bookTitle,
   onEdit,
   onDelete,
   onNavigate,
@@ -75,6 +78,16 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
             <span className="font-label text-label-sm text-on-surface-variant opacity-60">
               {annotations.length} 条
             </span>
+            {annotations.length > 0 && (
+              <button
+                className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-variant transition-colors"
+                onClick={() => exportAnnotationsToMarkdown(bookTitle, undefined, annotations)}
+                aria-label="导出批注为 Markdown"
+                title="导出批注为 Markdown"
+              >
+                <span className="material-symbols-outlined text-on-surface-variant text-[20px]">ios_share</span>
+              </button>
+            )}
             <button
               className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-variant transition-colors"
               onClick={onClose}
