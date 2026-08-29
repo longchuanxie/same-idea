@@ -76,6 +76,10 @@
 
 ### 持续工程线（每阶段穿插约 20% 精力）
 
+| # | 事项 | 状态 |
+|---|------|------|
+| 工-1 | 测试夹具库（漫画包/多编码文本/EPUB/PDF 边界矩阵 + 自动化回归） | ✅ 2026-08-29：`test-fixtures/`（34 个确定性生成文件）+ `boundaryFixtures.test.ts`（31 用例）+ 生成脚本 `npm run fixtures:generate`；并由此发现修复 `splitTextIntoChapters` 前导空白防护死代码 bug |
+
 - TextReader 剩余拆分：分页引擎 → 350 行文本选区 effect（当前 2711 行）
 - 页面组件测试补齐（14 个页面目前无测试）
 - 10MB+ 大文件性能基准（DOM 测量分页方案的规模上限验证）

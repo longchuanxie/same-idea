@@ -50,8 +50,10 @@ kuro-reader/
 │   └── screenshots/              # 应用截图
 ├── public/                     # icon.svg / manifest.json
 ├── screenshots/                # 开发过程截图
+├── test-fixtures/              # 测试夹具库（脚本确定性生成，含边界场景目录 README）
 ├── scripts/
-│   └── generate-splash.cjs     # 闪屏生成脚本
+│   ├── generate-splash.cjs     # 闪屏生成脚本
+│   └── generate-test-fixtures.mjs # 测试夹具生成器（npm run fixtures:generate）
 ├── server/
 │   └── ftpProxy.ts             # Vite 开发服务器 FTP 代理中间件
 ├── src/
@@ -326,7 +328,7 @@ IndexedDB（`kuro-reader-db`，**v6**），9 个 Object Store，由 [db.ts](src/
 
 ## 七、测试现状
 
-**31 个测试文件、274 个用例，全部通过**（`npm run test`，fake-indexeddb + jsdom 环境）。
+**32 个测试文件、305 个用例，全部通过**（`npm run test`，fake-indexeddb + jsdom 环境）。
 
 | 测试文件 | 覆盖范围 |
 |----------|----------|
@@ -360,6 +362,7 @@ IndexedDB（`kuro-reader-db`，**v6**），9 个 Object Store，由 [db.ts](src/
 | `hooks/useSpeech.test.tsx` | TTS 分块队列 / 会话失效 / 倍速 / 降级 |
 | `services/opds.test.ts` | OPDS Atom 解析 / 文件名推断 / Basic 认证 |
 | `components/OpdsBrowser.test.tsx` | OPDS 浏览（加载/下钻/下载导入/错误） |
+| `parsers/boundaryFixtures.test.ts` | 边界矩阵回归：以 `test-fixtures/` 真实文件驱动真实解析管线（31 用例） |
 
 测试基建：`src/test/setup.ts` 全局提供 fake-indexeddb 与 `URL.createObjectURL/revokeObjectURL` stub。覆盖重点在服务层、工具函数、Store 与阅读器子组件；**页面组件仍缺少测试**。
 

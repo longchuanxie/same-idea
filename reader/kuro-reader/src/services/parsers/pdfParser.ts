@@ -27,9 +27,11 @@ function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality?: number)
   })
 }
 
-/** 解析 PDF 文档（导出供测试与后续按需渲染复用） */
-export async function loadPdfDocument(data: ArrayBuffer): Promise<PDFDocumentProxy> {
-  return getDocument({ data }).promise
+/** 解析 PDF 文档（导出供测试与后续按需渲染复用）；pdfjs 6 要求纯 Uint8Array 且显式拒绝 Buffer */
+export async function loadPdfDocument(data: ArrayBuffer | Uint8Array): Promise<PDFDocumentProxy> {
+  // 跨 realm 安全转换：不能依赖 instanceof（测试环境的 Buffer 可能来自不同 realm）
+  const bytes = data instanceof ArrayBuffer ? data : Uint8Array.from(data as ArrayLike<number>);
+  return getDocument({ data: bytes }).promise
 }
 
 export class PdfParser implements BookParser {

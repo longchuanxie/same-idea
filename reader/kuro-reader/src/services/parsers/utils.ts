@@ -90,7 +90,8 @@ export function splitTextIntoChapters(text: string): ParsedTextChapter[] {
   for (const line of lines) {
     const trimmed = line.trim()
 
-    if (isChapterTitle(trimmed)) {
+    // 传入原始行：isChapterTitle 内部依赖前导空白判断「缩进伪标题」
+    if (isChapterTitle(line)) {
       // 保存之前的章节
       if (currentContent.length > 0 || foundFirstChapter) {
         const content = currentContent.join('\n').trim()
