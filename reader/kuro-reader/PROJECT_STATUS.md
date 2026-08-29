@@ -269,7 +269,7 @@ IndexedDB（`kuro-reader-db`，**v6**），9 个 Object Store，由 [db.ts](src/
 
 ### 4.9 阅读统计
 
-[useStatsStore](src/stores/useStatsStore.ts)：总阅读时长、连续天数、近 7 天数据、会话记录（每分钟采样）、localStorage 持久化。
+[useStatsStore](src/stores/useStatsStore.ts) + [readingHeatmap](src/utils/readingHeatmap.ts)：总阅读时长、连续天数、15 周日历热力图（按每日目标定档）、每日阅读目标与连续达标、近 7 天趋势、会话记录（每分钟采样）。
 
 ### 4.10 云端同步与设置
 
@@ -369,6 +369,7 @@ IndexedDB（`kuro-reader-db`，**v6**），9 个 Object Store，由 [db.ts](src/
 | `components/OpdsBrowser.test.tsx` | OPDS 浏览（加载/下钻/下载导入/错误） |
 | `parsers/boundaryFixtures.test.ts` | 边界矩阵回归：以 `test-fixtures/` 真实文件驱动真实解析管线（31 用例） |
 | `services/cloudSync.test.ts` | 同步载荷合并（逐条 LWW）/ 同步 URL / GET-MERGE-PUT 流程 |
+| `utils/readingHeatmap.test.ts` | 日历热力图聚合 / 强度分档 / 目标连续达标 |
 
 测试基建：`src/test/setup.ts` 全局提供 fake-indexeddb 与 `URL.createObjectURL/revokeObjectURL` stub。覆盖重点在服务层、工具函数、Store 与阅读器子组件；**页面组件仍缺少测试**。
 

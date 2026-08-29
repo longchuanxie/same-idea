@@ -13,8 +13,11 @@ interface ReadingSession {
 interface StatsState {
   stats: ReadingStats;
   readingSessions: ReadingSession[];
+  /** 每日阅读目标（分钟），用于热力图强度与达标连击 */
+  dailyGoalMinutes: number;
 
   addReadingSession: (bookId: string, minutes: number) => void;
+  setDailyGoalMinutes: (minutes: number) => void;
   getStats: () => ReadingStats;
   calculateWeeklyData: () => { day: string; hours: number }[];
 }
@@ -37,7 +40,9 @@ function getDayLabel(date: Date): string {
 }
 
 function getDateString(date: Date): string {
-  return date.toISOString().split('T')[0];
+  // 本地日期：toISOString 按 UTC 换算，晚间阅读会被记到前一天
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 function calculateStreaks(dates: string[]) {
@@ -89,6 +94,7 @@ export const useStatsStore = create<StatsState>()(
     (set, get) => ({
       stats: DEFAULT_STATS,
       readingSessions: [],
+      dailyGoalMinutes: 30,
 
       addReadingSession: (bookId, minutes) => {
         if (minutes <= 0) return;
@@ -114,6 +120,10 @@ export const useStatsStore = create<StatsState>()(
             },
           };
         });
+      },
+
+      setDailyGoalMinutes: (minutes) => {
+        set({ dailyGoalMinutes: Math.max(0, Math.round(minutes)) });
       },
 
       getStats: () => {

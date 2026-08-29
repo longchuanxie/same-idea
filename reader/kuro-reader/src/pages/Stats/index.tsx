@@ -2,12 +2,36 @@ import React, { useEffect } from 'react';
 
 import { FormatBadge } from '@/components/atoms/FormatBadge';
 import { useLibraryStore } from '@/stores/useLibraryStore';
+import { cn } from '@/utils/cn';
 import { useStatsStore } from '@/stores/useStatsStore';
+import {
+  buildReadingHeatmap,
+  getGoalStreak,
+  getTodayMinutes,
+} from '@/utils/readingHeatmap';
+
+const HEATMAP_WEEKS = 15;
+const GOAL_PRESETS = [15, 30, 60, 120];
+
+const HEATMAP_LEVEL_CLASSES = [
+  'bg-surface-variant',
+  'bg-primary/25',
+  'bg-primary/50',
+  'bg-primary/75',
+  'bg-primary',
+];
 
 export const StatsPage: React.FC = () => {
-  const { getStats } = useStatsStore();
+  const { getStats, readingSessions, dailyGoalMinutes, setDailyGoalMinutes } = useStatsStore();
   const { books, loadBooks } = useLibraryStore();
   const stats = getStats();
+
+  const heatmap = buildReadingHeatmap(readingSessions, dailyGoalMinutes, HEATMAP_WEEKS);
+  const todayMinutes = getTodayMinutes(readingSessions);
+  const goalStreak = getGoalStreak(readingSessions, dailyGoalMinutes);
+  const goalPercent = dailyGoalMinutes > 0
+    ? Math.min(100, Math.round((todayMinutes / dailyGoalMinutes) * 100))
+    : 0;
 
   useEffect(() => {
     loadBooks();
@@ -47,6 +71,44 @@ export const StatsPage: React.FC = () => {
             <span className="font-body text-body-md text-on-surface-variant">天</span>
           </div>
         </div>
+        <div className="border border-outline-variant bg-transparent p-6 flex flex-col gap-3 md:col-span-2">
+          <div className="flex items-center gap-2 text-on-surface-variant">
+            <span className="material-symbols-outlined text-xl">flag</span>
+            <h3 className="font-label text-label-md uppercase tracking-widest">今日目标</h3>
+            <span className="font-label text-label-sm text-on-surface-variant opacity-60 ml-auto">
+              连续达标 {goalStreak} 天
+            </span>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="font-display text-display-lg-mobile md:text-display-lg text-primary">{todayMinutes}</span>
+            <span className="font-body text-body-md text-on-surface-variant">
+              / {dailyGoalMinutes} 分钟 · 今日已读 {goalPercent}%
+            </span>
+          </div>
+          <div className="h-2 rounded-full bg-surface-variant overflow-hidden">
+            <div
+              className="h-full bg-primary rounded-full transition-all duration-500"
+              style={{ width: `${goalPercent}%` }}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="font-label text-label-sm text-on-surface-variant mr-1">目标</span>
+            {GOAL_PRESETS.map((preset) => (
+              <button
+                key={preset}
+                className={cn(
+                  'px-3 py-1 rounded-full font-label text-label-sm border transition-colors',
+                  dailyGoalMinutes === preset
+                    ? 'bg-primary text-on-primary border-primary'
+                    : 'border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary'
+                )}
+                onClick={() => setDailyGoalMinutes(preset)}
+              >
+                {preset} 分钟
+              </button>
+            ))}
+          </div>
+        </div>
       </section>
 
       {completedBooks.length > 0 && (
@@ -77,6 +139,37 @@ export const StatsPage: React.FC = () => {
           </div>
         </section>
       )}
+
+      <section className="flex flex-col gap-6">
+        <div className="flex items-center gap-2 border-b border-outline-variant pb-2">
+          <span className="material-symbols-outlined text-on-surface-variant">calendar_view_month</span>
+          <h3 className="font-display text-headline-md text-primary">阅读热力图</h3>
+          <span className="font-label text-label-sm text-on-surface-variant opacity-60 ml-auto">
+            近 {HEATMAP_WEEKS} 周 · 以每日目标 {dailyGoalMinutes} 分钟定档
+          </span>
+        </div>
+        <div className="overflow-x-auto pb-2">
+          <div
+            className="grid grid-flow-col grid-rows-7 gap-1 w-max"
+            style={{ gridAutoColumns: 'minmax(0, 1fr)' }}
+          >
+            {heatmap.map((cell) => (
+              <div
+                key={cell.date}
+                title={`${cell.date} · ${cell.minutes} 分钟`}
+                className={`w-3.5 h-3.5 rounded-sm ${HEATMAP_LEVEL_CLASSES[cell.level]}`}
+              />
+            ))}
+          </div>
+          <div className="flex items-center gap-1 mt-3 text-on-surface-variant">
+            <span className="font-label text-label-xs">少</span>
+            {HEATMAP_LEVEL_CLASSES.map((cls) => (
+              <span key={cls} className={`w-3 h-3 rounded-sm ${cls}`} />
+            ))}
+            <span className="font-label text-label-xs">多</span>
+          </div>
+        </div>
+      </section>
 
       {stats.weeklyData.length > 0 && stats.weeklyData.some((d) => d.hours > 0) && (
         <section className="flex flex-col gap-6 mt-8">
