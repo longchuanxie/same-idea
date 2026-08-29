@@ -85,11 +85,11 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
               <span className="material-symbols-outlined text-[24px]">search</span>
             </button>
             <button
-              aria-label="通知"
+              aria-label="阅读统计"
               className="w-11 h-11 flex items-center justify-center hover:bg-surface-variant rounded-full transition-colors text-on-surface-variant hover:text-primary relative"
               onClick={() => navigate(ROUTES.STATS)}
             >
-              <span className="material-symbols-outlined text-[24px]">notifications</span>
+              <span className="material-symbols-outlined text-[24px]">bar_chart</span>
             </button>
             <div className="relative" ref={menuRef}>
               <button
@@ -106,7 +106,7 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
                     onClick={() => handleMenuAction(() => navigate(ROUTES.IMPORT))}
                   >
                     <span className="material-symbols-outlined text-[20px]">upload_file</span>
-                    <span className="font-label text-label-md">导入漫画</span>
+                    <span className="font-label text-label-md">导入书籍</span>
                   </button>
                   <button
                     className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-variant transition-colors text-on-surface-variant hover:text-primary"

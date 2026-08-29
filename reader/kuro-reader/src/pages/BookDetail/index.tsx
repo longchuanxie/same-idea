@@ -10,6 +10,9 @@ import { annotationRepo } from '@/services/storage/annotationRepo';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import type { Book } from '@/types';
 import { exportAnnotationsToMarkdown } from '@/utils/annotationExport';
+
+/** 章节标题已自带「第N话/章/回」前缀时，目录不再叠加序号 */
+const TITLE_HAS_NUMBER_PREFIX = /^第\s*\d+\s*[话章回]/;
 import { cn } from '@/utils/cn';
 
 const TAG_INPUT_FOCUS_DELAY_MS = 50; // 等待弹窗渲染完成后聚焦
@@ -226,7 +229,7 @@ export const BookDetailPage: React.FC = () => {
                 </div>
 
                 <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-6">
-                  {tags.filter((t) => t.bookIds.includes(book.id)).map((tag) => (
+                  {tags.filter((t) => t.bookIds.includes(book.id) && !book.genres.includes(t.name)).map((tag) => (
                     <span
                       key={tag.id}
                       className="inline-flex items-center gap-1 px-3 py-1 rounded-full font-label text-label-sm text-white"
@@ -382,7 +385,7 @@ export const BookDetailPage: React.FC = () => {
             <div className="flex justify-between items-center mb-6">
               <h2 className="font-display text-headline-md text-primary">目录</h2>
               <span className="font-label text-label-sm text-on-surface-variant">
-                共 {book.chapters.length} 话
+                共 {book.chapters.length} {book.format === 'text' ? '章' : '话'}
               </span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -397,8 +400,16 @@ export const BookDetailPage: React.FC = () => {
                     onClick={() => navigate(readerPathForBook(book, ch.id))}
                   >
                     <div>
-                      <h3 className="font-label text-label-md text-primary">第 {ch.number} 话</h3>
-                      <p className="font-label text-label-sm text-on-surface-variant">{ch.title}</p>
+                      {TITLE_HAS_NUMBER_PREFIX.test(ch.title) ? (
+                        <h3 className="font-label text-label-md text-primary">{ch.title}</h3>
+                      ) : (
+                        <>
+                          <h3 className="font-label text-label-md text-primary">
+                            第 {ch.number} {book.format === 'text' ? '章' : '话'}
+                          </h3>
+                          <p className="font-label text-label-sm text-on-surface-variant">{ch.title}</p>
+                        </>
+                      )}
                     </div>
                     {statusText && (
                       <span className={`font-label text-label-sm ${ch.status === 'reading' ? 'text-primary' : 'text-on-surface-variant'}`}>

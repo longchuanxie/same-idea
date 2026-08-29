@@ -36,7 +36,7 @@ const getAppBarConfig = (pathname: string): AppBarConfig => {
     return { variant: 'back', title: '子书库' };
   }
   if (pathname === '/import') {
-    return { variant: 'back', title: '导入漫画' };
+    return { variant: 'back', title: '导入书籍' };
   }
   if (pathname === '/import/custom-cloud') {
     return { variant: 'back', title: '自定义云盘' };

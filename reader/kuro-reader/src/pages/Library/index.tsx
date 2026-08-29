@@ -72,11 +72,9 @@ export const LibraryPage: React.FC = () => {
     }
   }, [location.state, location.pathname, navigate]);
 
-  const subLibraryBookIds = new Set(subLibraries.flatMap((sl) => sl.bookIds));
-
   const displayedBooks = (() => {
+    // 子书库是分组视图而非互斥分类：成员书籍仍保留在书架列表中
     let result = activeTagId ? getBooksByTag(activeTagId) : books;
-    result = result.filter((b) => !subLibraryBookIds.has(b.id));
     if (showFavoritesOnly) {
       result = result.filter((b) => b.isFavorite);
     }
@@ -350,14 +348,6 @@ export const LibraryPage: React.FC = () => {
         ) : (
           <div className="flex items-center gap-3">
             <span className="font-label text-label-sm text-on-surface-variant">{displayedBooks.length} 本</span>
-            <button
-              className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1 py-2"
-              onClick={() => setIsSelectMode(true)}
-              aria-label="批量管理"
-            >
-              <span className="material-symbols-outlined text-[18px]">checklist</span>
-              批量管理
-            </button>
             <div className="relative">
               <button
                 className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1"
@@ -504,7 +494,7 @@ export const LibraryPage: React.FC = () => {
                 </div>
                 <span className="font-label text-label-md text-on-surface-variant group-hover:text-primary transition-colors">新建子书库</span>
               </div>
-              <h4 className="font-body text-body-lg text-on-surface-variant leading-tight">&nbsp;</h4>
+              <div className="font-body text-body-lg text-on-surface-variant leading-tight" aria-hidden="true">&nbsp;</div>
             </article>
             )}
           </div>
@@ -561,7 +551,7 @@ export const LibraryPage: React.FC = () => {
                 }}
               >
                 {tag.name}
-                <span className="ml-1 opacity-70">{tag.bookIds.length}</span>
+                <span className="ml-1.5 opacity-70">· {tag.bookIds.length}</span>
               </button>
             ))}
           </div>

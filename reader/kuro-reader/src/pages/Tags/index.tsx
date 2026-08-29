@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 
 import { useNavigate } from 'react-router-dom';
 
@@ -18,7 +18,12 @@ const TAG_COLORS = [
 
 export const TagsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { tags, coverUrls, createTag, updateTag, deleteTag, getBooksByTag } = useLibraryStore();
+  const { tags, coverUrls, createTag, updateTag, deleteTag, getBooksByTag, loadBooks } = useLibraryStore();
+
+  // 直接访问本页时加载标签数据（tags 随 loadBooks 一起拉取）
+  useEffect(() => {
+    loadBooks();
+  }, [loadBooks]);
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [editingTagId, setEditingTagId] = useState<string | null>(null);

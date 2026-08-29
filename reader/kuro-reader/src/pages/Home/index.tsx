@@ -15,7 +15,7 @@ export const HomePage: React.FC = () => {
     loadBooks();
   }, [loadBooks]);
 
-  const continueReading = getContinueReading().slice(0, 1);
+  const continueReading = getContinueReading();
   const favorites = getFavorites();
 
   return (
@@ -78,7 +78,7 @@ export const HomePage: React.FC = () => {
                   <div className="mt-auto">
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-label text-label-sm text-on-surface-variant">阅读进度</span>
-                      <span className="font-label text-label-sm text-primary">{pct}%</span>
+                      <span className="font-label text-label-sm text-primary">{pct > 0 ? `${pct}%` : "刚开始"}</span>
                     </div>
                     <div className="w-full h-[2px] bg-secondary-container">
                       <div className="h-full bg-primary transition-all duration-300" style={{ width: `${pct}%` }} />
