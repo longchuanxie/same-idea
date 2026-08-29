@@ -15,7 +15,11 @@
 | `comic-nested-folders.cbz` | 嵌套目录 | 递归收集 3 页 |
 | `comic-chinese-names.cbz` | 中文文件名（UTF-8 标志位） | 正常 2 页 |
 | `comic-mixed-nonimage.cbz` | 混入 txt/xml | 非图片被忽略，仅 1 页 |
-| `comic-single-page.cbz` | 单页 | 1 页 |
+| `comic-single-page.cbz` | 单页 | 1 页（单章） |
+| `comic-chapter-folders.cbz` | 章节识别：目录模式 | 2 章（第01话/第02话），扁平数组不变 |
+| `comic-chapter-nested.cbz` | 章节识别：内页文件夹过度细分 | 上退一级目录 → Ch.001/Ch.002 两章 |
+| `comic-chapter-filename.cbz` | 章节识别：文件名序列 | c01_*/c02_* → 2 章 |
+| `comic-webtoon-tall.cbz` | 章节识别：条漫竖长图 | 64×512（宽高比 8）→ 一图一话 3 章 |
 | `comic-empty.zip` | 0 条目 | **报错**「压缩包中未找到任何图片」 |
 | `comic-no-images.zip` | 只有文本无图片 | **报错**同上 |
 

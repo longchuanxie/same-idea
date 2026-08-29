@@ -143,6 +143,19 @@ function buildBookFromParsed(parsed: ParsedBook, bookId: string): { book: Book; 
     pages = parsed.imagePageNames;
   }
 
+  // 漫画：导入期识别出 ≥2 章时构建多章（目录模式/文件名序列/条漫宽高比）
+  if (parsed.format === 'comic' && parsed.chapters && parsed.chapters.length > 0) {
+    book.totalChapters = parsed.chapters.length;
+    book.chapters = parsed.chapters.map((ch, idx) => ({
+      id: `${bookId}-ch${idx + 1}`,
+      bookId,
+      number: idx + 1,
+      title: ch.title,
+      pages: ch.imagePageNames,
+      status: 'unread' as const,
+    }));
+  }
+
   // 文本格式：支持多章节
   if (parsed.format === 'text') {
     // 提取作者（如果解析器提供了）
@@ -289,7 +302,13 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
 
       // Save format-specific content
       if (parsed.format === 'comic') {
-        await pageRepo.saveAllPages(bookId, chapterId, parsed.imagePages);
+        if (parsed.chapters && parsed.chapters.length > 0) {
+          for (let i = 0; i < parsed.chapters.length; i++) {
+            await pageRepo.saveAllPages(bookId, `${bookId}-ch${i + 1}`, parsed.chapters[i].imagePages);
+          }
+        } else {
+          await pageRepo.saveAllPages(bookId, chapterId, parsed.imagePages);
+        }
       } else if (parsed.format === 'pdf') {
         // 渲染页供阅读器使用；原始 PDF 一并保留
         await pageRepo.saveAllPages(bookId, chapterId, parsed.imagePages);
@@ -347,7 +366,13 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
       const { book, chapter } = buildBookFromParsed(parsed, bookId);
 
       await bookRepo.saveCover(bookId, parsed.coverBlob);
-      await pageRepo.saveAllPages(bookId, chapter.id, parsed.imagePages);
+      if (parsed.chapters && parsed.chapters.length > 0) {
+        for (let i = 0; i < parsed.chapters.length; i++) {
+          await pageRepo.saveAllPages(bookId, `${bookId}-ch${i + 1}`, parsed.chapters[i].imagePages);
+        }
+      } else {
+        await pageRepo.saveAllPages(bookId, chapter.id, parsed.imagePages);
+      }
 
       set({ importProgress: 80 });
 
@@ -443,7 +468,13 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
           await bookRepo.saveCover(bookId, parsed.coverBlob);
 
           if (parsed.format === 'comic') {
-            await pageRepo.saveAllPages(bookId, chapterId, parsed.imagePages);
+            if (parsed.chapters && parsed.chapters.length > 0) {
+              for (let i = 0; i < parsed.chapters.length; i++) {
+                await pageRepo.saveAllPages(bookId, `${bookId}-ch${i + 1}`, parsed.chapters[i].imagePages);
+              }
+            } else {
+              await pageRepo.saveAllPages(bookId, chapterId, parsed.imagePages);
+            }
           } else if (parsed.format === 'text') {
             await bookFileRepo.save(bookId, parsed.textFile);
           }

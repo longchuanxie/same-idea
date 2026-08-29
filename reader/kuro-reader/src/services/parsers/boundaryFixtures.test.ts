@@ -90,6 +90,38 @@ describe('漫画压缩包边界', () => {
     expect(parsed.imagePages).toHaveLength(1)
   })
 
+  it('章节识别：目录模式（第N话）→ 2 章', async () => {
+    const parsed = await parseComic('comics/comic-chapter-folders.cbz')
+    expect(parsed.chapters).toBeDefined()
+    expect(parsed.chapters!.map((c) => c.title)).toEqual(['第01话', '第02话'])
+    expect(parsed.chapters![0].imagePages).toHaveLength(2)
+    // 扁平数组保持不变（兼容旧消费方）
+    expect(parsed.imagePages).toHaveLength(4)
+  })
+
+  it('章节识别：零售内页文件夹过度细分 → 上退一级目录', async () => {
+    const parsed = await parseComic('comics/comic-chapter-nested.cbz')
+    expect(parsed.chapters!.map((c) => c.title)).toEqual(['Ch.001', 'Ch.002'])
+    expect(parsed.chapters![0].imagePages).toHaveLength(2)
+  })
+
+  it('章节识别：文件名序列（前缀+首数字段）→ 2 章', async () => {
+    const parsed = await parseComic('comics/comic-chapter-filename.cbz')
+    expect(parsed.chapters!.map((c) => c.title)).toEqual(['第 1 话', '第 2 话'])
+  })
+
+  it('章节识别：条漫极端竖长图 → 一图一话 3 章', async () => {
+    const parsed = await parseComic('comics/comic-webtoon-tall.cbz')
+    expect(parsed.chapters).toBeDefined()
+    expect(parsed.chapters!.length).toBe(3)
+    expect(parsed.chapters![0].imagePages).toHaveLength(1)
+  })
+
+  it('无章节信号：基础 CBZ 保持单章（chapters undefined）', async () => {
+    const parsed = await parseComic('comics/comic-basic-3pages.cbz')
+    expect(parsed.chapters).toBeUndefined()
+  })
+
   it.each(['comics/comic-empty.zip', 'comics/comic-no-images.zip'])(
     '空包/无图片包：%s 应报错而非静默成功',
     async (rel) => {

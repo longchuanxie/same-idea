@@ -50,13 +50,6 @@ function naturalCompare(a: string, b: string): number {
   return ax.length - bx.length;
 }
 
-function sortImagesByNumber(files: string[]): string[] {
-  return [...files].sort((a, b) => {
-    const nameA = a.split('/').pop() ?? a;
-    const nameB = b.split('/').pop() ?? b;
-    return naturalCompare(nameA, nameB);
-  });
-}
 
 const BRACKET_PATTERN = /[【[](.+?)[】\]]/;
 const LEADING_CHARS_PATTERN = /^[[\]【】\s]+/u;
@@ -77,6 +70,8 @@ export interface ParsedArchive {
   coverBlob: Blob | null;
   pages: Blob[];
   pageNames: string[];
+  /** zip 内完整路径（与 pages 同序）；散图文件夹为相对路径或文件名 */
+  paths: string[];
 }
 
 export interface ArchiveEntry {
@@ -88,6 +83,8 @@ export interface StreamingArchiveResult {
   title: string;
   coverBlob: Blob | null;
   pageNames: string[];
+  /** zip 内完整路径（与抽取顺序同序），供章节拆分使用 */
+  paths: string[];
   totalPages: number;
 }
 
@@ -189,7 +186,8 @@ export async function parseArchiveFile(file: File): Promise<ParsedArchive> {
     }
   }
 
-  const sortedPaths = sortImagesByNumber(imageFiles.map((f) => f.path));
+  // 按完整路径自然排序：目录前缀参与顺序（跨目录同名页不交错），也是章节拆分的输入
+  const sortedPaths = [...imageFiles.map((f) => f.path)].sort(naturalCompare);
   const pathToBlob = new Map(imageFiles.map((f) => [f.path, f.blob]));
 
   const pages: Blob[] = [];
@@ -205,7 +203,7 @@ export async function parseArchiveFile(file: File): Promise<ParsedArchive> {
   const coverBlob = pages.length > 0 ? pages[0] : null;
   const title = extractTitleFromFileName(file.name);
 
-  return { title, coverBlob, pages, pageNames };
+  return { title, coverBlob, pages, pageNames, paths: sortedPaths };
 }
 
 export async function parseArchiveFileStreaming(
@@ -260,18 +258,16 @@ export async function parseArchiveFileStreaming(
     }
   }
 
-  const sortedEntries = [...imageEntries].sort((a, b) => {
-    const nameA = a.path.split('/').pop() ?? a.path;
-    const nameB = b.path.split('/').pop() ?? b.path;
-    return naturalCompare(nameA, nameB);
-  });
+  const sortedEntries = [...imageEntries].sort((a, b) => naturalCompare(a.path, b.path));
 
   const pageNames: string[] = [];
+  const paths: string[] = [];
   let coverBlob: Blob | null = null;
 
   for (let i = 0; i < sortedEntries.length; i++) {
     const entry = sortedEntries[i];
     pageNames.push(entry.path.split('/').pop() ?? entry.path);
+    paths.push(entry.path);
     if (i === 0) {
       coverBlob = entry.blob;
     }
@@ -280,7 +276,7 @@ export async function parseArchiveFileStreaming(
 
   const title = extractTitleFromFileName(file.name);
 
-  return { title, coverBlob, pageNames, totalPages: sortedEntries.length };
+  return { title, coverBlob, pageNames, paths, totalPages: sortedEntries.length };
 }
 
 function flattenArchiveFiles(
@@ -305,17 +301,21 @@ function flattenArchiveFiles(
 export async function parseImageFiles(files: File[], folderName: string): Promise<ParsedArchive> {
   const imageFiles = files.filter((f) => isImageFile(f.name));
 
-  const sortedFiles = [...imageFiles].sort((a, b) => naturalCompare(a.name, b.name));
+  // 相对路径（含子目录）参与排序与章节拆分
+  const pathOf = (f: File) => (f as File & { webkitRelativePath?: string }).webkitRelativePath || f.name;
+  const sortedFiles = [...imageFiles].sort((a, b) => naturalCompare(pathOf(a), pathOf(b)));
 
   const pages: Blob[] = [];
   const pageNames: string[] = [];
+  const paths: string[] = [];
   for (const file of sortedFiles) {
     pages.push(file);
     pageNames.push(file.name);
+    paths.push(pathOf(file));
   }
 
   const coverBlob = pages.length > 0 ? pages[0] : null;
   const title = extractTitleFromFileName(folderName);
 
-  return { title, coverBlob, pages, pageNames };
+  return { title, coverBlob, pages, pageNames, paths };
 }

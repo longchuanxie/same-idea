@@ -233,7 +233,7 @@ kuro-reader/
 
 | Parser | 格式 | 要点 |
 |--------|------|------|
-| ComicArchiveParser | zip/cbz/rar/cbr | JSZip 优先，RAR/失败回退 libarchive.js；流式解析；动态超时；自然排序 |
+| ComicArchiveParser | zip/cbz/rar/cbr | JSZip 优先，RAR/失败回退 libarchive.js；流式解析；动态超时；完整路径自然排序；**导入期章节识别**（目录模式/文件名序列/条漫宽高比） |
 | EpubParser | epub | JSZip 解包；OPF spine 定序；NCX/EPUB3 nav 提取章节标题；导入期 XHTML 转纯文本 + 封面 |
 | TextParser | txt/md/markdown | UTF-8/GBK 编码自动检测；导入时拆分章节；生成占位封面 |
 | PdfParser | pdf | pdfjs-dist 逐页渲染为图片（≤1400px 宽 / 2x 上限，JPEG），复用漫画阅读器；原始文件存 bookFiles |
@@ -368,8 +368,10 @@ IndexedDB（`kuro-reader-db`，**v6**），9 个 Object Store，由 [db.ts](src/
 | `hooks/useSpeech.test.tsx` | TTS 分块队列 / 会话失效 / 倍速 / 降级 |
 | `services/opds.test.ts` | OPDS Atom 解析 / 文件名推断 / Basic 认证 |
 | `components/OpdsBrowser.test.tsx` | OPDS 浏览（加载/下钻/下载导入/错误） |
-| `parsers/boundaryFixtures.test.ts` | 边界矩阵回归：以 `test-fixtures/` 真实文件驱动真实解析管线（31 用例） |
+| `parsers/boundaryFixtures.test.ts` | 边界矩阵回归：以 `test-fixtures/` 真实文件驱动真实解析管线（含章节识别 5 类，36 用例） |
 | `services/cloudSync.test.ts` | 同步载荷合并（逐条 LWW）/ 同步 URL / GET-MERGE-PUT 流程 |
+| `utils/comicChapterSplit.test.ts` | 漫画章节拆分：目录模式/序列/宽高比/过度细分回退 |
+| `utils/imageSize.test.ts` | PNG/JPEG 头部尺寸读取 |
 | `utils/readingHeatmap.test.ts` | 日历热力图聚合 / 强度分档 / 目标连续达标 |
 
 测试基建：`src/test/setup.ts` 全局提供 fake-indexeddb 与 `URL.createObjectURL/revokeObjectURL` stub。覆盖重点在服务层、工具函数、Store 与阅读器子组件；**页面组件仍缺少测试**。

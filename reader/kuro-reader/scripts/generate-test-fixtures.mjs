@@ -25,6 +25,63 @@ function write(relPath, data) {
   console.log('  +', relPath);
 }
 
+/** 纯色 PNG（任意尺寸）：IHDR + stored-deflate IDAT，供条漫宽高比夹具 */
+function makePng(width, height, r, g, b) {
+  const crcTable = [];
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    crcTable[n] = c >>> 0;
+  }
+  const crc32 = (buf) => {
+    let c = 0xffffffff;
+    for (const byte of buf) c = crcTable[(c ^ byte) & 0xff] ^ (c >>> 8);
+    return (c ^ 0xffffffff) >>> 0;
+  };
+  const chunk = (type, data) => {
+    const len = new Uint8Array(4);
+    new DataView(len.buffer).setUint32(0, data.length);
+    const typeBytes = new Uint8Array([...type].map((c) => c.charCodeAt(0)));
+    const body = new Uint8Array(data.length + 4);
+    body.set(typeBytes); body.set(data, 4);
+    const crc = new Uint8Array(4);
+    new DataView(crc.buffer).setUint32(0, crc32(body));
+    return new Uint8Array([...len, ...body, ...crc]);
+  };
+  const ihdr = new Uint8Array(13);
+  new DataView(ihdr.buffer).setUint32(0, width);
+  new DataView(ihdr.buffer).setUint32(4, height);
+  ihdr[8] = 8; ihdr[9] = 2;
+  const raw = new Uint8Array(height * (width * 3 + 1));
+  for (let y = 0; y < height; y++) {
+    const row = y * (width * 3 + 1);
+    raw[row] = 0;
+    for (let x = 0; x < width; x++) {
+      raw[row + 1 + x * 3] = r; raw[row + 2 + x * 3] = g; raw[row + 3 + x * 3] = b;
+    }
+  }
+  const blocks = [];
+  for (let i = 0; i < raw.length; i += 65535) {
+    const slice = raw.subarray(i, i + 65535);
+    const last = i + 65535 >= raw.length ? 1 : 0;
+    blocks.push(new Uint8Array([last, slice.length & 255, (slice.length >> 8) & 255, ~slice.length & 255, (~(slice.length >> 8)) & 255, ...slice]));
+  }
+  const zdata = new Uint8Array(blocks.reduce((n, blk) => n + blk.length, 0));
+  let zi = 0; for (const blk of blocks) { zdata.set(blk, zi); zi += blk.length; }
+  const zlib = new Uint8Array(zdata.length + 6);
+  zlib[0] = 0x78; zlib[1] = 0x01;
+  const A = 65521; let a = 1, bb = 0;
+  for (const byte of raw) { a = (a + byte) % A; bb = (bb + a) % A; }
+  zlib.set(zdata, 2);
+  zlib.set(new Uint8Array([(bb >> 8) & 255, bb & 255, (a >> 8) & 255, a & 255]), zlib.length - 4);
+  const sig = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
+  const parts = [sig, chunk('IHDR', ihdr), chunk('IDAT', zlib), chunk('IEND', new Uint8Array(0))];
+  const total = parts.reduce((n, part) => n + part.length, 0);
+  const out = new Uint8Array(total);
+  let o = 0; for (const part of parts) { out.set(part, o); o += part.length; }
+  return Buffer.from(out);
+}
+
 // 1x1 红色 PNG（解析器不读像素，占位即可）
 const PNG_1X1 = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
@@ -114,6 +171,30 @@ async function main() {
 
   // 单页漫画
   await write('comics/comic-single-page.cbz', await zipOf({ 'only.jpg': PNG_1X1 }));
+
+  // 章节化：目录模式（第N话）
+  await write('comics/comic-chapter-folders.cbz', await zipOf({
+    '第01话/001.jpg': PNG_1X1, '第01话/002.jpg': PNG_1X1,
+    '第02话/001.jpg': PNG_1X1, '第02话/002.jpg': PNG_1X1,
+  }));
+
+  // 章节化：零售扫描包（内页文件夹过度细分 → 上退一级目录）
+  await write('comics/comic-chapter-nested.cbz', await zipOf({
+    'Ch.001/0001/001.jpg': PNG_1X1, 'Ch.001/0002/001.jpg': PNG_1X1,
+    'Ch.002/0001/001.jpg': PNG_1X1,
+  }));
+
+  // 章节化：文件名序列（前缀+首数字段）
+  await write('comics/comic-chapter-filename.cbz', await zipOf({
+    'c01_001.jpg': PNG_1X1, 'c01_002.jpg': PNG_1X1,
+    'c02_001.jpg': PNG_1X1, 'c02_002.jpg': PNG_1X1,
+  }));
+
+  // 条漫：极端竖长图，一图一话（64x512，宽高比 8）
+  const TALL = () => makePng(64, 512, 120, 90, 60);
+  await write('comics/comic-webtoon-tall.cbz', await zipOf({
+    'strip1.png': TALL(), 'strip2.png': TALL(), 'strip3.png': TALL(),
+  }));
 
   // 空压缩包（0 条目）→ 导入应报「压缩包中未找到任何图片」
   await write('comics/comic-empty.zip', await zipOf({}));

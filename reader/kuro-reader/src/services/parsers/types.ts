@@ -12,13 +12,22 @@ interface ParsedBookBase {
   pageRefs?: PageRef[]
 }
 
+/** 导入期识别出的漫画章节分组（目录模式 / 文件名序列 / 条漫宽高比） */
+export interface ParsedComicChapter {
+  title: string
+  imagePages: Blob[]
+  imagePageNames: string[]
+}
+
 /**
  * Comic 分支：解压后的图片页集合必填。
+ * chapters 为导入期章节识别结果（≥2 章时提供），缺失时按单章处理。
  */
 export interface ParsedComicBook extends ParsedBookBase {
   format: 'comic'
   imagePages: Blob[]
   imagePageNames: string[]
+  chapters?: ParsedComicChapter[]
 }
 
 /**

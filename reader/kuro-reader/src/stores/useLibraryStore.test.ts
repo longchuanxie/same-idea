@@ -448,6 +448,49 @@ describe('importFile', () => {
     expect(bookFileRepoMock.save).toHaveBeenCalledWith(result!.id, pdfParsed.pdfFile)
   })
 
+  it('imports comic with detected chapters: saves pages per chapter id', async () => {
+    const chapteredParsed: ParsedBook = {
+      format: 'comic',
+      title: '章节漫画',
+      coverBlob: new Blob(['cover']),
+      imagePages: [new Blob(['a']), new Blob(['b']), new Blob(['c']), new Blob(['d'])],
+      imagePageNames: ['a.jpg', 'b.jpg', 'c.jpg', 'd.jpg'],
+      chapters: [
+        { title: '第01话', imagePages: [new Blob(['a']), new Blob(['b'])], imagePageNames: ['a.jpg', 'b.jpg'] },
+        { title: '第02话', imagePages: [new Blob(['c']), new Blob(['d'])], imagePageNames: ['c.jpg', 'd.jpg'] },
+      ],
+    }
+    getParserForFileMock.mockReturnValue({
+      canParse: () => true,
+      parse: vi.fn().mockResolvedValue(chapteredParsed),
+    })
+    bookRepoMock.saveCover.mockResolvedValue(undefined)
+    pageRepoMock.saveAllPages.mockResolvedValue(undefined)
+    bookRepoMock.save.mockResolvedValue(undefined)
+
+    const result = await useLibraryStore.getState().importFile(new File(['x'], '章节漫画.cbz'))
+
+    expect(result).not.toBeNull()
+    expect(result?.totalChapters).toBe(2)
+    expect(result?.chapters.map((c) => c.title)).toEqual(['第01话', '第02话'])
+    expect(result?.chapters[0].pages).toEqual(['a.jpg', 'b.jpg'])
+
+    // 每章独立存储
+    expect(pageRepoMock.saveAllPages).toHaveBeenCalledTimes(2)
+    expect(pageRepoMock.saveAllPages).toHaveBeenNthCalledWith(
+      1,
+      result!.id,
+      `${result!.id}-ch1`,
+      chapteredParsed.chapters![0].imagePages
+    )
+    expect(pageRepoMock.saveAllPages).toHaveBeenNthCalledWith(
+      2,
+      result!.id,
+      `${result!.id}-ch2`,
+      chapteredParsed.chapters![1].imagePages
+    )
+  })
+
   it('uses streaming parse for files above 50MB when available', async () => {
     const parse = vi.fn()
     const parseStreaming = vi.fn().mockResolvedValue(comicParsed)

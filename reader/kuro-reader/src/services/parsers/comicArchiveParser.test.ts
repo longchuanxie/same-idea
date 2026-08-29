@@ -50,6 +50,7 @@ describe('ComicArchiveParser.parse via mock', () => {
       coverBlob: testBlob,
       pages: [b1, b2, b3],
       pageNames: ['1.jpg', '2.jpg', '3.jpg'],
+      paths: ['1.jpg', '2.jpg', '3.jpg'],
     })
 
     const parser = new ComicArchiveParser()
@@ -75,6 +76,7 @@ describe('ComicArchiveParser.parse via mock', () => {
       coverBlob: null,
       pages: [],
       pageNames: [],
+      paths: [],
     })
 
     const parser = new ComicArchiveParser()
@@ -94,6 +96,7 @@ describe('ComicArchiveParser.parseStreaming via mock', () => {
         title: 't',
         coverBlob: blobs[0],
         pageNames: ['0', '1', '2', '3', '4'],
+        paths: ['0', '1', '2', '3', '4'],
         totalPages: 5,
       }
     })
