@@ -1,11 +1,6 @@
 import { useCallback, useEffect } from 'react';
 
-import { updateStatusBarTheme } from '@/utils/capacitor';
-
-const THEME_COLORS = {
-  light: '#fdf8f8',
-  dark: '#1c1b1c',
-} as const;
+import { CHROME_COLORS, updateStatusBarTheme } from '@/utils/capacitor';
 
 /**
  * useStatusBar Hook
@@ -17,7 +12,7 @@ export const useStatusBar = (isDark: boolean): void => {
   const updateThemeColor = useCallback(() => {
     const meta = document.getElementById('theme-color-meta') as HTMLMetaElement | null;
     if (meta) {
-      meta.content = isDark ? THEME_COLORS.dark : THEME_COLORS.light;
+      meta.content = isDark ? CHROME_COLORS.dark : CHROME_COLORS.light;
     }
   }, [isDark]);
 

@@ -108,20 +108,8 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
                     <span className="material-symbols-outlined text-[20px]">upload_file</span>
                     <span className="font-label text-label-md">导入书籍</span>
                   </button>
-                  <button
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-variant transition-colors text-on-surface-variant hover:text-primary"
-                    onClick={() => handleMenuAction(() => navigate(ROUTES.STATS))}
-                  >
-                    <span className="material-symbols-outlined text-[20px]">bar_chart</span>
-                    <span className="font-label text-label-md">阅读统计</span>
-                  </button>
-                  <button
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-variant transition-colors text-on-surface-variant hover:text-primary"
-                    onClick={() => handleMenuAction(() => navigate(ROUTES.LIBRARY, { state: { selectMode: true } }))}
-                  >
-                    <span className="material-symbols-outlined text-[20px]">checklist</span>
-                    <span className="font-label text-label-md">批量管理</span>
-                  </button>
+                  {/* 阅读统计入口收敛为顶栏图表 icon（建议书 5.3：删除重复项）；
+                      批量管理统一走书库页「管理」按钮，不再绕道菜单 */}
                   <div className="border-t border-outline-variant my-1" />
                   <button
                     className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-variant transition-colors text-on-surface-variant hover:text-primary"

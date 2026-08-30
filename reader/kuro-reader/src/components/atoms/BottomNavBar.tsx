@@ -24,6 +24,8 @@ export interface BottomNavBarProps {
   active?: NavItem;
 }
 
+/** 贴边实心底栏（建议书 5.1）——馆内楼层指示：纸底 + 顶部细线，
+ *  激活项 = 图标填充 + 下方 2px 书脊线；不再悬浮、不再遮挡批量操作条。 */
 export const BottomNavBar: React.FC<BottomNavBarProps> = ({ active = 'home' }) => {
   const navigate = useNavigate();
   const { setActiveNav } = useAppStore();
@@ -38,38 +40,40 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ active = 'home' }) =
     <nav
       ref={navRef}
       className={cn(
-        'lg:hidden landscape:flex',
-        'fixed bottom-8 left-1/2 z-50 -translate-x-1/2',
-        'flex items-center justify-around gap-2 p-2',
-        'landscape:bottom-4 landscape:gap-1 landscape:p-1',
-        'bg-surface-container border border-outline-variant',
-        'w-[calc(100%-48px)] max-w-max-width-content rounded-full',
-        'mb-safe'
+        'lg:hidden',
+        'fixed bottom-0 inset-x-0 z-50',
+        'bg-surface border-t border-outline-variant',
+        'flex items-stretch px-2 pt-1',
+        'pb-safe'
       )}
     >
-     
       {NAV_ITEMS.map((item) => {
         const isActive = item.key === active;
         return (
           <button
             key={item.key}
             data-nav-item
+            aria-current={isActive ? 'page' : undefined}
             className={cn(
-              'relative z-10 flex flex-col items-center justify-center px-4 py-1 rounded-full transition-colors duration-200',
-              'landscape:px-3 landscape:py-0.5',
-              isActive
-                ? 'bg-primary text-on-primary'
-                : 'text-on-surface-variant hover:bg-surface-container-highest'
+              'relative flex-1 flex flex-col items-center justify-center gap-0.5 py-2 rounded',
+              'transition-colors duration-instant ease-instant',
+              isActive ? 'text-primary' : 'text-on-surface-variant'
             )}
             onClick={() => handleClick(item)}
           >
             <span
-              className="material-symbols-outlined text-[24px] transition-[font-variation-settings] duration-300"
+              className="material-symbols-outlined text-icon-lg transition-[font-variation-settings] duration-flow"
               style={isActive ? { fontVariationSettings: "'FILL' 1" } : { fontVariationSettings: "'FILL' 0" }}
             >
               {item.icon}
             </span>
-            <span className="font-label text-label-sm mt-0.5">{item.label}</span>
+            <span className="font-label text-label-sm">{item.label}</span>
+            {isActive && (
+              <span
+                aria-hidden="true"
+                className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-primary rounded-full"
+              />
+            )}
           </button>
         );
       })}
