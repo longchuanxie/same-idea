@@ -29,5 +29,16 @@ export const COPY = {
     saveHighlightOnly: '仅划线',
     pureHighlight: '纯划线',
     clearToPureHighlight: '清空文字即转为纯划线',
+    goTo: '回到此处',
+    remove: '删除',
+    edit: '编辑',
+    save: '保存',
+    cancel: '取消',
+    close: '关闭',
+    styleLabels: {
+      highlight: '水彩笔',
+      underline: '下划线',
+      wavy: '波浪线',
+    },
   },
 } as const;

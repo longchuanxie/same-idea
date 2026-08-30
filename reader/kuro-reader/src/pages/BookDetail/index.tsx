@@ -541,7 +541,7 @@ export const BookDetailPage: React.FC = () => {
                   <button
                     key={ann.id}
                     className="text-left p-4 rounded-card bg-surface-container-low border border-outline-variant hover:bg-surface-container transition-colors"
-                    onClick={() => navigate(readerPathForBook(book, book.chapters[ann.chapterIndex]?.id))}
+                    onClick={() => navigate(readerPathForBook(book, book.chapters[ann.chapterIndex]?.id, ann.id))}
                   >
                     <p className="font-body text-body-md text-on-surface leading-relaxed line-clamp-2">
                       「{ann.selectedText}」

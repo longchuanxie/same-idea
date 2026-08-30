@@ -1,6 +1,6 @@
 import React, { useEffect, useCallback, useRef, useState, useMemo } from 'react';
 
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import { AnnotationDetailModal } from '@/components/molecules/AnnotationDetailModal';
 import { AnnotationList } from '@/components/molecules/AnnotationList';
@@ -18,6 +18,7 @@ import { TextReaderBottomBar } from '@/components/molecules/TextReaderBottomBar'
 import { TextReaderFooter } from '@/components/molecules/TextReaderFooter';
 import { TextReaderHeader } from '@/components/molecules/TextReaderHeader';
 import { UndoToast } from '@/components/molecules/UndoToast';
+import { ANNOTATION_QUERY_PARAM } from '@/constants/routes';
 import { getTextReaderFontFamily } from '@/constants/textReaderFonts';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { useBackHandler } from '@/hooks/useBackHandler';
@@ -169,6 +170,9 @@ interface TextSelectionInfo {
 export const TextReaderPage: React.FC = () => {
   const navigate = useNavigate();
   const { bookId, chapterId } = useParams<{ bookId: string; chapterId?: string }>();
+  const [searchParams] = useSearchParams();
+  /** 外部批注直达目标（?ann=<id>）；一次导航只消费一次 */
+  const annTargetId = searchParams.get(ANNOTATION_QUERY_PARAM);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const progressSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const progressHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -2274,8 +2278,8 @@ export const TextReaderPage: React.FC = () => {
     isSelectingTextRef.current = false;
   }, [buildAnnotationFromSelection]);
 
-  // 批注编辑
-  const handleAnnotationEdit = useCallback(async (updated: Annotation) => {
+  // 批注编辑（补丁式：id 必填，note/style 可选；note 置空即转纯划线）
+  const handleAnnotationEdit = useCallback(async (updated: { id: string; note?: string; style?: AnnotationStyle }) => {
     const updates: Partial<Pick<Annotation, 'note' | 'style' | 'updatedAt'>> = {};
     if (updated.note !== undefined) updates.note = updated.note;
     if (updated.style !== undefined) updates.style = updated.style;
@@ -2306,6 +2310,47 @@ export const TextReaderPage: React.FC = () => {
   }, [annotations, bookId, showToast]);
 
   // 批注跳转：根据批注的 startOffset 定位到正文中的具体位置
+  // 跨章节定位（对外可复用）：切章 + 内容渲染后按偏移占比定位。
+  // 同章亦适用（章节索引重设为同值无副作用），外部 ?ann= 直达与列表跳转共用。
+  const jumpToAnnotation = useCallback((ann: Annotation) => {
+    // 暂存目标 offset，等章节内容加载完成后跳转
+    pendingNavRef.current = {
+      chapterIndex: ann.chapterIndex,
+      scrollRatio: undefined, // 需要在内容加载后从 startOffset 计算
+      pageIndex: undefined,
+    };
+    // 先设置章节，让内容加载
+    setCurrentChapterIndex(ann.chapterIndex);
+    setCurrentPageIndex(0);
+
+    if (textReadingMode === 'scroll') {
+      // 滚动模式：延迟两帧等 DOM 渲染后计算位置并滚动
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const nav = pendingNavRef.current;
+          if (nav) {
+            const chapter = chaptersRef.current[ann.chapterIndex];
+            if (chapter && chapter.content.length > 0) {
+              const ratio = ann.startOffset / chapter.content.length;
+              const container = scrollContainerRef.current;
+              if (container) {
+                const scrollable = container.scrollHeight - container.clientHeight;
+                container.scrollTop = ratio * scrollable;
+              }
+            }
+          }
+          pendingNavRef.current = null;
+        });
+      });
+    } else {
+      // 分页模式：按批注偏移占比排队定位请求，分页完成时消费
+      const chapter = chaptersRef.current[ann.chapterIndex];
+      if (chapter && chapter.content.length > 0) {
+        requestPageAfterPagination({ ratio: ann.startOffset / chapter.content.length });
+      }
+    }
+  }, [textReadingMode, requestPageAfterPagination]);
+
   const handleAnnotationNavigate = useCallback((ann: Annotation) => {
     setIsAnnotationListOpen(false);
 
@@ -2342,44 +2387,30 @@ export const TextReaderPage: React.FC = () => {
         }
       }
     } else {
-      // 跨章节：暂存目标 offset，等章节内容加载完成后跳转
-      pendingNavRef.current = {
-        chapterIndex: ann.chapterIndex,
-        scrollRatio: undefined, // 需要在内容加载后从 startOffset 计算
-        pageIndex: undefined,
-      };
-      // 先设置章节，让内容加载
-      setCurrentChapterIndex(ann.chapterIndex);
-      setCurrentPageIndex(0);
-
-      if (textReadingMode === 'scroll') {
-        // 滚动模式：延迟两帧等 DOM 渲染后计算位置并滚动
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            const nav = pendingNavRef.current;
-            if (nav) {
-              const chapter = chaptersRef.current[ann.chapterIndex];
-              if (chapter && chapter.content.length > 0) {
-                const ratio = ann.startOffset / chapter.content.length;
-                const container = scrollContainerRef.current;
-                if (container) {
-                  const scrollable = container.scrollHeight - container.clientHeight;
-                  container.scrollTop = ratio * scrollable;
-                }
-              }
-            }
-            pendingNavRef.current = null;
-          });
-        });
-      } else {
-        // 分页模式：按批注偏移占比排队定位请求，分页完成时消费
-        const chapter = chaptersRef.current[ann.chapterIndex];
-        if (chapter && chapter.content.length > 0) {
-          requestPageAfterPagination({ ratio: ann.startOffset / chapter.content.length });
-        }
-      }
+      jumpToAnnotation(ann);
     }
-  }, [currentChapterIndex, currentChapter, textReadingMode, textPages, chapters, requestPageAfterPagination, verticalWriting]);
+  }, [currentChapterIndex, currentChapter, textReadingMode, textPages, chapters, verticalWriting, jumpToAnnotation]);
+
+  // 外部批注直达（摘抄墙/回望席/档案卡带 ?ann=<id>）：显式意图优先于进度恢复。
+  // 统一走跨章节定位路径（分页模式经 requestPageAfterPagination 排队，滚动模式双帧后定位）。
+  const jumpToAnnotationRef = useRef(jumpToAnnotation);
+  jumpToAnnotationRef.current = jumpToAnnotation;
+  const annJumpDoneRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!bookId || !annTargetId || isLoading || chapters.length === 0) return;
+    if (annJumpDoneRef.current === annTargetId) return;
+    let cancelled = false;
+    annotationRepo.getByBookId(bookId).then((all) => {
+      if (cancelled) return;
+      const target = all.find((a) => a.id === annTargetId);
+      if (!target) return;
+      annJumpDoneRef.current = annTargetId;
+      jumpToAnnotationRef.current(target);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [bookId, annTargetId, isLoading, chapters.length]);
 
   if (isLoading) {
     return (
@@ -3068,10 +3099,13 @@ export const TextReaderPage: React.FC = () => {
         />
       )}
 
-      {/* 批注详情弹窗 */}
+      {/* 批注详情弹窗：查看 / 编辑 / 删除 / 回到原句 */}
       {highlightedAnnotation && (
         <AnnotationDetailModal
           annotation={highlightedAnnotation}
+          onEdit={handleAnnotationEdit}
+          onDelete={handleAnnotationDelete}
+          onNavigate={handleAnnotationNavigate}
           onClose={() => setHighlightedAnnotation(null)}
         />
       )}

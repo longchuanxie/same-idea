@@ -112,7 +112,8 @@ export const HomePage: React.FC = () => {
 
   const openExcerpt = (ann: Annotation, book: Book) => {
     const chapter = book.chapters[ann.chapterIndex];
-    navigate(readerPathForBook(book, chapter?.id));
+    // 文本书带 ?ann= 直达批注原句处
+    navigate(readerPathForBook(book, chapter?.id, ann.id));
   };
 
   const renderCover = (book: Book, className: string) =>

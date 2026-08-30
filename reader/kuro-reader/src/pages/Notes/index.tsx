@@ -38,7 +38,8 @@ export const NotesPage: React.FC = () => {
   );
 
   const openInReader = (ann: Annotation, book: Book) => {
-    navigate(readerPathForBook(book, book.chapters[ann.chapterIndex]?.id));
+    // 文本书带 ?ann= 直达批注原句处
+    navigate(readerPathForBook(book, book.chapters[ann.chapterIndex]?.id, ann.id));
   };
 
   return (
