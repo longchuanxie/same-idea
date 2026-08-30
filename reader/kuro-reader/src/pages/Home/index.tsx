@@ -4,12 +4,15 @@ import { useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/atoms/Button';
 import { FormatBadge } from '@/components/atoms/FormatBadge';
+import { COPY } from '@/constants/copy';
 import { ROUTES, bookDetailPath, readerPathForBook } from '@/constants/routes';
+import { STORAGE_KEYS } from '@/constants/storage';
 import { annotationRepo } from '@/services/storage/annotationRepo';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import { useStatsStore } from '@/stores/useStatsStore';
 import type { Annotation, Book } from '@/types';
 import { describeLastRead } from '@/utils/readingProgress';
+import { findAnniversary, pickDailyRevisit } from '@/utils/revisit';
 import { toast } from '@/utils/toast';
 
 const SEAT_FALLBACK_COUNT = 3;
@@ -23,6 +26,42 @@ const NIGHT_START_HOUR = 23;
 /** 灯芯辉光半径上限（px），随目标进度增长 */
 const LAMP_GLOW_MAX_PX = 8;
 /** 撤销窗口：移出座位后 5 秒内可撤销（进度本就保留，撤销只是重新显示卡片） */
+/** 回望席隐藏记录形态：跨日自动失效 */
+interface HiddenRevisit {
+  id: string;
+  date: string;
+}
+
+function toLocalDateStr(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+/** 「今日不再看」：localStorage 记录 + 跨日自动失效（照 hiddenContinueIds 模式） */
+function useHiddenRevisits(): {
+  isHidden: (id: string) => boolean;
+  hide: (id: string) => void;
+} {
+  const [hidden, setHidden] = useState<HiddenRevisit[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEYS.HIDDEN_REVISITS) ?? '[]') as HiddenRevisit[];
+    } catch {
+      return [];
+    }
+  });
+  const todayStr = toLocalDateStr(new Date());
+  const effective = hidden.filter((h) => h.date === todayStr);
+
+  const persist = (next: HiddenRevisit[]) => {
+    setHidden(next);
+    localStorage.setItem(STORAGE_KEYS.HIDDEN_REVISITS, JSON.stringify(next));
+  };
+
+  return {
+    isHidden: (id: string) => effective.some((h) => h.id === id),
+    hide: (id: string) => persist([...effective, { id, date: todayStr }]),
+  };
+}
 
 /** 时段问候（建议书 2.8-4）：一天至多四变，无动画 */
 const getGreeting = (hour: number): string => {
@@ -100,6 +139,19 @@ export const HomePage: React.FC = () => {
         .slice(0, RECENT_ACCESSIONS_COUNT),
     [books]
   );
+
+  // 回望席（呼吸的呼出环节）：周年手记/入藏优先，否则当日确定性回访
+  const anniversary = useMemo(() => findAnniversary(annotations, books), [annotations, books]);
+  const revisitPick = useMemo(
+    () => pickDailyRevisit(books, readingProgress, annotations),
+    [books, readingProgress, annotations]
+  );
+  /** 周年卡优先；无周年时展示回访卡 */
+  const anniversaryBook = anniversary?.kind === 'book-added' ? anniversary.book : undefined;
+  const anniversaryAnn = anniversary?.annotation;
+  const revisitCardBook = anniversaryBook ?? revisitPick?.book ?? null;
+  const revisitCardAnn = anniversaryAnn ?? revisitPick?.annotation ?? undefined;
+  const hiddenRevisits = useHiddenRevisits();
 
   const handleDismissSeat = (bookId: string) => {
     setSeatMenuFor(null);
@@ -334,6 +386,64 @@ export const HomePage: React.FC = () => {
           </div>
         </section>
       )}
+
+      {/* 回望席：呼吸的呼出环节——周年手记优先，否则当日确定性回访（每回望席至多一张卡） */}
+      {(() => {
+        if (!revisitCardBook) return null;
+        if (hiddenRevisits.isHidden(revisitCardBook.id)) return null;
+
+        const reasonText = anniversaryAnn
+          ? COPY.revisit.anniversaryNote(anniversary?.yearsAgo ?? 1)
+          : anniversaryBook
+            ? COPY.revisit.anniversaryBook(anniversary?.yearsAgo ?? 1)
+            : revisitPick?.reason === 'annotated-long-unread'
+              ? COPY.revisit.revisitAnnotated
+              : revisitPick?.reason === 'long-unread'
+                ? COPY.revisit.revisitLongUnread
+                : COPY.revisit.revisitRandom;
+
+        return (
+          <section className="mb-10">
+            <div className="flex justify-between items-end mb-4">
+              <h2 className="font-display text-headline-md text-on-background">{COPY.revisit.sectionTitle}</h2>
+              <button
+                className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors"
+                onClick={() => {
+                  hiddenRevisits.hide(revisitCardBook.id);
+                  toast('今天先不看它', { durationMs: 3000 });
+                }}
+              >
+                {COPY.revisit.dismissToday}
+              </button>
+            </div>
+            <article
+              className="flex border border-outline-variant rounded-card-lg shadow-paper overflow-hidden bg-surface-container-low cursor-pointer"
+              onClick={() =>
+                revisitCardAnn
+                  ? openExcerpt(revisitCardAnn, revisitCardBook)
+                  : navigate(bookDetailPath(revisitCardBook.id))
+              }
+            >
+              <div className="w-24 md:w-32 flex-shrink-0 border-r border-outline-variant bg-surface-container">
+                {renderCover(revisitCardBook, 'aspect-[2/3]')}
+              </div>
+              <div className="p-4 md:p-5 flex flex-col justify-center flex-1 min-w-0">
+                <p className="font-label text-label-sm text-seal mb-1">{reasonText}</p>
+                {revisitCardAnn && (
+                  <p className="font-body text-body-md text-on-surface leading-relaxed line-clamp-2 mb-1.5">
+                    「{revisitCardAnn.selectedText.slice(0, EXCERPT_PREVIEW_CHARS)}
+                    {revisitCardAnn.selectedText.length > EXCERPT_PREVIEW_CHARS ? '…' : ''}」
+                  </p>
+                )}
+                <p className="font-body text-body-md text-primary truncate">
+                  《{revisitCardBook.title}》
+                  {revisitCardAnn ? ` · ${revisitCardAnn.chapterTitle}` : ''}
+                </p>
+              </div>
+            </article>
+          </section>
+        );
+      })()}
 
       {/* 新近入藏 */}
       {recentAccessions.length > 0 && (

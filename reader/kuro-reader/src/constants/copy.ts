@@ -60,4 +60,15 @@ export const COPY = {
     emptyFiltered: '没有符合条件的手记——换个词或放宽筛选',
     exportAll: '导出整墙 Markdown',
   },
+  /** 回望席（门厅的呼出环节） */
+  revisit: {
+    sectionTitle: '回望席',
+    anniversaryBook: (years: number) => `这本书入馆 ${years} 周年了`,
+    anniversaryNote: (years: number) => `${years} 年前的今天，你划下了这句`,
+    revisitAnnotated: '这本书留了你的手记，很久没翻了',
+    revisitLongUnread: '它在书架上等你很久了',
+    revisitRandom: '今天想从这本开始吗？',
+    dismissToday: '今日不再看',
+    goBack: '回望',
+  },
 } as const;

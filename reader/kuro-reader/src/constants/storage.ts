@@ -11,4 +11,6 @@ export const STORAGE_KEYS = {
   CLOUD_SYNC_LAST: 'kuro-reader-cloud-sync-last',
   /** 已从门厅「你的座位」移出的书（仅隐藏卡片，阅读进度保留） */
   HIDDEN_CONTINUE: 'kuro-reader-hidden-continue',
+  /** 回望席「今日不再看」：[{id, date}]，跨日自动失效 */
+  HIDDEN_REVISITS: 'kuro-reader-hidden-revisits',
 } as const;
