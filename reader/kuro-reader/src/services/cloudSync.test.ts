@@ -3,11 +3,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 
 import {
+  applyMergedPayloadToLocal,
   buildSyncUrl,
   mergeSyncPayloads,
   runCloudSync,
   type SyncPayload,
 } from '@/services/cloudSync'
+import { annotationRepo } from '@/services/storage/annotationRepo'
+import { bookmarkRepo } from '@/services/storage/bookmarkRepo'
+import { getDB, _resetDBForTesting } from '@/services/storage/db'
+import { progressRepo } from '@/services/storage/progressRepo'
 import type { Annotation, Bookmark } from '@/types'
 
 vi.mock('axios')
@@ -142,6 +147,8 @@ describe('runCloudSync', () => {
     expect(merged.annotations.map((a) => a.id).sort()).toEqual(['ann-local', 'ann-remote'])
     // 上传载荷的 exportedAt 被重打为本次同步时刻
     expect(new Date(merged.exportedAt).getTime()).toBeGreaterThan(Date.now() - 60000)
+    // 结果携带最终载荷，供调用方落地本地
+    expect(result.payload.annotations.map((a) => a.id).sort()).toEqual(['ann-local', 'ann-remote'])
   })
 
   it('surfaces non-404 errors', async () => {
@@ -150,5 +157,56 @@ describe('runCloudSync', () => {
       runCloudSync({ serverAddress: 'http://nas/dav' }, makePayload())
     ).rejects.toBeDefined()
     expect(axios.put).not.toHaveBeenCalled()
+  })
+})
+
+describe('applyMergedPayloadToLocal', () => {
+  beforeEach(async () => {
+    try {
+      const db = await getDB()
+      db.close()
+    } catch {
+      // first run: no DB yet
+    }
+    _resetDBForTesting()
+    await new Promise<void>((resolve, reject) => {
+      const req = indexedDB.deleteDatabase('kuro-reader-db')
+      req.onsuccess = () => resolve()
+      req.onerror = () => reject(req.error)
+      req.onblocked = () => resolve()
+    })
+  })
+
+  it('把合并载荷(含 JSON 反序列化的字符串日期)写回本地三张表', async () => {
+    // 远端 JSON 落地时日期是 ISO 字符串——repo 需容忍该形态
+    const remoteAnnotation = {
+      ...makeAnnotation('ann-remote', '2026-08-29T15:00:00Z'),
+      createdAt: '2026-08-29T15:00:00.000Z' as unknown as Date,
+      updatedAt: '2026-08-29T15:00:00.000Z' as unknown as Date,
+    }
+    const payload = makePayload({
+      readingProgress: {
+        b1: { bookId: 'b1', chapterId: 'c1', page: 5, totalPages: 10, percentage: 50, globalPageIndex: 4, totalImages: 10, updatedAt: 300 },
+      },
+      bookmarks: [makeBookmark('bm-remote', BOOKMARK_TIME)],
+      annotations: [remoteAnnotation],
+    })
+
+    await applyMergedPayloadToLocal(payload)
+
+    const progressList = await progressRepo.getAll()
+    expect(progressList.map((p) => p.bookId)).toEqual(['b1'])
+    expect((await bookmarkRepo.getByBookId('b1')).map((b) => b.id)).toEqual(['bm-remote'])
+    const annotations = await annotationRepo.getByBookId('b1')
+    expect(annotations.map((a) => a.id)).toEqual(['ann-remote'])
+    // 读出时日期已还原为 Date 实例
+    expect(annotations[0].createdAt instanceof Date).toBe(true)
+  })
+
+  it('重复应用同一载荷是幂等的', async () => {
+    const payload = makePayload({ annotations: [makeAnnotation('ann-dup', '2026-08-29T15:00:00Z')] })
+    await applyMergedPayloadToLocal(payload)
+    await applyMergedPayloadToLocal(payload)
+    expect(await annotationRepo.getAll()).toHaveLength(1)
   })
 })

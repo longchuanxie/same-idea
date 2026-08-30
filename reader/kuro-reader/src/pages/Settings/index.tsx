@@ -5,7 +5,7 @@ import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
 import { GestureLock } from '@/components/organisms/GestureLock';
 import { COPY } from '@/constants/copy';
 import { STORAGE_KEYS } from '@/constants/storage';
-import { runCloudSync, type SyncCredentials, type SyncPayload } from '@/services/cloudSync';
+import { applyMergedPayloadToLocal, runCloudSync, type SyncCredentials, type SyncPayload } from '@/services/cloudSync';
 import { annotationRepo } from '@/services/storage/annotationRepo';
 import { bookmarkRepo } from '@/services/storage/bookmarkRepo';
 import { progressRepo } from '@/services/storage/progressRepo';
@@ -229,6 +229,11 @@ export const SettingsPage: React.FC = () => {
         annotations,
       };
       const result = await runCloudSync(credentials, localPayload);
+      // 多端拉取：合并结果落地本地 IndexedDB（此前只 PUT 远端，另一台设备永远拉不到）
+      if (result.direction === 'merged') {
+        await applyMergedPayloadToLocal(result.payload);
+        await useLibraryStore.getState().loadBooks();
+      }
 
       localStorage.setItem(STORAGE_KEYS.CLOUD_SYNC_LAST, result.exportedAt);
       setLastSyncedAt(result.exportedAt);

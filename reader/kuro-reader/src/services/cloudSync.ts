@@ -1,5 +1,9 @@
 import axios from 'axios';
 
+
+import { annotationRepo } from '@/services/storage/annotationRepo';
+import { bookmarkRepo } from '@/services/storage/bookmarkRepo';
+import { progressRepo } from '@/services/storage/progressRepo';
 import type { Annotation, Bookmark, ReadingProgress } from '@/types';
 
 /** 同步载荷版本 */
@@ -29,6 +33,8 @@ export type SyncDirection = 'pushed' | 'merged';
 export interface SyncResult {
   direction: SyncDirection;
   exportedAt: string;
+  /** 本次同步的最终载荷（与远端一致）。多端「拉取」靠调用方 applyMergedPayloadToLocal 落地本地。 */
+  payload: SyncPayload;
   counts: {
     progress: number;
     bookmarks: number;
@@ -138,10 +144,29 @@ export async function runCloudSync(
   return {
     direction,
     exportedAt,
+    payload,
     counts: {
       progress: Object.keys(payload.readingProgress).length,
       bookmarks: payload.bookmarks.length,
       annotations: payload.annotations.length,
     },
   };
+}
+
+/**
+ * 将合并结果落地本地 IndexedDB（多端「拉取」环节）。
+ * repo 写入均为按键 upsert：与本地一致的数据原样覆写无副作用，
+ * 远端较新/远端独有的条目由此进入本地库。
+ * 注：LWW 合并无删除墓碑，本地删除的条目会被远端副本复活——已知边界。
+ */
+export async function applyMergedPayloadToLocal(merged: SyncPayload): Promise<void> {
+  for (const progress of Object.values(merged.readingProgress)) {
+    await progressRepo.save(progress);
+  }
+  for (const bookmark of merged.bookmarks) {
+    await bookmarkRepo.add(bookmark);
+  }
+  for (const annotation of merged.annotations) {
+    await annotationRepo.add(annotation);
+  }
 }
