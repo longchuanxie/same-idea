@@ -1,18 +1,29 @@
 import React, { useEffect, useCallback, useRef, useState, useMemo } from 'react';
 
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
+import { AnnotationDetailModal, type AnnotationEditPatch } from '@/components/molecules/AnnotationDetailModal';
+import { AnnotationList } from '@/components/molecules/AnnotationList';
+import { AnnotationPopup } from '@/components/molecules/AnnotationPopup';
 import { ChapterListDrawer } from '@/components/molecules/ChapterListDrawer';
 import { FullscreenViewer } from '@/components/molecules/FullscreenViewer';
 import { HorizontalReaderView } from '@/components/molecules/HorizontalReaderView';
+import { InBookSearchPanel } from '@/components/molecules/InBookSearchPanel';
 import { ReaderBottomBar } from '@/components/molecules/ReaderBottomBar';
+import { COPY } from '@/constants/copy';
+import { READER_PAGE_QUERY_PARAM } from '@/constants/routes';
 import { useBackHandler } from '@/hooks/useBackHandler';
 import { useReadingStats } from '@/hooks/useReadingStats';
 import { useSmoothScroll } from '@/hooks/useSmoothScroll';
+import { buildPdfSearchChapters, getPdfPageTexts } from '@/services/pdfText';
+import { annotationRepo } from '@/services/storage/annotationRepo';
+import type { TextChapter } from '@/services/textContent';
 import { useAppStore } from '@/stores/useAppStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import { useReaderStore } from '@/stores/useReaderStore';
+import type { Annotation } from '@/types';
 import { cn } from '@/utils/cn';
+import { buildPageNoteAnnotation, isPageNote } from '@/utils/pageAnnotation';
 import { computePaperOpacity, getPaperBaseOpacity, getPaperConfig } from '@/utils/paperTexture';
 import {
   getHorizontalPageSpread,
@@ -53,6 +64,10 @@ const LAST_PAGE_NOTICE_TEXT = '已经到最后一页';
 const DEFAULT_PAGE_SCROLL_RATIO = 0;
 const MAX_PAGE_SCROLL_RATIO = 1;
 const PAGE_PROGRESS_OFFSET = 1;
+/** 检索命中页索引（0 起）→ goToPage 页码（1 起） */
+const PAGE_INDEX_TO_PAGE_OFFSET = 1;
+/** 页注弹窗纵向落点（视口高度的 1/3） */
+const PAGE_NOTE_POPUP_VIEWPORT_DIVISOR = 3;
 const READING_ANCHOR_RATIO = 0.2;
 
 const clampPageScrollRatio = (ratio: number): number =>
@@ -74,6 +89,13 @@ const getReadingPercentage = (
 export const ReaderPage: React.FC = () => {
   const navigate = useNavigate();
   const { bookId, chapterId } = useParams<{ bookId: string; chapterId?: string }>();
+  const [searchParams] = useSearchParams();
+  /** 页码直达（?page=，1 起；页级手记跳转）：挂载消费一次，不随重渲染触发重开书 */
+  const initialPageRef = useRef<number | undefined>((() => {
+    const raw = searchParams.get(READER_PAGE_QUERY_PARAM);
+    const parsed = raw ? Number.parseInt(raw, 10) : NaN;
+    return Number.isFinite(parsed) && parsed >= 1 ? parsed : undefined;
+  })());
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isTogglingRef = useRef(false);
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
@@ -122,6 +144,16 @@ export const ReaderPage: React.FC = () => {
   const [verticalRenderStartIndex, setVerticalRenderStartIndex] = useState(0);
   const [verticalRenderEndIndex, setVerticalRenderEndIndex] = useState(VERTICAL_RESTORE_PRELOAD_COUNT);
   const [readerNotice, setReaderNotice] = useState<string | null>(null);
+  // PDF 文本层检索（漫画无文本不提供）：一次提取按书缓存于服务层
+  const [isSearchPanelOpen, setIsSearchPanelOpen] = useState(false);
+  const [pdfSearchChapters, setPdfSearchChapters] = useState<TextChapter[] | null>(null);
+  const [isExtractingPdfText, setIsExtractingPdfText] = useState(false);
+  // 页级手记（漫画/PDF）：长按菜单 → 页注弹窗；手记面板复用文本批注组件
+  const [longPressMenuPage, setLongPressMenuPage] = useState<number | null>(null);
+  const [pageNotePopupPage, setPageNotePopupPage] = useState<number | null>(null);
+  const [isAnnotationPanelOpen, setIsAnnotationPanelOpen] = useState(false);
+  const [bookAnnotations, setBookAnnotations] = useState<Annotation[]>([]);
+  const [editingPageNote, setEditingPageNote] = useState<Annotation | null>(null);
 
   const {
     currentPage,
@@ -282,6 +314,10 @@ export const ReaderPage: React.FC = () => {
   // Android 返回键：从最上层浮层开始逐层关闭
   useBackHandler(() => {
     if (fullscreenImageUrl) { closeFullscreen(); return true; }
+    if (isSearchPanelOpen) { setIsSearchPanelOpen(false); return true; }
+    if (pageNotePopupPage != null) { setPageNotePopupPage(null); return true; }
+    if (longPressMenuPage != null) { setLongPressMenuPage(null); return true; }
+    if (isAnnotationPanelOpen) { setIsAnnotationPanelOpen(false); return true; }
     if (isBottomBarVisible) { setBottomBarVisible(false); return true; }
     if (showChapterList) { setShowChapterList(false); return true; }
     if (isUiVisible) { toggleUi(); return true; }
@@ -311,7 +347,8 @@ export const ReaderPage: React.FC = () => {
       if (progress?.pageLayout) {
         setPageLayout(progress.pageLayout);
       }
-      openBook(bookId, chapterId);
+      // ?page= 直达（页级手记跳转）：显式意图优先于进度恢复
+      openBook(bookId, chapterId, initialPageRef.current);
     }
 
     return () => {
@@ -516,6 +553,93 @@ export const ReaderPage: React.FC = () => {
       firstPageNoticeTimerRef.current = null;
     }, FIRST_PAGE_NOTICE_DURATION);
   }, []);
+
+  // PDF 检索入口：首次打开时提取文本层（一页一章伪章节，复用文本检索面板）
+  const openPdfSearch = useCallback(async () => {
+    if (!bookId) return;
+    if (pdfSearchChapters) {
+      setIsSearchPanelOpen(true);
+      return;
+    }
+    setIsExtractingPdfText(true);
+    showReaderNotice(COPY.searchInBook.extracting);
+    try {
+      const pages = await getPdfPageTexts(bookId);
+      if (pages.length === 0) {
+        showReaderNotice(COPY.searchInBook.extractFailed);
+        return;
+      }
+      setPdfSearchChapters(buildPdfSearchChapters(pages));
+      setIsSearchPanelOpen(true);
+    } catch {
+      showReaderNotice(COPY.searchInBook.extractFailed);
+    } finally {
+      setIsExtractingPdfText(false);
+    }
+  }, [bookId, pdfSearchChapters, showReaderNotice]);
+
+  // ── 页级手记（漫画/PDF） ──
+
+  /** 手记面板打开时懒加载本书手记 */
+  const openAnnotationPanel = useCallback(async () => {
+    if (!bookId) return;
+    setIsAnnotationPanelOpen(true);
+    setBookAnnotations(await annotationRepo.getByBookId(bookId));
+  }, [bookId]);
+
+  const handlePageNoteSave = useCallback(async (note: string, _style: Annotation['style'], tagIds: string[] = []) => {
+    if (!bookId || pageNotePopupPage == null) return;
+    const chapter = chapters.find((ch) => ch.id === currentChapterId);
+    const chapterIndex = chapters.findIndex((ch) => ch.id === currentChapterId);
+    if (!chapter || chapterIndex < 0) return;
+    const annotation = buildPageNoteAnnotation({
+      bookId,
+      chapterIndex,
+      chapterTitle: chapter.title,
+      pageIndex: pageNotePopupPage,
+      note,
+      tagIds,
+    });
+    await annotationRepo.add(annotation);
+    setBookAnnotations((prev) => [annotation, ...prev]);
+    setPageNotePopupPage(null);
+    showReaderNotice(COPY.annotation.pageNoteSaved);
+  }, [bookId, pageNotePopupPage, chapters, currentChapterId, showReaderNotice]);
+
+  const handlePageNoteEdit = useCallback(async (patch: AnnotationEditPatch) => {
+    const updates: Partial<Pick<Annotation, 'note' | 'style' | 'tagIds' | 'updatedAt'>> = {};
+    if (patch.note !== undefined) updates.note = patch.note;
+    if (patch.style !== undefined) updates.style = patch.style;
+    if (patch.tagIds !== undefined) updates.tagIds = patch.tagIds;
+    await annotationRepo.update(patch.id, updates);
+    setBookAnnotations((prev) => prev.map((a) => (a.id === patch.id ? { ...a, ...updates, updatedAt: new Date() } : a)));
+    setEditingPageNote(null);
+  }, []);
+
+  const handlePageNoteDelete = useCallback(async (id: string) => {
+    await annotationRepo.remove(id);
+    setBookAnnotations((prev) => prev.filter((a) => a.id !== id));
+    setEditingPageNote(null);
+    showReaderNotice(COPY.annotation.deleted);
+  }, [showReaderNotice]);
+
+  /** 手记跳转：页注直达页码，其余到章 */
+  const handlePageNoteNavigate = useCallback((ann: Annotation) => {
+    setIsAnnotationPanelOpen(false);
+    setEditingPageNote(null);
+    const chapter = chapters[ann.chapterIndex];
+    if (!chapter) return;
+    if (isPageNote(ann)) {
+      const page = (ann.pageIndex ?? 0) + PAGE_INDEX_TO_PAGE_OFFSET;
+      if (chapter.id === currentChapterId) {
+        goToPage(page);
+      } else {
+        openChapter(chapter.id, page);
+      }
+    } else if (chapter.id !== currentChapterId) {
+      openChapter(chapter.id);
+    }
+  }, [chapters, currentChapterId, goToPage, openChapter]);
 
   const showFirstPageNotice = useCallback(() => {
     showReaderNotice(FIRST_PAGE_NOTICE_TEXT);
@@ -862,14 +986,15 @@ export const ReaderPage: React.FC = () => {
   );
 
   const handleImageTouchStart = useCallback(
-    (_pageIndex: number, e: React.TouchEvent) => {
+    (pageIndex: number, e: React.TouchEvent) => {
       isLongPressRef.current = false;
       const touch = e.touches[0];
       const startPos = { x: touch.clientX, y: touch.clientY };
 
       longPressTimerRef.current = setTimeout(() => {
         isLongPressRef.current = true;
-        setBottomBarVisible(true);
+        // 长按弹出页级动作菜单（页级手记 / 阅读设置），锚定触发页
+        setLongPressMenuPage(pageIndex);
       }, LONG_PRESS_DURATION);
 
       if (direction === 'horizontal') {
@@ -880,7 +1005,7 @@ export const ReaderPage: React.FC = () => {
         };
       }
     },
-    [direction, setBottomBarVisible]
+    [direction]
   );
 
   const handleImageTouchMove = useCallback(
@@ -1519,6 +1644,25 @@ export const ReaderPage: React.FC = () => {
                 </span>
               </div>
               <div className="flex items-center gap-1">
+                {book?.format === 'pdf' && (
+                  <button
+                    className="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center w-11 h-11 rounded-full hover:bg-surface-variant/50"
+                    onClick={openPdfSearch}
+                    disabled={isExtractingPdfText}
+                    data-ui-control
+                    aria-label={COPY.searchInBook.search}
+                  >
+                    <span className="material-symbols-outlined text-headline-md">search</span>
+                  </button>
+                )}
+                <button
+                  className="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center w-11 h-11 rounded-full hover:bg-surface-variant/50"
+                  onClick={openAnnotationPanel}
+                  data-ui-control
+                  aria-label={COPY.annotation.readerNotes}
+                >
+                  <span className="material-symbols-outlined text-headline-md">edit_note</span>
+                </button>
                 <button
                   className={`${book?.isFavorite ? 'text-primary' : 'text-on-surface-variant'} hover:text-primary transition-colors flex items-center justify-center w-11 h-11 rounded-full hover:bg-surface-variant/50`}
                   onClick={() => {
@@ -1675,6 +1819,85 @@ export const ReaderPage: React.FC = () => {
           currentChapterId={currentChapterId}
           onSelect={openChapter}
           onClose={() => setShowChapterList(false)}
+        />
+      )}
+
+      {/* PDF 书内检索面板：命中页直达（chapterIndex 即页索引） */}
+      {isSearchPanelOpen && pdfSearchChapters && (
+        <InBookSearchPanel
+          chapters={pdfSearchChapters}
+          onSelectHit={(hit) => {
+            setIsSearchPanelOpen(false);
+            goToPage(hit.chapterIndex + PAGE_INDEX_TO_PAGE_OFFSET);
+          }}
+          onClose={() => setIsSearchPanelOpen(false)}
+        />
+      )}
+
+      {/* 长按页级动作菜单：页级手记 / 阅读设置 */}
+      {longPressMenuPage != null && (
+        <div className="fixed inset-0 z-[46]" onClick={() => setLongPressMenuPage(null)}>
+          <div className="absolute inset-0 bg-on-background/30 animate-fade-in" />
+          <div
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-surface rounded-card-lg border border-outline-variant shadow-paper-up py-2 w-52 animate-scale-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="w-full text-left px-5 py-3 font-label text-label-md text-on-surface hover:bg-surface-container transition-colors flex items-center gap-2"
+              onClick={() => {
+                setPageNotePopupPage(longPressMenuPage);
+                setLongPressMenuPage(null);
+              }}
+              data-ui-control
+            >
+              <span className="material-symbols-outlined text-icon-md text-secondary">edit_note</span>
+              {COPY.annotation.addPageNote}
+            </button>
+            <button
+              className="w-full text-left px-5 py-3 font-label text-label-md text-on-surface hover:bg-surface-container transition-colors flex items-center gap-2"
+              onClick={() => {
+                setLongPressMenuPage(null);
+                setBottomBarVisible(true);
+              }}
+              data-ui-control
+            >
+              <span className="material-symbols-outlined text-icon-md text-on-surface-variant">tune</span>
+              {COPY.annotation.readerSettings}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 页注弹窗（复用批注弹窗；锚点/样式对页注无意义，由 buildPageNoteAnnotation 归一） */}
+      {pageNotePopupPage != null && (
+        <AnnotationPopup
+          selectedText={`${COPY.annotation.pageNote} · ${pageNotePopupPage + PAGE_INDEX_TO_PAGE_OFFSET}`}
+          position={{ x: window.innerWidth / 2, y: window.innerHeight / PAGE_NOTE_POPUP_VIEWPORT_DIVISOR }}
+          onSave={handlePageNoteSave}
+          onCancel={() => setPageNotePopupPage(null)}
+        />
+      )}
+
+      {/* 页注详情（手记列表点「编辑」进入） */}
+      {editingPageNote && (
+        <AnnotationDetailModal
+          annotation={editingPageNote}
+          onEdit={handlePageNoteEdit}
+          onDelete={handlePageNoteDelete}
+          onNavigate={handlePageNoteNavigate}
+          onClose={() => setEditingPageNote(null)}
+        />
+      )}
+
+      {/* 手记面板（本书全部手记：页注与文本划线共存） */}
+      {isAnnotationPanelOpen && (
+        <AnnotationList
+          annotations={bookAnnotations}
+          bookTitle={book?.title ?? ''}
+          onEdit={(ann) => setEditingPageNote(bookAnnotations.find((a) => a.id === ann.id) ?? null)}
+          onDelete={handlePageNoteDelete}
+          onNavigate={handlePageNoteNavigate}
+          onClose={() => setIsAnnotationPanelOpen(false)}
         />
       )}
 

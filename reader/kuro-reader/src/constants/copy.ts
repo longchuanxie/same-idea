@@ -29,6 +29,13 @@ export const COPY = {
     saveHighlightOnly: '仅划线',
     pureHighlight: '纯划线',
     clearToPureHighlight: '清空文字即转为纯划线',
+    pageNote: '页注',
+    pageNotePlaceholder: '给这一页写点什么…',
+    addPageNote: '页级手记',
+    readerNotes: '手记',
+    pageNoteSaved: '已贴上这页手记',
+    deleted: '已删除手记',
+    readerSettings: '阅读设置',
     goTo: '回到此处',
     remove: '删除',
     edit: '编辑',
@@ -48,6 +55,9 @@ export const COPY = {
     hint: '至少两个字符；命中按章节排列',
     noResults: '这本书里没有找到',
     hitCount: (n: number) => `找到 ${n} 处`,
+    extracting: '正在提取文本层…',
+    extractFailed: '这本书的文本提不出来——可能没有文字层',
+    search: '检索本书',
   },
   /** 摘抄墙 */
   notesWall: {
