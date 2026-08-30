@@ -46,7 +46,7 @@ export const AnnotationPopup: React.FC<AnnotationPopupProps> = ({
   return (
     <div className="fixed inset-0 z-[70]" onClick={onCancel}>
       <div
-        className="absolute bg-surface rounded-xl shadow-2xl border border-outline-variant/50 overflow-hidden animate-fade-in"
+        className="absolute bg-surface rounded-card-lg shadow-2xl border border-outline-variant/50 overflow-hidden animate-fade-in"
         style={{
           left: Math.max(VIEWPORT_EDGE_MARGIN_PX, left),
           top: Math.min(top, window.innerHeight - popupMaxHeight - POPUP_EDGE_MARGIN_PX),
@@ -77,8 +77,10 @@ export const AnnotationPopup: React.FC<AnnotationPopupProps> = ({
                   : 'text-on-surface-variant hover:bg-surface-variant'
               }`}
             >
-              <span className="material-symbols-outlined text-[16px] align-middle mr-1">format_color_fill</span>
-              背景色
+              <span className="annotation-marker annotation-marker-v1">
+                <span className="material-symbols-outlined text-[16px] align-middle mr-1">brush</span>
+                水彩笔
+              </span>
             </button>
             <button
               onClick={() => setStyle('underline')}

@@ -6,12 +6,13 @@ import { AnnotationDetailModal } from '@/components/molecules/AnnotationDetailMo
 import { AnnotationList } from '@/components/molecules/AnnotationList';
 import { AnnotationPopup } from '@/components/molecules/AnnotationPopup';
 import { AutoScrollBadge } from '@/components/molecules/AutoScrollBadge';
-import { SpeechBadge } from '@/components/molecules/SpeechBadge';
 import { BookmarkPanel } from '@/components/molecules/BookmarkPanel';
 import { ChapterDrawer } from '@/components/molecules/ChapterDrawer';
 import { ChapterEndPrompt } from '@/components/molecules/ChapterEndPrompt';
+import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
 import { MarkdownReaderContent } from '@/components/molecules/MarkdownReaderContent';
 import { SelectionFloatingButton } from '@/components/molecules/SelectionFloatingButton';
+import { SpeechBadge } from '@/components/molecules/SpeechBadge';
 import { TextProgressHint } from '@/components/molecules/TextProgressHint';
 import { TextReaderBottomBar } from '@/components/molecules/TextReaderBottomBar';
 import { TextReaderFooter } from '@/components/molecules/TextReaderFooter';
@@ -29,10 +30,14 @@ import { revokeEpubObjectUrls } from '@/services/epubContent';
 import { annotationRepo } from '@/services/storage/annotationRepo';
 import { bookmarkRepo } from '@/services/storage/bookmarkRepo';
 import { loadTextContent, resolveTextChapterIndex, type TextChapter } from '@/services/textContent';
+import { piperModelStored } from '@/services/tts/piperEngine';
 import { useAppStore } from '@/stores/useAppStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
-import type { Bookmark, Annotation, AnnotationStyle } from '@/types';
+import type { Bookmark, Annotation, AnnotationStyle, TtsEngineOption } from '@/types';
+import { computeAnnotationAnchor, resolveAnnotationOffsets } from '@/utils/annotationAnchor';
+import { getAnnotationPresentation } from '@/utils/annotationHighlight';
 import { cn } from '@/utils/cn';
+import { computePaperOpacity, getPaperBaseOpacity, getPaperConfig } from '@/utils/paperTexture';
 import {
   getOverallReadingPercent,
   getOverallReadingRatio,
@@ -45,7 +50,6 @@ import {
   getNextTextPageIndex,
   getPaginatedTapAction,
 } from '@/utils/textReaderNavigation';
-import { computeAnnotationAnchor, resolveAnnotationOffsets } from '@/utils/annotationAnchor';
 
 const PROGRESS_SAVE_DEBOUNCE = 500;
 const PROGRESS_HINT_AUTO_HIDE_MS = 1400;
@@ -68,6 +72,9 @@ const SELECTION_POPUP_OFFSET_X = 160;
 const SELECTION_POPUP_OFFSET_Y = 40;
 // 百分比与比例换算
 const PERCENT_MULTIPLIER = 100;
+/** 纸型底色上的正文字色（暖墨，与漫画纸底一致的可读性） */
+const PAPER_INK_COLOR = '#3a352c';
+
 const TEXT_SEPIA_MAX_INTENSITY = 0.4; // 色温滤镜最大 sepia 强度
 const HALF_DIVISOR = 2; // 二分查找中点 / 选区弹窗中心点 / 页边距均分
 // UI 时序
@@ -88,8 +95,8 @@ const PAGE_BREAK_SEARCH_WINDOW_RATIO = 0.2;
 const PAGE_BREAK_SEARCH_WINDOW_MIN = 50;
 // 翻书动画
 const BOOK_FLIP_ANIMATION_MS = 900;
-const PAGE_SLIDE_ANIMATION_MS = 500;
-const FLIP_ANIMATION_COMPLETE_MS = 450;
+const PAGE_SLIDE_ANIMATION_MS = 650;
+const FLIP_ANIMATION_COMPLETE_MS = 600;
 const FLIP_SNAPBACK_MS = 350;
 const FLIP_STATE_RESET_DELAY_MS = 50;
 const FLIP_ROTATION_DEG = 160;
@@ -100,7 +107,12 @@ const FLIP_ENTER_SHADOW_MAX_OPACITY = 0.3;
 const FLIP_EXIT_SHADOW_GRADIENT_END_PCT = 50;
 const FLIP_ENTER_SHADOW_GRADIENT_END_PCT = 40;
 const FLIP_SPINE_OPACITY = 0.5;
-const FLIP_SPINE_SNAPBACK_OPACITY = 0.4;
+// 听书跟读
+/** 跟随滚动时高亮目标的目标落点（视口高度比例，偏上） */
+const SPEECH_FOLLOW_ANCHOR_RATIO = 0.4;
+/** 高亮目标越出视口舒适区（顶部 25% 以上 / 底部 85% 以下）才触发跟随滚动，避免打扰手动浏览 */
+const SPEECH_FOLLOW_ZONE_START = 0.25;
+const SPEECH_FOLLOW_ZONE_END = 0.85;
 // 书签 / 批注
 const BOOKMARK_MATCH_EPSILON = 0.02;
 const BOOKMARK_PREVIEW_BEFORE_CHARS = 20;
@@ -317,7 +329,6 @@ export const TextReaderPage: React.FC = () => {
 
   const fontSize = localFontSize ?? settings.fontSize;
   const lineHeight = localLineHeight ?? settings.textLineHeight;
-  const readingTheme = settings.readingTheme;
   const textFontFamily = settings.textFontFamily;
   const textAlign = settings.textAlign;
   const firstLineIndent = settings.firstLineIndent;
@@ -353,16 +364,27 @@ export const TextReaderPage: React.FC = () => {
     return getTextReaderFontFamily(textFontFamily);
   }, [textFontFamily]);
 
-  // 阅读主题样式
-  const themeStyles = useMemo(() => {
-    const themes: Record<string, { bg: string; color: string }> = {
-      light: { bg: '#ffffff', color: '#1a1a1a' },
-      green: { bg: '#c7edcc', color: '#2d3a2d' },
-      sepia: { bg: '#f5e6c8', color: '#5b4636' },
-      dark: { bg: '#1a1a1a', color: '#b8b8b8' },
+  // 阅读主题样式（单源定义见 @/constants/readerThemes）
+
+
+  // 阅读外观 = 纸型（与漫画阅读同源）：底色恒纸型色、文字恒暖墨；
+  // 纹理层 multiply 混入纸色（paperMode 关闭时仅无噪声，底色不变）
+  const paperConfigForBg = getPaperConfig(settings.paperType);
+  const effectiveBg = paperConfigForBg.bgColor;
+  const effectiveColor = paperConfigForBg.inkColor ?? PAPER_INK_COLOR;
+  const paperTextureLayer = useMemo(() => {
+    if (!settings.paperMode) return null;
+    const config = getPaperConfig(settings.paperType);
+    const opacity = computePaperOpacity(
+      settings.textureIntensity,
+      getPaperBaseOpacity(settings.paperType),
+      false
+    );
+    return {
+      backgroundImage: config.svgFilter(opacity),
+      mixBlendMode: config.blendMode as 'multiply' | 'screen',
     };
-    return themes[readingTheme] || themes.light;
-  }, [readingTheme]);
+  }, [settings.paperMode, settings.paperType, settings.textureIntensity]);
 
   const displayFilter = useMemo(() => {
     const filters: string[] = [];
@@ -436,9 +458,6 @@ export const TextReaderPage: React.FC = () => {
     if (progress.textReadingMode && progress.textReadingMode !== appState.settings.textReadingMode) {
       appState.updateSettings({ textReadingMode: progress.textReadingMode });
     }
-    if (progress.readingTheme && progress.readingTheme !== appState.settings.readingTheme) {
-      appState.updateSettings({ readingTheme: progress.readingTheme });
-    }
 
     // 从 locator 解析文本阅读定位信息
     let locatorData: { chapterIndex?: number; pageIndex?: number; scrollRatio?: number } | null = null;
@@ -476,7 +495,7 @@ export const TextReaderPage: React.FC = () => {
         requestPageAfterPagination(pageIndex);
       }
     }
-  }, [bookId, chapterId, isLoading, textReadingMode, chapters, book?.chapters]);
+  }, [bookId, chapterId, isLoading, textReadingMode, chapters, book?.chapters, requestPageAfterPagination]);
 
   // 统计阅读时长（共享 Hook）
   useReadingStats(bookId);
@@ -488,6 +507,8 @@ export const TextReaderPage: React.FC = () => {
   chaptersRef.current = chapters;
   const textPagesLengthRef = useRef(textPages.length);
   textPagesLengthRef.current = textPages.length;
+  const textPagesRef = useRef(textPages);
+  textPagesRef.current = textPages;
 
   const saveTextProgress = useCallback((chapterIdx: number, pageIdx?: number, scrollRat?: number) => {
     if (!bookId) return;
@@ -588,7 +609,9 @@ export const TextReaderPage: React.FC = () => {
     const contentSize = verticalWriting ? container.scrollWidth : container.scrollHeight;
     const isAtChapterEnd = ratio >= TEXT_SCROLL_END_THRESHOLD ||
       endPosition >= contentSize - TEXT_SCROLL_END_EPSILON_PX;
-    if (hasNextChapter && isAtChapterEnd) {
+    // 听书期间章节末尾提示/自动切章让位于播报进度（切章由 speech 播完回调独占），
+    // 避免滚动位置先于播报到达章末时提前切断当前章的朗读
+    if (hasNextChapter && isAtChapterEnd && !ttsActive) {
       if (autoAdvanceTextChapter) {
         if (autoAdvancedChapterRef.current !== currentChapterIndex) {
           autoAdvancedChapterRef.current = currentChapterIndex;
@@ -602,7 +625,7 @@ export const TextReaderPage: React.FC = () => {
       } else {
         setIsChapterEndPromptVisible(true);
       }
-    } else {
+    } else if (!ttsActive) {
       setIsChapterEndPromptVisible(false);
       if (!isAtChapterEnd) {
         autoAdvancedChapterRef.current = null;
@@ -614,7 +637,7 @@ export const TextReaderPage: React.FC = () => {
     progressSaveTimerRef.current = setTimeout(() => {
       saveTextProgress(currentChapterIndex, undefined, ratio);
     }, PROGRESS_SAVE_DEBOUNCE);
-  }, [bookId, currentChapterIndex, chapters.length, autoAdvanceTextChapter, saveTextProgress, isProgressDragging, showProgressHint, verticalWriting]);
+  }, [bookId, currentChapterIndex, chapters.length, autoAdvanceTextChapter, saveTextProgress, isProgressDragging, showProgressHint, verticalWriting, ttsActive]);
 
   // 离开时保存最终进度 + 清理 UI 定时器 + 持久化阅读设置
   useEffect(() => {
@@ -758,7 +781,9 @@ export const TextReaderPage: React.FC = () => {
     } else {
       setTtsActive(false);
     }
-  }, []));
+  }, []), useCallback((message: string) => {
+    showToast(message);
+  }, [showToast]));
 
   const handleToggleTTS = useCallback(() => {
     if (ttsActive) {
@@ -769,21 +794,116 @@ export const TextReaderPage: React.FC = () => {
     }
   }, [ttsActive, speech]);
 
-  // 听书开启/换章时：从当前阅读位置起播（按进度比例换算字符偏移，向前对齐句首）
+  // 听书引擎切换:神经网络首次启用前确认音色包下载体积
+  const [pendingNeuralConfirm, setPendingNeuralConfirm] = useState(false);
+  const handleTtsEngineChange = useCallback(async (engine: TtsEngineOption) => {
+    if (engine === 'neural' && !(await piperModelStored())) {
+      setPendingNeuralConfirm(true);
+      return;
+    }
+    useAppStore.getState().updateSettings({ ttsEngine: engine });
+  }, []);
+  const handleTtsServerFieldChange = useCallback((field: 'url' | 'model' | 'voice', value: string) => {
+    useAppStore.getState().updateSettings(
+      field === 'url' ? { ttsServerUrl: value } : field === 'model' ? { ttsServerModel: value } : { ttsServerVoice: value }
+    );
+  }, []);
+
+  // 听书期间挂起匀速自动滚动（跟滚改由高亮驱动，两套滚动并存会互相打断产生抖动），退出听书恢复原状态
+  const isAutoScrollingRef = useRef(isAutoScrolling);
+  isAutoScrollingRef.current = isAutoScrolling;
+  const autoScrollWasActiveBeforeTtsRef = useRef(false);
+  const prevTtsActiveRef = useRef(false);
+  useEffect(() => {
+    if (ttsActive && !prevTtsActiveRef.current) {
+      if (isAutoScrollingRef.current) {
+        autoScrollWasActiveBeforeTtsRef.current = true;
+        toggleAutoScroll();
+      }
+    } else if (!ttsActive && prevTtsActiveRef.current) {
+      if (autoScrollWasActiveBeforeTtsRef.current && !isAutoScrollingRef.current) {
+        toggleAutoScroll();
+      }
+      autoScrollWasActiveBeforeTtsRef.current = false;
+    }
+    prevTtsActiveRef.current = ttsActive;
+  }, [ttsActive, toggleAutoScroll]);
+
+  // 听书开启/换章时：从当前阅读位置起播（滚动模式按进度比例、分页模式按当前页偏移换算字符起点）
   const chapterSpeechText = currentChapter
     ? currentChapter.markdownDocument?.text ?? currentChapter.content
     : '';
+  /** 当前播报范围（章节坐标系）：驱动正文范围高亮渲染 */
+  const speechRange = ttsActive ? speech.currentChunkRange : null;
+
   const { start: speechStart, stop: speechStop } = speech;
   useEffect(() => {
     if (!ttsActive || !chapterSpeechText) return;
-    const ratio = scrollPercentRef.current / PERCENT_MULTIPLIER;
-    const startChar =
-      ratio > 0 && ratio < 1 ? Math.floor(ratio * chapterSpeechText.length) : 0;
+    let startChar = 0;
+    if (textReadingMode === 'scroll') {
+      const ratio = scrollPercentRef.current / PERCENT_MULTIPLIER;
+      if (ratio > 0 && ratio < 1) startChar = Math.floor(ratio * chapterSpeechText.length);
+    } else if (paginatedChapterIndexRef.current === currentChapterIndexRef.current) {
+      // 分页/翻书模式：页文本是章节可读文本的顺序切片，起播点 = 当前页之前所有页的长度和
+      let offset = 0;
+      for (let i = 0; i < currentPageIndexRef.current && i < textPagesLengthRef.current; i++) {
+        offset += textPagesRef.current[i].length;
+      }
+      startChar = Math.min(offset, chapterSpeechText.length);
+    }
     let slice = chapterSpeechText.slice(startChar);
-    if (!slice.trim()) slice = chapterSpeechText;
-    speechStart(slice);
+    let baseOffset = startChar;
+    if (!slice.trim()) {
+      slice = chapterSpeechText;
+      baseOffset = 0;
+    }
+    speechStart(slice, baseOffset);
     return () => speechStop();
-  }, [ttsActive, currentChapterIndex, chapterSpeechText, speechStart, speechStop]);
+  }, [ttsActive, currentChapterIndex, chapterSpeechText, textReadingMode, speechStart, speechStop]);
+
+  // 滚动模式跟读滚动：高亮目标越出视口舒适区时平滑滚到落点（听书时匀速自动滚动已挂起，不会互相打断）
+  useEffect(() => {
+    if (!ttsActive || textReadingMode !== 'scroll' || !speechRange) return;
+    const frame = requestAnimationFrame(() => {
+      const container = scrollContainerRef.current;
+      const target = container?.querySelector<HTMLElement>('.speech-reading');
+      if (!container || !target) return;
+      const rect = target.getBoundingClientRect();
+      const view = container.getBoundingClientRect();
+      if (rect.height <= 0 || view.height <= 0) return;
+      if (verticalWriting) {
+        // 竖排：阅读沿横轴推进，落点取视口横向中点
+        if (rect.left < view.left + view.width * SPEECH_FOLLOW_ZONE_START
+          || rect.right > view.left + view.width * SPEECH_FOLLOW_ZONE_END) {
+          const delta = rect.left + rect.width / 2 - (view.left + view.width / 2);
+          container.scrollBy({ left: delta, behavior: 'smooth' });
+        }
+      } else if (rect.top - view.top < view.height * SPEECH_FOLLOW_ZONE_START
+        || (rect.bottom - view.top) / view.height > SPEECH_FOLLOW_ZONE_END) {
+        const delta = rect.top + rect.height / 2 - (view.top + view.height * SPEECH_FOLLOW_ANCHOR_RATIO);
+        container.scrollBy({ top: delta, behavior: 'smooth' });
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [ttsActive, speechRange, textReadingMode, verticalWriting]);
+
+  // 分页/翻书模式跟读翻页：按播报偏移定位目标页，仅向前跟随（页文本是章节文本的顺序切片）
+  useEffect(() => {
+    if (!ttsActive || textReadingMode === 'scroll' || !speechRange) return;
+    if (paginatedChapterIndexRef.current !== currentChapterIndexRef.current) return;
+    let offset = 0;
+    let targetPage = -1;
+    for (let i = 0; i < textPages.length; i++) {
+      if (speechRange.start >= offset && speechRange.start < offset + textPages[i].length) {
+        targetPage = i;
+        break;
+      }
+      offset += textPages[i].length;
+    }
+    if (targetPage > currentPageIndex) {
+      goToPageRef.current?.(targetPage, 'left');
+    }
+  }, [ttsActive, speechRange, textReadingMode, textPages, currentPageIndex]);
 
   // 点击区域翻页
   const handleTapZoneClick = useCallback((e: React.MouseEvent) => {
@@ -987,7 +1107,7 @@ export const TextReaderPage: React.FC = () => {
     measureEl.style.fontSize = `${fontSize}px`;
     measureEl.style.lineHeight = String(lineHeight);
     measureEl.style.fontFamily = resolvedFontFamily;
-    measureEl.style.color = themeStyles.color;
+    measureEl.style.color = effectiveColor;
     measureEl.style.whiteSpace = 'normal';
     measureEl.style.wordBreak = 'break-word';
     measureEl.style.boxSizing = 'border-box';
@@ -1044,7 +1164,7 @@ export const TextReaderPage: React.FC = () => {
       markdownMeasureEl.style.fontSize = `${fontSize}px`;
       markdownMeasureEl.style.lineHeight = String(lineHeight);
       markdownMeasureEl.style.fontFamily = resolvedFontFamily;
-      markdownMeasureEl.style.color = themeStyles.color;
+      markdownMeasureEl.style.color = effectiveColor;
       markdownMeasureEl.style.textAlign = textAlign === 'justify' ? 'justify' : 'left';
 
       const measuredBlocks = Array.from(
@@ -1181,7 +1301,7 @@ export const TextReaderPage: React.FC = () => {
     fontSize,
     lineHeight,
     resolvedFontFamily,
-    themeStyles.color,
+    effectiveColor,
     textAlign,
     hasMultipleChapters,
     firstLineIndent,
@@ -1220,26 +1340,40 @@ export const TextReaderPage: React.FC = () => {
   }, [textReadingMode, paginateMeasuredContent]);
 
   // 翻页
+  // 连滚翻页：动画期间的后续翻页暂存，动画结束立即执行（建议书 B2，替代硬拦截的生硬感）
+  const pendingPageRef = useRef<{ index: number; direction: 'left' | 'right' } | null>(null);
+
   const goToPage = useCallback((index: number, direction: 'left' | 'right') => {
-    if (isPageAnimating) return;
+    if (isPageAnimating) {
+      // 仅接受与当前方向相同的连续翻页，且目标页有效
+      if (index >= 0 && index < textPages.length) {
+        pendingPageRef.current = { index, direction };
+      }
+      return;
+    }
     if (index < 0 || index >= textPages.length) return;
-    
+
     // 记录前一页索引
     setPreviousPageIndex(currentPageIndex);
     setPageDirection(direction);
     setIsPageAnimating(true);
-    
+
     // 根据阅读模式设置不同的动画时长
-    const animationDuration = textReadingMode === 'book' ? BOOK_FLIP_ANIMATION_MS : PAGE_SLIDE_ANIMATION_MS; // 翻书模式 900ms，左右滑动 500ms
-    
+    const animationDuration = textReadingMode === 'book' ? BOOK_FLIP_ANIMATION_MS : PAGE_SLIDE_ANIMATION_MS;
+
     // 先设置新页索引，让 React 渲染新页
     setCurrentPageIndex(index);
-    
-    // 等待动画完成后清除状态
+
+    // 等待动画完成后清除状态；若有连滚请求则立即接续下一跳
     setTimeout(() => {
+      const pending = pendingPageRef.current;
+      pendingPageRef.current = null;
       setIsPageAnimating(false);
       setPageDirection(null);
       setPreviousPageIndex(null);
+      if (pending) {
+        goToPageRef.current?.(pending.index, pending.direction);
+      }
     }, animationDuration);
   }, [textPages.length, isPageAnimating, currentPageIndex, textReadingMode]);
   goToPageRef.current = goToPage;
@@ -1430,7 +1564,6 @@ export const TextReaderPage: React.FC = () => {
   // 键盘快捷键
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') navigate(-1);
       if (textReadingMode === 'scroll') {
         if (e.key === 'ArrowUp' || e.key === 'PageUp') {
           e.preventDefault();
@@ -2222,7 +2355,7 @@ export const TextReaderPage: React.FC = () => {
         }
       }
     }
-  }, [currentChapterIndex, currentChapter, textReadingMode, textPages, chapters, requestPageAfterPagination]);
+  }, [currentChapterIndex, currentChapter, textReadingMode, textPages, chapters, requestPageAfterPagination, verticalWriting]);
 
   if (isLoading) {
     return (
@@ -2235,82 +2368,65 @@ export const TextReaderPage: React.FC = () => {
     );
   }
 
-  // 渲染带批注高亮的文本
+  // 按边界点把文本切段渲染：批注端点与听书范围端点并入边界集合，任一分段内命中状态一致，
+  // 听书范围与批注重叠时按段嵌套（听书 span 包在批注 mark 外层），不会丢文本
+  const renderTextWithRanges = (
+    text: string,
+    annotations: Annotation[],
+    speech: { start: number; end: number } | null
+  ): React.ReactNode[] => {
+    const points = new Set<number>([0, text.length]);
+    annotations.forEach((a) => {
+      points.add(Math.max(0, Math.min(a.startOffset, text.length)));
+      points.add(Math.max(0, Math.min(a.endOffset, text.length)));
+    });
+    if (speech) {
+      points.add(Math.max(0, Math.min(speech.start, text.length)));
+      points.add(Math.max(0, Math.min(speech.end, text.length)));
+    }
+    const sorted = [...points].sort((a, b) => a - b);
+    const parts: React.ReactNode[] = [];
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const segStart = sorted[i];
+      const segEnd = sorted[i + 1];
+      if (segEnd <= segStart) continue;
+      const segmentText = text.slice(segStart, segEnd);
+      const ann = annotations.find((a) => a.startOffset <= segStart && a.endOffset >= segEnd);
+      let node: React.ReactNode = segmentText;
+      if (ann) {
+        const presentation = getAnnotationPresentation(ann.style, effectiveColor, ann.id);
+        node = (
+          <mark
+            key={`ann-${ann.id}-${segStart}`}
+            style={presentation.style}
+            className={`transition-colors hover:opacity-80 ${presentation.className}`}
+            title={ann.note}
+            onClick={(e) => {
+              e.stopPropagation();
+              setHighlightedAnnotation(ann);
+            }}
+          >
+            {segmentText}
+          </mark>
+        );
+      }
+      if (speech && speech.start <= segStart && speech.end >= segEnd) {
+        node = (
+          <span key={`speech-${segStart}`} className="speech-reading">{node}</span>
+        );
+      }
+      parts.push(node);
+    }
+    return parts;
+  };
+
+  // 渲染带批注高亮与听书跟读高亮的文本（滚动模式：章节全文坐标系）
   const renderContentWithAnnotations = (content: string, chapterIdx: number) => {
     const chapterAnns = currentChapterAnnotations.filter(
       (a) => a.chapterIndex === chapterIdx && a.startOffset >= 0 && a.endOffset > a.startOffset
-    );
-    if (chapterAnns.length === 0) return content;
-
-    // 按 startOffset 排序并构建片段
-    const sorted = [...chapterAnns].sort((a, b) => a.startOffset - b.startOffset);
-    const parts: React.ReactNode[] = [];
-    let lastEnd = 0;
-
-    sorted.forEach((ann) => {
-      // 跳过与前一批注重叠的批注（避免 slice 产生空/负区间导致文本丢失）
-      if (ann.startOffset < lastEnd) return;
-      // 添加批注前的普通文本
-      if (ann.startOffset > lastEnd) {
-        parts.push(content.slice(lastEnd, ann.startOffset));
-      }
-      // 添加高亮文本（根据样式选择不同的 CSS 类）
-      const highlightText = content.slice(ann.startOffset, ann.endOffset);
-      
-      // 根据样式选择 CSS 样式
-      const getAnnotationStyle = (style?: AnnotationStyle): React.CSSProperties => {
-        switch (style) {
-          case 'underline':
-            return {
-              textDecoration: 'underline',
-              textDecorationColor: themeStyles.color,
-              textDecorationThickness: '2px',
-              textUnderlineOffset: '3px',
-              cursor: 'pointer',
-            };
-          case 'wavy':
-            return {
-              textDecoration: 'underline wavy',
-              textDecorationColor: themeStyles.color,
-              textDecorationThickness: '1.5px',
-              textUnderlineOffset: '4px',
-              cursor: 'pointer',
-            };
-          case 'highlight':
-          default:
-            // 使用 color-mix 将当前文字色与透明混合，实现半透明背景，适配所有阅读主题
-            return {
-              backgroundColor: `color-mix(in srgb, ${themeStyles.color} 20%, transparent)`,
-              borderRadius: '2px',
-              padding: '0 2px',
-              cursor: 'pointer',
-            };
-        }
-      };
-
-      parts.push(
-        <mark
-          key={`ann-${ann.id}`}
-          style={getAnnotationStyle(ann.style)}
-          className="transition-colors hover:opacity-80"
-          title={ann.note}
-          onClick={(e) => {
-            e.stopPropagation();
-            setHighlightedAnnotation(ann);
-          }}
-        >
-          {highlightText}
-        </mark>
-      );
-      lastEnd = ann.endOffset;
-    });
-
-    // 添加剩余文本
-    if (lastEnd < content.length) {
-      parts.push(content.slice(lastEnd));
-    }
-
-    return parts;
+    ).sort((a, b) => a.startOffset - b.startOffset);
+    if (chapterAnns.length === 0 && !speechRange) return content;
+    return renderTextWithRanges(content, chapterAnns, speechRange);
   };
 
   // 分页模式下渲染批注高亮：将章节级偏移映射为页内偏移
@@ -2319,45 +2435,23 @@ export const TextReaderPage: React.FC = () => {
     const pageAnns = currentChapterAnnotations.filter(
       (a) => a.chapterIndex === chapterIdx && a.startOffset >= 0 && a.endOffset > a.startOffset
         && a.startOffset < pageEnd && a.endOffset > pageStartOffset
-    );
-    if (pageAnns.length === 0) return pageContent;
-
-    // 将章节偏移映射为页内偏移并排序
-    const mapped = pageAnns.map((a) => ({
+    ).map((a) => ({
       ...a,
-      pageStart: Math.max(0, a.startOffset - pageStartOffset),
-      pageEnd: Math.min(pageContent.length, a.endOffset - pageStartOffset),
-    })).sort((a, b) => a.pageStart - b.pageStart);
-
-    const parts: React.ReactNode[] = [];
-    let lastEnd = 0;
-
-    mapped.forEach((ann) => {
-      // 跳过与前一批注重叠的批注
-      if (ann.pageStart < lastEnd) return;
-      if (ann.pageStart > lastEnd) parts.push(pageContent.slice(lastEnd, ann.pageStart));
-      const highlightText = pageContent.slice(ann.pageStart, ann.pageEnd);
-      const getAnnotationStyle = (style?: AnnotationStyle): React.CSSProperties => {
-        switch (style) {
-          case 'underline':
-            return { textDecoration: 'underline', textDecorationColor: themeStyles.color, textDecorationThickness: '2px', textUnderlineOffset: '3px', cursor: 'pointer' };
-          case 'wavy':
-            return { textDecoration: 'underline wavy', textDecorationColor: themeStyles.color, textDecorationThickness: '1.5px', textUnderlineOffset: '4px', cursor: 'pointer' };
-          case 'highlight':
-          default:
-            return { backgroundColor: `color-mix(in srgb, ${themeStyles.color} 20%, transparent)`, borderRadius: '2px', padding: '0 2px', cursor: 'pointer' };
-        }
-      };
-      parts.push(
-        <mark key={`ann-${ann.id}`} style={getAnnotationStyle(ann.style)} className="transition-colors hover:opacity-80" title={ann.note}
-          onClick={(e) => { e.stopPropagation(); setHighlightedAnnotation(ann); }}>
-          {highlightText}
-        </mark>
-      );
-      lastEnd = ann.pageEnd;
-    });
-    if (lastEnd < pageContent.length) parts.push(pageContent.slice(lastEnd));
-    return parts;
+      startOffset: Math.max(0, a.startOffset - pageStartOffset),
+      endOffset: Math.min(pageContent.length, a.endOffset - pageStartOffset),
+    })).sort((a, b) => a.startOffset - b.startOffset);
+    // 听书范围裁剪到本页窗口后转为页内坐标；完全不在页内则为 null
+    const pageSpeech = speechRange
+      ? (() => {
+          const clippedStart = Math.max(speechRange.start, pageStartOffset);
+          const clippedEnd = Math.min(speechRange.end, pageEnd);
+          return clippedEnd > clippedStart
+            ? { start: clippedStart - pageStartOffset, end: clippedEnd - pageStartOffset }
+            : null;
+        })()
+      : null;
+    if (pageAnns.length === 0 && !pageSpeech) return pageContent;
+    return renderTextWithRanges(pageContent, pageAnns, pageSpeech);
   };
 
   // 计算指定页在完整章节中的起始偏移（通过累积页长度计算，避免 indexOf 在重复内容时定位错误）
@@ -2396,9 +2490,10 @@ export const TextReaderPage: React.FC = () => {
               startOffset={pageStartOffset}
               endOffset={pageStartOffset + content.length}
               annotations={currentChapterAnnotations}
-              color={themeStyles.color}
+              color={effectiveColor}
               firstLineIndent={firstLineIndent}
               paginated={pageIndex != null}
+              highlightRange={speechRange}
               onAnnotationClick={setHighlightedAnnotation}
               onInternalLink={pageIndex != null ? (href) => {
                 let targetId = href.slice(1)
@@ -2438,7 +2533,7 @@ export const TextReaderPage: React.FC = () => {
       fontSize: `${fontSize}px`,
       lineHeight,
       fontFamily: resolvedFontFamily,
-      color: themeStyles.color,
+      color: effectiveColor,
       WebkitUserSelect: 'text' as const,
       userSelect: 'text' as const,
       WebkitTouchCallout: 'none' as const,
@@ -2513,11 +2608,21 @@ export const TextReaderPage: React.FC = () => {
   return (
     <div
       className="font-body min-h-screen relative overflow-hidden"
+      data-speech-paused={ttsActive && speech.paused ? 'true' : undefined}
       style={{
-        backgroundColor: themeStyles.bg,
-        color: themeStyles.color,
+        backgroundColor: effectiveBg,
+        color: effectiveColor,
+        isolation: 'isolate',
       }}
     >
+      {/* 纸张纹理层：位于主题色之上、正文之下（负 z），multiply 混入纸色 */}
+      {paperTextureLayer && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none fixed inset-0 z-[-1]"
+          style={paperTextureLayer}
+        />
+      )}
       {/* 隐藏的测量容器 */}
       <div ref={measureRef} className="absolute pointer-events-none" aria-hidden="true" />
       {currentChapter?.markdownDocument && textReadingMode !== 'scroll' && (
@@ -2534,7 +2639,7 @@ export const TextReaderPage: React.FC = () => {
           <MarkdownReaderContent
             document={currentChapter.markdownDocument}
             annotations={[]}
-            color={themeStyles.color}
+            color={effectiveColor}
             firstLineIndent={firstLineIndent}
             paginated
             measurementMode
@@ -2566,7 +2671,7 @@ export const TextReaderPage: React.FC = () => {
               fontSize: `${fontSize}px`,
               lineHeight,
               fontFamily: resolvedFontFamily,
-              color: themeStyles.color,
+              color: effectiveColor,
               WebkitUserSelect: 'text',
               userSelect: 'text',
               WebkitTouchCallout: 'none',
@@ -2629,7 +2734,7 @@ export const TextReaderPage: React.FC = () => {
                   key={`page-${previousPageIndex}-exit`}
                   data-flip-exit
                   className={cn(
-                    'absolute inset-0 w-full h-screen overflow-hidden book-flip-page',
+                    'absolute inset-0 w-full h-screen overflow-hidden book-flip-page book-flip-page-backface',
                     textReadingMode !== 'book' && getPageAnimClass(true)
                   )}
                   style={textReadingMode === 'book' ? {
@@ -2653,7 +2758,7 @@ export const TextReaderPage: React.FC = () => {
                 </div>
               )}
               
-              {/* 当前页（进入动画或静态显示） */}
+              {/* 当前页（book 模式：静止在底层被揭开；paginate：滑入） */}
               <div
                 key={`page-${currentPageIndex}-enter`}
                 data-flip-enter
@@ -2662,23 +2767,17 @@ export const TextReaderPage: React.FC = () => {
                   isPageAnimating ? 'absolute inset-0 book-flip-page' : '',
                   textReadingMode !== 'book' && isPageAnimating && getPageAnimClass(false)
                 )}
-                style={textReadingMode === 'book' && isPageAnimating ? {
-                  transformOrigin: pageDirection === 'left' ? 'right center' : 'left center',
-                  transform: `rotateY(${pageDirection === 'left' ? FLIP_ROTATION_DEG * (1 - flipProgress) : -FLIP_ROTATION_DEG * (1 - flipProgress)}deg)`,
-                  zIndex: 2,
-                } : undefined}
+                style={textReadingMode === 'book' && isPageAnimating ? { zIndex: 1 } : undefined}
               >
                 {renderPagedArticle(Math.min(currentPageIndex, textPages.length - 1))}
-                {/* 翻页阴影 */}
+                {/* 翻起页投在静止页上的投影（随翻起渐弱） */}
                 {textReadingMode === 'book' && isPageAnimating && (
-                  <>
-                    <div className="book-page-shadow" style={{
-                      background: flipProgress < 1
-                        ? `linear-gradient(to ${pageDirection === 'left' ? 'right' : 'left'}, rgba(0,0,0,${FLIP_ENTER_SHADOW_MAX_OPACITY * (1 - flipProgress)}) 0%, transparent ${FLIP_ENTER_SHADOW_GRADIENT_END_PCT}%)`
-                        : undefined,
-                    }} />
-                    <div className="book-spine-highlight" style={{ opacity: flipProgress < 1 ? FLIP_SPINE_SNAPBACK_OPACITY * (1 - flipProgress) : 0 }} />
-                  </>
+                  <div
+                    className="book-page-shadow"
+                    style={{
+                      background: `linear-gradient(to ${pageDirection === 'left' ? 'right' : 'left'}, rgba(0,0,0,${FLIP_ENTER_SHADOW_MAX_OPACITY * (1 - flipProgress)}) 0%, transparent ${FLIP_ENTER_SHADOW_GRADIENT_END_PCT}%)`,
+                    }}
+                  />
                 )}
               </div>
             </>
@@ -2727,6 +2826,8 @@ export const TextReaderPage: React.FC = () => {
         <SpeechBadge
           rate={speech.rate}
           paused={speech.paused}
+          engineLabel={speech.engineLabel}
+          synthesizing={speech.synthesizing}
           onCycleRate={speech.cycleRate}
           onPauseResume={() => (speech.paused ? speech.resume() : speech.pause())}
           onStop={handleToggleTTS}
@@ -2755,9 +2856,14 @@ export const TextReaderPage: React.FC = () => {
             chapterTitle={currentChapter?.title}
             showChapterButton={hasMultipleChapters}
             isBookmarked={isBookmarked}
+            isFavorite={book?.isFavorite ?? false}
             onBack={handleClose}
             onOpenChapters={() => setIsChapterDrawerOpen(true)}
             onToggleBookmark={toggleBookmark}
+            onToggleFavorite={() => {
+              if (bookId) useLibraryStore.getState().toggleFavorite(bookId);
+            }}
+            onOpenAnnotations={() => setIsAnnotationListOpen(true)}
             onOpenSettings={() => setIsBottomBarVisible(true)}
           />
 
@@ -2794,7 +2900,7 @@ export const TextReaderPage: React.FC = () => {
       {/* 底栏遮罩 */}
       {isBottomBarVisible && (
         <div
-          className="fixed inset-0 z-[55] bg-black/30 animate-fade-in"
+          className="fixed inset-0 z-[45] bg-on-background/30 animate-fade-in"
           onClick={() => { setIsBottomBarVisible(false); toggleUi(); }}
         />
       )}
@@ -2808,7 +2914,6 @@ export const TextReaderPage: React.FC = () => {
           paperType={settings.paperType}
           brightness={brightness}
           colorTemperature={colorTemperature}
-          readingTheme={readingTheme}
           textFontFamily={textFontFamily}
           textAlign={textAlign}
           firstLineIndent={firstLineIndent}
@@ -2821,8 +2926,9 @@ export const TextReaderPage: React.FC = () => {
           onPaperModeToggle={() => useAppStore.getState().togglePaperMode()}
           onPaperTypeChange={(type) => useAppStore.getState().updateSettings({ paperType: type })}
           onBrightnessChange={(v) => useAppStore.getState().updateSettings({ brightness: v })}
+          textureIntensity={settings.textureIntensity}
+          onTextureIntensityChange={(v) => useAppStore.getState().updateSettings({ textureIntensity: v })}
           onColorTemperatureChange={(v) => useAppStore.getState().updateSettings({ colorTemperature: v })}
-          onReadingThemeChange={(theme) => useAppStore.getState().updateSettings({ readingTheme: theme })}
           onTextFontFamilyChange={(family) => useAppStore.getState().updateSettings({ textFontFamily: family })}
           onTextAlignChange={(align) => useAppStore.getState().updateSettings({ textAlign: align })}
           onFirstLineIndentToggle={() => useAppStore.getState().updateSettings({ firstLineIndent: !firstLineIndent })}
@@ -2838,18 +2944,30 @@ export const TextReaderPage: React.FC = () => {
               showToast('双栏阅读需要横屏，旋转设备后生效');
             }
           }}
-          onBookmarkListOpen={() => setIsBookmarkPanelOpen(true)}
-          onAnnotationListOpen={() => setIsAnnotationListOpen(true)}
-          onFavoriteToggle={() => {
-            if (bookId) useLibraryStore.getState().toggleFavorite(bookId);
-          }}
-          isBookmarked={isBookmarked}
-          isFavorite={book?.isFavorite}
+          ttsEngine={settings.ttsEngine}
+          ttsServerUrl={settings.ttsServerUrl}
+          ttsServerModel={settings.ttsServerModel}
+          ttsServerVoice={settings.ttsServerVoice}
+          onTtsEngineChange={handleTtsEngineChange}
+          onTtsServerFieldChange={handleTtsServerFieldChange}
           onClose={() => setIsBottomBarVisible(false)}
         />
       )}
 
       {toast && <UndoToast message={toast.message} onUndo={toast.undo} />}
+
+      {/* 神经网络音色包首次下载确认 */}
+      <ConfirmDialog
+        isOpen={pendingNeuralConfirm}
+        title="下载离线语音包"
+        message="神经网络语音需先下载约 60-80MB 的中文音色包（仅下载一次，之后可离线使用）。是否继续？"
+        confirmLabel="下载并启用"
+        onConfirm={() => {
+          setPendingNeuralConfirm(false);
+          useAppStore.getState().updateSettings({ ttsEngine: 'neural' });
+        }}
+        onCancel={() => setPendingNeuralConfirm(false)}
+      />
 
       {/* 章节目录抽屉 */}
       {isChapterDrawerOpen && (

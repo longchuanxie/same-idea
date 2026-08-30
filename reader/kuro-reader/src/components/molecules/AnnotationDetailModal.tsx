@@ -16,9 +16,9 @@ export const AnnotationDetailModal: React.FC<AnnotationDetailModalProps> = ({
     className="fixed inset-0 z-[65] flex items-center justify-center"
     onClick={onClose}
   >
-    <div className="absolute inset-0 bg-black/30" />
+    <div className="absolute inset-0 bg-on-background/30" />
     <div
-      className="relative bg-surface rounded-xl shadow-2xl border border-outline-variant/50 max-w-sm mx-4 p-5 animate-fade-in"
+      className="relative bg-surface rounded-card-lg shadow-2xl border border-outline-variant/50 max-w-sm mx-4 p-5 animate-fade-in"
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex items-center gap-2 mb-3">

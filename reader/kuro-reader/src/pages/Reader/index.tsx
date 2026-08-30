@@ -13,7 +13,7 @@ import { useAppStore } from '@/stores/useAppStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import { useReaderStore } from '@/stores/useReaderStore';
 import { cn } from '@/utils/cn';
-import { getPaperConfig } from '@/utils/paperTexture';
+import { computePaperOpacity, getPaperBaseOpacity, getPaperConfig } from '@/utils/paperTexture';
 import {
   getHorizontalPageSpread,
   getHorizontalPageStart,
@@ -161,7 +161,9 @@ export const ReaderPage: React.FC = () => {
     isActive: !isLoading,
   });
   const { updateProgress, getBookById, toggleFavorite } = useLibraryStore();
-  const { settings } = useAppStore();
+  const { settings, theme } = useAppStore();
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const isDarkSurface = theme === 'dark' || (theme === 'auto' && prefersDark);
   const readingDirection = settings.readingDirection;
   const pageTurnGestures = settings.pageTurnGestures;
   const paperModeEnabled = settings.paperMode;
@@ -1056,11 +1058,9 @@ export const ReaderPage: React.FC = () => {
         goNextPage();
       } else if (pageTurn === 'prev') {
         goPrevPage();
-      } else if (e.key === 'Escape') {
-        navigate(-1);
       }
     },
-    [direction, goNextPage, goPrevPage, navigate, fullscreenImageUrl, readingDirection]
+    [direction, goNextPage, goPrevPage, fullscreenImageUrl, readingDirection]
   );
 
   useEffect(() => {
@@ -1379,8 +1379,16 @@ export const ReaderPage: React.FC = () => {
     );
   }
 
-  const paperOpacity = paperModeEnabled ? textureIntensity / 100 : 0;
   const paperConfig = paperModeEnabled ? getPaperConfig(paperType) : null;
+  // 纹理层：幂曲线强度 + 暗色减淡；混合模式随纸型（浅色纸 multiply / 夜读纸 screen）
+  const paperTextureLayer = paperModeEnabled && paperConfig
+    ? {
+        backgroundImage: paperConfig.svgFilter(
+          computePaperOpacity(textureIntensity, getPaperBaseOpacity(paperType), isDarkSurface)
+        ),
+        mixBlendMode: paperConfig.blendMode as 'multiply' | 'screen',
+      }
+    : null;
 
   return (
     <div
@@ -1389,13 +1397,13 @@ export const ReaderPage: React.FC = () => {
       )}
       style={
         paperModeEnabled && paperConfig
-          ? {
-              backgroundColor: paperConfig.bgColor,
-              backgroundImage: paperConfig.svgFilter(paperOpacity),
-            }
+          ? { backgroundColor: paperConfig.bgColor, isolation: 'isolate' }
           : undefined
       }
     >
+      {paperTextureLayer && (
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[-1]" style={paperTextureLayer} />
+      )}
       <main
         ref={direction === 'vertical' ? smoothScrollContainerRef : scrollContainerRef}
         className={`w-full h-screen overflow-auto relative z-0 ${
@@ -1502,9 +1510,14 @@ export const ReaderPage: React.FC = () => {
               >
                 <span className="material-symbols-outlined text-headline-md">arrow_back</span>
               </button>
-              <h1 className="font-display text-headline-sm text-primary truncate max-w-[60%] text-center">
-                {chapterTitle}
-              </h1>
+              <div className="flex flex-col items-center flex-1 min-w-0 px-2">
+                <h1 className="font-display text-headline-sm text-primary truncate w-full text-center" title={book?.title}>
+                  {book?.title}
+                </h1>
+                <span className="font-label text-label-sm text-on-surface-variant truncate w-full text-center">
+                  {chapterTitle}
+                </span>
+              </div>
               <div className="flex items-center gap-1">
                 <button
                   className={`${book?.isFavorite ? 'text-primary' : 'text-on-surface-variant'} hover:text-primary transition-colors flex items-center justify-center w-11 h-11 rounded-full hover:bg-surface-variant/50`}
@@ -1530,9 +1543,9 @@ export const ReaderPage: React.FC = () => {
                   className="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center w-11 h-11 rounded-full hover:bg-surface-variant/50"
                   onClick={() => setBottomBarVisible(true)}
                   data-ui-control
-                  aria-label="设置"
+                  aria-label="阅读设置"
                 >
-                  <span className="material-symbols-outlined text-headline-md">more_vert</span>
+                  <span className="material-symbols-outlined text-headline-md">tune</span>
                 </button>
               </div>
             </div>
@@ -1593,10 +1606,10 @@ export const ReaderPage: React.FC = () => {
 
       {showChapterEnd && nextChapter && (
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 animate-slide-up">
-          <div className="bg-surface/95 backdrop-blur-md border border-outline-variant/50 rounded-2xl px-6 py-4 shadow-lg flex flex-col items-center gap-3 max-w-[280px]">
+          <div className="bg-surface/95 backdrop-blur-md border border-outline-variant/50 rounded-2xl px-6 py-4 shadow-paper-up flex flex-col items-center gap-3 max-w-[280px]">
             <p className="font-body text-body-sm text-on-surface-variant">本章已读完</p>
             <button
-              className="w-full bg-primary text-on-primary font-label text-label-md px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity"
+              className="w-full bg-primary text-on-primary font-label text-label-md px-5 py-2.5 rounded-card-lg hover:opacity-90 transition-opacity"
               onClick={() => {
                 setShowChapterEnd(false);
                 openChapter(nextChapter.id);
@@ -1611,7 +1624,7 @@ export const ReaderPage: React.FC = () => {
 
       {isBottomBarVisible && (
         <div
-          className="fixed inset-0 z-[55] bg-black/30 animate-fade-in"
+          className="fixed inset-0 z-[45] bg-on-background/30 animate-fade-in"
           onClick={() => setBottomBarVisible(false)}
         />
       )}
@@ -1624,6 +1637,8 @@ export const ReaderPage: React.FC = () => {
           paperType={paperType}
           brightness={brightness}
           colorTemperature={colorTemperature}
+          textureIntensity={textureIntensity}
+          onTextureIntensityChange={(v) => useAppStore.getState().updateSettings({ textureIntensity: v })}
           onDirectionChange={handleReaderDirectionChange}
           onPageLayoutChange={(layout) => {
             setPageLayout(layout);

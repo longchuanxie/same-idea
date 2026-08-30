@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 
+import { getRandomCatalogColor, migrateTagColor } from '@/constants/catalogColors';
 import { STORAGE_KEYS } from '@/constants/storage';
 import { getParserForFile } from '@/services/parsers';
 import { ComicArchiveParser } from '@/services/parsers/comicArchiveParser';
@@ -11,8 +12,8 @@ import { progressRepo } from '@/services/storage/progressRepo';
 import { subLibraryRepo } from '@/services/storage/subLibraryRepo';
 import { tagRepo } from '@/services/storage/tagRepo';
 import type { Book, Chapter, ReadingProgress, SubLibrary, Tag } from '@/types';
-import { extractTitleFromFileName } from '@/utils/extractTitle';
 import { deriveMergedBookTitle, extractArchiveChapterInfo } from '@/utils/comicChapterSplit';
+import { extractTitleFromFileName } from '@/utils/extractTitle';
 
 interface LibraryState {
   books: Book[];
@@ -20,6 +21,8 @@ interface LibraryState {
   tags: Tag[];
   coverUrls: Record<string, string>;
   readingProgress: Record<string, ReadingProgress>;
+  /** 已从门厅座位移出的书（仅隐藏，进度保留） */
+  hiddenContinueIds: string[];
   isLoading: boolean;
   isImporting: boolean;
   importProgress: number;
@@ -41,6 +44,9 @@ interface LibraryState {
   updateBook: (id: string, updates: Partial<Pick<Book, 'title' | 'author' | 'description' | 'status' | 'tags'>>) => Promise<void>;
   getContinueReading: () => Book[];
   removeContinueReading: (bookId: string) => void;
+  /** 仅把书移出门厅「你的座位」，阅读进度保留（可经 restoreContinueReading 撤销） */
+  dismissContinueReading: (bookId: string) => void;
+  restoreContinueReading: (bookId: string) => void;
   getRecentlyRead: () => Book[];
   getFavorites: () => Book[];
   getBooksByTag: (tagId: string) => Book[];
@@ -62,15 +68,8 @@ interface LibraryState {
   getBookById: (bookId: string) => Book | undefined;
 }
 
-const TAG_COLORS = [
-  '#E53935', '#D81B60', '#8E24AA', '#5E35B1', '#3949AB',
-  '#1E88E5', '#039BE5', '#00ACC1', '#00897B', '#43A047',
-  '#7CB342', '#C0CA33', '#FDD835', '#FFB300', '#FB8C00',
-  '#F4511E', '#6D4C41', '#757575', '#546E7A', '#78909C',
-];
-
 function getRandomColor(): string {
-  return TAG_COLORS[Math.floor(Math.random() * TAG_COLORS.length)];
+  return getRandomCatalogColor();
 }
 
 /**
@@ -207,6 +206,14 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
   tags: [],
   coverUrls: {},
   readingProgress: {},
+  hiddenContinueIds: (() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.HIDDEN_CONTINUE);
+      return raw ? (JSON.parse(raw) as string[]) : [];
+    } catch {
+      return [];
+    }
+  })(),
   isLoading: false,
   isImporting: false,
   importProgress: 0,
@@ -233,7 +240,12 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
       const readingProgress = await loadProgressWithMigration();
 
       const subLibraries = await subLibraryRepo.getAll();
-      const tags = await tagRepo.getAll();
+      // 存量标签的旧色板在加载期归一为分类色（不回写数据库）
+      const rawTags = await tagRepo.getAll();
+      const tags = (Array.isArray(rawTags) ? rawTags : []).map((t) => ({
+        ...t,
+        color: migrateTagColor(t.color) ?? t.color,
+      }));
 
       set({ books: booksWithTags, coverUrls, readingProgress, subLibraries, tags, isLoading: false });
     } catch (e) {
@@ -750,9 +762,14 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
   },
 
   getContinueReading: () => {
-    const { books, readingProgress } = get();
+    const { books, readingProgress, hiddenContinueIds } = get();
     return books
-      .filter((b) => readingProgress[b.id] && readingProgress[b.id].percentage < PERCENT_MULTIPLIER)
+      .filter(
+        (b) =>
+          readingProgress[b.id] &&
+          readingProgress[b.id].percentage < PERCENT_MULTIPLIER &&
+          !hiddenContinueIds.includes(b.id)
+      )
       .sort((a, b) => (b.lastReadAt ? new Date(b.lastReadAt).getTime() : 0) - (a.lastReadAt ? new Date(a.lastReadAt).getTime() : 0));
   },
 
@@ -762,6 +779,30 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     const { [bookId]: _, ...rest } = readingProgress;
     progressRepo.remove(bookId);
     set({ readingProgress: rest as Record<string, ReadingProgress> });
+  },
+
+  dismissContinueReading: (bookId: string) => {
+    const { hiddenContinueIds } = get();
+    if (hiddenContinueIds.includes(bookId)) return;
+    const next = [...hiddenContinueIds, bookId];
+    set({ hiddenContinueIds: next });
+    try {
+      localStorage.setItem(STORAGE_KEYS.HIDDEN_CONTINUE, JSON.stringify(next));
+    } catch {
+      // localStorage 不可用时仅本次会话生效
+    }
+  },
+
+  restoreContinueReading: (bookId: string) => {
+    const { hiddenContinueIds } = get();
+    if (!hiddenContinueIds.includes(bookId)) return;
+    const next = hiddenContinueIds.filter((id) => id !== bookId);
+    set({ hiddenContinueIds: next });
+    try {
+      localStorage.setItem(STORAGE_KEYS.HIDDEN_CONTINUE, JSON.stringify(next));
+    } catch {
+      // 同上
+    }
   },
 
   getRecentlyRead: () => {

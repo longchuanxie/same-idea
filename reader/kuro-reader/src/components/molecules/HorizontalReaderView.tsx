@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import type { FC, MouseEvent, TouchEvent } from 'react';
 
 import { cn } from '@/utils/cn';
@@ -26,11 +26,11 @@ interface HorizontalReaderViewProps {
 }
 
 const HORIZONTAL_VIEW_CLASSES = 'w-full h-full flex items-center justify-center overflow-hidden px-1 sm:px-2';
-const DOUBLE_SPREAD_CLASSES = 'flex items-center justify-center h-full w-full gap-1 animate-page-fade';
+const DOUBLE_SPREAD_CLASSES = 'flex items-center justify-center h-full w-full gap-1';
 const DOUBLE_PAGE_SLOT_CLASSES = 'h-full min-w-0 flex-1 flex items-center justify-center';
 const DOUBLE_IMAGE_CLASSES = 'max-w-full max-h-full object-contain cursor-pointer';
-const SINGLE_IMAGE_CLASSES = 'max-w-full max-h-full object-contain cursor-pointer animate-page-fade';
-const LOADING_SLOT_CLASSES = 'h-full w-full max-w-max-width-content flex items-center justify-center bg-surface-container';
+const SINGLE_IMAGE_CLASSES = 'max-w-full max-h-full object-contain cursor-pointer';
+const LOADING_SLOT_CLASSES = 'h-full w-full max-w-max-width-content flex items-center justify-center';
 const LOADING_FALLBACK_CLASSES = 'flex flex-col items-center gap-2';
 const TOUCH_CLICK_SUPPRESSION_DISTANCE = 10;
 const TOUCH_CLICK_SUPPRESSION_DURATION = 700;
@@ -54,11 +54,19 @@ export const HorizontalReaderView: FC<HorizontalReaderViewProps> = ({
 }) => {
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const suppressClickUntilRef = useRef(0);
+  // 翻页方向感：按页码变化方向给进入页加方向性滑动（与文本阅读器手感对齐）
+  const prevPageRef = useRef(currentPage);
+  const turnDirection = currentPage >= prevPageRef.current ? 'next' : 'prev';
+  useEffect(() => {
+    prevPageRef.current = currentPage;
+  }, [currentPage]);
+  const turnAnimClass = turnDirection === 'next' ? 'animate-slide-in-right' : 'animate-slide-in-left';
 
   const imageStyle = {
     ...(paperConfig ? { filter: paperConfig.imageFilter } : {}),
-    willChange: 'transform',
   };
+  // 占位块与纸底同色，消除纸型切换时的色差突兀
+  const loadingSlotStyle = paperConfig ? { backgroundColor: paperConfig.bgColor } : undefined;
 
   const zoomStyle = zoomScale > 1
     ? {
@@ -131,7 +139,7 @@ export const HorizontalReaderView: FC<HorizontalReaderViewProps> = ({
       }}
     >
       {pageLayout === 'double' && horizontalPageSpread.length > 1 ? (
-        <div className={DOUBLE_SPREAD_CLASSES}>
+        <div className={cn(DOUBLE_SPREAD_CLASSES, turnAnimClass)}>
           {horizontalPageSpread.map((pageNumber) => {
             const url = pageUrls[pageNumber - 1];
             return (
@@ -147,7 +155,7 @@ export const HorizontalReaderView: FC<HorizontalReaderViewProps> = ({
                     onClick={(event) => handleImageClick(pageNumber - 1, event)}
                   />
                 ) : (
-                  <div className={LOADING_SLOT_CLASSES}>
+                  <div className={LOADING_SLOT_CLASSES} style={loadingSlotStyle}>
                     <span className="material-symbols-outlined text-on-surface-variant text-3xl animate-spin">progress_activity</span>
                   </div>
                 )}
@@ -162,6 +170,7 @@ export const HorizontalReaderView: FC<HorizontalReaderViewProps> = ({
           alt={`Page ${currentPage}`}
           className={cn(
             SINGLE_IMAGE_CLASSES,
+            turnAnimClass,
             zoomScale > 1 && 'transition-transform duration-200'
           )}
           style={{

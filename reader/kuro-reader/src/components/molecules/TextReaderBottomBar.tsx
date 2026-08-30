@@ -1,9 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 import { TEXT_READER_FONT_OPTIONS } from '@/constants/textReaderFonts';
-import type { PaperType, ReadingTheme, TextFontFamily, TextAlign, TextReadingMode } from '@/types';
+import type { PaperType, TextFontFamily, TextAlign, TextReadingMode, TtsEngineOption } from '@/types';
 import { cn } from '@/utils/cn';
 import { getAllPaperTypes } from '@/utils/paperTexture';
+
+/** 设置面板三 tab（建议书 6.9 动线五）：排版（高频）/ 外观 / 更多 */
+type SettingsTab = 'typography' | 'appearance' | 'more';
+
+const SETTINGS_TABS: { key: SettingsTab; label: string; icon: string }[] = [
+  { key: 'typography', label: '排版', icon: 'format_size' },
+  { key: 'appearance', label: '外观', icon: 'palette' },
+  { key: 'more', label: '更多', icon: 'tune' },
+];
 
 export interface TextReaderBottomBarProps {
   fontSize: number;
@@ -12,7 +21,7 @@ export interface TextReaderBottomBarProps {
   paperType: PaperType;
   brightness: number;
   colorTemperature: number;
-  readingTheme: ReadingTheme;
+  textureIntensity: number;
   textFontFamily: TextFontFamily;
   textAlign: TextAlign;
   firstLineIndent: boolean;
@@ -26,7 +35,7 @@ export interface TextReaderBottomBarProps {
   onPaperTypeChange: (type: PaperType) => void;
   onBrightnessChange: (value: number) => void;
   onColorTemperatureChange: (value: number) => void;
-  onReadingThemeChange: (theme: ReadingTheme) => void;
+  onTextureIntensityChange: (value: number) => void;
   onTextFontFamilyChange: (family: TextFontFamily) => void;
   onTextAlignChange: (align: TextAlign) => void;
   onFirstLineIndentToggle: () => void;
@@ -36,12 +45,13 @@ export interface TextReaderBottomBarProps {
   onAutoAdvanceTextChapterToggle: () => void;
   onAutoScrollSpeedChange: (speed: number) => void;
   onTextReadingModeChange: (mode: TextReadingMode) => void;
+  ttsEngine: TtsEngineOption;
+  ttsServerUrl: string;
+  ttsServerModel: string;
+  ttsServerVoice: string;
+  onTtsEngineChange: (engine: TtsEngineOption) => void;
+  onTtsServerFieldChange: (field: 'url' | 'model' | 'voice', value: string) => void;
   onClose: () => void;
-  onBookmarkListOpen?: () => void;
-  onAnnotationListOpen?: () => void;
-  onFavoriteToggle?: () => void;
-  isBookmarked?: boolean;
-  isFavorite?: boolean;
 }
 
 // 字号 / 行距预设值（数值即业务含义，故豁免魔数检查）
@@ -53,19 +63,22 @@ const LINE_HEIGHTS = [1.4, 1.6, 1.8, 2.0, 2.2];
 const LINE_HEIGHT_MATCH_EPSILON = 0.05;
 const COLOR_TEMP_WARM_THRESHOLD = 50;
 
-const READING_THEMES: { theme: ReadingTheme; label: string; bg: string; color: string }[] = [
-  { theme: 'light', label: '白色', bg: '#ffffff', color: '#1a1a1a' },
-  { theme: 'green', label: '护眼', bg: '#c7edcc', color: '#2d3a2d' },
-  { theme: 'sepia', label: '羊皮纸', bg: '#f5e6c8', color: '#5b4636' },
-  { theme: 'dark', label: '暗夜', bg: '#1a1a1a', color: '#b8b8b8' },
-];
-
 const READING_MODES: { mode: TextReadingMode; label: string; icon: string }[] = [
   { mode: 'scroll', label: '上下滚动', icon: 'swap_vert' },
   { mode: 'paginate', label: '左右翻页', icon: 'chevron_left' },
   { mode: 'columns', label: '双栏阅读', icon: 'view_week' },
   { mode: 'book', label: '模拟翻书', icon: 'menu_book' },
 ];
+
+const TTS_ENGINE_OPTIONS: { option: TtsEngineOption; label: string; icon: string }[] = [
+  { option: 'auto', label: '跟随系统', icon: 'auto_awesome' },
+  { option: 'system', label: '系统语音', icon: 'record_voice_over' },
+  { option: 'neural', label: '神经网络', icon: 'graphic_eq' },
+  { option: 'server', label: '自定义服务', icon: 'dns' },
+];
+
+const TTS_INPUT_CLASS =
+  'w-full h-10 rounded-lg border border-outline-variant bg-surface-container-high px-3 font-body text-body-sm text-on-surface placeholder:text-on-surface-faint focus:outline-none focus:border-primary';
 
 const AUTO_ADVANCE_TEXT_CHAPTER_LABELS = {
   title: '\u7ae0\u672b\u81ea\u52a8\u4e0b\u4e00\u7ae0',
@@ -82,7 +95,7 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
   paperType,
   brightness,
   colorTemperature,
-  readingTheme,
+  textureIntensity,
   textFontFamily,
   textAlign,
   firstLineIndent,
@@ -96,7 +109,7 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
   onPaperTypeChange,
   onBrightnessChange,
   onColorTemperatureChange,
-  onReadingThemeChange,
+  onTextureIntensityChange,
   onTextFontFamilyChange,
   onTextAlignChange,
   onFirstLineIndentToggle,
@@ -106,103 +119,29 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
   onAutoAdvanceTextChapterToggle,
   onAutoScrollSpeedChange,
   onTextReadingModeChange,
+  ttsEngine,
+  ttsServerUrl,
+  ttsServerModel,
+  ttsServerVoice,
+  onTtsEngineChange,
+  onTtsServerFieldChange,
   onClose,
-  onBookmarkListOpen,
-  onAnnotationListOpen,
-  onFavoriteToggle,
-  isBookmarked,
-  isFavorite,
 }) => {
   const paperTypes = getAllPaperTypes();
+  const [activeTab, setActiveTab] = useState<SettingsTab>('typography');
 
-  return (
-    <div
-      className="fixed inset-x-0 bottom-0 z-[60] animate-slide-up"
-      onClick={(e) => e.stopPropagation()}
-    >
-      <div className="bg-surface/95 backdrop-blur-md border-t border-outline-variant/50 px-margin-mobile">
-        <div className="max-w-max-width-content mx-auto">
-          {/* 标题栏 */}
-          <div className="pt-4 pb-3 flex items-center justify-between">
-            <span className="font-label text-label-md text-on-surface-variant">阅读设置</span>
-            <button
-              className="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-variant transition-colors"
-              onClick={onClose}
-              aria-label="关闭"
-            >
-              <span className="material-symbols-outlined text-[20px]">close</span>
-            </button>
-          </div>
-
-          {/* 可滚动内容 */}
-          <div
-            className="overflow-y-auto scrollbar-hide"
-            style={{
-              WebkitOverflowScrolling: 'touch',
-              maxHeight: 'calc(100vh - 220px)',
-              paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))',
-            }}
-          >
-
-          {/* 阅读模式 */}
-          <div className="flex items-center justify-between py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant mb-4">
-            <div className="flex items-center gap-3">
-              <span className="material-symbols-outlined text-on-surface-variant">last_page</span>
-              <div>
-                <p className="font-label text-label-md text-on-surface">{AUTO_ADVANCE_TEXT_CHAPTER_LABELS.title}</p>
-                <p className="font-body text-body-sm text-on-surface-variant">
-                  {autoAdvanceTextChapter ? AUTO_ADVANCE_TEXT_CHAPTER_LABELS.enabled : AUTO_ADVANCE_TEXT_CHAPTER_LABELS.disabled}
-                </p>
-              </div>
-            </div>
-            <button
-              className={cn(
-                'relative inline-block w-11 h-6 rounded-full toggle-spring',
-                autoAdvanceTextChapter ? 'bg-primary' : 'bg-surface-variant'
-              )}
-              onClick={onAutoAdvanceTextChapterToggle}
-              aria-label={autoAdvanceTextChapter ? AUTO_ADVANCE_TEXT_CHAPTER_LABELS.disableAria : AUTO_ADVANCE_TEXT_CHAPTER_LABELS.enableAria}
-            >
-              <span
-                className={cn(
-                  'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full toggle-thumb-spring border',
-                  autoAdvanceTextChapter
-                    ? 'translate-x-5 border-primary'
-                    : 'border-outline-variant'
-                )}
-              />
-            </button>
-          </div>
-
-          <div className="py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant mb-4">
-            <p className="font-label text-label-md text-on-surface mb-3">阅读模式</p>
-            <div className="grid grid-cols-4 gap-2">
-              {READING_MODES.map(({ mode, label, icon }) => (
-                <button
-                  key={mode}
-                  className={cn(
-                    'flex-1 h-12 rounded-lg border text-label-sm font-label transition-colors flex flex-col items-center justify-center gap-1',
-                    textReadingMode === mode
-                      ? 'bg-primary text-on-primary border-primary'
-                      : 'bg-surface-container-high text-on-surface-variant border-outline-variant hover:border-primary/50'
-                  )}
-                  onClick={() => onTextReadingModeChange(mode)}
-                >
-                  <span className="material-symbols-outlined text-[18px]">{icon}</span>
-                  <span className="text-[11px]">{label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
+  // ── 排版 tab：字号 / 行距 / 字体 / 对齐 / 首行缩进 / 竖排 ──
+  const typographyPanel = (
+    <>
           {/* 字号控制 */}
-          <div className="py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant mb-4">
+          <div className="py-3 px-4 bg-surface-container-lowest rounded-card-lg border border-outline-variant mb-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-on-surface-variant text-[18px]">format_size</span>
+                <span className="material-symbols-outlined text-on-surface-variant text-icon-md">format_size</span>
                 <p className="font-label text-label-md text-on-surface">字号</p>
+                <span className="font-label text-label-sm text-on-surface-faint">（仅本书正文）</span>
               </div>
-              <span className="font-label text-label-sm text-on-surface-variant">{fontSize}px</span>
+              <span className="font-mono text-label-sm text-on-surface-variant">{fontSize}px</span>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -268,123 +207,6 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
                   onClick={() => onLineHeightChange(lh)}
                 >
                   {lh.toFixed(1)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* 纸张模拟 */}
-          <div className="flex items-center justify-between py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant mb-4">
-            <div className="flex items-center gap-3">
-              <span className="material-symbols-outlined text-on-surface-variant">note</span>
-              <div>
-                <p className="font-label text-label-md text-on-surface">纸张模拟效果</p>
-                <p className="font-body text-body-sm text-on-surface-variant">
-                  {paperModeEnabled ? '已开启' : '已关闭'}
-                </p>
-              </div>
-            </div>
-            <button
-              className={cn(
-                'relative inline-block w-11 h-6 rounded-full toggle-spring',
-                paperModeEnabled ? 'bg-primary' : 'bg-surface-variant'
-              )}
-              onClick={onPaperModeToggle}
-              aria-label={paperModeEnabled ? '关闭纸张模式' : '开启纸张模式'}
-            >
-              <span
-                className={cn(
-                  'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full toggle-thumb-spring border',
-                  paperModeEnabled
-                    ? 'translate-x-5 border-primary'
-                    : 'border-outline-variant'
-                )}
-              />
-            </button>
-          </div>
-
-          {/* 纸张类型 */}
-          {paperModeEnabled && (
-            <div className="py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant mb-4">
-              <p className="font-label text-label-md text-on-surface mb-3">纸张类型</p>
-              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                {paperTypes.map(({ type, config }) => (
-                  <button
-                    key={type}
-                    className={cn(
-                      'flex items-center gap-1.5 px-3 py-2 rounded-lg border whitespace-nowrap transition-colors',
-                      paperType === type
-                        ? 'bg-primary text-on-primary border-primary'
-                        : 'bg-surface-container-high text-on-surface-variant border-outline-variant hover:border-primary/50'
-                    )}
-                    onClick={() => onPaperTypeChange(type)}
-                  >
-                    <span className="material-symbols-outlined text-[16px]">{config.icon}</span>
-                    <span className="font-label text-label-sm">{config.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 亮度 */}
-          <div className="py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant mb-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-on-surface-variant text-[18px]">brightness_6</span>
-                <p className="font-label text-label-md text-on-surface">亮度</p>
-              </div>
-              <span className="font-label text-label-sm text-on-surface-variant">{brightness}%</span>
-            </div>
-            <input
-              type="range"
-              min={20}
-              max={100}
-              value={brightness}
-              onChange={(e) => onBrightnessChange(Number(e.target.value))}
-              className="w-full h-1.5 bg-surface-variant rounded-full appearance-none cursor-pointer accent-primary"
-            />
-          </div>
-
-          {/* 色温 */}
-          <div className="py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant mb-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-on-surface-variant text-[18px]">thermostat</span>
-                <p className="font-label text-label-md text-on-surface">色温</p>
-              </div>
-              <span className="font-label text-label-sm text-on-surface-variant">
-                {colorTemperature === 0 ? '冷光' : colorTemperature <= COLOR_TEMP_WARM_THRESHOLD ? '暖白' : '暖光'}
-              </span>
-            </div>
-            <input
-              type="range"
-              min={0}
-              max={100}
-              value={colorTemperature}
-              onChange={(e) => onColorTemperatureChange(Number(e.target.value))}
-              className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-primary"
-              style={{ background: `linear-gradient(to right, #ffffff, #ffcc80)` }}
-            />
-          </div>
-
-          {/* 阅读主题 */}
-          <div className="py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant mb-4">
-            <p className="font-label text-label-md text-on-surface mb-3">阅读主题</p>
-            <div className="flex gap-3">
-              {READING_THEMES.map(({ theme, label, bg, color }) => (
-                <button
-                  key={theme}
-                  className={cn(
-                    'flex-1 h-16 rounded-lg border-2 transition-all flex flex-col items-center justify-center gap-1',
-                    readingTheme === theme
-                      ? 'border-primary shadow-md scale-105'
-                      : 'border-outline-variant hover:border-primary/50'
-                  )}
-                  style={{ backgroundColor: bg }}
-                  onClick={() => onReadingThemeChange(theme)}
-                >
-                  <span className="text-xs font-medium" style={{ color }}>{label}</span>
                 </button>
               ))}
             </div>
@@ -503,6 +325,209 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
             </button>
           </div>
 
+          {/* ── 排版 tab 结束 ── */}
+          </>
+  );
+
+  // ── 外观 tab：纸张模拟 / 纸张类型 / 纹理强度 / 亮度 / 色温 ──
+  const appearancePanel = (
+    <>
+          {/* 纸张模拟 */}
+          <div className="flex items-center justify-between py-3 px-4 bg-surface-container-lowest rounded-card-lg border border-outline-variant mb-4">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-on-surface-variant">note</span>
+              <div>
+                <p className="font-label text-label-md text-on-surface">纸张模拟效果</p>
+                <p className="font-body text-body-sm text-on-surface-variant">
+                  {paperModeEnabled ? '已开启' : '已关闭'}
+                </p>
+              </div>
+            </div>
+            <button
+              className={cn(
+                'relative inline-block w-11 h-6 rounded-full toggle-spring',
+                paperModeEnabled ? 'bg-primary' : 'bg-surface-variant'
+              )}
+              onClick={onPaperModeToggle}
+              aria-label={paperModeEnabled ? '关闭纸张模式' : '开启纸张模式'}
+            >
+              <span
+                className={cn(
+                  'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full toggle-thumb-spring border',
+                  paperModeEnabled
+                    ? 'translate-x-5 border-primary'
+                    : 'border-outline-variant'
+                )}
+              />
+            </button>
+          </div>
+
+          {/* 纸张类型 */}
+          {paperModeEnabled && (
+            <div className="py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant mb-4">
+              <p className="font-label text-label-md text-on-surface mb-3">纸张类型</p>
+              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                {paperTypes.map(({ type, config }) => (
+                  <button
+                    key={type}
+                    className={cn(
+                      'flex items-center gap-1.5 px-3 py-2 rounded-lg border whitespace-nowrap transition-colors',
+                      paperType === type
+                        ? 'bg-primary text-on-primary border-primary'
+                        : 'bg-surface-container-high text-on-surface-variant border-outline-variant hover:border-primary/50'
+                    )}
+                    onClick={() => onPaperTypeChange(type)}
+                  >
+                    <span className="material-symbols-outlined text-[16px]">{config.icon}</span>
+                    <span className="font-label text-label-sm">{config.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 亮度 */}
+          <div className="py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-on-surface-variant text-[18px]">brightness_6</span>
+                <p className="font-label text-label-md text-on-surface">亮度</p>
+              </div>
+              <span className="font-label text-label-sm text-on-surface-variant">{brightness}%</span>
+            </div>
+            <input
+              type="range"
+              min={20}
+              max={100}
+              value={brightness}
+              onChange={(e) => onBrightnessChange(Number(e.target.value))}
+              className="w-full h-1.5 bg-surface-variant rounded-full appearance-none cursor-pointer accent-primary"
+            />
+          </div>
+
+          {/* 色温 */}
+          <div className="py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-on-surface-variant text-[18px]">thermostat</span>
+                <p className="font-label text-label-md text-on-surface">色温</p>
+              </div>
+              <span className="font-label text-label-sm text-on-surface-variant">
+                {colorTemperature === 0 ? '冷光' : colorTemperature <= COLOR_TEMP_WARM_THRESHOLD ? '暖白' : '暖光'}
+              </span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={colorTemperature}
+              onChange={(e) => onColorTemperatureChange(Number(e.target.value))}
+              className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-primary"
+              style={{ background: `linear-gradient(to right, #ffffff, #ffcc80)` }}
+            />
+          </div>
+
+
+          {/* 纹理强度 */}
+          <div className="py-3 px-4 bg-surface-container-lowest rounded-card-lg border border-outline-variant mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-on-surface-variant text-icon-md">texture</span>
+                <p className="font-label text-label-md text-on-surface">纹理强度</p>
+              </div>
+              <span className="font-mono text-label-sm text-on-surface-variant">{textureIntensity}%</span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={textureIntensity}
+              onChange={(e) => onTextureIntensityChange(Number(e.target.value))}
+              className="w-full h-1.5 bg-surface-variant rounded-full appearance-none cursor-pointer accent-primary"
+            />
+          </div>
+
+
+
+
+
+
+          {/* ── 外观 tab 结束 ── */}
+          </>
+  );
+
+  // ── 更多 tab：阅读模式 / 章末连读 / 点击翻页 / 滚动速度 ──
+  const morePanel = (
+    <>
+          <div className="py-3 px-4 bg-surface-container-lowest rounded-card-lg border border-outline-variant mb-4">
+            <p className="font-label text-label-md text-on-surface mb-3">阅读模式</p>
+            <div className="grid grid-cols-4 gap-2">
+              {READING_MODES.map(({ mode, label, icon }) => (
+                <button
+                  key={mode}
+                  className={cn(
+                    'flex-1 h-12 rounded-lg border text-label-sm font-label transition-colors flex flex-col items-center justify-center gap-1',
+                    textReadingMode === mode
+                      ? 'bg-primary text-on-primary border-primary'
+                      : 'bg-surface-container-high text-on-surface-variant border-outline-variant hover:border-primary/50'
+                  )}
+                  onClick={() => onTextReadingModeChange(mode)}
+                >
+                  <span className="material-symbols-outlined text-icon-md">{icon}</span>
+                  <span className="text-[11px]">{label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 章末自动下一章 */}
+          <div className="flex items-center justify-between py-3 px-4 bg-surface-container-lowest rounded-card-lg border border-outline-variant mb-4">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-on-surface-variant">last_page</span>
+              <div>
+                <p className="font-label text-label-md text-on-surface">{AUTO_ADVANCE_TEXT_CHAPTER_LABELS.title}</p>
+                <p className="font-body text-body-sm text-on-surface-variant">
+                  {autoAdvanceTextChapter ? AUTO_ADVANCE_TEXT_CHAPTER_LABELS.enabled : AUTO_ADVANCE_TEXT_CHAPTER_LABELS.disabled}
+                </p>
+              </div>
+            </div>
+            <button
+              className={cn(
+                'relative inline-block w-11 h-6 rounded-full toggle-spring',
+                autoAdvanceTextChapter ? 'bg-primary' : 'bg-surface-variant'
+              )}
+              onClick={onAutoAdvanceTextChapterToggle}
+              aria-label={autoAdvanceTextChapter ? AUTO_ADVANCE_TEXT_CHAPTER_LABELS.disableAria : AUTO_ADVANCE_TEXT_CHAPTER_LABELS.enableAria}
+            >
+              <span
+                className={cn(
+                  'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full toggle-thumb-spring border',
+                  autoAdvanceTextChapter
+                    ? 'translate-x-5 border-primary'
+                    : 'border-outline-variant'
+                )}
+              />
+            </button>
+          </div>
+
+          {/* 自动滚动速度 */}
+          <div className="py-3 px-4 bg-surface-container-lowest rounded-card-lg border border-outline-variant">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-on-surface-variant text-icon-md">speed</span>
+                <p className="font-label text-label-md text-on-surface">自动滚动速度</p>
+              </div>
+              <span className="font-mono text-label-sm text-on-surface-variant">{autoScrollSpeed}</span>
+            </div>
+            <input
+              type="range"
+              min={1}
+              max={10}
+              value={autoScrollSpeed}
+              onChange={(e) => onAutoScrollSpeedChange(Number(e.target.value))}
+              className="w-full h-1.5 bg-surface-variant rounded-full appearance-none cursor-pointer accent-primary"
+            />
+          </div>
           {/* 点击区域翻页 */}
           <div className="flex items-center justify-between py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant mb-4">
             <div className="flex items-center gap-3">
@@ -533,68 +558,119 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
             </button>
           </div>
 
-          {/* 工具入口：书签列表 / 批注列表 / 收藏 */}
-          <div className="py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant mb-4">
-            <p className="font-label text-label-md text-on-surface mb-3">工具</p>
-            <div className="flex gap-2">
-              <button
-                className={cn(
-                  'flex-1 h-12 rounded-lg border text-label-sm font-label transition-colors flex flex-col items-center justify-center gap-1',
-                  isBookmarked
-                    ? 'bg-primary/10 text-primary border-primary/50'
-                    : 'bg-surface-container-high text-on-surface-variant border-outline-variant hover:border-primary/50'
-                )}
-                onClick={onBookmarkListOpen}
-              >
-                <span className="material-symbols-outlined text-[18px]">bookmarks</span>
-                <span className="text-[11px]">书签列表</span>
-              </button>
-              <button
-                className="flex-1 h-12 rounded-lg border text-label-sm font-label transition-colors flex flex-col items-center justify-center gap-1 bg-surface-container-high text-on-surface-variant border-outline-variant hover:border-primary/50"
-                onClick={onAnnotationListOpen}
-              >
-                <span className="material-symbols-outlined text-[18px]">edit_note</span>
-                <span className="text-[11px]">批注列表</span>
-              </button>
-              <button
-                className={cn(
-                  'flex-1 h-12 rounded-lg border text-label-sm font-label transition-colors flex flex-col items-center justify-center gap-1',
-                  isFavorite
-                    ? 'bg-primary/10 text-primary border-primary/50'
-                    : 'bg-surface-container-high text-on-surface-variant border-outline-variant hover:border-primary/50'
-                )}
-                onClick={onFavoriteToggle}
-              >
-                <span
-                  className="material-symbols-outlined text-[18px]"
-                  style={isFavorite ? { fontVariationSettings: "'FILL' 1" } : undefined}
+          {/* 听书发音引擎 */}
+          <div className="py-3 px-4 bg-surface-container-lowest rounded-card-lg border border-outline-variant mb-4">
+            <p className="font-label text-label-md text-on-surface mb-3">听书发音</p>
+            <div className="grid grid-cols-4 gap-2">
+              {TTS_ENGINE_OPTIONS.map(({ option, label, icon }) => (
+                <button
+                  key={option}
+                  className={cn(
+                    'flex-1 h-12 rounded-lg border text-label-sm font-label transition-colors flex flex-col items-center justify-center gap-1',
+                    ttsEngine === option
+                      ? 'bg-primary text-on-primary border-primary'
+                      : 'bg-surface-container-high text-on-surface-variant border-outline-variant hover:border-primary/50'
+                  )}
+                  onClick={() => onTtsEngineChange(option)}
                 >
-                  {isFavorite ? 'favorite' : 'favorite_border'}
-                </span>
-                <span className="text-[11px]">{isFavorite ? '已收藏' : '收藏'}</span>
-              </button>
+                  <span className="material-symbols-outlined text-icon-md">{icon}</span>
+                  <span className="text-[11px]">{label}</span>
+                </button>
+              ))}
             </div>
+            {ttsEngine === 'neural' && (
+              <p className="font-body text-body-sm text-on-surface-variant mt-3">
+                离线神经网络中文语音（huayan）。首次使用需下载约 60-80MB 音色包，仅下载一次。
+              </p>
+            )}
+            {ttsEngine === 'server' && (
+              <div className="mt-3 space-y-2">
+                <input
+                  type="url"
+                  value={ttsServerUrl}
+                  placeholder="服务地址，如 http://192.168.1.10:9880"
+                  className={TTS_INPUT_CLASS}
+                  onChange={(e) => onTtsServerFieldChange('url', e.target.value)}
+                />
+                <input
+                  type="text"
+                  value={ttsServerModel}
+                  placeholder="模型名（可选，默认 tts-1）"
+                  className={TTS_INPUT_CLASS}
+                  onChange={(e) => onTtsServerFieldChange('model', e.target.value)}
+                />
+                <input
+                  type="text"
+                  value={ttsServerVoice}
+                  placeholder="音色名（可选，默认 alloy）"
+                  className={TTS_INPUT_CLASS}
+                  onChange={(e) => onTtsServerFieldChange('voice', e.target.value)}
+                />
+                <p className="font-body text-body-sm text-on-surface-variant">
+                  兼容 OpenAI /v1/audio/speech 接口的自部署 TTS 服务
+                </p>
+              </div>
+            )}
           </div>
 
-          {/* 自动滚动速度 */}
-          <div className="py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-on-surface-variant text-[18px]">speed</span>
-                <p className="font-label text-label-md text-on-surface">自动滚动速度</p>
-              </div>
-              <span className="font-label text-label-sm text-on-surface-variant">{autoScrollSpeed}</span>
-            </div>
-            <input
-              type="range"
-              min={1}
-              max={10}
-              value={autoScrollSpeed}
-              onChange={(e) => onAutoScrollSpeedChange(Number(e.target.value))}
-              className="w-full h-1.5 bg-surface-variant rounded-full appearance-none cursor-pointer accent-primary"
-            />
+          {/* ── 更多 tab 结束 ── */}
+          </>
+  );
+
+  return (
+    <div
+      className="fixed inset-x-0 bottom-0 z-sheet animate-slide-up"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="bg-surface/95 backdrop-blur-md border-t border-outline-variant/50 px-margin-mobile pb-safe">
+        <div className="max-w-max-width-content mx-auto">
+          {/* 标题栏 + tab 导航 */}
+          <div className="pt-3 flex items-center justify-between">
+            <span className="font-label text-label-md text-on-surface-variant">阅读设置</span>
+            <button
+              className="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-variant transition-colors"
+              onClick={onClose}
+              aria-label="关闭"
+            >
+              <span className="material-symbols-outlined text-icon-md">close</span>
+            </button>
           </div>
-        </div>
+          <div className="flex gap-1 mt-1 mb-3 border-b border-outline-variant/50" role="tablist" aria-label="设置分组">
+            {SETTINGS_TABS.map(({ key, label, icon }) => (
+              <button
+                key={key}
+                role="tab"
+                aria-selected={activeTab === key}
+                className={cn(
+                  'relative flex-1 h-10 flex items-center justify-center gap-1.5 font-label text-label-md transition-colors',
+                  activeTab === key ? 'text-primary' : 'text-on-surface-variant hover:text-primary'
+                )}
+                onClick={() => setActiveTab(key)}
+              >
+                <span className="material-symbols-outlined text-icon-md">{icon}</span>
+                {label}
+                {activeTab === key && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-10 h-0.5 bg-primary rounded-full"
+                  />
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* 当前 tab 内容 */}
+          <div
+            className="overflow-y-auto scrollbar-hide pb-6"
+            style={{
+              WebkitOverflowScrolling: 'touch',
+              maxHeight: 'calc(100vh - 260px)',
+            }}
+          >
+            {activeTab === 'typography' && typographyPanel}
+            {activeTab === 'appearance' && appearancePanel}
+            {activeTab === 'more' && morePanel}
+          </div>
         </div>
       </div>
     </div>

@@ -21,12 +21,14 @@ export interface ReaderBottomBarProps {
   paperType: PaperType;
   brightness: number;
   colorTemperature: number;
+  textureIntensity: number;
   onDirectionChange: (dir: 'vertical' | 'horizontal') => void;
   onPageLayoutChange: (layout: 'single' | 'double') => void;
   onReadingDirectionChange: (direction: ReadingDirection) => void;
   onPaperModeToggle: () => void;
   onPaperTypeChange: (type: PaperType) => void;
   onBrightnessChange: (value: number) => void;
+  onTextureIntensityChange: (value: number) => void;
   onColorTemperatureChange: (value: number) => void;
   onClose: () => void;
 }
@@ -39,12 +41,14 @@ export const ReaderBottomBar: FC<ReaderBottomBarProps> = ({
   paperType,
   brightness,
   colorTemperature,
+  textureIntensity,
   onDirectionChange,
   onPageLayoutChange,
   onReadingDirectionChange,
   onPaperModeToggle,
   onPaperTypeChange,
   onBrightnessChange,
+  onTextureIntensityChange,
   onColorTemperatureChange,
   onClose,
 }) => {
@@ -71,7 +75,7 @@ export const ReaderBottomBar: FC<ReaderBottomBarProps> = ({
           <div className="flex gap-3 mb-4">
             <button
               className={cn(
-                'flex-1 flex flex-col items-center gap-2 py-3 rounded-xl border transition-colors',
+                'flex-1 flex flex-col items-center gap-2 py-3 rounded-card-lg border transition-colors',
                 direction === 'vertical'
                   ? 'bg-primary text-on-primary border-primary'
                   : 'bg-surface-container-lowest text-on-surface-variant border-outline-variant hover:bg-surface-variant'
@@ -83,7 +87,7 @@ export const ReaderBottomBar: FC<ReaderBottomBarProps> = ({
             </button>
             <button
               className={cn(
-                'flex-1 flex flex-col items-center gap-2 py-3 rounded-xl border transition-colors',
+                'flex-1 flex flex-col items-center gap-2 py-3 rounded-card-lg border transition-colors',
                 direction === 'horizontal'
                   ? 'bg-primary text-on-primary border-primary'
                   : 'bg-surface-container-lowest text-on-surface-variant border-outline-variant hover:bg-surface-variant'
@@ -99,7 +103,7 @@ export const ReaderBottomBar: FC<ReaderBottomBarProps> = ({
             <div className="flex gap-3 mb-4">
               <button
                 className={cn(
-                  'flex-1 flex flex-col items-center gap-2 py-3 rounded-xl border transition-colors',
+                  'flex-1 flex flex-col items-center gap-2 py-3 rounded-card-lg border transition-colors',
                   pageLayout === 'single'
                     ? 'bg-primary text-on-primary border-primary'
                     : 'bg-surface-container-lowest text-on-surface-variant border-outline-variant hover:bg-surface-variant'
@@ -111,7 +115,7 @@ export const ReaderBottomBar: FC<ReaderBottomBarProps> = ({
               </button>
               <button
                 className={cn(
-                  'flex-1 flex flex-col items-center gap-2 py-3 rounded-xl border transition-colors',
+                  'flex-1 flex flex-col items-center gap-2 py-3 rounded-card-lg border transition-colors',
                   pageLayout === 'double'
                     ? 'bg-primary text-on-primary border-primary'
                     : 'bg-surface-container-lowest text-on-surface-variant border-outline-variant hover:bg-surface-variant'
@@ -128,7 +132,7 @@ export const ReaderBottomBar: FC<ReaderBottomBarProps> = ({
             <div className="flex gap-3 mb-4">
               <button
                 className={cn(
-                  'flex-1 flex flex-col items-center gap-2 py-3 rounded-xl border transition-colors',
+                  'flex-1 flex flex-col items-center gap-2 py-3 rounded-card-lg border transition-colors',
                   readingDirection === 'rtl'
                     ? 'bg-primary text-on-primary border-primary'
                     : 'bg-surface-container-lowest text-on-surface-variant border-outline-variant hover:bg-surface-variant'
@@ -140,7 +144,7 @@ export const ReaderBottomBar: FC<ReaderBottomBarProps> = ({
               </button>
               <button
                 className={cn(
-                  'flex-1 flex flex-col items-center gap-2 py-3 rounded-xl border transition-colors',
+                  'flex-1 flex flex-col items-center gap-2 py-3 rounded-card-lg border transition-colors',
                   readingDirection === 'ltr'
                     ? 'bg-primary text-on-primary border-primary'
                     : 'bg-surface-container-lowest text-on-surface-variant border-outline-variant hover:bg-surface-variant'
@@ -153,7 +157,7 @@ export const ReaderBottomBar: FC<ReaderBottomBarProps> = ({
             </div>
           )}
 
-          <div className="flex items-center justify-between py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant mb-4">
+          <div className="flex items-center justify-between py-3 px-4 bg-surface-container-lowest rounded-card-lg border border-outline-variant mb-4">
             <div className="flex items-center gap-3">
               <span className="material-symbols-outlined text-on-surface-variant">note</span>
               <div>
@@ -183,7 +187,7 @@ export const ReaderBottomBar: FC<ReaderBottomBarProps> = ({
           </div>
 
           {paperModeEnabled && (
-            <div className="py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant">
+            <div className="py-3 px-4 bg-surface-container-lowest rounded-card-lg border border-outline-variant">
               <p className="font-label text-label-md text-on-surface mb-3">纸张类型</p>
               <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
                 {paperTypes.map(({ type, config }) => (
@@ -205,7 +209,25 @@ export const ReaderBottomBar: FC<ReaderBottomBarProps> = ({
             </div>
           )}
 
-          <div className="py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant mb-4">
+          {/* 纹理强度 */}
+          <div className="py-3 px-4 bg-surface-container-lowest rounded-card-lg border border-outline-variant mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-on-surface-variant text-[18px]">texture</span>
+                <p className="font-label text-label-md text-on-surface">纹理强度</p>
+              </div>
+              <span className="font-label text-label-sm text-on-surface-variant">{textureIntensity}%</span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={textureIntensity}
+              onChange={(e) => onTextureIntensityChange(Number(e.target.value))}
+              className="w-full h-1.5 bg-surface-variant rounded-full appearance-none cursor-pointer accent-primary"
+            />
+          </div>
+          <div className="py-3 px-4 bg-surface-container-lowest rounded-card-lg border border-outline-variant mb-4">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-on-surface-variant text-[18px]">brightness_6</span>
@@ -223,7 +245,7 @@ export const ReaderBottomBar: FC<ReaderBottomBarProps> = ({
             />
           </div>
 
-          <div className="py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant">
+          <div className="py-3 px-4 bg-surface-container-lowest rounded-card-lg border border-outline-variant">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-on-surface-variant text-[18px]">thermostat</span>

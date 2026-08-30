@@ -57,7 +57,7 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
         return { icon: 'wave', label: '波浪线' };
       case 'highlight':
       default:
-        return { icon: 'format_color_fill', label: '背景色' };
+        return { icon: 'brush', label: '水彩笔' };
     }
   };
 
@@ -65,15 +65,15 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
     <div className="fixed inset-0 z-[60] flex flex-col justify-end">
       {/* 遮罩 */}
       <div
-        className="absolute inset-0 bg-black/40 animate-fade-in"
+        className="absolute inset-0 bg-on-background/40 animate-fade-in"
         onClick={onClose}
       />
 
       {/* 面板 */}
-      <div className="relative bg-surface rounded-t-2xl max-h-[70vh] flex flex-col animate-slide-up shadow-xl">
+      <div className="relative bg-surface rounded-t-card-lg max-h-[70vh] flex flex-col animate-slide-up shadow-raised">
         {/* 标题栏 */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/50">
-          <h3 className="font-display text-headline-sm text-primary">批注</h3>
+          <h3 className="font-display text-headline-sm text-primary">手记</h3>
           <div className="flex items-center gap-2">
             <span className="font-label text-label-sm text-on-surface-variant opacity-60">
               {annotations.length} 条
@@ -82,8 +82,8 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
               <button
                 className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-variant transition-colors"
                 onClick={() => exportAnnotationsToMarkdown(bookTitle, undefined, annotations)}
-                aria-label="导出批注为 Markdown"
-                title="导出批注为 Markdown"
+                aria-label="导出手记为 Markdown"
+                title="导出手记为 Markdown"
               >
                 <span className="material-symbols-outlined text-on-surface-variant text-[20px]">ios_share</span>
               </button>
@@ -102,19 +102,19 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
           {annotations.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 gap-3">
               <span className="material-symbols-outlined text-on-surface-variant text-5xl opacity-40">edit_note</span>
-              <p className="font-body text-body-md text-on-surface-variant opacity-60">暂无批注</p>
-              <p className="font-label text-label-sm text-on-surface-variant opacity-40">选中文本后可添加批注</p>
+              <p className="font-body text-body-md text-on-surface-variant">墙上还没有手记</p>
+              <p className="font-label text-label-sm text-on-surface-faint">读的时候，长按一句话就能把它贴上来</p>
             </div>
           ) : (
             <div className="py-2">
               {annotations.map((ann) => (
                 <div
                   key={ann.id}
-                  className="relative overflow-hidden mx-3 my-1 rounded-xl"
+                  className="relative overflow-hidden mx-3 my-1 rounded-card-lg"
                   onTouchStart={() => setSwipedId(ann.id)}
                 >
                   {/* 删除按钮 */}
-                  <div className="absolute right-0 top-0 bottom-0 w-20 bg-error flex items-center justify-center rounded-r-xl">
+                  <div className="absolute right-0 top-0 bottom-0 w-20 bg-error flex items-center justify-center rounded-r-card">
                     <button
                       className="w-full h-full flex items-center justify-center"
                       onClick={() => {
@@ -129,7 +129,7 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
                   {/* 内容 */}
                   <div
                     className={cn(
-                      'bg-surface-container-low px-4 py-3 rounded-xl transition-transform duration-200 cursor-pointer',
+                      'bg-surface-container-low px-4 py-3 rounded-card-lg transition-transform duration-200 cursor-pointer',
                       swipedId === ann.id ? '-translate-x-20' : 'translate-x-0'
                     )}
                     onClick={() => {
@@ -149,15 +149,15 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
                       <span className="font-label text-label-xs text-on-surface-variant opacity-40 bg-surface-variant/50 px-1.5 py-0.5 rounded">
                         {getStyleInfo(ann.style).label}
                       </span>
-                      <span className="font-label text-label-sm text-on-surface-variant opacity-40">
+                      <span className="font-mono text-label-sm text-on-surface-faint">
                         {formatTime(ann.updatedAt)}
                       </span>
                     </div>
 
-                    {/* 选中文本 */}
-                    <div className="bg-secondary/10 rounded-lg px-3 py-2 mb-2">
-                      <p className="font-body text-body-sm text-on-surface opacity-70 line-clamp-2 italic">
-                        "{ann.selectedText.length > 100 ? ann.selectedText.slice(0, 100) + '...' : ann.selectedText}"
+                    {/* 引文：左书脊线 + 衬线 */}
+                    <div className="border-l-2 border-seal/70 pl-3 py-1 mb-2">
+                      <p className="font-body text-body-sm text-on-surface/80 line-clamp-2">
+                        「{ann.selectedText.length > 100 ? ann.selectedText.slice(0, 100) + '…' : ann.selectedText}」
                       </p>
                     </div>
 
@@ -192,7 +192,7 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
                           {ann.note}
                         </p>
                         <button
-                          className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center hover:bg-surface-variant transition-colors opacity-0 group-hover:opacity-100"
+                          className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center hover:bg-surface-variant transition-colors"
                           onClick={(e) => {
                             e.stopPropagation();
                             startEdit(ann);

@@ -23,7 +23,7 @@ export const SelectionFloatingButton: React.FC<SelectionFloatingButtonProps> = (
     <div className="fixed inset-0 z-[68]" onClick={onCancel} />
     {/* 浮动按钮 */}
     <button
-      className="fixed z-[69] bg-primary text-on-primary rounded-full shadow-lg flex items-center gap-1.5 pl-2.5 pr-3 py-2 animate-fade-in hover:shadow-xl active:scale-95 transition-shadow"
+      className="fixed z-[69] bg-primary text-on-primary rounded-full shadow-paper-up flex items-center gap-1.5 pl-2.5 pr-3 py-2 animate-fade-in hover:shadow-raised active:scale-95 transition-shadow"
       style={{
         left: Math.max(
           VIEWPORT_EDGE_PX,

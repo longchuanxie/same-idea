@@ -35,12 +35,12 @@ export const BookmarkPanel: React.FC<BookmarkPanelProps> = ({
     <div className="fixed inset-0 z-[60] flex flex-col justify-end">
       {/* 遮罩 */}
       <div
-        className="absolute inset-0 bg-black/40 animate-fade-in"
+        className="absolute inset-0 bg-on-background/40 animate-fade-in"
         onClick={onClose}
       />
 
       {/* 面板 */}
-      <div className="relative bg-surface rounded-t-2xl max-h-[70vh] flex flex-col animate-slide-up shadow-xl">
+      <div className="relative bg-surface rounded-t-card-lg max-h-[70vh] flex flex-col animate-slide-up shadow-raised">
         {/* 标题栏 */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/50">
           <h3 className="font-display text-headline-sm text-primary">书签</h3>
@@ -65,11 +65,11 @@ export const BookmarkPanel: React.FC<BookmarkPanelProps> = ({
               {bookmarks.map((bm) => (
                 <div
                   key={bm.id}
-                  className="relative overflow-hidden mx-3 my-1 rounded-xl"
+                  className="relative overflow-hidden mx-3 my-1 rounded-card-lg"
                   onTouchStart={() => handleTouchStart(bm.id)}
                 >
                   {/* 删除按钮（滑动显示） */}
-                  <div className="absolute right-0 top-0 bottom-0 w-20 bg-error flex items-center justify-center rounded-r-xl">
+                  <div className="absolute right-0 top-0 bottom-0 w-20 bg-error flex items-center justify-center rounded-r-card">
                     <button
                       className="w-full h-full flex items-center justify-center"
                       onClick={() => {
@@ -84,7 +84,7 @@ export const BookmarkPanel: React.FC<BookmarkPanelProps> = ({
                   {/* 内容 */}
                   <div
                     className={cn(
-                      'bg-surface-container-low px-4 py-3 rounded-xl transition-transform duration-200 cursor-pointer',
+                      'bg-surface-container-low px-4 py-3 rounded-card-lg transition-transform duration-200 cursor-pointer',
                       swipedId === bm.id ? '-translate-x-20' : 'translate-x-0'
                     )}
                     onClick={() => {

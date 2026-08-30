@@ -1,6 +1,7 @@
-import { Fragment, useState, type CSSProperties, type FC, type ReactNode } from 'react'
+import { Fragment, useState, type FC, type ReactNode } from 'react'
 
-import type { Annotation, AnnotationStyle } from '@/types'
+import type { Annotation } from '@/types'
+import { getAnnotationPresentation } from '@/utils/annotationHighlight'
 import { cn } from '@/utils/cn'
 import {
   isSafeMarkdownLink,
@@ -22,6 +23,8 @@ export interface MarkdownReaderContentProps {
   firstLineIndent: boolean
   paginated?: boolean
   measurementMode?: boolean
+  /** 听书跟读高亮：章节坐标系中的当前播报范围（章节全文 document.text 的偏移） */
+  highlightRange?: { start: number; end: number } | null
   onAnnotationClick: (annotation: Annotation) => void
   onInternalLink?: (href: string) => void
 }
@@ -47,35 +50,6 @@ function findBlockSpans(spans: MarkdownSpan[], block: MarkdownBlock): MarkdownSp
     if (spans[index].end > block.start) matches.push(spans[index])
   }
   return matches
-}
-
-function getAnnotationStyle(style: AnnotationStyle | undefined, color: string): CSSProperties {
-  switch (style) {
-    case 'underline':
-      return {
-        textDecoration: 'underline',
-        textDecorationColor: color,
-        textDecorationThickness: '2px',
-        textUnderlineOffset: '3px',
-        cursor: 'pointer',
-      }
-    case 'wavy':
-      return {
-        textDecoration: 'underline wavy',
-        textDecorationColor: color,
-        textDecorationThickness: '1.5px',
-        textUnderlineOffset: '4px',
-        cursor: 'pointer',
-      }
-    case 'highlight':
-    default:
-      return {
-        backgroundColor: `color-mix(in srgb, ${color} 20%, transparent)`,
-        borderRadius: '2px',
-        padding: '0 2px',
-        cursor: 'pointer',
-      }
-  }
 }
 
 const MarkdownImage: FC<{ span: MarkdownSpan }> = ({ span }) => {
@@ -199,6 +173,7 @@ export const MarkdownReaderContent: FC<MarkdownReaderContentProps> = ({
   firstLineIndent,
   paginated = false,
   measurementMode = false,
+  highlightRange = null,
   onAnnotationClick,
   onInternalLink,
 }) => {
@@ -235,6 +210,18 @@ export const MarkdownReaderContent: FC<MarkdownReaderContentProps> = ({
             boundaries.add(Math.max(rangeStart, annotation.startOffset))
             boundaries.add(Math.min(rangeEnd, annotation.endOffset))
           })
+          // 听书跟读范围：裁剪到当前区间后并入边界集合，保证任一分段内命中状态一致
+          const speechStart = highlightRange
+            ? Math.max(rangeStart, Math.min(highlightRange.start, rangeEnd))
+            : null
+          const speechEnd = highlightRange
+            ? Math.max(rangeStart, Math.min(highlightRange.end, rangeEnd))
+            : null
+          const hasSpeech = speechStart !== null && speechEnd !== null && speechEnd > speechStart
+          if (hasSpeech) {
+            boundaries.add(speechStart)
+            boundaries.add(speechEnd)
+          }
 
           const sortedBoundaries = [...boundaries].sort((left, right) => left - right)
           return sortedBoundaries.slice(0, -1).map((segmentStart, segmentIndex) => {
@@ -259,12 +246,13 @@ export const MarkdownReaderContent: FC<MarkdownReaderContentProps> = ({
             (item) => item.startOffset <= segmentStart && item.endOffset >= segmentEnd
           )
           if (annotation) {
+            const presentation = getAnnotationPresentation(annotation.style, color, annotation.id)
             node = (
               <mark
                 key={`annotation-${annotation.id}-${segmentStart}`}
-                style={getAnnotationStyle(annotation.style, color)}
+                style={presentation.style}
                 title={annotation.note}
-                className="transition-colors hover:opacity-80"
+                className={cn('transition-colors hover:opacity-80', presentation.className)}
                 onClick={(event) => {
                   event.stopPropagation()
                   onAnnotationClick(annotation)
@@ -272,6 +260,14 @@ export const MarkdownReaderContent: FC<MarkdownReaderContentProps> = ({
               >
                 {node}
               </mark>
+            )
+          }
+
+          if (hasSpeech && segmentStart >= speechStart && segmentEnd <= speechEnd) {
+            node = (
+              <span key={`speech-${segmentStart}`} className="speech-reading">
+                {node}
+              </span>
             )
           }
 

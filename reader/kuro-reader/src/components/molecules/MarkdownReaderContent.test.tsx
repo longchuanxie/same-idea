@@ -45,6 +45,23 @@ describe('MarkdownReaderContent', () => {
     expect(screen.queryByText('**重点**')).not.toBeInTheDocument()
   })
 
+  it('wraps the speech highlight range in a speech-reading span', () => {
+    const markdown = '第一段内容。\n\n第二段内容。'
+    render(
+      <MarkdownReaderContent
+        document={parseMarkdownDocument(markdown)}
+        annotations={[]}
+        color="#222222"
+        firstLineIndent={false}
+        highlightRange={{ start: 8, end: 14 }}
+        onAnnotationClick={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('第二段内容。').closest('.speech-reading')).not.toBeNull()
+    expect(screen.getByText('第一段内容。').closest('.speech-reading')).toBeNull()
+  })
+
   it('allows safe links and leaves unsafe links inert', () => {
     renderMarkdown('[安全链接](https://example.com) [危险链接](javascript:alert(1))')
 
