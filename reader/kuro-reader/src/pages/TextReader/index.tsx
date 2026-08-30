@@ -10,6 +10,7 @@ import { BookmarkPanel } from '@/components/molecules/BookmarkPanel';
 import { ChapterDrawer } from '@/components/molecules/ChapterDrawer';
 import { ChapterEndPrompt } from '@/components/molecules/ChapterEndPrompt';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
+import { InBookSearchPanel } from '@/components/molecules/InBookSearchPanel';
 import { MarkdownReaderContent } from '@/components/molecules/MarkdownReaderContent';
 import { SelectionFloatingButton } from '@/components/molecules/SelectionFloatingButton';
 import { SpeechBadge } from '@/components/molecules/SpeechBadge';
@@ -51,6 +52,7 @@ import {
   getNextTextPageIndex,
   getPaginatedTapAction,
 } from '@/utils/textReaderNavigation';
+import type { SearchHit } from '@/utils/textSearch';
 
 const PROGRESS_SAVE_DEBOUNCE = 500;
 const PROGRESS_HINT_AUTO_HIDE_MS = 1400;
@@ -214,6 +216,7 @@ export const TextReaderPage: React.FC = () => {
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [isBookmarkPanelOpen, setIsBookmarkPanelOpen] = useState(false);
   const [isAnnotationListOpen, setIsAnnotationListOpen] = useState(false);
+  const [isSearchPanelOpen, setIsSearchPanelOpen] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [selectionPopup, setSelectionPopup] = useState<TextSelectionInfo | null>(null);
   const selectionPopupRef = useRef(selectionPopup);
@@ -746,6 +749,7 @@ export const TextReaderPage: React.FC = () => {
     if (isBottomBarVisible) { setIsBottomBarVisible(false); return true; }
     if (isBookmarkPanelOpen) { setIsBookmarkPanelOpen(false); return true; }
     if (isAnnotationListOpen) { setIsAnnotationListOpen(false); return true; }
+    if (isSearchPanelOpen) { setIsSearchPanelOpen(false); return true; }
     if (isChapterDrawerOpen) { setIsChapterDrawerOpen(false); return true; }
     if (uiVisible) { toggleUi(); return true; }
     return false;
@@ -2310,46 +2314,51 @@ export const TextReaderPage: React.FC = () => {
   }, [annotations, bookId, showToast]);
 
   // 批注跳转：根据批注的 startOffset 定位到正文中的具体位置
-  // 跨章节定位（对外可复用）：切章 + 内容渲染后按偏移占比定位。
-  // 同章亦适用（章节索引重设为同值无副作用），外部 ?ann= 直达与列表跳转共用。
-  const jumpToAnnotation = useCallback((ann: Annotation) => {
-    // 暂存目标 offset，等章节内容加载完成后跳转
+  // 跨章节定位原语（对外可复用）：切章 + 内容渲染后按占比定位。
+  // 分页模式经 requestPageAfterPagination 排队消费；滚动模式双帧后定位。
+  const jumpToChapterRatio = useCallback((chapterIndex: number, ratio: number) => {
+    // 暂存目标，等章节内容加载完成后跳转
     pendingNavRef.current = {
-      chapterIndex: ann.chapterIndex,
-      scrollRatio: undefined, // 需要在内容加载后从 startOffset 计算
+      chapterIndex,
+      scrollRatio: undefined, // 由 ratio 直接驱动
       pageIndex: undefined,
     };
     // 先设置章节，让内容加载
-    setCurrentChapterIndex(ann.chapterIndex);
+    setCurrentChapterIndex(chapterIndex);
     setCurrentPageIndex(0);
 
     if (textReadingMode === 'scroll') {
       // 滚动模式：延迟两帧等 DOM 渲染后计算位置并滚动
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          const nav = pendingNavRef.current;
-          if (nav) {
-            const chapter = chaptersRef.current[ann.chapterIndex];
-            if (chapter && chapter.content.length > 0) {
-              const ratio = ann.startOffset / chapter.content.length;
-              const container = scrollContainerRef.current;
-              if (container) {
-                const scrollable = container.scrollHeight - container.clientHeight;
-                container.scrollTop = ratio * scrollable;
-              }
+          if (pendingNavRef.current) {
+            const container = scrollContainerRef.current;
+            if (container) {
+              const scrollable = container.scrollHeight - container.clientHeight;
+              container.scrollTop = ratio * scrollable;
             }
           }
           pendingNavRef.current = null;
         });
       });
     } else {
-      // 分页模式：按批注偏移占比排队定位请求，分页完成时消费
-      const chapter = chaptersRef.current[ann.chapterIndex];
-      if (chapter && chapter.content.length > 0) {
-        requestPageAfterPagination({ ratio: ann.startOffset / chapter.content.length });
-      }
+      requestPageAfterPagination({ ratio });
     }
   }, [textReadingMode, requestPageAfterPagination]);
+
+  // 批注定位（同章亦适用）：偏移按章节正文长度折算占比后走定位原语
+  const jumpToAnnotation = useCallback((ann: Annotation) => {
+    const chapter = chaptersRef.current[ann.chapterIndex];
+    const ratio = chapter && chapter.content.length > 0 ? ann.startOffset / chapter.content.length : 0;
+    jumpToChapterRatio(ann.chapterIndex, ratio);
+  }, [jumpToChapterRatio]);
+
+  // 书内检索命中定位：命中偏移与 textLength 同坐标系，占比直接可用
+  const handleSearchHitSelect = useCallback((hit: SearchHit) => {
+    setIsSearchPanelOpen(false);
+    const ratio = hit.textLength > 0 ? hit.offset / hit.textLength : 0;
+    jumpToChapterRatio(hit.chapterIndex, ratio);
+  }, [jumpToChapterRatio]);
 
   const handleAnnotationNavigate = useCallback((ann: Annotation) => {
     setIsAnnotationListOpen(false);
@@ -2919,6 +2928,7 @@ export const TextReaderPage: React.FC = () => {
               if (bookId) useLibraryStore.getState().toggleFavorite(bookId);
             }}
             onOpenAnnotations={() => setIsAnnotationListOpen(true)}
+            onOpenSearch={() => setIsSearchPanelOpen(true)}
             onOpenSettings={() => setIsBottomBarVisible(true)}
           />
 
@@ -3053,6 +3063,15 @@ export const TextReaderPage: React.FC = () => {
           onDelete={handleAnnotationDelete}
           onNavigate={handleAnnotationNavigate}
           onClose={() => setIsAnnotationListOpen(false)}
+        />
+      )}
+
+      {/* 书内检索面板 */}
+      {isSearchPanelOpen && (
+        <InBookSearchPanel
+          chapters={chapters}
+          onSelectHit={handleSearchHitSelect}
+          onClose={() => setIsSearchPanelOpen(false)}
         />
       )}
 

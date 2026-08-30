@@ -16,6 +16,8 @@ interface TextReaderHeaderProps {
   onToggleFavorite: () => void;
   /** 手记合入口：书签列表 + 批注列表（动线三：从设置面板第 16 组提升为顶栏直达） */
   onOpenAnnotations: () => void;
+  /** 书内检索（知识闭环：找得回） */
+  onOpenSearch: () => void;
   onOpenSettings: () => void;
 }
 
@@ -33,6 +35,7 @@ export const TextReaderHeader: React.FC<TextReaderHeaderProps> = ({
   onToggleBookmark,
   onToggleFavorite,
   onOpenAnnotations,
+  onOpenSearch,
   onOpenSettings,
 }) => (
   <header
@@ -78,6 +81,15 @@ export const TextReaderHeader: React.FC<TextReaderHeaderProps> = ({
           aria-label="手记列表"
         >
           <span className="material-symbols-outlined text-headline-md">edit_note</span>
+        </button>
+        {/* 书内检索 */}
+        <button
+          className="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center w-11 h-11 rounded-full hover:bg-surface-variant/50"
+          onClick={onOpenSearch}
+          data-ui-control
+          aria-label="检索本书"
+        >
+          <span className="material-symbols-outlined text-headline-md">search</span>
         </button>
         {/* 收藏：bookmark 统一隐喻 */}
         <button

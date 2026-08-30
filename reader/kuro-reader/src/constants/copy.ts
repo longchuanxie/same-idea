@@ -41,4 +41,12 @@ export const COPY = {
       wavy: '波浪线',
     },
   },
+  /** 书内检索 */
+  searchInBook: {
+    title: '检索本书',
+    placeholder: '在这本书里找一个词',
+    hint: '至少两个字符；命中按章节排列',
+    noResults: '这本书里没有找到',
+    hitCount: (n: number) => `找到 ${n} 处`,
+  },
 } as const;
