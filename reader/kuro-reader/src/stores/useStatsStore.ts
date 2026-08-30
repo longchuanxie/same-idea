@@ -20,6 +20,8 @@ interface StatsState {
   setDailyGoalMinutes: (minutes: number) => void;
   getStats: () => ReadingStats;
   calculateWeeklyData: () => { day: string; hours: number }[];
+  /** 今日已读分钟数（门厅「今日之灯」用） */
+  getTodayMinutes: () => number;
 }
 
 const MS_PER_DAY = 86400000;
@@ -160,6 +162,14 @@ export const useStatsStore = create<StatsState>()(
         }
 
         return result;
+      },
+
+      getTodayMinutes: () => {
+        const { readingSessions } = get();
+        const today = getDateString(new Date());
+        return readingSessions
+          .filter((s) => s.date === today)
+          .reduce((sum, s) => sum + s.minutes, 0);
       },
     }),
     {

@@ -3,18 +3,13 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { FormatBadge } from '@/components/atoms/FormatBadge';
+import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
+import { CATALOG_COLORS } from '@/constants/catalogColors';
 import { bookDetailPath } from '@/constants/routes';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import { cn } from '@/utils/cn';
 
 const TAG_INPUT_FOCUS_DELAY_MS = 50; // 等待弹窗渲染完成后聚焦
-
-const TAG_COLORS = [
-  '#E53935', '#D81B60', '#8E24AA', '#5E35B1', '#3949AB',
-  '#1E88E5', '#039BE5', '#00ACC1', '#00897B', '#43A047',
-  '#7CB342', '#C0CA33', '#FDD835', '#FFB300', '#FB8C00',
-  '#F4511E', '#6D4C41', '#757575', '#546E7A', '#78909C',
-];
 
 export const TagsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -28,7 +23,7 @@ export const TagsPage: React.FC = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [editingTagId, setEditingTagId] = useState<string | null>(null);
   const [newTagName, setNewTagName] = useState('');
-  const [newTagColor, setNewTagColor] = useState(TAG_COLORS[0]);
+  const [newTagColor, setNewTagColor] = useState<string>(CATALOG_COLORS[0]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const filteredBooks = selectedTagId ? getBooksByTag(selectedTagId) : [];
@@ -38,7 +33,7 @@ export const TagsPage: React.FC = () => {
     if (!name) return;
     await createTag(name, newTagColor);
     setNewTagName('');
-    setNewTagColor(TAG_COLORS[0]);
+    setNewTagColor(CATALOG_COLORS[0]);
     setIsCreating(false);
   };
 
@@ -50,11 +45,18 @@ export const TagsPage: React.FC = () => {
     setNewTagName('');
   };
 
-  const handleDeleteTag = async (tagId: string) => {
-    if (confirm('确定要删除这个标签吗？关联的书籍将移除此标签。')) {
-      await deleteTag(tagId);
-      if (selectedTagId === tagId) setSelectedTagId(null);
-    }
+  const [pendingDeleteTag, setPendingDeleteTag] = useState<(typeof tags)[0] | null>(null);
+
+  const handleDeleteTag = (tag: (typeof tags)[0]) => {
+    setPendingDeleteTag(tag);
+  };
+
+  const confirmDeleteTag = async () => {
+    const tag = pendingDeleteTag;
+    if (!tag) return;
+    setPendingDeleteTag(null);
+    await deleteTag(tag.id);
+    if (selectedTagId === tag.id) setSelectedTagId(null);
   };
 
   const startEditing = (tag: typeof tags[0]) => {
@@ -67,18 +69,18 @@ export const TagsPage: React.FC = () => {
   return (
     <div className="relative z-10 w-full max-w-max-width-content mx-auto px-margin-mobile md:px-0 pt-8 pb-16">
       <header className="mb-8">
-        <h1 className="font-display text-display-lg-mobile md:text-display-lg text-primary mb-2">标签管理</h1>
-        <p className="font-body text-body-md text-on-surface-variant">为书籍添加标签，快速分类和查找。</p>
+        <h1 className="font-display text-display-lg-mobile md:text-display-lg text-primary mb-2">分类目录</h1>
+        <p className="font-body text-body-md text-on-surface-variant">给书架立几个目录，找书更快。</p>
       </header>
 
       <div className="mb-6">
         <button
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-full font-label text-label-md hover:opacity-90 transition-opacity"
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-card font-label text-label-md hover:opacity-90 transition-opacity"
           onClick={() => {
             setIsCreating(true);
             setEditingTagId(null);
             setNewTagName('');
-            setNewTagColor(TAG_COLORS[0]);
+            setNewTagColor(CATALOG_COLORS[0]);
             setTimeout(() => inputRef.current?.focus(), TAG_INPUT_FOCUS_DELAY_MS);
           }}
         >
@@ -112,7 +114,7 @@ export const TagsPage: React.FC = () => {
             <div>
               <label className="font-label text-label-sm text-on-surface-variant mb-2 block">选择颜色</label>
               <div className="flex flex-wrap gap-2">
-                {TAG_COLORS.map((color) => (
+                {CATALOG_COLORS.map((color) => (
                   <button
                     key={color}
                     className={cn(
@@ -153,8 +155,8 @@ export const TagsPage: React.FC = () => {
       {tags.length === 0 && !isCreating && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <span className="material-symbols-outlined text-on-surface-variant text-6xl mb-4">label</span>
-          <p className="font-body text-body-md text-on-surface-variant">还没有标签</p>
-          <p className="font-label text-label-sm text-on-surface-variant mt-2">点击上方按钮创建第一个标签</p>
+          <p className="font-body text-body-md text-on-surface-variant">还没有分类</p>
+          <p className="font-label text-label-sm text-on-surface-variant mt-2">新建一个分类，把书归到一起</p>
         </div>
       )}
 
@@ -178,7 +180,7 @@ export const TagsPage: React.FC = () => {
                     style={{ backgroundColor: tag.color }}
                   />
                   <span className="font-label text-label-lg text-on-surface">{tag.name}</span>
-                  <span className="font-label text-label-sm text-on-surface-variant bg-surface-variant px-2 py-0.5 rounded-full">
+                  <span className="font-label text-label-sm text-on-surface-variant bg-surface-variant px-2 py-0.5 rounded-card">
                     {tag.bookIds.length}
                   </span>
                 </div>
@@ -194,10 +196,10 @@ export const TagsPage: React.FC = () => {
                     <span className="material-symbols-outlined text-[18px]">edit</span>
                   </button>
                   <button
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-error-container hover:text-error transition-colors"
+                    className="w-8 h-8 rounded-card flex items-center justify-center text-on-surface-variant hover:bg-error-container hover:text-error transition-colors"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDeleteTag(tag.id);
+                      handleDeleteTag(tag);
                     }}
                     aria-label="删除"
                   >
@@ -251,6 +253,21 @@ export const TagsPage: React.FC = () => {
           </div>
         ))}
       </div>
+
+      <ConfirmDialog
+        isOpen={pendingDeleteTag !== null}
+        title={`移除分类「${pendingDeleteTag?.name ?? ''}」？`}
+        message={
+          pendingDeleteTag
+            ? `挂在 ${getBooksByTag(pendingDeleteTag.id).length} 本书上的这个分类会一并摘下，书不受影响。`
+            : ''
+        }
+        confirmLabel="移除"
+        cancelLabel="留下"
+        variant="danger"
+        onConfirm={() => void confirmDeleteTag()}
+        onCancel={() => setPendingDeleteTag(null)}
+      />
     </div>
   );
 };

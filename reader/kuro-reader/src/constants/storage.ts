@@ -9,4 +9,6 @@ export const STORAGE_KEYS = {
   CLOUD_SYNC: 'kuro-reader-cloud-sync',
   /** 上次成功同步时间（ISO 字符串） */
   CLOUD_SYNC_LAST: 'kuro-reader-cloud-sync-last',
+  /** 已从门厅「你的座位」移出的书（仅隐藏卡片，阅读进度保留） */
+  HIDDEN_CONTINUE: 'kuro-reader-hidden-continue',
 } as const;

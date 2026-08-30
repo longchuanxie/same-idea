@@ -1,21 +1,32 @@
 import React, { useEffect, useState, useRef } from 'react';
 
 import { Collapsible } from '@/components/atoms/Collapsible';
+import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
 import { GestureLock } from '@/components/organisms/GestureLock';
+import { COPY } from '@/constants/copy';
 import { STORAGE_KEYS } from '@/constants/storage';
+import { runCloudSync, type SyncCredentials, type SyncPayload } from '@/services/cloudSync';
 import { annotationRepo } from '@/services/storage/annotationRepo';
 import { bookmarkRepo } from '@/services/storage/bookmarkRepo';
 import { progressRepo } from '@/services/storage/progressRepo';
-import { runCloudSync, type SyncCredentials, type SyncPayload } from '@/services/cloudSync';
 import { useAppStore } from '@/stores/useAppStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
-import type { Annotation, Bookmark, PaperType, ReadingProgress } from '@/types';
+import type { Annotation, Bookmark, PaperType, ReadingProgress, UserSettings } from '@/types';
 import { getAllPaperTypes } from '@/utils/paperTexture';
 import { getStorageUsage } from '@/utils/storage';
+import { toast } from '@/utils/toast';
 
 /** 备份格式版本：v2 起包含书签与批注；导入时兼容 v1 */
 const BACKUP_VERSION = 2;
 const LEGACY_BACKUP_VERSION = 1;
+
+/** 待确认恢复的备份内容（经版本校验后暂存，用户确认覆盖后才写入） */
+interface PendingBackup {
+  settings?: Partial<UserSettings>;
+  readingProgress?: Record<string, ReadingProgress>;
+  bookmarks?: Bookmark[];
+  annotations?: Annotation[];
+}
 
 const TEXTURE_INTENSITY_WEAK_MAX = 33;
 const TEXTURE_INTENSITY_MEDIUM_MAX = 66;
@@ -91,52 +102,58 @@ export const SettingsPage: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
+  const [pendingBackup, setPendingBackup] = useState<PendingBackup | null>(null);
+
+  /** 用户确认后执行覆盖恢复 */
+  const restoreBackup = async (data: PendingBackup) => {
+    if (data.settings) updateSettings(data.settings);
+
+    // 阅读进度：覆盖写入 IndexedDB 并刷新内存状态
+    const importedProgress: Record<string, ReadingProgress> = data.readingProgress || {};
+    const existingProgress = await progressRepo.getAll();
+    await Promise.all(existingProgress.map((p) => progressRepo.remove(p.bookId)));
+    await Promise.all(Object.values(importedProgress).map((p) => progressRepo.save(p)));
+
+    // 书签与批注（v2 备份起包含）
+    if (Array.isArray(data.bookmarks)) {
+      await bookmarkRepo.deleteAll();
+      await Promise.all(
+        (data.bookmarks as Bookmark[]).map((b) =>
+          bookmarkRepo.add({ ...b, createdAt: new Date(b.createdAt) })
+        )
+      );
+    }
+    if (Array.isArray(data.annotations)) {
+      await annotationRepo.deleteAll();
+      await Promise.all(
+        (data.annotations as Annotation[]).map((a) =>
+          annotationRepo.add({
+            ...a,
+            createdAt: new Date(a.createdAt),
+            updatedAt: new Date(a.updatedAt),
+          })
+        )
+      );
+    }
+
+    await useLibraryStore.getState().loadBooks();
+    toast(COPY.toast.backupRestored);
+  };
+
   const handleImportData = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = async (event) => {
+    reader.onload = (event) => {
       try {
         const data = JSON.parse(event.target?.result as string);
         if (data.version !== BACKUP_VERSION && data.version !== LEGACY_BACKUP_VERSION) {
-          alert('不支持的备份文件版本');
+          toast(COPY.toast.backupVersionUnsupported);
           return;
         }
-        if (!confirm('导入将覆盖当前所有数据，确定继续吗？')) return;
-        if (data.settings) updateSettings(data.settings);
-
-        // 阅读进度：覆盖写入 IndexedDB 并刷新内存状态
-        const importedProgress: Record<string, ReadingProgress> = data.readingProgress || {};
-        const existingProgress = await progressRepo.getAll();
-        await Promise.all(existingProgress.map((p) => progressRepo.remove(p.bookId)));
-        await Promise.all(Object.values(importedProgress).map((p) => progressRepo.save(p)));
-
-        // 书签与批注（v2 备份起包含）
-        if (Array.isArray(data.bookmarks)) {
-          await bookmarkRepo.deleteAll();
-          await Promise.all(
-            (data.bookmarks as Bookmark[]).map((b) =>
-              bookmarkRepo.add({ ...b, createdAt: new Date(b.createdAt) })
-            )
-          );
-        }
-        if (Array.isArray(data.annotations)) {
-          await annotationRepo.deleteAll();
-          await Promise.all(
-            (data.annotations as Annotation[]).map((a) =>
-              annotationRepo.add({
-                ...a,
-                createdAt: new Date(a.createdAt),
-                updatedAt: new Date(a.updatedAt),
-              })
-            )
-          );
-        }
-
-        await useLibraryStore.getState().loadBooks();
-        alert('数据导入成功');
+        setPendingBackup(data as PendingBackup);
       } catch {
-        alert('备份文件格式错误');
+        toast(COPY.toast.backupBroken);
       }
     };
     reader.readAsText(file);
@@ -805,17 +822,18 @@ export const SettingsPage: React.FC = () => {
           <h2 className="font-label text-label-md text-secondary uppercase tracking-widest mb-4 ml-2">系统管理</h2>
           <div className="bg-surface rounded-lg border border-outline-variant overflow-hidden">
             <button
-              className="w-full p-6 flex justify-between items-center bg-surface-container-lowest cursor-pointer hover:bg-surface-container-low transition-colors group text-left"
-              onClick={() => alert('存储管理功能即将上线')}
+              className="w-full p-6 flex justify-between items-center bg-surface-container-lowest text-left opacity-60 cursor-not-allowed"
+              disabled
+              aria-disabled="true"
             >
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant">
                   <span className="material-symbols-outlined">storage</span>
                 </div>
                 <div>
-                  <h3 className="font-display text-headline-sm text-on-surface">存储管理</h3>
+                  <h3 className="font-display text-headline-sm text-on-surface">馆容量（筹备中）</h3>
                   <p className="font-body text-body-md text-on-surface-variant text-sm leading-tight mt-1">
-                    已使用 {formatBytes(storageInfo.used)} / 共 {formatBytes(storageInfo.quota)}
+                    已藏 {formatBytes(storageInfo.used)} / 馆舍 {formatBytes(storageInfo.quota)}
                   </p>
                 </div>
               </div>
@@ -916,6 +934,21 @@ export const SettingsPage: React.FC = () => {
           </div>
         </section>
       </div>
+
+      <ConfirmDialog
+        isOpen={pendingBackup !== null}
+        title={COPY.dialog.backupRestoreTitle}
+        message={COPY.dialog.backupRestoreMessage}
+        confirmLabel={COPY.dialog.backupRestoreConfirm}
+        cancelLabel={COPY.dialog.backupRestoreCancel}
+        variant="danger"
+        onConfirm={() => {
+          const backup = pendingBackup;
+          setPendingBackup(null);
+          if (backup) void restoreBackup(backup);
+        }}
+        onCancel={() => setPendingBackup(null)}
+      />
     </div>
   );
 };

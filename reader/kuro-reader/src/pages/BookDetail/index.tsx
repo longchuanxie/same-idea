@@ -3,19 +3,26 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { BottomNavBar } from '@/components/atoms/BottomNavBar';
+import { Button } from '@/components/atoms/Button';
 import { FormatBadge } from '@/components/atoms/FormatBadge';
 import { TopAppBar } from '@/components/atoms/TopAppBar';
+import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
+import { COPY } from '@/constants/copy';
 import { ROUTES, readerPathForBook } from '@/constants/routes';
 import { annotationRepo } from '@/services/storage/annotationRepo';
 import { useLibraryStore } from '@/stores/useLibraryStore';
-import type { Book } from '@/types';
+import type { Annotation, Book } from '@/types';
 import { exportAnnotationsToMarkdown } from '@/utils/annotationExport';
+import { cn } from '@/utils/cn';
+import { describeLastRead } from '@/utils/readingProgress';
+import { toast } from '@/utils/toast';
 
 /** 章节标题已自带「第N话/章/回」前缀时，目录不再叠加序号 */
 const TITLE_HAS_NUMBER_PREFIX = /^第\s*\d+\s*[话章回]/;
-import { cn } from '@/utils/cn';
 
 const TAG_INPUT_FOCUS_DELAY_MS = 50; // 等待弹窗渲染完成后聚焦
+/** 档案卡手记区块展示的最近条数 */
+const ANNOTATION_PREVIEW_COUNT = 3;
 
 type BookStatus = Book['status'];
 
@@ -30,7 +37,7 @@ export const BookDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const {
     books, coverUrls, readingProgress, tags, loadBooks,
-    toggleFavorite, updateBook, addTagToBook, removeTagFromBook, createTag,
+    toggleFavorite, updateBook, addTagToBook, removeTagFromBook, createTag, removeBook,
   } = useLibraryStore();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -41,12 +48,40 @@ export const BookDetailPage: React.FC = () => {
   const [showTagPanel, setShowTagPanel] = useState(false);
   const [newTagName, setNewTagName] = useState('');
   const tagInputRef = useRef<HTMLInputElement>(null);
+  const [annotations, setAnnotations] = useState<Annotation[]>([]);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (books.length === 0) {
       loadBooks();
     }
   }, [books.length, loadBooks]);
+
+  // 手记预览（档案卡的手记区块）
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    annotationRepo.getByBookId(id).then((all) => {
+      if (!cancelled) setAnnotations(all);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  // ⋯ 菜单点击外部关闭
+  useEffect(() => {
+    if (!showMoreMenu) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+        setShowMoreMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showMoreMenu]);
 
   const book = books.find((b) => b.id === id);
 
@@ -73,6 +108,16 @@ export const BookDetailPage: React.FC = () => {
   const handleCancelEdit = useCallback(() => {
     setIsEditing(false);
   }, []);
+
+  const handleExportAnnotations = async () => {
+    if (!book) return;
+    const bookAnnotations = await annotationRepo.getByBookId(book.id);
+    if (bookAnnotations.length === 0) {
+      toast(COPY.toast.noAnnotations);
+      return;
+    }
+    exportAnnotationsToMarkdown(book.title, book.author || undefined, bookAnnotations);
+  };
 
   if (!book) {
     return (
@@ -120,7 +165,45 @@ export const BookDetailPage: React.FC = () => {
   return (
     <div className="paper-texture min-h-screen pb-0">
       <div className="fixed inset-0 noise-overlay z-0" />
-      <TopAppBar variant="detail" />
+      <TopAppBar variant="detail" onMore={() => setShowMoreMenu((v) => !v)} />
+      {showMoreMenu && book && (
+        <div
+          ref={moreMenuRef}
+          className="fixed top-[76px] right-4 z-menu w-48 bg-surface-bright border border-outline-variant rounded-card shadow-paper-up py-1 animate-scale-in origin-top-right"
+        >
+          <button
+            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-container transition-colors text-on-surface-variant hover:text-primary"
+            onClick={() => {
+              setShowMoreMenu(false);
+              enterEditMode();
+            }}
+          >
+            <span className="material-symbols-outlined text-icon-md">edit</span>
+            <span className="font-label text-label-md">编辑档案</span>
+          </button>
+          <button
+            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-container transition-colors text-on-surface-variant hover:text-primary"
+            onClick={() => {
+              setShowMoreMenu(false);
+              void handleExportAnnotations();
+            }}
+          >
+            <span className="material-symbols-outlined text-icon-md">ios_share</span>
+            <span className="font-label text-label-md">导出手记</span>
+          </button>
+          <div className="border-t border-outline-variant my-1" />
+          <button
+            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-seal-soft transition-colors text-seal"
+            onClick={() => {
+              setShowMoreMenu(false);
+              setConfirmDelete(true);
+            }}
+          >
+            <span className="material-symbols-outlined text-icon-md">delete</span>
+            <span className="font-label text-label-md">移出馆藏</span>
+          </button>
+        </div>
+      )}
       <main className="relative z-10 pt-4 max-w-max-width-content mx-auto px-margin-mobile pb-32">
         <section className="flex flex-col md:flex-row gap-8 py-8 md:py-12 border-b border-outline-variant animate-slide-down">
           <div className="w-48 md:w-64 flex-shrink-0 mx-auto md:mx-0 border border-outline-variant rounded bg-surface">
@@ -260,7 +343,17 @@ export const BookDetailPage: React.FC = () => {
                 </div>
 
                 {showTagPanel && (
-                  <div className="bg-surface-container-low rounded-xl border border-outline-variant p-4 mb-4">
+                  <div className="bg-surface-container-low rounded-card-lg border border-outline-variant p-4 mb-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="font-label text-label-sm text-on-surface-variant">分类</span>
+                      <button
+                        aria-label="收起分类面板"
+                        className="w-7 h-7 flex items-center justify-center rounded text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors"
+                        onClick={() => setShowTagPanel(false)}
+                      >
+                        <span className="material-symbols-outlined text-icon-sm">close</span>
+                      </button>
+                    </div>
                     <div className="flex items-center gap-2 mb-3">
                       <input
                         ref={tagInputRef}
@@ -275,6 +368,7 @@ export const BookDetailPage: React.FC = () => {
                             } else {
                               const newTag = await createTag(newTagName.trim());
                               await addTagToBook(id, newTag.id);
+                              setShowTagPanel(false);
                             }
                             setNewTagName('');
                           }
@@ -292,6 +386,7 @@ export const BookDetailPage: React.FC = () => {
                           } else {
                             const newTag = await createTag(newTagName.trim());
                             await addTagToBook(id, newTag.id);
+                            setShowTagPanel(false);
                           }
                           setNewTagName('');
                         }}
@@ -341,39 +436,47 @@ export const BookDetailPage: React.FC = () => {
                     {book.description}
                   </p>
                 )}
-                <div className="flex gap-4 justify-center md:justify-start mt-auto">
-                  <button
-                    className="bg-primary text-on-primary font-label text-label-md px-8 py-3 rounded hover:opacity-90 transition-colors w-full md:w-auto"
+                {/* 进度上下文（书签动线）：档案卡与门厅同源 */}
+                {progress && (
+                  <div className="flex items-center gap-2 justify-center md:justify-start mb-4 font-label text-label-sm text-on-surface-variant">
+                    <span className="w-1 h-4 bg-seal rounded-sm flex-shrink-0" aria-hidden="true" />
+                    <span>
+                      在读
+                      {continueChapter ? ` · 第 ${continueChapter.number} ${book.format === 'text' ? '章' : '话'}` : ''}
+                      <span className="font-mono ml-1.5">{Math.round(progress.percentage)}%</span>
+                    </span>
+                    {book.lastReadAt && (
+                      <>
+                        <span aria-hidden="true">·</span>
+                        <span>{describeLastRead(book.lastReadAt)}读过</span>
+                      </>
+                    )}
+                  </div>
+                )}
+                <div className="flex gap-3 items-stretch justify-center md:justify-start mt-auto">
+                  <Button
+                    variant="accent"
+                    size="lg"
+                    className="flex-1 md:flex-none md:min-w-44"
                     onClick={() => navigate(startReaderPath)}
                   >
-                    {continueChapter ? '继续阅读' : '立即阅读'}
-                  </button>
-                  <button
-                    className={`border border-outline-variant font-label text-label-md px-4 py-3 rounded hover:bg-surface-variant transition-colors flex items-center justify-center ${
-                      book.isFavorite ? 'text-primary' : 'text-on-surface-variant'
-                    }`}
+                    {continueChapter ? '继续阅读' : '立即开读'}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="lg"
+                    className={book.isFavorite ? 'text-primary' : ''}
                     onClick={() => toggleFavorite(book.id)}
                     aria-label="收藏"
+                    title="收藏"
                   >
-                    <span className="material-symbols-outlined" style={book.isFavorite ? { fontVariationSettings: "'FILL' 1" } : undefined}>
+                    <span
+                      className="material-symbols-outlined text-icon-md"
+                      style={book.isFavorite ? { fontVariationSettings: "'FILL' 1" } : undefined}
+                    >
                       {book.isFavorite ? 'bookmark' : 'bookmark_add'}
                     </span>
-                  </button>
-                  <button
-                    className="border border-outline-variant font-label text-label-md px-4 py-3 rounded hover:bg-surface-variant transition-colors flex items-center justify-center text-on-surface-variant"
-                    onClick={async () => {
-                      const bookAnnotations = await annotationRepo.getByBookId(book.id);
-                      if (bookAnnotations.length === 0) {
-                        alert('这本书还没有批注');
-                        return;
-                      }
-                      exportAnnotationsToMarkdown(book.title, book.author || undefined, bookAnnotations);
-                    }}
-                    aria-label="导出批注为 Markdown"
-                    title="导出批注为 Markdown"
-                  >
-                    <span className="material-symbols-outlined">ios_share</span>
-                  </button>
+                  </Button>
                 </div>
               </>
             )}
@@ -422,7 +525,62 @@ export const BookDetailPage: React.FC = () => {
             </div>
           </section>
         )}
+
+        {/* 手记区块（手记动线的书内聚合）：最近 3 条，点击回跳原文 */}
+        {annotations.length > 0 && (
+          <section className="py-8 border-t border-outline-variant">
+            <div className="flex items-baseline justify-between mb-4">
+              <h2 className="font-display text-headline-md text-primary">手记</h2>
+              <span className="font-mono text-label-sm text-on-surface-variant">{annotations.length} 条</span>
+            </div>
+            <div className="flex flex-col gap-3 mb-4">
+              {[...annotations]
+                .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+                .slice(0, ANNOTATION_PREVIEW_COUNT)
+                .map((ann) => (
+                  <button
+                    key={ann.id}
+                    className="text-left p-4 rounded-card bg-surface-container-low border border-outline-variant hover:bg-surface-container transition-colors"
+                    onClick={() => navigate(readerPathForBook(book, book.chapters[ann.chapterIndex]?.id))}
+                  >
+                    <p className="font-body text-body-md text-on-surface leading-relaxed line-clamp-2">
+                      「{ann.selectedText}」
+                    </p>
+                    {ann.note && (
+                      <p className="font-label text-label-sm text-on-surface-variant mt-1.5 line-clamp-1">
+                        <span className="material-symbols-outlined text-icon-sm align-[-2px]">edit_note</span>{' '}
+                        {ann.note}
+                      </p>
+                    )}
+                    <p className="font-label text-label-sm text-on-surface-faint mt-1.5">{ann.chapterTitle}</p>
+                  </button>
+                ))}
+            </div>
+            <button
+              className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1.5"
+              onClick={() => void handleExportAnnotations()}
+            >
+              <span className="material-symbols-outlined text-icon-sm">ios_share</span>
+              导出全部 Markdown
+            </button>
+          </section>
+        )}
       </main>
+
+      <ConfirmDialog
+        isOpen={confirmDelete}
+        title={`把《${book.title}》从馆中移除？`}
+        message={`它的 ${annotations.length} 条手记与阅读进度会一并消失。`}
+        confirmLabel="移除"
+        cancelLabel="留下"
+        variant="danger"
+        onConfirm={() => {
+          setConfirmDelete(false);
+          if (id) void removeBook(id);
+          navigate(ROUTES.LIBRARY);
+        }}
+        onCancel={() => setConfirmDelete(false)}
+      />
       <BottomNavBar active="library" />
     </div>
   );

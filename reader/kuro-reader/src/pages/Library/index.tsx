@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -6,10 +6,13 @@ import { FormatBadge } from '@/components/atoms/FormatBadge';
 import { BookEditDialog } from '@/components/molecules/BookEditDialog';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
 import { SubLibraryMenu } from '@/components/molecules/SubLibraryMenu';
-import { ROUTES, bookDetailPath, subLibraryPath } from '@/constants/routes';
+import { ROUTES, bookDetailPath, readerPathForBook, subLibraryPath } from '@/constants/routes';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import type { Book } from '@/types';
 import { cn } from '@/utils/cn';
+
+const LIBRARY_VIEW_KEY = 'kuro-library-view';
+const LONG_PRESS_MS = 500;
 
 
 export const LibraryPage: React.FC = () => {
@@ -20,6 +23,7 @@ export const LibraryPage: React.FC = () => {
     subLibraries,
     tags,
     coverUrls,
+    readingProgress,
     isLoading,
     loadBooks,
     removeBook,
@@ -48,6 +52,14 @@ export const LibraryPage: React.FC = () => {
   const [sortBy, setSortBy] = useState<'title' | 'addedAt' | 'lastReadAt'>('addedAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showSortMenu, setShowSortMenu] = useState(false);
+  /** 书架视图：网格（封面）/ 列表（书脊行），记忆用户选择 */
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() =>
+    localStorage.getItem(LIBRARY_VIEW_KEY) === 'list' ? 'list' : 'grid'
+  );
+  /** 长按呼出的情境菜单目标书（动线四：书务动线） */
+  const [menuBook, setMenuBook] = useState<Book | null>(null);
+  const longPressTimerRef = useRef<number | null>(null);
+  const suppressClickRef = useRef(false);
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -180,17 +192,6 @@ export const LibraryPage: React.FC = () => {
     setSelectedIds(new Set());
   };
 
-  const handleToggleFavorite = async (bookId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    await toggleFavorite(bookId);
-  };
-
-  const handleEditBook = (book: Book, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setEditingBook(book);
-    setShowEditDialog(true);
-  };
-
   const handleSaveBook = async (
     id: string,
     updates: Partial<Pick<Book, 'title' | 'author' | 'description' | 'status'>>
@@ -268,13 +269,64 @@ export const LibraryPage: React.FC = () => {
     );
   };
 
+  // ── 长按情境菜单（动线四）：触屏 500ms 长按 / 桌面右键，替代 hover-only 操作 ──
+  const clearLongPress = useCallback(() => {
+    if (longPressTimerRef.current !== null) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  const startLongPress = useCallback(
+    (book: Book) => {
+      if (isSelectMode) return;
+      clearLongPress();
+      longPressTimerRef.current = window.setTimeout(() => {
+        longPressTimerRef.current = null;
+        suppressClickRef.current = true;
+        setMenuBook(book);
+      }, LONG_PRESS_MS);
+    },
+    [isSelectMode, clearLongPress]
+  );
+
+  useEffect(() => clearLongPress, [clearLongPress]);
+
+  const toggleViewMode = () => {
+    setViewMode((prev) => {
+      const next = prev === 'grid' ? 'list' : 'grid';
+      try {
+        localStorage.setItem(LIBRARY_VIEW_KEY, next);
+      } catch {
+        // localStorage 不可用时仅本次会话生效
+      }
+      return next;
+    });
+  };
+
   const handleBookClick = useCallback((bookId: string) => {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
     if (isSelectMode) {
       toggleSelect(bookId);
     } else {
       navigate(bookDetailPath(bookId));
     }
   }, [isSelectMode, navigate]);
+
+  const handleBookPointerProps = (book: Book) => ({
+    onPointerDown: () => startLongPress(book),
+    onPointerMove: clearLongPress,
+    onPointerUp: clearLongPress,
+    onPointerCancel: clearLongPress,
+    onContextMenu: (e: React.MouseEvent) => {
+      if (isSelectMode) return;
+      e.preventDefault();
+      setMenuBook(book);
+    },
+  });
 
   if (isLoading) {
     return (
@@ -296,22 +348,22 @@ export const LibraryPage: React.FC = () => {
               auto_stories
             </span>
           </div>
-          <h2 className="font-display text-headline-md text-primary mb-4 tracking-tight">书架空空如也</h2>
+          <h2 className="font-display text-headline-md text-primary mb-4 tracking-tight">书架还空着</h2>
           <p className="font-body text-body-md text-on-surface-variant mb-12">
-            开启你的第一次沉浸阅读，从导入书籍开始。
+            从采编台带回第一本书吧
           </p>
           <div className="flex flex-col w-full gap-4">
             <button
-              className="w-full bg-primary text-on-primary font-label text-label-md py-4 px-6 rounded hover:opacity-90 transition-colors"
+              className="w-full bg-seal text-on-primary font-label text-label-md py-4 px-6 rounded-card hover:bg-seal-deep transition-colors"
               onClick={() => navigate(ROUTES.IMPORT)}
             >
-              立即导入
+              去采编
             </button>
             <button
-              className="w-full bg-transparent text-primary font-label text-label-md py-4 px-6 rounded hover:bg-surface-container transition-colors border border-outline-variant"
+              className="w-full bg-transparent text-primary font-label text-label-md py-4 px-6 rounded-card hover:bg-surface-container transition-colors border border-outline-variant"
               onClick={() => navigate(ROUTES.SEARCH)}
             >
-              去搜索发现
+              去检索台看看
             </button>
           </div>
         </div>
@@ -404,6 +456,37 @@ export const LibraryPage: React.FC = () => {
             </div>
             <button
               className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1"
+              onClick={() => navigate(ROUTES.TAGS)}
+              aria-label="分类目录"
+              title="分类目录"
+            >
+              <span className="material-symbols-outlined text-lg">sell</span>
+              分类
+            </button>
+            <div className="flex items-center border border-outline-variant rounded overflow-hidden">
+              <button
+                className={`w-8 h-8 flex items-center justify-center transition-colors ${
+                  viewMode === 'grid' ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:text-primary'
+                }`}
+                onClick={() => viewMode !== 'grid' && toggleViewMode()}
+                aria-label="网格视图"
+                title="网格视图"
+              >
+                <span className="material-symbols-outlined text-icon-sm">grid_view</span>
+              </button>
+              <button
+                className={`w-8 h-8 flex items-center justify-center transition-colors border-l border-outline-variant ${
+                  viewMode === 'list' ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:text-primary'
+                }`}
+                onClick={() => viewMode !== 'list' && toggleViewMode()}
+                aria-label="列表视图"
+                title="列表视图"
+              >
+                <span className="material-symbols-outlined text-icon-sm">view_agenda</span>
+              </button>
+            </div>
+            <button
+              className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1"
               onClick={() => setIsSelectMode(true)}
             >
               <span className="material-symbols-outlined text-lg">checklist</span>
@@ -413,9 +496,12 @@ export const LibraryPage: React.FC = () => {
         )}
       </div>
 
-      {subLibraries.length > 0 && (
+      {/* 特藏室：入口位置固定（有库=网格末尾虚线卡；无库=本区常驻虚线卡），不再随状态漂移 */}
+      {(subLibraries.length > 0 || !isSelectMode) && (
         <section className="mb-8">
-          <h3 className="font-label text-label-sm text-on-surface-variant uppercase tracking-widest mb-4">子书库</h3>
+          <h3 className="font-label text-label-sm text-on-surface-variant uppercase tracking-widest mb-4">
+            特藏室{subLibraries.length > 0 ? ` · ${subLibraries.length}` : ''}
+          </h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
             {subLibraries.map((subLib) => {
               const isSubLibSelected = selectedSubLibIds.has(subLib.id);
@@ -501,7 +587,7 @@ export const LibraryPage: React.FC = () => {
         </section>
       )}
 
-      {(tags.length > 0 || books.some((b) => b.isFavorite)) && !isSelectMode && (
+      {(tags.length > 0 || books.some((b) => b.isFavorite)) && (
         <section className="mb-6">
           <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
             <button
@@ -558,22 +644,99 @@ export const LibraryPage: React.FC = () => {
         </section>
       )}
 
-      {subLibraries.length === 0 && !isSelectMode && books.length > 0 && (
-        <div className="mb-6">
-          <button
-            className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1 border border-outline-variant rounded-full px-4 py-2"
-            onClick={() => {
-              setNewSubLibName('');
-              setShowNewSubLibDialog(true);
-            }}
-          >
-            <span className="material-symbols-outlined text-lg">create_new_folder</span>
-            新建子书库
-          </button>
-        </div>
-      )}
+      {/* 木质书架横板（结构性装饰，全页唯一木质元素） */}
+      <div className="h-px bg-wood/40 mb-6" aria-hidden="true" />
 
       {displayedBooks.length > 0 ? (
+        viewMode === 'list' ? (
+          <div className="flex flex-col">
+            {displayedBooks.map((book) => {
+              const isSelected = selectedIds.has(book.id);
+              const progress = readingProgress[book.id];
+              const pct = progress ? Math.round(progress.percentage) : 0;
+              return (
+                <article
+                  key={book.id}
+                  className={cn(
+                    'group relative flex items-center gap-3 px-2 py-2.5 -mx-2 rounded-card cursor-pointer transition-colors',
+                    isSelectMode && isSelected ? 'bg-surface-container' : 'hover:bg-surface-container-low'
+                  )}
+                  onClick={() => handleBookClick(book.id)}
+                  {...handleBookPointerProps(book)}
+                >
+                  {isSelectMode && (
+                    <div
+                      className={cn(
+                        'w-5 h-5 flex-shrink-0 grid place-content-center border rounded',
+                        isSelected ? 'bg-primary border-primary' : 'bg-surface-bright/80 border-outline'
+                      )}
+                    >
+                      {isSelected && (
+                        <div
+                          className="w-3 h-3"
+                          style={{
+                            clipPath: 'polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%)',
+                            backgroundColor: 'white',
+                          }}
+                        />
+                      )}
+                    </div>
+                  )}
+                  <div className="w-10 h-14 flex-shrink-0 rounded-sm overflow-hidden bg-surface-container border border-outline-variant">
+                    {coverUrls[book.id] ? (
+                      <img src={coverUrls[book.id]} alt={book.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="material-symbols-outlined text-on-surface-faint text-icon-md">auto_stories</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-body text-body-md text-primary truncate flex-1">{book.title}</h4>
+                      <FormatBadge format={book.format} />
+                    </div>
+                    <p className="font-label text-label-sm text-on-surface-variant mt-0.5 truncate">
+                      {book.author || (book.status === 'completed' ? '已完结' : `${book.totalChapters} 话`)}
+                    </p>
+                    {progress && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="font-mono text-label-sm text-on-surface-variant flex-shrink-0">{pct}%</span>
+                        <span className="flex-1 h-0.5 bg-surface-container-highest overflow-hidden rounded-full">
+                          <span
+                            className={cn('block h-full rounded-full', pct >= 100 ? 'bg-seal' : 'bg-seal/80')}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  {book.isFavorite && !isSelectMode && (
+                    <span
+                      className="material-symbols-outlined text-icon-sm text-primary flex-shrink-0"
+                      style={{ fontVariationSettings: "'FILL' 1" }}
+                      aria-label="已收藏"
+                    >
+                      bookmark
+                    </span>
+                  )}
+                  {!isSelectMode && (
+                    <button
+                      className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors"
+                      aria-label="书务菜单"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setMenuBook(book);
+                      }}
+                    >
+                      <span className="material-symbols-outlined text-icon-md">more_vert</span>
+                    </button>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
           {displayedBooks.map((book) => {
           const isSelected = selectedIds.has(book.id);
@@ -582,6 +745,7 @@ export const LibraryPage: React.FC = () => {
               key={book.id}
               className="group cursor-pointer flex flex-col relative"
               onClick={() => handleBookClick(book.id)}
+              {...handleBookPointerProps(book)}
             >
               {isSelectMode && (
                 <div className="absolute top-2 left-2 z-10">
@@ -600,36 +764,6 @@ export const LibraryPage: React.FC = () => {
                 </div>
               )}
 
-              {!isSelectMode && (
-                <div className="absolute top-2 right-2 z-10 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    className={`w-8 h-8 rounded-full bg-surface-bright/90 backdrop-blur-sm flex items-center justify-center ${book.isFavorite ? 'text-primary' : 'text-on-surface-variant'} hover:text-primary shadow-sm transition-colors`}
-                    onClick={(e) => handleToggleFavorite(book.id, e)}
-                    aria-label={book.isFavorite ? '取消收藏' : '收藏'}
-                  >
-                    <span className="material-symbols-outlined text-[18px]" style={book.isFavorite ? { fontVariationSettings: "'FILL' 1" } : undefined}>
-                      {book.isFavorite ? 'bookmark' : 'bookmark_border'}
-                    </span>
-                  </button>
-                  <button
-                    className="w-8 h-8 rounded-full bg-surface-bright/90 backdrop-blur-sm flex items-center justify-center text-on-surface-variant hover:text-primary shadow-sm transition-colors"
-                    onClick={(e) => handleEditBook(book, e)}
-                    aria-label="编辑"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">edit</span>
-                  </button>
-                  <button
-                    className="w-8 h-8 rounded-full bg-surface-bright/90 backdrop-blur-sm flex items-center justify-center text-on-surface-variant hover:text-error shadow-sm transition-colors"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleSingleDelete(book.id, book.title);
-                    }}
-                    aria-label="删除"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">delete</span>
-                  </button>
-                </div>
-              )}
 
               <div className={`border bg-surface-container aspect-[2/3] overflow-hidden mb-3 relative ${
                 isSelectMode && isSelected ? 'border-primary' : 'border-outline-variant'
@@ -651,6 +785,32 @@ export const LibraryPage: React.FC = () => {
                     <span className="material-symbols-outlined text-primary text-[20px] drop-shadow-sm" style={{ fontVariationSettings: "'FILL' 1" }}>bookmark</span>
                   </div>
                 )}
+                {/* 书的生命状态（建议书 2.8-1）：在读=书脊进度丝带；读完=归架印点 */}
+                {!isSelectMode &&
+                  (() => {
+                    const progress = readingProgress[book.id];
+                    if (!progress) return null;
+                    const pct = Math.round(progress.percentage);
+                    if (pct >= 100) {
+                      return (
+                        <span
+                          className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-seal"
+                          aria-label="已归架"
+                          title="已归架"
+                        />
+                      );
+                    }
+                    if (pct > 0) {
+                      return (
+                        <span
+                          className="absolute top-0 right-2 w-1.5 bg-seal rounded-b-sm"
+                          style={{ height: `${Math.max(10, pct)}%` }}
+                          aria-label={`读到 ${pct}%`}
+                        />
+                      );
+                    }
+                    return null;
+                  })()}
               </div>
               <div className="flex items-center gap-1.5 mb-0.5">
                 <FormatBadge format={book.format} />
@@ -665,6 +825,7 @@ export const LibraryPage: React.FC = () => {
           );
         })}
         </div>
+        )
       ) : (
         <div className="text-center py-16">
           <span className="material-symbols-outlined text-on-surface-variant text-5xl mb-4 block">auto_stories</span>
@@ -824,6 +985,123 @@ export const LibraryPage: React.FC = () => {
           setEditingBook(null);
         }}
       />
+
+      {/* 书务情境菜单（长按/右键/⋯ 呼出）：触屏可达的关键补齐 */}
+      {menuBook && (
+        <div
+          className="fixed inset-0 z-sheet flex items-end justify-center bg-on-background/40 animate-fade-in"
+          onClick={() => setMenuBook(null)}
+        >
+          <div
+            className="w-full max-w-max-width-content bg-surface-bright rounded-t-card-lg shadow-raised animate-slide-up pb-safe"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 p-4 border-b border-outline-variant">
+              <div className="w-10 h-14 flex-shrink-0 rounded-sm overflow-hidden bg-surface-container border border-outline-variant">
+                {coverUrls[menuBook.id] ? (
+                  <img src={coverUrls[menuBook.id]} alt={menuBook.title} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <span className="material-symbols-outlined text-on-surface-faint text-icon-md">auto_stories</span>
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-display text-headline-sm text-primary truncate">{menuBook.title}</p>
+                <p className="font-label text-label-sm text-on-surface-variant mt-0.5 truncate">
+                  {menuBook.author || (menuBook.status === 'completed' ? '已完结' : `${menuBook.totalChapters} 话`)}
+                </p>
+              </div>
+            </div>
+            <div className="p-2">
+              <button
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-card font-label text-label-md text-on-surface hover:bg-surface-container transition-colors"
+                onClick={() => {
+                  const target = menuBook;
+                  setMenuBook(null);
+                  navigate(readerPathForBook(target));
+                }}
+              >
+                <span className="material-symbols-outlined text-icon-md">auto_stories</span>
+                继续阅读
+              </button>
+              <button
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-card font-label text-label-md text-on-surface hover:bg-surface-container transition-colors"
+                onClick={() => {
+                  const target = menuBook;
+                  setMenuBook(null);
+                  navigate(bookDetailPath(target.id));
+                }}
+              >
+                <span className="material-symbols-outlined text-icon-md">info</span>
+                书籍档案
+              </button>
+              <button
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-card font-label text-label-md text-on-surface hover:bg-surface-container transition-colors"
+                onClick={() => {
+                  const target = menuBook;
+                  setMenuBook(null);
+                  setEditingBook(target);
+                  setShowEditDialog(true);
+                }}
+              >
+                <span className="material-symbols-outlined text-icon-md">edit</span>
+                编辑档案
+              </button>
+              <button
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-card font-label text-label-md text-on-surface hover:bg-surface-container transition-colors"
+                onClick={async () => {
+                  const target = menuBook;
+                  setMenuBook(null);
+                  await toggleFavorite(target.id);
+                }}
+              >
+                <span
+                  className="material-symbols-outlined text-icon-md"
+                  style={menuBook.isFavorite ? { fontVariationSettings: "'FILL' 1" } : undefined}
+                >
+                  {menuBook.isFavorite ? 'bookmark' : 'bookmark_border'}
+                </span>
+                {menuBook.isFavorite ? '取消收藏' : '收藏'}
+              </button>
+              <button
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-card font-label text-label-md text-on-surface hover:bg-surface-container transition-colors"
+                onClick={() => {
+                  const target = menuBook;
+                  setMenuBook(null);
+                  setSelectedIds(new Set([target.id]));
+                  setShowAddToSubLibDialog(true);
+                }}
+              >
+                <span className="material-symbols-outlined text-icon-md">create_new_folder</span>
+                移入特藏室
+              </button>
+              <button
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-card font-label text-label-md text-on-surface hover:bg-surface-container transition-colors"
+                onClick={() => {
+                  setMenuBook(null);
+                  setIsSelectMode(true);
+                }}
+              >
+                <span className="material-symbols-outlined text-icon-md">checklist</span>
+                选择多本
+              </button>
+              <div className="h-px bg-outline-variant my-1 mx-2" aria-hidden="true" />
+              <button
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-card font-label text-label-md text-seal hover:bg-seal-soft transition-colors"
+                onClick={() => {
+                  const target = menuBook;
+                  setMenuBook(null);
+                  handleSingleDelete(target.id, target.title);
+                }}
+              >
+                <span className="material-symbols-outlined text-icon-md">delete</span>
+                移出馆藏
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog
         isOpen={confirmDialog.isOpen}

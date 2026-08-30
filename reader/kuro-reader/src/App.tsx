@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
+import { ToastHost } from '@/components/atoms/Toast';
 import { AuthGuard } from '@/components/layouts/AuthGuard';
 import { MainLayout } from '@/components/layouts/MainLayout';
 import { ROUTES } from '@/constants/routes';
@@ -12,6 +13,7 @@ import { CustomCloudPage } from '@/pages/CustomCloud';
 import { HomePage } from '@/pages/Home';
 import { ImportPage } from '@/pages/Import';
 import { LibraryPage } from '@/pages/Library';
+import { NotesPage } from '@/pages/Notes';
 import { ProfilePage } from '@/pages/Profile';
 import { ReaderPage } from '@/pages/Reader';
 import { SearchPage } from '@/pages/Search';
@@ -56,6 +58,20 @@ const App: React.FC = () => {
     return () => removeListener?.();
   }, []);
 
+  // Web/桌面 Escape：与 Android 返回键同源消费（统一返回协议，建议书 4.2）——
+  // 浮层（已注册 backHandler）优先逐层关闭，无浮层时路由后退
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (consumeBackPress()) return;
+      if (window.history.state?.idx > 0) {
+        window.history.back();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
   useEffect(() => {
     const root = document.documentElement;
     const mediaQuery = window.matchMedia(SYSTEM_DARK_QUERY);
@@ -89,6 +105,7 @@ const App: React.FC = () => {
 
   return (
     <BrowserRouter>
+      <ToastHost />
       <Routes>
         <Route path={ROUTES.AUTH} element={<AuthPage />} />
         <Route
@@ -106,12 +123,13 @@ const App: React.FC = () => {
           <Route path={ROUTES.SETTINGS} element={<SettingsPage />} />
           <Route path={ROUTES.STATS} element={<StatsPage />} />
           <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
+          <Route path={ROUTES.NOTES} element={<NotesPage />} />
+          <Route path={ROUTES.TAGS} element={<TagsPage />} />
         </Route>
         <Route path={ROUTES.BOOK_DETAIL} element={<BookDetailPage />} />
         <Route path={ROUTES.READER} element={<ReaderPage />} />
         <Route path={ROUTES.TEXT_READER} element={<TextReaderPage />} />
         <Route path={ROUTES.CUSTOM_CLOUD} element={<CustomCloudPage />} />
-        <Route path={ROUTES.TAGS} element={<TagsPage />} />
         <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
       </Routes>
     </BrowserRouter>

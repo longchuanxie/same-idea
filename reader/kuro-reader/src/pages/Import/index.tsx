@@ -4,11 +4,11 @@ import { Capacitor } from '@capacitor/core';
 import { useNavigate } from 'react-router-dom';
 
 import { APP_CONFIG } from '@/constants/config';
-import { extractArchiveChapterInfo } from '@/utils/comicChapterSplit';
 import { ROUTES, bookDetailPath, customCloudPath, subLibraryPath } from '@/constants/routes';
 import { FilePicker } from '@/plugins/FilePickerPlugin';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import { isNativePlatform } from '@/utils/capacitor';
+import { extractArchiveChapterInfo } from '@/utils/comicChapterSplit';
 
 const SUPPORTED_EXTENSIONS = APP_CONFIG.supportedFormats;
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.img'];
@@ -219,7 +219,7 @@ export const ImportPage: React.FC = () => {
     } catch {
       // User cancelled or error
     }
-  }, [importFolder, importArchivesAsBook, importArchivesAsSubLibrary, importResult]);
+  }, [importFolder, importArchivesAsSubLibrary, importResult]);
 
   const formatList = APP_CONFIG.supportedFormats.join(', ').toUpperCase();
 
@@ -247,7 +247,7 @@ export const ImportPage: React.FC = () => {
       </section>
 
       {isImporting && (
-        <section className="border border-outline-variant rounded-lg p-6 bg-surface-bright">
+        <section className="border border-outline-variant rounded-card-lg p-6 bg-surface-bright shadow-paper">
           <div className="flex items-center gap-3 mb-4">
             <span className="material-symbols-outlined text-primary animate-spin">progress_activity</span>
             <h3 className="font-display text-headline-md text-primary">
@@ -270,7 +270,7 @@ export const ImportPage: React.FC = () => {
       )}
 
       {error && (
-        <section className="border border-error rounded-lg p-6 bg-surface-bright">
+        <section className="border border-error rounded-card-lg p-6 bg-surface-bright shadow-paper">
           <div className="flex items-center gap-3">
             <span className="material-symbols-outlined text-error">error</span>
             <p className="font-body text-body-md text-error">{error}</p>
@@ -279,7 +279,7 @@ export const ImportPage: React.FC = () => {
       )}
 
       {importResult && !isImporting && (
-        <section className="border border-primary rounded-lg p-6 bg-surface-bright">
+        <section className="border border-primary rounded-card-lg p-6 bg-surface-bright shadow-paper">
           <div className="flex items-center gap-3 mb-4">
             <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
             <h3 className="font-display text-headline-md text-primary">导入成功</h3>
@@ -294,7 +294,7 @@ export const ImportPage: React.FC = () => {
               </p>
               <div className="flex gap-4">
                 <button
-                  className="bg-primary text-on-primary font-label text-label-md px-6 py-2 rounded hover:opacity-90 transition-colors"
+                  className="bg-seal text-on-primary font-label text-label-md px-6 py-2 rounded-card hover:bg-seal-deep transition-colors"
                   onClick={() => navigate(subLibraryPath(importResult.id))}
                 >
                   查看子书库
@@ -312,7 +312,7 @@ export const ImportPage: React.FC = () => {
               <p className="font-body text-body-md text-on-surface-variant mb-4">{importResult.title}</p>
               <div className="flex gap-4">
                 <button
-                  className="bg-primary text-on-primary font-label text-label-md px-6 py-2 rounded hover:opacity-90 transition-colors"
+                  className="bg-seal text-on-primary font-label text-label-md px-6 py-2 rounded-card hover:bg-seal-deep transition-colors"
                   onClick={() => navigate(bookDetailPath(importResult.id))}
                 >
                   查看详情
@@ -337,7 +337,7 @@ export const ImportPage: React.FC = () => {
           </div>
           <div className="flex flex-col gap-4">
             <button
-              className="w-full bg-primary text-on-primary py-3 px-4 rounded font-label text-label-md flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
+              className="w-full bg-seal text-on-primary py-3 px-4 rounded-card font-label text-label-md flex items-center justify-center gap-2 hover:bg-seal-deep transition-colors"
               onClick={handleNativeFilePick}
               disabled={isImporting}
             >
