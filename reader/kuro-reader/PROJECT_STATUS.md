@@ -1,10 +1,10 @@
 # Kuro Reader 项目现状梳理
 
-> 更新日期：2026-08-29，与 `comics` 分支工作区代码（含未提交改动）对齐。
+> 更新日期：2026-08-30，与 `comics` 分支提交基线对齐（阶段 4/5 知识闭环交付后）。
 
 ## 一、项目概述
 
-**Kuro Reader** 是一款本地书籍阅读器，支持 **漫画（ZIP/CBZ/RAR/CBR）** 与 **文本（TXT/Markdown/EPUB）** 双模式阅读，可部署为 Web 应用或 Android App。采用 Material Design 3 设计体系，提供沉浸式阅读体验和流畅的交互动画。
+**Kuro Reader** 是一座本地优先的**私人图书馆**：一款漫画（ZIP/CBZ/RAR/CBR）、PDF 与文本（TXT/Markdown/EPUB）统一阅读器，叠加「手记采集器官」能力——划线/批注、摘抄墙、书内检索、回望席、Markdown 导出嫁接 Obsidian/Notion。可部署为 Web 应用或 Android App。采用 Material Design 3 设计体系，提供沉浸式阅读体验和流畅的交互动画。
 
 - **应用 ID**: `com.kuro.reader`
 - **版本**: `1.0.0`（package.json 与 APP_CONFIG 常量已统一）
@@ -334,7 +334,27 @@ IndexedDB（`kuro-reader-db`，**v6**），9 个 Object Store，由 [db.ts](src/
 
 ## 七、测试现状
 
-**33 个测试文件、313 个用例，全部通过**（`npm run test`，fake-indexeddb + jsdom 环境）。
+**50 个测试文件、466 个用例，全部通过**（`npm run test`，fake-indexeddb + jsdom 环境；阶段 4/5 交付后）。
+
+阶段 4/5 新增覆盖：
+
+| 测试文件 | 覆盖范围 |
+|----------|----------|
+| `storage/annotationRepo.test.ts` | 批注仓库 CRUD / deleteByBookId 级联 / update 白名单 |
+| `storage/bookmarkRepo.test.ts` | 书签仓库 CRUD / deleteByBookId / 位置查找 |
+| `storage/bookRepo.test.ts` | deleteFully 级联清理（批注/书签/进度，他书保留） |
+| `components/SelectionFloatingButton.test.tsx` | 划线/批注双动作条 |
+| `components/AnnotationPopup.test.tsx` | 空笔记纯划线 / 笔记+样式 / 取消 |
+| `components/AnnotationList.test.tsx` | 纯划线标识 / 清空转划线 / 跳转 |
+| `components/AnnotationDetailModal.test.tsx` | 编辑补丁 / 删除 / 回到此处 |
+| `components/AnnotationTagPicker.test.tsx` | chips 多选 / 内联新建 / Escape |
+| `components/InBookSearchPanel.test.tsx` | 防抖检索 / 命中定位 / 三态 |
+| `utils/textSearch.test.ts` | 书内检索：大小写/CJK/MD坐标/上限 |
+| `utils/annotationFilter.test.ts` | 摘抄墙四维过滤交集 |
+| `utils/revisit.test.ts` | 周年/当日回访/重读候选确定性 |
+| `constants/routes.test.ts` | ?ann= 批注直达路由 |
+
+以下为存量测试清单（阶段 3 收官时）：
 
 | 测试文件 | 覆盖范围 |
 |----------|----------|
@@ -391,9 +411,27 @@ IndexedDB（`kuro-reader-db`，**v6**），9 个 Object Store，由 [db.ts](src/
 
 14 个页面组件无测试（阅读器子组件除外）；云存储/FTP 客户端无测试；认证流程无集成测试。
 
+### 8.2.1 阶段 4/5 遗留（采集器官边界外，见 ROADMAP.md 第五节）
+
+- PDF 逐页转 JPEG 丢弃 textLayer——不可选中/检索/批注（P1）
+- 漫画/PDF 无批注，批注仅文本书可用（P1）
+- 分发反馈渠道未建立，采集器官价值假设待真实用户验证（P2）
+- 云同步 LWW 无删除墓碑：本地删除的条目可能被远端副本复活（已知边界）
+
 ### 8.3 已解决（历史问题存档）
 
-**阶段 2「内容闭环」（进行中，详见 ROADMAP.md）**：
+**阶段 4/5「知识闭环 + 呼出环节」（2026-08-30，详见 ROADMAP.md）**：
+- ~~批注必须写非空笔记（划线入口卡死）~~ → 划线/批注分离，纯划线零输入保存
+- ~~批注详情只读~~ → 编辑/删除/「回到此处」
+- ~~摘抄墙跳转只到章节级~~ → ?ann= 直达批注原句
+- ~~书内内容找不回~~ → 书内全文检索（textSearch + InBookSearchPanel）
+- ~~摘抄墙无检索无筛选~~ → 四维过滤（query/书/标签/形态）+ 手记标签 tagIds
+- ~~删除书后批注/书签/进度成孤儿~~ → deleteFully 级联清理（兑现删除弹窗承诺）
+- ~~云同步合并不落地本地（多端拉取无效）~~ → applyMergedPayloadToLocal 写回 IndexedDB
+- ~~阅读统计不同步不备份（换机年轮断）~~ → SYNC_VERSION 2 + 备份 v3 含时长簿
+- ~~划完线之后没有任何东西回到用户面前~~ → 回望席（周年手记/当日确定性回访）+ 整墙导出
+
+**阶段 2「内容闭环」（2026-08-29，详见 ROADMAP.md）**：
 - ~~WebDAV/FTP 云端导入断头路~~ → 浏览模式 + 下载导入（969b1e6）
 - ~~EPUB 丢图丢结构~~ → XHTML→Markdown 保真管线 + NCX/nav 目录（cddf9fc）
 - ~~PDF 仅类型预留~~ → pdfjs 逐页渲染复用漫画阅读器
