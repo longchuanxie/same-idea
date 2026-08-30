@@ -334,7 +334,7 @@ IndexedDB（`kuro-reader-db`，**v6**），9 个 Object Store，由 [db.ts](src/
 
 ## 七、测试现状
 
-**50 个测试文件、466 个用例，全部通过**（`npm run test`，fake-indexeddb + jsdom 环境；阶段 4/5 交付后）。
+**52 个测试文件、477 个用例，全部通过**（`npm run test`，fake-indexeddb + jsdom 环境；阶段 4/5 交付后）。
 
 阶段 4/5 新增覆盖：
 
@@ -413,8 +413,9 @@ IndexedDB（`kuro-reader-db`，**v6**），9 个 Object Store，由 [db.ts](src/
 
 ### 8.2.1 阶段 4/5 遗留（采集器官边界外，见 ROADMAP.md 第五节）
 
-- PDF 逐页转 JPEG 丢弃 textLayer——不可选中/检索/批注（P1）
-- 漫画/PDF 无批注，批注仅文本书可用（P1）
+- ~~PDF 逐页转 JPEG 丢弃 textLayer——不可检索~~ → services/pdfText 逐页提取 + PDF 顶栏检索直达页码（2026-08-30）
+- ~~漫画/PDF 无批注~~ → 页级手记（Annotation.pageIndex 页码锚定：长按动作菜单/手记面板/摘抄墙 ?page= 直达，同步导出全兼容）（2026-08-30）
+- 图片内文字级批注（划线级）仍缺：需 OCR 或 textLayer 坐标映射，观察项（P2）
 - 分发反馈渠道未建立，采集器官价值假设待真实用户验证（P2）
 - 云同步 LWW 无删除墓碑：本地删除的条目可能被远端副本复活（已知边界）
 
