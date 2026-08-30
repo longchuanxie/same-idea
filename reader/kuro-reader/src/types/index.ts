@@ -242,6 +242,8 @@ export interface Annotation {
   style?: AnnotationStyle // 默认 'highlight'
   /** 手记标签（可选；引用 useLibraryStore 的 Tag.id，空/缺省为未分类） */
   tagIds?: string[]
+  /** 页级手记（可选；仅漫画/PDF 等图页书，值为章内页索引 0 起；有此字段即页注而非文字划线） */
+  pageIndex?: number
   createdAt: Date
   updatedAt: Date
 }

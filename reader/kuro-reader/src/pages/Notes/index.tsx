@@ -61,8 +61,9 @@ export const NotesPage: React.FC = () => {
   const visible = useMemo(() => filterAnnotations(sorted, filter), [sorted, filter]);
 
   const openInReader = (ann: Annotation, book: Book) => {
-    // 文本书带 ?ann= 直达批注原句处
-    navigate(readerPathForBook(book, book.chapters[ann.chapterIndex]?.id, ann.id));
+    // 文本书带 ?ann= 直达批注原句处；图页书页注带 ?page= 直达页码
+    const page = book.format !== 'text' && ann.pageIndex != null ? ann.pageIndex + 1 : undefined;
+    navigate(readerPathForBook(book, book.chapters[ann.chapterIndex]?.id, ann.id, page));
   };
 
   const setFilterPart = (part: Partial<AnnotationFilter>) =>

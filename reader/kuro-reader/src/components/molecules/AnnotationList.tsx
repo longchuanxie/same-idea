@@ -4,6 +4,7 @@ import { COPY } from '@/constants/copy';
 import type { Annotation, AnnotationStyle } from '@/types';
 import { exportAnnotationsToMarkdown } from '@/utils/annotationExport';
 import { cn } from '@/utils/cn';
+import { isPageNote } from '@/utils/pageAnnotation';
 
 interface AnnotationListProps {
   annotations: Annotation[];
@@ -168,7 +169,7 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
                           value={editNote}
                           onChange={(e) => setEditNote(e.target.value)}
                           rows={2}
-                          placeholder={COPY.annotation.clearToPureHighlight}
+                          placeholder={isPageNote(ann) ? COPY.annotation.pageNotePlaceholder : COPY.annotation.clearToPureHighlight}
                           className="w-full px-3 py-2 bg-surface-container-lowest border border-outline-variant/50 rounded-lg text-on-surface font-body text-body-sm resize-none focus:outline-none focus:border-primary"
                           autoFocus
                         />
@@ -195,7 +196,7 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
                           </p>
                         ) : (
                           <span className="font-label text-label-xs text-on-surface-faint flex-1">
-                            {COPY.annotation.pureHighlight}
+                            {isPageNote(ann) ? COPY.annotation.pageNote : COPY.annotation.pureHighlight}
                           </span>
                         )}
                         <button

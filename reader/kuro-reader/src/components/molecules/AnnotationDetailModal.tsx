@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 import { COPY } from '@/constants/copy';
 import type { Annotation, AnnotationStyle } from '@/types';
+import { isPageNote } from '@/utils/pageAnnotation';
 
 import { AnnotationTagPicker } from './AnnotationTagPicker';
 
@@ -126,7 +127,9 @@ export const AnnotationDetailModal: React.FC<AnnotationDetailModalProps> = ({
             {annotation.note ? (
               <p className="font-body text-body-md text-on-surface mb-4">{annotation.note}</p>
             ) : (
-              <p className="font-label text-label-xs text-on-surface-faint mb-4">{COPY.annotation.pureHighlight}</p>
+              <p className="font-label text-label-xs text-on-surface-faint mb-4">
+                {isPageNote(annotation) ? COPY.annotation.pageNote : COPY.annotation.pureHighlight}
+              </p>
             )}
             <div className="flex items-center justify-between gap-2">
               <button
