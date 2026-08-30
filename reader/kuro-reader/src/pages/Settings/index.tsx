@@ -11,14 +11,15 @@ import { bookmarkRepo } from '@/services/storage/bookmarkRepo';
 import { progressRepo } from '@/services/storage/progressRepo';
 import { useAppStore } from '@/stores/useAppStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
+import { useStatsStore } from '@/stores/useStatsStore';
 import type { Annotation, Bookmark, PaperType, ReadingProgress, UserSettings } from '@/types';
 import { getAllPaperTypes } from '@/utils/paperTexture';
 import { getStorageUsage } from '@/utils/storage';
 import { toast } from '@/utils/toast';
 
-/** 备份格式版本：v2 起包含书签与批注；导入时兼容 v1 */
-const BACKUP_VERSION = 2;
-const LEGACY_BACKUP_VERSION = 1;
+/** 备份格式版本：v2 起包含书签与批注；v3 起包含阅读时长簿；导入时兼容 v1/v2 */
+const BACKUP_VERSION = 3;
+const LEGACY_BACKUP_VERSIONS = [1, 2];
 
 /** 待确认恢复的备份内容（经版本校验后暂存，用户确认覆盖后才写入） */
 interface PendingBackup {
@@ -26,10 +27,31 @@ interface PendingBackup {
   readingProgress?: Record<string, ReadingProgress>;
   bookmarks?: Bookmark[];
   annotations?: Annotation[];
+  stats?: { readingSessions: { date: string; minutes: number; bookId: string }[]; dailyGoalMinutes: number };
 }
 
 const TEXTURE_INTENSITY_WEAK_MAX = 33;
 const TEXTURE_INTENSITY_MEDIUM_MAX = 66;
+/** 阅读时长簿序列化体积护栏（字节）：超出降级为按日聚合（牺牲按书维度保住载荷体积） */
+const STATS_SESSIONS_PAYLOAD_LIMIT_KB = 200;
+const STATS_SESSIONS_PAYLOAD_LIMIT_BYTES = STATS_SESSIONS_PAYLOAD_LIMIT_KB * 1024;
+type SessionEntry = { date: string; minutes: number; bookId: string };
+
+/** 时长簿体积护栏：明细超阈值时按 (date,bookId) 聚合（通常已聚合；防御极端记录碎片） */
+function compactSessions(sessions: SessionEntry[]): SessionEntry[] {
+  if (JSON.stringify(sessions).length <= STATS_SESSIONS_PAYLOAD_LIMIT_BYTES) {
+    return sessions;
+  }
+  const byKey = new Map<string, number>();
+  for (const s of sessions) {
+    const key = `${s.date}|${s.bookId}`;
+    byKey.set(key, (byKey.get(key) ?? 0) + s.minutes);
+  }
+  return [...byKey.entries()].map(([key, minutes]) => {
+    const [date, bookId] = key.split('|');
+    return { date, bookId, minutes };
+  });
+}
 // 锁定超时预设（分钟，数值即业务含义）
 // eslint-disable-next-line no-magic-numbers
 const LOCK_TIMEOUT_MINUTES = [1, 3, 5, 15, 30] as const;
@@ -82,6 +104,7 @@ export const SettingsPage: React.FC = () => {
       bookmarkRepo.getAll(),
       annotationRepo.getAll(),
     ]);
+    const statsState = useStatsStore.getState();
     const data = {
       version: BACKUP_VERSION,
       exportedAt: new Date().toISOString(),
@@ -92,6 +115,11 @@ export const SettingsPage: React.FC = () => {
       readingProgress,
       bookmarks,
       annotations,
+      // v3 起：阅读时长簿（热力图/连击/今日之灯的数据源）
+      stats: {
+        readingSessions: statsState.readingSessions,
+        dailyGoalMinutes: statsState.dailyGoalMinutes,
+      },
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -137,6 +165,12 @@ export const SettingsPage: React.FC = () => {
     }
 
     await useLibraryStore.getState().loadBooks();
+
+    // 阅读时长簿（v3 备份起包含；旧备份无此字段则保留本地）
+    if (data.stats && Array.isArray(data.stats.readingSessions)) {
+      useStatsStore.getState().restoreStats(data.stats);
+    }
+
     toast(COPY.toast.backupRestored);
   };
 
@@ -147,7 +181,7 @@ export const SettingsPage: React.FC = () => {
     reader.onload = (event) => {
       try {
         const data = JSON.parse(event.target?.result as string);
-        if (data.version !== BACKUP_VERSION && data.version !== LEGACY_BACKUP_VERSION) {
+        if (data.version !== BACKUP_VERSION && !LEGACY_BACKUP_VERSIONS.includes(data.version)) {
           toast(COPY.toast.backupVersionUnsupported);
           return;
         }
@@ -221,12 +255,19 @@ export const SettingsPage: React.FC = () => {
       const readingProgress: Record<string, ReadingProgress> = {};
       for (const p of progressList) readingProgress[p.bookId] = p;
 
+      const statsState = useStatsStore.getState();
       const localPayload: SyncPayload = {
-        version: 1,
+        version: 2,
         exportedAt: new Date().toISOString(),
         readingProgress,
         bookmarks,
         annotations,
+        // v2 起：阅读时长簿随载荷同步（连击/热力图不再换机失忆）；
+        // 明细超阈值时降级为按日聚合（牺牲按书维度，保住载荷体积）
+        stats: {
+          readingSessions: compactSessions(statsState.readingSessions),
+          dailyGoalMinutes: statsState.dailyGoalMinutes,
+        },
       };
       const result = await runCloudSync(credentials, localPayload);
       // 多端拉取：合并结果落地本地 IndexedDB（此前只 PUT 远端，另一台设备永远拉不到）

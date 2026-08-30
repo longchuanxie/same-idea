@@ -6,12 +6,18 @@ import { bookmarkRepo } from '@/services/storage/bookmarkRepo';
 import { progressRepo } from '@/services/storage/progressRepo';
 import type { Annotation, Bookmark, ReadingProgress } from '@/types';
 
-/** 同步载荷版本 */
-const SYNC_VERSION = 1;
+/** 同步载荷版本：v2 起携带可选 stats（阅读时长簿） */
+const SYNC_VERSION = 2;
 /** 同步文件在 WebDAV 根下的固定路径 */
 const SYNC_FILE_PATH = '/kuro-reader-sync.json';
 /** WebDAV 404 = 远端尚无同步文件（首次同步），直接上传 */
 const HTTP_NOT_FOUND = 404;
+
+/** 阅读时长簿（可同步形态）：sessions 按 (date,bookId) 归并，goal 以较新者为准 */
+export interface SyncedStats {
+  readingSessions: { date: string; minutes: number; bookId: string }[];
+  dailyGoalMinutes: number;
+}
 
 export interface SyncCredentials {
   /** WebDAV 根地址，如 http://nas:5005/dav */
@@ -26,6 +32,8 @@ export interface SyncPayload {
   readingProgress: Record<string, ReadingProgress>;
   bookmarks: Bookmark[];
   annotations: Annotation[];
+  /** v2 起：可选。旧载荷/旧客户端无此字段，合并时保留本地 */
+  stats?: SyncedStats;
 }
 
 export type SyncDirection = 'pushed' | 'merged';
@@ -62,8 +70,41 @@ function newerOf<T>(local: T, remote: T, localTime: number, remoteTime: number):
 }
 
 /**
+ * 归并阅读时长簿（v2）：
+ * - sessions 按 (date, bookId) 键取 minutes 较大者——同一设备不会重复计同一天的同一本书，
+ *   取 max 而非求和以避免双设备把同一次阅读算两遍；
+ * - dailyGoalMinutes 取 exportedAt 较新的载荷的值；
+ * - 一方无 stats（旧载荷）时保留另一方。
+ */
+export function mergeSyncedStats(
+  localStats: SyncedStats | undefined,
+  remoteStats: SyncedStats | undefined,
+  localExportedAt: string,
+  remoteExportedAt: string
+): SyncedStats | undefined {
+  if (!localStats) return remoteStats;
+  if (!remoteStats) return localStats;
+
+  const byKey = new Map<string, number>();
+  for (const s of [...localStats.readingSessions, ...remoteStats.readingSessions]) {
+    const key = `${s.date}|${s.bookId}`;
+    byKey.set(key, Math.max(byKey.get(key) ?? 0, s.minutes));
+  }
+
+  const remoteNewer = +new Date(remoteExportedAt) > +new Date(localExportedAt);
+  return {
+    readingSessions: [...byKey.entries()].map(([key, minutes]) => {
+      const [date, bookId] = key.split('|');
+      return { date, bookId, minutes };
+    }),
+    dailyGoalMinutes: remoteNewer ? remoteStats.dailyGoalMinutes : localStats.dailyGoalMinutes,
+  };
+}
+
+/**
  * 逐条合并本地与远端载荷：
  * - 进度按 bookId、书签/批注按 id，取 updatedAt/createdAt 较新者
+ * - stats（v2，可选）按 mergeSyncedStats 规则归并
  * - 载荷级 exportedAt 取较新者
  */
 export function mergeSyncPayloads(local: SyncPayload, remote: SyncPayload): SyncPayload {
@@ -103,6 +144,7 @@ export function mergeSyncPayloads(local: SyncPayload, remote: SyncPayload): Sync
     readingProgress,
     bookmarks: [...bookmarkById.values()],
     annotations: [...annotationById.values()],
+    stats: mergeSyncedStats(local.stats, remote.stats, local.exportedAt, remote.exportedAt),
   };
 }
 
@@ -154,9 +196,9 @@ export async function runCloudSync(
 }
 
 /**
- * 将合并结果落地本地 IndexedDB（多端「拉取」环节）。
- * repo 写入均为按键 upsert：与本地一致的数据原样覆写无副作用，
- * 远端较新/远端独有的条目由此进入本地库。
+ * 将合并结果落地本地（多端「拉取」环节）。
+ * 进度/书签/批注写入 IndexedDB（repo 按键 upsert）；stats 存在时回写
+ * useStatsStore（zustand persist 自行落 localStorage）。
  * 注：LWW 合并无删除墓碑，本地删除的条目会被远端副本复活——已知边界。
  */
 export async function applyMergedPayloadToLocal(merged: SyncPayload): Promise<void> {
@@ -169,4 +211,19 @@ export async function applyMergedPayloadToLocal(merged: SyncPayload): Promise<vo
   for (const annotation of merged.annotations) {
     await annotationRepo.add(annotation);
   }
+  if (merged.stats) {
+    applyStatsToLocal(merged.stats);
+  }
+}
+
+/** 把同步后的阅读时长簿回写统计 store（模块注入避免 cloudSync ↔ store 循环依赖） */
+let statsApplier: ((stats: SyncedStats) => void) | null = null;
+
+/** 由应用装配层调用（main.tsx），注入 useStatsStore 的回写实现 */
+export function registerStatsApplier(applier: (stats: SyncedStats) => void): void {
+  statsApplier = applier;
+}
+
+function applyStatsToLocal(stats: SyncedStats): void {
+  statsApplier?.(stats);
 }

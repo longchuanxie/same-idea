@@ -10,6 +10,12 @@ interface ReadingSession {
   bookId: string;
 }
 
+/** 云同步/备份恢复的时长簿形态（与 services/cloudSync 的 SyncedStats 对应） */
+export interface RestorableStats {
+  readingSessions: ReadingSession[];
+  dailyGoalMinutes: number;
+}
+
 interface StatsState {
   stats: ReadingStats;
   readingSessions: ReadingSession[];
@@ -18,6 +24,8 @@ interface StatsState {
 
   addReadingSession: (bookId: string, minutes: number) => void;
   setDailyGoalMinutes: (minutes: number) => void;
+  /** 云同步/备份恢复：整体替换时长簿与目标 */
+  restoreStats: (stats: RestorableStats) => void;
   getStats: () => ReadingStats;
   calculateWeeklyData: () => { day: string; hours: number }[];
   /** 今日已读分钟数（门厅「今日之灯」用） */
@@ -126,6 +134,29 @@ export const useStatsStore = create<StatsState>()(
 
       setDailyGoalMinutes: (minutes) => {
         set({ dailyGoalMinutes: Math.max(0, Math.round(minutes)) });
+      },
+
+      restoreStats: ({ readingSessions, dailyGoalMinutes }) => {
+        const safeSessions = Array.isArray(readingSessions)
+          ? readingSessions.filter(
+              (s) => typeof s?.date === 'string' && Number.isFinite(s?.minutes) && typeof s?.bookId === 'string'
+            )
+          : [];
+        const totalMinutes = safeSessions.reduce((sum, s) => sum + s.minutes, 0);
+        const totalHours = Math.round((totalMinutes / 60) * 10) / 10;
+        const dates = safeSessions.map((s) => s.date);
+        const { currentStreak, longestStreak } = calculateStreaks(dates);
+        set((state) => ({
+          readingSessions: safeSessions,
+          dailyGoalMinutes: Math.max(0, Math.round(dailyGoalMinutes) || state.dailyGoalMinutes),
+          stats: {
+            ...state.stats,
+            totalHours,
+            currentStreak,
+            longestStreak,
+            weeklyData: get().calculateWeeklyData(),
+          },
+        }));
       },
 
       getStats: () => {

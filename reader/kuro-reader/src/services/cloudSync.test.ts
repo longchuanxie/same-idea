@@ -6,8 +6,10 @@ import {
   applyMergedPayloadToLocal,
   buildSyncUrl,
   mergeSyncPayloads,
+  mergeSyncedStats,
   runCloudSync,
   type SyncPayload,
+  type SyncedStats,
 } from '@/services/cloudSync'
 import { annotationRepo } from '@/services/storage/annotationRepo'
 import { bookmarkRepo } from '@/services/storage/bookmarkRepo'
@@ -20,7 +22,7 @@ vi.mock('axios')
 const BOOKMARK_TIME = '2026-08-29T10:00:00Z'
 
 const makePayload = (overrides: Partial<SyncPayload> = {}): SyncPayload => ({
-  version: 1,
+  version: 2,
   exportedAt: '2026-08-29T12:00:00',
   readingProgress: {},
   bookmarks: [],
@@ -99,6 +101,63 @@ describe('mergeSyncPayloads', () => {
     const local = makePayload({ exportedAt: '2026-08-29T12:00:00Z' })
     const remote = makePayload({ exportedAt: '2026-08-29T13:00:00Z' })
     expect(mergeSyncPayloads(local, remote).exportedAt).toBe('2026-08-29T13:00:00Z')
+  })
+
+  it('merges stats by (date,bookId) taking max minutes; goal from newer payload', () => {
+    const localStats: SyncedStats = {
+      readingSessions: [
+        { date: '2026-08-28', minutes: 20, bookId: 'b1' },
+        { date: '2026-08-29', minutes: 10, bookId: 'b1' },
+      ],
+      dailyGoalMinutes: 30,
+    }
+    const remoteStats: SyncedStats = {
+      readingSessions: [
+        { date: '2026-08-28', minutes: 45, bookId: 'b1' }, // 远端更大
+        { date: '2026-08-28', minutes: 15, bookId: 'b2' }, // 远端独有
+      ],
+      dailyGoalMinutes: 60,
+    }
+    const local = makePayload({ exportedAt: '2026-08-29T12:00:00Z', stats: localStats })
+    const remote = makePayload({ exportedAt: '2026-08-29T13:00:00Z', stats: remoteStats })
+
+    const merged = mergeSyncPayloads(local, remote)
+    expect(merged.stats?.readingSessions).toHaveLength(3)
+    const byKey = new Map(merged.stats!.readingSessions.map((s) => [`${s.date}|${s.bookId}`, s.minutes]))
+    expect(byKey.get('2026-08-28|b1')).toBe(45) // max 而非求和
+    expect(byKey.get('2026-08-29|b1')).toBe(10)
+    expect(byKey.get('2026-08-28|b2')).toBe(15)
+    expect(merged.stats?.dailyGoalMinutes).toBe(60) // 远端 exportedAt 更新
+  })
+
+  it('stats: 一方无 stats（旧客户端）时保留另一方', () => {
+    const stats: SyncedStats = {
+      readingSessions: [{ date: '2026-08-28', minutes: 20, bookId: 'b1' }],
+      dailyGoalMinutes: 45,
+    }
+    // 远端是 v1 旧载荷（无 stats）
+    const oldRemote = makePayload({ exportedAt: '2026-08-29T13:00:00Z' })
+    delete (oldRemote as Partial<SyncPayload>).stats
+    const local = makePayload({ exportedAt: '2026-08-29T12:00:00Z', stats })
+
+    const merged = mergeSyncPayloads(local, oldRemote)
+    expect(merged.stats?.dailyGoalMinutes).toBe(45)
+
+    // 本地旧、远端新
+    const merged2 = mergeSyncPayloads(makePayload({ exportedAt: '2026-08-29T12:00:00Z' }), makePayload({ exportedAt: '2026-08-29T13:00:00Z', stats }))
+    expect(merged2.stats?.dailyGoalMinutes).toBe(45)
+
+    // 双方都无 stats → undefined
+    expect(mergeSyncPayloads(makePayload(), makePayload({ exportedAt: '2026-08-30T00:00:00Z' })).stats).toBeUndefined()
+  })
+
+  it('mergeSyncedStats 直接调用：相同 exportedAt 时 goal 保留本地', () => {
+    const local: SyncedStats = { readingSessions: [], dailyGoalMinutes: 30 }
+    const remote: SyncedStats = { readingSessions: [], dailyGoalMinutes: 60 }
+    const same = '2026-08-29T12:00:00Z'
+    expect(mergeSyncedStats(local, remote, same, same)?.dailyGoalMinutes).toBe(30)
+    expect(mergeSyncedStats(undefined, remote, same, same)).toEqual(remote)
+    expect(mergeSyncedStats(local, undefined, same, same)).toEqual(local)
   })
 
   it('does not mutate inputs', () => {
