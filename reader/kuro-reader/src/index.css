@@ -36,45 +36,78 @@
   }
 
   :root {
-    --color-background: #fdf8f8;
-    --color-on-background: #1c1b1c;
-    --color-surface: #fdf8f8;
-    --color-surface-bright: #fdf8f8;
-    --color-surface-variant: #e6e1e1;
-    --color-on-surface: #1c1b1c;
-    --color-on-surface-variant: #444748;
-    --color-surface-container-lowest: #ffffff;
-    --color-surface-container-low: #f7f2f2;
-    --color-surface-container: #f1eded;
-    --color-surface-container-high: #ece7e7;
-    --color-surface-container-highest: #e6e1e1;
-    --color-primary: #000000;
-    --color-on-primary: #ffffff;
-    --color-secondary: #5e5e5e;
-    --color-secondary-container: #e4e2e2;
-    --color-outline: #747878;
-    --color-outline-variant: #c4c7c7;
+    /* 「墨·纸·光·印」色板 —— RGB 三元组，全应用唯一真源。
+       tailwind.config.js 通过 rgb(var(--c-*) / <alpha-value>) 引用；
+       暗色模式仅覆盖本块变量，无需 dark: 变体。 */
+    --color-background: 247 244 238;            /* 纸 paper 米白 */
+    --color-on-background: 33 30 27;            /* 墨 ink 暖墨黑 */
+    --color-surface: 247 244 238;
+    --color-surface-bright: 252 250 246;        /* 浮纸 paper-raised */
+    --color-surface-dim: 226 220 208;
+    --color-surface-variant: 226 220 208;
+    --color-on-surface: 33 30 27;
+    --color-on-surface-variant: 92 87 79;       /* ink-soft */
+    --color-on-surface-faint: 138 132 120;      /* ink-faint */
+    --color-surface-container-lowest: 252 250 246;
+    --color-surface-container-low: 241 237 229;
+    --color-surface-container: 234 229 219;
+    --color-surface-container-high: 226 220 208;
+    --color-surface-container-highest: 217 210 196;
+    --color-surface-tint: 140 111 78;           /* wood */
+    --color-primary: 33 30 27;                  /* 墨（暗色反转为暖白） */
+    --color-on-primary: 252 250 246;
+    --color-on-tertiary-container: 138 132 120; /* 兼容旧键：占位文字 = ink-faint */
+    --color-secondary: 92 87 79;
+    --color-secondary-container: 234 229 219;
+    --color-outline: 185 178 164;
+    --color-outline-variant: 216 210 197;
+    --color-error: 179 38 30;
+    --color-error-container: 249 222 220;
+    --color-on-error: 252 250 246;
+    --color-on-error-container: 140 29 24;
+    /* 光与印（新） */
+    --color-seal: 188 69 41;                    /* 藏书印 朱砂 —— 唯一强调色 */
+    --color-seal-deep: 154 52 32;
+    --color-seal-soft: 243 222 212;
+    --color-lamp: 200 150 62;                   /* 琥珀光 —— 仅生命力元素 */
+    --color-wood: 140 111 78;                   /* 木质 —— 仅结构性元素 */
+    --color-wood-deep: 107 84 56;
   }
 
   .dark {
-    --color-background: #111111;
-    --color-on-background: #f4f0f0;
-    --color-surface: #1c1b1c;
-    --color-surface-bright: #2b2a2b;
-    --color-surface-variant: #444748;
-    --color-on-surface: #f4f0f0;
-    --color-on-surface-variant: #c8c6c5;
-    --color-surface-container-lowest: #171717;
-    --color-surface-container-low: #201f20;
-    --color-surface-container: #252425;
-    --color-surface-container-high: #302f30;
-    --color-surface-container-highest: #3a393a;
-    --color-primary: #f4f0f0;
-    --color-on-primary: #1c1b1c;
-    --color-secondary: #c8c6c5;
-    --color-secondary-container: #313030;
-    --color-outline: #8f9191;
-    --color-outline-variant: #444748;
+    /* 夜读的图书馆：暖黑而非冷黑 */
+    --color-background: 25 23 20;
+    --color-on-background: 237 231 219;
+    --color-surface: 32 29 25;
+    --color-surface-bright: 48 44 38;
+    --color-surface-dim: 58 53 45;
+    --color-surface-variant: 58 53 45;
+    --color-on-surface: 237 231 219;
+    --color-on-surface-variant: 181 173 158;
+    --color-on-surface-faint: 128 122 109;
+    --color-surface-container-lowest: 30 27 23;
+    --color-surface-container-low: 36 33 29;
+    --color-surface-container: 42 39 34;
+    --color-surface-container-high: 50 46 40;
+    --color-surface-container-highest: 58 54 46;
+    --color-surface-tint: 167 138 102;
+    --color-primary: 237 231 219;
+    --color-on-primary: 33 30 27;
+    --color-on-tertiary-container: 128 122 109;
+    --color-secondary: 181 173 158;
+    --color-secondary-container: 52 48 40;
+    --color-outline: 110 103 89;
+    --color-outline-variant: 58 53 45;
+    --color-error: 242 184 181;
+    --color-error-container: 140 29 24;
+    --color-on-error: 60 20 16;
+    --color-on-error-container: 249 222 220;
+    --color-seal: 208 96 74;                    /* 朱砂提亮保对比度 */
+    --color-seal-deep: 224 122 100;
+    --color-seal-soft: 58 36 30;
+    --color-lamp: 217 174 95;                   /* 夜里灯更亮一档 */
+    --color-wood: 58 49 41;
+    --color-wood-deep: 44 37 31;
   }
 
   html {
@@ -126,92 +159,25 @@
     z-index: 1;
     border-radius: inherit;
   }
+}
 
-  .glass-panel {
-    background: rgba(32, 31, 31, 0.4);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-  }
+/* 听书跟读：当前播报文本范围高亮（内联范围级，跨行断开时逐行保留圆角） */
+.speech-reading {
+  background: rgb(var(--color-seal-soft) / 0.6);
+  border-radius: 4px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  transition: background 0.3s ease;
+}
+
+/* 听书暂停时高亮降透明，提示播报未推进 */
+[data-speech-paused='true'] .speech-reading {
+  opacity: 0.45;
 }
 
 @layer utilities {
-  .bg-background {
-    background-color: var(--color-background);
-  }
-
-  .text-on-background {
-    color: var(--color-on-background);
-  }
-
-  .bg-surface {
-    background-color: var(--color-surface);
-  }
-
-  .bg-surface-bright {
-    background-color: var(--color-surface-bright);
-  }
-
-  .bg-surface-variant {
-    background-color: var(--color-surface-variant);
-  }
-
-  .text-on-surface {
-    color: var(--color-on-surface);
-  }
-
-  .text-on-surface-variant {
-    color: var(--color-on-surface-variant);
-  }
-
-  .bg-surface-container-lowest {
-    background-color: var(--color-surface-container-lowest);
-  }
-
-  .bg-surface-container-low {
-    background-color: var(--color-surface-container-low);
-  }
-
-  .bg-surface-container {
-    background-color: var(--color-surface-container);
-  }
-
-  .bg-surface-container-high {
-    background-color: var(--color-surface-container-high);
-  }
-
-  .bg-surface-container-highest {
-    background-color: var(--color-surface-container-highest);
-  }
-
-  .text-primary {
-    color: var(--color-primary);
-  }
-
-  .bg-primary {
-    background-color: var(--color-primary);
-  }
-
-  .text-on-primary {
-    color: var(--color-on-primary);
-  }
-
-  .text-secondary {
-    color: var(--color-secondary);
-  }
-
-  .bg-secondary-container {
-    background-color: var(--color-secondary-container);
-  }
-
-  .border-outline {
-    border-color: var(--color-outline);
-  }
-
-  .border-outline-variant {
-    border-color: var(--color-outline-variant);
-  }
-
+  /* 颜色类由 Tailwind 依 tailwind.config 的 rgb(var()) 引用自动生成（双源合一，见建议书 3.1）。
+     此处仅保留 Tailwind 无法生成的排版类。 */
   .font-body {
     font-family: var(--app-body-font-family, 'Literata', serif);
   }
@@ -672,19 +638,19 @@
 
 /* 文本阅读翻页动画 - 左右滑动 */
 .text-page-enter-right {
-  animation: textPageEnterRight 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+  animation: textPageEnterRight 0.6s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .text-page-enter-left {
-  animation: textPageEnterLeft 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+  animation: textPageEnterLeft 0.6s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .text-page-exit-left {
-  animation: textPageExitLeft 0.45s cubic-bezier(0.4, 0, 0.6, 1) forwards;
+  animation: textPageExitLeft 0.6s cubic-bezier(0.2, 0, 0, 1) forwards;
 }
 
 .text-page-exit-right {
-  animation: textPageExitRight 0.45s cubic-bezier(0.4, 0, 0.6, 1) forwards;
+  animation: textPageExitRight 0.6s cubic-bezier(0.2, 0, 0, 1) forwards;
 }
 
 @keyframes textPageEnterRight {
@@ -710,25 +676,13 @@
 }
 
 @keyframes textPageExitLeft {
-  from {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  to {
-    transform: translateX(-100%);
-    opacity: 0;
-  }
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
 }
 
 @keyframes textPageExitRight {
-  from {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  to {
-    transform: translateX(100%);
-    opacity: 0;
-  }
+  from { transform: translateX(0); }
+  to { transform: translateX(100%); }
 }
 
 /* ==============================
@@ -745,6 +699,23 @@
 .book-flip-page {
   transform-style: preserve-3d;
   will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* 翻起页的纸背：转过 90° 后露出（拟真书的纸页背面） */
+.book-flip-page-backface::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to left,
+    #efe9dd 0%,
+    #f7f2e8 35%,
+    #e8e1d2 100%
+  );
+  transform: rotateY(180deg);
+  backface-visibility: hidden;
 }
 
 /* ===== 向前翻页（左滑 / 下一页） ===== */
@@ -920,11 +891,11 @@
 /* ===== 翻书完成动画（松手后继续完成翻页） ===== */
 
 .book-flip-complete-exit {
-  transition: transform 450ms cubic-bezier(0.4, 0.0, 0.2, 1);
+  transition: transform 600ms cubic-bezier(0.4, 0.0, 0.2, 1);
 }
 
 .book-flip-complete-enter {
-  transition: transform 450ms cubic-bezier(0.4, 0.0, 0.2, 1);
+  transition: transform 600ms cubic-bezier(0.4, 0.0, 0.2, 1);
 }
 
 /* ===== 翻书弹回动画（松手后回弹） ===== */
@@ -953,7 +924,7 @@
 .progress-slider::-webkit-slider-runnable-track {
   height: 6px;
   border-radius: 3px;
-  background: var(--color-surface-container-high, #ece7e7);
+  background: var(--color-surface-container-high, #e2dcd0);
 }
 
 .progress-slider::-webkit-slider-thumb {
@@ -962,8 +933,8 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: var(--color-primary, #000);
-  border: 2px solid var(--color-surface, #fdf8f8);
+  background: var(--color-primary, #211e1b);
+  border: 2px solid var(--color-surface, #f7f4ee);
   margin-top: -6px;
   cursor: pointer;
   box-shadow: 0 1px 4px rgba(0,0,0,0.2);
@@ -982,7 +953,7 @@
 .progress-slider::-moz-range-track {
   height: 6px;
   border-radius: 3px;
-  background: var(--color-surface-container-high, #ece7e7);
+  background: var(--color-surface-container-high, #e2dcd0);
   border: none;
 }
 
@@ -990,8 +961,8 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: var(--color-primary, #000);
-  border: 2px solid var(--color-surface, #fdf8f8);
+  background: var(--color-primary, #211e1b);
+  border: 2px solid var(--color-surface, #f7f4ee);
   cursor: pointer;
   box-shadow: 0 1px 4px rgba(0,0,0,0.2);
 }
@@ -1000,4 +971,43 @@
   height: 6px;
   border-radius: 3px;
   background: rgba(0,0,0,0.4);
+}
+
+/* ============================== 批注高亮：水彩笔手工涂抹 ============================== */
+/* 默认批注高亮模拟水彩笔涂抹：墨迹形状由 SVG 笔触的 mask 通道驱动——
+   中央墨芯全实心（被涂抹的文字保持锐利），上下边缘呈不规则晕染、两端收笔变细；
+   box-decoration-break: clone 让跨行批注的每一行都独立完整落笔。
+   三套笔触形态（-v0/-v1/-v2）按批注 id 散列选取，避免连续批注纹理重复；
+   墨色由使用方通过 --annotation-marker-color 注入，未注入时回退为文字色淡染。
+   preserveAspectRatio='none' 让笔触随片段盒拉伸铺满（SVG 默认等比缩放会信箱化留空）。 */
+.annotation-marker {
+  background-color: var(--annotation-marker-color, color-mix(in srgb, currentColor 27%, transparent));
+  padding: 0.08em 0.18em;
+  margin: -0.08em -0.18em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.annotation-marker-v0,
+.annotation-marker-v1,
+.annotation-marker-v2 {
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+}
+
+.annotation-marker-v0 {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 40' preserveAspectRatio='none'%3E%3Cpath fill='%23fff' d='M2 22.5C2.5 16 4.5 9 11 6.5C28 3.5 50 7 72 5C94 3 112 6 130 5C144 4.5 154 8.5 157 15C158.3 18.5 158.3 22 157 24.5C153.5 32 142 35.5 124 36.5C102 38 84 34 64 36.5C46 38.5 24 37 9.5 30.5C4.5 27.5 2.8 25 2 22.5Z'/%3E%3Cpath fill='%23fff' fill-opacity='.45' d='M8 30C2 24 4 14 14 10.5C30 7.5 50 12 66 10C88 8 108 11 128 10C146 9 156 13.5 157.5 20C158.3 24 156.5 27.5 152 30C138 34 118 32 98 33C76 34 58 30 40 32C26 33.5 14 33 8 30Z'/%3E%3Ccircle cx='12' cy='10' r='1.6' fill='%23fff' fill-opacity='.4'/%3E%3Ccircle cx='149' cy='31' r='1.8' fill='%23fff' fill-opacity='.35'/%3E%3Ccircle cx='96' cy='1.8' r='1.2' fill='%23fff' fill-opacity='.3'/%3E%3Ccircle cx='40' cy='38.5' r='1.1' fill='%23fff' fill-opacity='.3'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 40' preserveAspectRatio='none'%3E%3Cpath fill='%23fff' d='M2 22.5C2.5 16 4.5 9 11 6.5C28 3.5 50 7 72 5C94 3 112 6 130 5C144 4.5 154 8.5 157 15C158.3 18.5 158.3 22 157 24.5C153.5 32 142 35.5 124 36.5C102 38 84 34 64 36.5C46 38.5 24 37 9.5 30.5C4.5 27.5 2.8 25 2 22.5Z'/%3E%3Cpath fill='%23fff' fill-opacity='.45' d='M8 30C2 24 4 14 14 10.5C30 7.5 50 12 66 10C88 8 108 11 128 10C146 9 156 13.5 157.5 20C158.3 24 156.5 27.5 152 30C138 34 118 32 98 33C76 34 58 30 40 32C26 33.5 14 33 8 30Z'/%3E%3Ccircle cx='12' cy='10' r='1.6' fill='%23fff' fill-opacity='.4'/%3E%3Ccircle cx='149' cy='31' r='1.8' fill='%23fff' fill-opacity='.35'/%3E%3Ccircle cx='96' cy='1.8' r='1.2' fill='%23fff' fill-opacity='.3'/%3E%3Ccircle cx='40' cy='38.5' r='1.1' fill='%23fff' fill-opacity='.3'/%3E%3C/svg%3E");
+}
+
+.annotation-marker-v1 {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 40' preserveAspectRatio='none'%3E%3Cpath fill='%23fff' d='M3 20C5 13 9 8.5 17 7C36 4.5 60 9 78 7.5C98 5.5 116 8 134 7C148 6.5 155 10 157 16.5C158.3 20 158 24.5 156 26.5C150 33 138 35 122 36C100 37.5 82 33 62 35C44 36.5 18 36.5 7.5 29.5C4.5 27 3.3 23 3 20Z'/%3E%3Cpath fill='%23fff' fill-opacity='.4' d='M10 27C4 22 6 13 16 10.5C34 7.5 52 12 70 10C90 7.5 110 11 130 10C145 9.5 154 13 156 19C157 23 154 27 148 29.5C132 33.5 112 31 92 32.5C70 34 50 30 32 32C20 33 13 31 10 27Z'/%3E%3Ccircle cx='20' cy='3.5' r='1.3' fill='%23fff' fill-opacity='.35'/%3E%3Ccircle cx='140' cy='36.5' r='1.5' fill='%23fff' fill-opacity='.3'/%3E%3Ccircle cx='74' cy='1.5' r='1.1' fill='%23fff' fill-opacity='.3'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 40' preserveAspectRatio='none'%3E%3Cpath fill='%23fff' d='M3 20C5 13 9 8.5 17 7C36 4.5 60 9 78 7.5C98 5.5 116 8 134 7C148 6.5 155 10 157 16.5C158.3 20 158 24.5 156 26.5C150 33 138 35 122 36C100 37.5 82 33 62 35C44 36.5 18 36.5 7.5 29.5C4.5 27 3.3 23 3 20Z'/%3E%3Cpath fill='%23fff' fill-opacity='.4' d='M10 27C4 22 6 13 16 10.5C34 7.5 52 12 70 10C90 7.5 110 11 130 10C145 9.5 154 13 156 19C157 23 154 27 148 29.5C132 33.5 112 31 92 32.5C70 34 50 30 32 32C20 33 13 31 10 27Z'/%3E%3Ccircle cx='20' cy='3.5' r='1.3' fill='%23fff' fill-opacity='.35'/%3E%3Ccircle cx='140' cy='36.5' r='1.5' fill='%23fff' fill-opacity='.3'/%3E%3Ccircle cx='74' cy='1.5' r='1.1' fill='%23fff' fill-opacity='.3'/%3E%3C/svg%3E");
+}
+
+.annotation-marker-v2 {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 40' preserveAspectRatio='none'%3E%3Cpath fill='%23fff' d='M2.5 23.5C3.5 18 6.5 12 14 10C34 6.5 56 10 74 8.5C92 7 110 9.5 128 8.5C142 8 151 10.5 155 16C156.8 18.5 157 22 155.5 24.5C150 32.5 138 36 120 37C98 38 80 34.5 60 36.5C42 38 20 36 8.5 29.5C4 27 3 25 2.5 23.5Z'/%3E%3Cpath fill='%23fff' fill-opacity='.5' d='M9 28C3.5 23 5.5 14.5 15.5 12C33 8.5 50 13 68 11C88 9 108 12.5 128 11.5C144 11 152.5 14 154.5 19.5C155.5 23 153 26.5 147 29C130 33.5 110 31.5 90 32.5C68 34 48 31 30 33C19 34 12 31.5 9 28Z'/%3E%3Ccircle cx='150' cy='8' r='1.4' fill='%23fff' fill-opacity='.35'/%3E%3Ccircle cx='16' cy='32' r='1.4' fill='%23fff' fill-opacity='.3'/%3E%3Ccircle cx='110' cy='38' r='1.2' fill='%23fff' fill-opacity='.3'/%3E%3Ccircle cx='56' cy='2.5' r='1.1' fill='%23fff' fill-opacity='.3'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 40' preserveAspectRatio='none'%3E%3Cpath fill='%23fff' d='M2.5 23.5C3.5 18 6.5 12 14 10C34 6.5 56 10 74 8.5C92 7 110 9.5 128 8.5C142 8 151 10.5 155 16C156.8 18.5 157 22 155.5 24.5C150 32.5 138 36 120 37C98 38 80 34.5 60 36.5C42 38 20 36 8.5 29.5C4 27 3 25 2.5 23.5Z'/%3E%3Cpath fill='%23fff' fill-opacity='.5' d='M9 28C3.5 23 5.5 14.5 15.5 12C33 8.5 50 13 68 11C88 9 108 12.5 128 11.5C144 11 152.5 14 154.5 19.5C155.5 23 153 26.5 147 29C130 33.5 110 31.5 90 32.5C68 34 48 31 30 33C19 34 12 31.5 9 28Z'/%3E%3Ccircle cx='150' cy='8' r='1.4' fill='%23fff' fill-opacity='.35'/%3E%3Ccircle cx='16' cy='32' r='1.4' fill='%23fff' fill-opacity='.3'/%3E%3Ccircle cx='110' cy='38' r='1.2' fill='%23fff' fill-opacity='.3'/%3E%3Ccircle cx='56' cy='2.5' r='1.1' fill='%23fff' fill-opacity='.3'/%3E%3C/svg%3E");
 }

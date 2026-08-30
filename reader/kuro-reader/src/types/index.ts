@@ -89,7 +89,7 @@ export interface Collection {
   createdAt: Date
 }
 
-export type PaperType = 'coated' | 'rice' | 'kraft' | 'newsprint' | 'matte' | 'eink'
+export type PaperType = 'coated' | 'rice' | 'kraft' | 'newsprint' | 'matte' | 'eink' | 'green' | 'night'
 
 /** 阅读主题预设 */
 export type ReadingTheme = 'light' | 'green' | 'sepia' | 'dark'
@@ -110,6 +110,9 @@ export type TextAlign = 'left' | 'justify'
 
 /** 文本阅读模式 */
 export type TextReadingMode = 'scroll' | 'paginate' | 'book' | 'columns'
+
+/** 听书发音引擎(与 services/tts 的 TtsEngineSetting 对应,不含 'native'——原生环境归入系统语音语义) */
+export type TtsEngineOption = 'auto' | 'system' | 'neural' | 'server'
 
 export interface UserSettings {
   theme: 'light' | 'dark' | 'auto'
@@ -136,6 +139,12 @@ export interface UserSettings {
   textReadingMode: TextReadingMode
   /** 竖排书写（滚动模式下生效，日文/古典中文场景） */
   verticalWriting: boolean
+  /** 听书发音引擎;auto=原生环境走设备语音、桌面走系统语音 */
+  ttsEngine: TtsEngineOption
+  /** 自定义 TTS 服务(OpenAI 兼容 /v1/audio/speech) */
+  ttsServerUrl: string
+  ttsServerModel: string
+  ttsServerVoice: string
 }
 
 export interface SecurityQuestion {
