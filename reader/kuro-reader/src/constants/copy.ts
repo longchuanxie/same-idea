@@ -20,4 +20,14 @@ export const COPY = {
     backupRestoreConfirm: '覆盖导入',
     backupRestoreCancel: '先不',
   },
+  /** 手记（划线/批注分离：划线零输入，批注弹笔记） */
+  annotation: {
+    highlightAction: '划线',
+    annotateAction: '批注',
+    notePlaceholder: '写点什么…（留空则仅划线）',
+    saveNote: '保存批注',
+    saveHighlightOnly: '仅划线',
+    pureHighlight: '纯划线',
+    clearToPureHighlight: '清空文字即转为纯划线',
+  },
 } as const;

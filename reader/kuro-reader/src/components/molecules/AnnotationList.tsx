@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 
+import { COPY } from '@/constants/copy';
 import type { Annotation, AnnotationStyle } from '@/types';
 import { exportAnnotationsToMarkdown } from '@/utils/annotationExport';
 import { cn } from '@/utils/cn';
@@ -41,9 +42,8 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
   };
 
   const saveEdit = (annId: string) => {
-    if (editNote.trim()) {
-      onEdit({ id: annId, note: editNote.trim() } as Annotation);
-    }
+    // 空笔记合法——纯划线形态
+    onEdit({ id: annId, note: editNote.trim() } as Annotation);
     setEditingId(null);
     setEditNote('');
   };
@@ -168,6 +168,7 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
                           value={editNote}
                           onChange={(e) => setEditNote(e.target.value)}
                           rows={2}
+                          placeholder={COPY.annotation.clearToPureHighlight}
                           className="w-full px-3 py-2 bg-surface-container-lowest border border-outline-variant/50 rounded-lg text-on-surface font-body text-body-sm resize-none focus:outline-none focus:border-primary"
                           autoFocus
                         />
@@ -188,9 +189,15 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
                       </div>
                     ) : (
                       <div className="flex items-start justify-between gap-2">
-                        <p className="font-body text-body-sm text-on-surface flex-1">
-                          {ann.note}
-                        </p>
+                        {ann.note ? (
+                          <p className="font-body text-body-sm text-on-surface flex-1">
+                            {ann.note}
+                          </p>
+                        ) : (
+                          <span className="font-label text-label-xs text-on-surface-faint flex-1">
+                            {COPY.annotation.pureHighlight}
+                          </span>
+                        )}
                         <button
                           className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center hover:bg-surface-variant transition-colors"
                           onClick={(e) => {

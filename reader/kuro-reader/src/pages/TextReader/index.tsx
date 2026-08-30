@@ -2212,25 +2212,29 @@ export const TextReaderPage: React.FC = () => {
     };
   }, []);
 
-  // 保存批注
-  const handleAnnotationSave = useCallback(async (note: string, style: AnnotationStyle) => {
-    if (!bookId || !currentChapter || !selectionPopup) return;
+  // 保存批注：从选区信息构建批注（笔记可为空 = 纯划线）
+  const buildAnnotationFromSelection = useCallback((
+    sel: Pick<TextSelectionInfo, 'text' | 'contentOffset' | 'contentEndOffset'>,
+    note: string,
+    style: AnnotationStyle
+  ): Annotation | null => {
+    if (!bookId || !currentChapter) return null;
 
     const content = currentChapter.content;
     // 优先使用从选区 Range 计算的精确偏移，回退到 indexOf
-    const startOffset = selectionPopup.contentOffset != null && selectionPopup.contentOffset >= 0
-      ? selectionPopup.contentOffset
-      : content.indexOf(selectionPopup.text);
-    const endOffset = selectionPopup.contentEndOffset != null && selectionPopup.contentEndOffset >= startOffset
-      ? selectionPopup.contentEndOffset
-      : startOffset >= 0 ? startOffset + selectionPopup.text.length : 0;
+    const startOffset = sel.contentOffset != null && sel.contentOffset >= 0
+      ? sel.contentOffset
+      : content.indexOf(sel.text);
+    const endOffset = sel.contentEndOffset != null && sel.contentEndOffset >= startOffset
+      ? sel.contentEndOffset
+      : startOffset >= 0 ? startOffset + sel.text.length : 0;
 
-    const annotation: Annotation = {
+    return {
       id: `ann-${Date.now()}-${Math.random().toString(RANDOM_ID_RADIX).slice(RANDOM_ID_SLICE_START, RANDOM_ID_SLICE_END)}`,
       bookId,
       chapterIndex: currentChapterIndex,
       chapterTitle: currentChapter.title,
-      selectedText: selectionPopup.text,
+      selectedText: sel.text,
       note,
       startOffset: startOffset >= 0 ? startOffset : 0,
       endOffset,
@@ -2243,12 +2247,32 @@ export const TextReaderPage: React.FC = () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
+  }, [bookId, currentChapter, currentChapterIndex]);
+
+  const handleAnnotationSave = useCallback(async (note: string, style: AnnotationStyle) => {
+    if (!selectionPopup) return;
+    const annotation = buildAnnotationFromSelection(selectionPopup, note, style);
+    if (!annotation) return;
 
     await annotationRepo.add(annotation);
     setAnnotations((prev) => [annotation, ...prev]);
     setSelectionPopup(null);
     window.getSelection()?.removeAllRanges();
-  }, [bookId, currentChapter, currentChapterIndex, selectionPopup]);
+  }, [selectionPopup, buildAnnotationFromSelection]);
+
+  // 纯划线：一键保存当前选区为无笔记高亮（划线/批注分离，零输入）
+  const handleQuickHighlight = useCallback(async () => {
+    const sel = selectionInfoRef.current;
+    if (!sel) return;
+    const annotation = buildAnnotationFromSelection(sel, '', 'highlight');
+    if (!annotation) return;
+
+    await annotationRepo.add(annotation);
+    setAnnotations((prev) => [annotation, ...prev]);
+    setSelectionInfo(null);
+    window.getSelection()?.removeAllRanges();
+    isSelectingTextRef.current = false;
+  }, [buildAnnotationFromSelection]);
 
   // 批注编辑
   const handleAnnotationEdit = useCallback(async (updated: Annotation) => {
@@ -2400,7 +2424,7 @@ export const TextReaderPage: React.FC = () => {
             key={`ann-${ann.id}-${segStart}`}
             style={presentation.style}
             className={`transition-colors hover:opacity-80 ${presentation.className}`}
-            title={ann.note}
+            title={ann.note || undefined}
             onClick={(e) => {
               e.stopPropagation();
               setHighlightedAnnotation(ann);
@@ -3001,10 +3025,11 @@ export const TextReaderPage: React.FC = () => {
         />
       )}
 
-      {/* 浮动批注按钮：选中文本后显示一个小按钮，点击后弹出批注编辑窗 */}
+      {/* 浮动动作条：选中后一键划线或打开批注弹窗 */}
       {selectionInfo && !selectionPopup && (
         <SelectionFloatingButton
           position={selectionInfo.position}
+          onHighlight={handleQuickHighlight}
           onOpen={() => {
             selectionPopupTimeRef.current = Date.now();
             setSelectionPopup({

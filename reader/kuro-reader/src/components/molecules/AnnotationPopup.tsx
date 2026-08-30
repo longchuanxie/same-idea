@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 
+import { COPY } from '@/constants/copy';
+
 import type { AnnotationStyle } from '../../types';
+
 
 const POPUP_EDGE_MARGIN_PX = 16;
 const POPUP_VERTICAL_OFFSET_PX = 8;
@@ -9,6 +12,7 @@ const MAX_SELECTED_TEXT_CHARS = 150;
 interface AnnotationPopupProps {
   selectedText: string;
   position: { x: number; y: number } | null;
+  /** 笔记可为空——空笔记即纯划线 */
   onSave: (note: string, style: AnnotationStyle) => void;
   onCancel: () => void;
 }
@@ -30,9 +34,7 @@ export const AnnotationPopup: React.FC<AnnotationPopupProps> = ({
   }, []);
 
   const handleSave = () => {
-    if (note.trim()) {
-      onSave(note.trim(), style);
-    }
+    onSave(note.trim(), style);
   };
 
   if (!position) return null;
@@ -113,7 +115,7 @@ export const AnnotationPopup: React.FC<AnnotationPopupProps> = ({
             ref={textareaRef}
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="输入批注内容..."
+            placeholder={COPY.annotation.notePlaceholder}
             rows={3}
             className="w-full px-3 py-2 bg-surface-container-lowest border border-outline-variant/50 rounded-lg text-on-surface font-body text-body-sm resize-none focus:outline-none focus:border-primary placeholder:text-on-surface-variant/40"
           />
@@ -128,11 +130,10 @@ export const AnnotationPopup: React.FC<AnnotationPopupProps> = ({
             取消
           </button>
           <button
-            className="px-4 py-1.5 rounded-lg font-label text-label-sm bg-primary text-on-primary hover:opacity-90 transition-opacity disabled:opacity-40"
+            className="px-4 py-1.5 rounded-lg font-label text-label-sm bg-primary text-on-primary hover:opacity-90 transition-opacity"
             onClick={handleSave}
-            disabled={!note.trim()}
           >
-            保存批注
+            {note.trim() ? COPY.annotation.saveNote : COPY.annotation.saveHighlightOnly}
           </button>
         </div>
       </div>
