@@ -45,6 +45,16 @@ export const bookmarkRepo = {
     await db.clear(STORE_NAMES.bookmarks)
   },
 
+  /** 删书级联：清空指定书的全部书签 */
+  async deleteByBookId(bookId: string): Promise<void> {
+    const db = await getDB()
+    const all = (await db.getAll(STORE_NAMES.bookmarks)) as StoredBookmark[]
+    const ids = all.filter((b) => b.bookId === bookId).map((b) => b.id)
+    const tx = db.transaction(STORE_NAMES.bookmarks, 'readwrite')
+    await Promise.all(ids.map((id) => tx.store.delete(id)))
+    await tx.done
+  },
+
   async findByPosition(bookId: string, chapterIndex: number, pageIndex?: number, scrollRatio?: number): Promise<Bookmark | undefined> {
     const db = await getDB()
     const all = (await db.getAll(STORE_NAMES.bookmarks)) as StoredBookmark[]

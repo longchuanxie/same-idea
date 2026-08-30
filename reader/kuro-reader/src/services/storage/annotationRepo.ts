@@ -65,6 +65,15 @@ export const annotationRepo = {
     await db.clear(STORE_NAMES.annotations)
   },
 
+  /** 删书级联：清空指定书的全部批注（走 bookId 索引） */
+  async deleteByBookId(bookId: string): Promise<void> {
+    const db = await getDB()
+    const keys = await db.getAllKeysFromIndex(STORE_NAMES.annotations, 'bookId', bookId)
+    const tx = db.transaction(STORE_NAMES.annotations, 'readwrite')
+    await Promise.all(keys.map((key) => tx.store.delete(key)))
+    await tx.done
+  },
+
   async getByChapter(bookId: string, chapterIndex: number): Promise<Annotation[]> {
     const db = await getDB()
     const all = (await db.getAll(STORE_NAMES.annotations)) as StoredAnnotation[]

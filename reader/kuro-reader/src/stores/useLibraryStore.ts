@@ -664,7 +664,8 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
       await bookRepo.deleteFully(id);
       const coverUrl = get().coverUrls[id];
       if (coverUrl) URL.revokeObjectURL(coverUrl);
-      const { [id]: _, ...restCoverUrls } = get().coverUrls;
+      const { [id]: _cover, ...restCoverUrls } = get().coverUrls;
+      const { [id]: _progress, ...restProgress } = get().readingProgress;
       // 持久化受影响的标签（移除已删除书籍的引用）
       const affectedTags = get().tags.filter((t) => t.bookIds.includes(id));
       for (const tag of affectedTags) {
@@ -674,6 +675,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
       set((state) => ({
         books: state.books.filter((b) => b.id !== id),
         coverUrls: restCoverUrls as Record<string, string>,
+        readingProgress: restProgress,
         tags: state.tags.map((t) => ({
           ...t,
           bookIds: t.bookIds.filter((bid) => bid !== id),
@@ -730,6 +732,9 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
       books: state.books.filter((b) => !ids.includes(b.id)),
       coverUrls: Object.fromEntries(
         Object.entries(state.coverUrls).filter(([k]) => !ids.includes(k))
+      ),
+      readingProgress: Object.fromEntries(
+        Object.entries(state.readingProgress).filter(([k]) => !ids.includes(k))
       ),
       tags: state.tags.map((t) => ({
         ...t,
@@ -888,6 +893,9 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
             coverUrls: Object.fromEntries(
               Object.entries(state.coverUrls).filter(([k]) => !bookIdsToDelete.includes(k))
             ),
+            readingProgress: Object.fromEntries(
+              Object.entries(state.readingProgress).filter(([k]) => !bookIdsToDelete.includes(k))
+            ),
             tags: state.tags.map((t) => ({
               ...t,
               bookIds: t.bookIds.filter((bid) => !bookIdsToDelete.includes(bid)),
@@ -936,6 +944,9 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
         books: state.books.filter((b) => !uniqueBookIds.includes(b.id)),
         coverUrls: Object.fromEntries(
           Object.entries(state.coverUrls).filter(([k]) => !uniqueBookIds.includes(k))
+        ),
+        readingProgress: Object.fromEntries(
+          Object.entries(state.readingProgress).filter(([k]) => !uniqueBookIds.includes(k))
         ),
         tags: state.tags.map((t) => ({
           ...t,

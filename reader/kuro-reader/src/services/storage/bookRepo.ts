@@ -1,8 +1,11 @@
 import type { Book } from '@/types'
 
+import { annotationRepo } from './annotationRepo'
 import { bookFileRepo } from './bookFileRepo'
+import { bookmarkRepo } from './bookmarkRepo'
 import { getDB, STORE_NAMES } from './db'
 import { pageRepo } from './pageRepo'
+import { progressRepo } from './progressRepo'
 
 export const bookRepo = {
   async save(book: Book): Promise<void> {
@@ -40,11 +43,14 @@ export const bookRepo = {
     await db.delete(STORE_NAMES.covers, id)
   },
 
-  /** 删除一本书及其所有关联数据（页面、封面、原始文件） */
+  /** 删除一本书及其所有关联数据（页面、封面、原始文件、批注、书签、阅读进度） */
   async deleteFully(id: string): Promise<void> {
-    await bookRepo.delete(id)
-    await pageRepo.deleteAllPages(id)
-    await bookRepo.deleteCover(id)
-    await bookFileRepo.delete(id)
+    await bookRepo.delete(id);
+    await pageRepo.deleteAllPages(id);
+    await bookRepo.deleteCover(id);
+    await bookFileRepo.delete(id);
+    await annotationRepo.deleteByBookId(id);
+    await bookmarkRepo.deleteByBookId(id);
+    await progressRepo.remove(id);
   },
 }
