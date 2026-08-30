@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 
-import { buildAnnotationMarkdown, sanitizeFileName } from '@/utils/annotationExport'
 import type { Annotation } from '@/types'
+import { buildAnnotationMarkdown, sanitizeFileName } from '@/utils/annotationExport'
 
 const makeAnnotation = (overrides: Partial<Annotation>): Annotation => ({
   id: 'a1',

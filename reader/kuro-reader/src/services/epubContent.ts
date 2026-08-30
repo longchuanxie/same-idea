@@ -106,7 +106,7 @@ export function convertXhtmlToMarkdown(
         const src = el.getAttribute('src') || el.getAttribute('data-src') || '';
         const alt = el.getAttribute('alt') || '插图';
         const href = src ? resolveImageHref(src, alt) : null;
-        if (href) out.push(`\n\n![${alt.replace(/[\[\]]/g, '')}](${href})\n\n`);
+        if (href) out.push(`\n\n![${alt.replace(/[[\]]/g, '')}](${href})\n\n`);
         return;
       }
       case 'svg':
@@ -132,7 +132,7 @@ export function convertXhtmlToMarkdown(
   const inlineOf = (el: Element): string => {
     el.querySelectorAll('img').forEach((img) => {
       const src = img.getAttribute('src') || '';
-      const alt = (img.getAttribute('alt') || '插图').replace(/[\[\]]/g, '');
+      const alt = (img.getAttribute('alt') || '插图').replace(/[[\]]/g, '');
       const href = src ? resolveImageHref(src, alt) : null;
       img.replaceWith(document.createTextNode(href ? `![${alt}](${href})` : ''));
     });

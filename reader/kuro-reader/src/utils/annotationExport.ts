@@ -2,6 +2,9 @@ import type { Annotation, AnnotationStyle } from '@/types'
 
 const CONTEXT_HEADER_SEPARATOR = '---';
 
+/** 导出文件名清理后的最大长度 */
+const FILE_NAME_MAX_CHARS = 50;
+
 const STYLE_LABELS: Record<AnnotationStyle, string> = {
   highlight: '高亮',
   underline: '下划线',
@@ -67,7 +70,7 @@ export function buildAnnotationMarkdown(
 /** 清理文件名中的非法字符并限制长度 */
 export function sanitizeFileName(name: string): string {
   const cleaned = name.replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, ' ').trim();
-  return cleaned.slice(0, 50) || 'untitled';
+  return cleaned.slice(0, FILE_NAME_MAX_CHARS) || 'untitled';
 }
 
 /** 触发浏览器下载文本文件 */

@@ -4,12 +4,12 @@ import {
   parseImageFiles,
 } from '@/services/archiveParser'
 import type { PageRef } from '@/types'
-import { isArchiveFile } from '@/utils/fileType'
 import {
   splitByImageAspect,
   splitComicChapters,
   type ComicChapterDraft,
 } from '@/utils/comicChapterSplit'
+import { isArchiveFile } from '@/utils/fileType'
 import { readBlobImageDimensions } from '@/utils/imageSize'
 
 import type { BookParser, ParsedBook, ParsedComicBook, ParsedComicChapter, ParserProgressCallback } from './types'

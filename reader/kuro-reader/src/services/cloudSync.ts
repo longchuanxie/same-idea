@@ -6,6 +6,8 @@ import type { Annotation, Bookmark, ReadingProgress } from '@/types';
 const SYNC_VERSION = 1;
 /** 同步文件在 WebDAV 根下的固定路径 */
 const SYNC_FILE_PATH = '/kuro-reader-sync.json';
+/** WebDAV 404 = 远端尚无同步文件（首次同步），直接上传 */
+const HTTP_NOT_FOUND = 404;
 
 export interface SyncCredentials {
   /** WebDAV 根地址，如 http://nas:5005/dav */
@@ -122,7 +124,7 @@ export async function runCloudSync(
   } catch (e) {
     // 404 = 首次同步，直接上传；其他错误上抛
     const status = (e as { response?: { status?: number } }).response?.status;
-    if (status !== 404) throw e;
+    if (status !== HTTP_NOT_FOUND) throw e;
   }
 
   const exportedAt = new Date().toISOString();

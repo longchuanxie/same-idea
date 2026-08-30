@@ -1,16 +1,16 @@
-import { describe, it, expect, beforeAll, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { GlobalWorkerOptions } from 'pdfjs-dist'
+import { describe, it, expect, beforeAll, vi } from 'vitest'
 
+import { loadEpubChapters } from '@/services/epubContent'
 import { ComicArchiveParser } from '@/services/parsers/comicArchiveParser'
-import { TextParser } from '@/services/parsers/textParser'
 import { EpubParser } from '@/services/parsers/epubParser'
 import { loadPdfDocument } from '@/services/parsers/pdfParser'
-import { deriveMergedBookTitle, extractArchiveChapterInfo } from '@/utils/comicChapterSplit'
-import { loadEpubChapters } from '@/services/epubContent'
+import { TextParser } from '@/services/parsers/textParser'
 import type { ParsedComicBook, ParsedTextBook } from '@/services/parsers/types'
+import { deriveMergedBookTitle, extractArchiveChapterInfo } from '@/utils/comicChapterSplit'
 
 const comicParser = new ComicArchiveParser()
 /** 解析漫画压缩包（显式收窄为 ParsedComicBook） */

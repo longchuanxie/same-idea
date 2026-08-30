@@ -1,10 +1,20 @@
 /** 阅读统计深化：日历热力图聚合与每日目标连续达标计算 */
 
+/** 热度等级：结构性序数（0 无阅读 → 4 远超目标），非业务阈值 */
+const LEVEL_NONE = 0;
+const LEVEL_LIGHT = 1;
+const LEVEL_MODERATE = 2;
+const LEVEL_STRONG = 3;
+const LEVEL_INTENSE = 4;
+const DAYS_PER_WEEK = 7;
+/** goalMinutes 未设置（≤0）时的兜底目标 */
+const FALLBACK_GOAL_MINUTES = 30;
+
 export interface HeatmapCell {
   /** 本地日期 YYYY-MM-DD */
   date: string;
   minutes: number;
-  /** 0=无阅读 1..<goal/2 2..<goal 3..<2*goal 4=≥2*goal */
+  // eslint-disable-next-line no-magic-numbers -- 等级为结构性序数枚举，见上方 LEVEL_* 常量
   level: 0 | 1 | 2 | 3 | 4;
 }
 
@@ -15,12 +25,12 @@ export function toLocalDateStr(date: Date): string {
 }
 
 function levelFor(minutes: number, goalMinutes: number): HeatmapCell['level'] {
-  if (minutes <= 0) return 0;
-  const goal = goalMinutes > 0 ? goalMinutes : 30;
-  if (minutes < goal / 2) return 1;
-  if (minutes < goal) return 2;
-  if (minutes < goal * 2) return 3;
-  return 4;
+  if (minutes <= 0) return LEVEL_NONE;
+  const goal = goalMinutes > 0 ? goalMinutes : FALLBACK_GOAL_MINUTES;
+  if (minutes < goal / 2) return LEVEL_LIGHT;
+  if (minutes < goal) return LEVEL_MODERATE;
+  if (minutes < goal * 2) return LEVEL_STRONG;
+  return LEVEL_INTENSE;
 }
 
 export interface DayMinutes {
@@ -43,12 +53,12 @@ export function buildReadingHeatmap(
     minutesByDate.set(s.date, (minutesByDate.get(s.date) ?? 0) + s.minutes);
   }
 
-  const totalDays = weeks * 7;
+  const totalDays = weeks * DAYS_PER_WEEK;
   // 以「本周周日」为最后一列起点，向前共 weeks 列（每列周日到周六）
   const weekStart = new Date(today);
   weekStart.setDate(today.getDate() - today.getDay());
   const start = new Date(weekStart);
-  start.setDate(weekStart.getDate() - (weeks - 1) * 7);
+  start.setDate(weekStart.getDate() - (weeks - 1) * DAYS_PER_WEEK);
 
   const cells: HeatmapCell[] = [];
   for (let i = 0; i < totalDays; i++) {

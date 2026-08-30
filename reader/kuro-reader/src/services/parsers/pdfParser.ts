@@ -1,9 +1,9 @@
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist'
-import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
+import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 
-import { isPdfFile } from '@/utils/fileType'
 import { extractTitleFromFileName } from '@/utils/extractTitle'
+import { isPdfFile } from '@/utils/fileType'
 
 import type { BookParser, ParsedBook, ParsedPdfBook, ParserProgressCallback } from './types'
 
@@ -16,6 +16,10 @@ const RENDER_MAX_SCALE = 2
 /** 渲染页压缩格式与质量 */
 const PAGE_IMAGE_TYPE = 'image/jpeg'
 const PAGE_IMAGE_QUALITY = 0.85
+/** 导入进度分段（百分比）：开始 → 文档加载完 → 逐页渲染区间 → 100 完成 */
+const PROGRESS_STARTED = 5
+const PROGRESS_DOC_LOADED = 15
+const PROGRESS_RENDER_SPAN = 80
 
 function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality?: number): Promise<Blob> {
   return new Promise((resolve, reject) => {
@@ -43,12 +47,12 @@ export class PdfParser implements BookParser {
    * 逐页渲染为图片（复用漫画阅读器），同时保留原始 PDF 文件。
    */
   async parse(file: File, onProgress?: ParserProgressCallback): Promise<ParsedBook> {
-    onProgress?.(5)
+    onProgress?.(PROGRESS_STARTED)
 
     const data = await file.arrayBuffer()
     const loadingTask = getDocument({ data })
     const doc = await loadingTask.promise
-    onProgress?.(15)
+    onProgress?.(PROGRESS_DOC_LOADED)
 
     const pages: Blob[] = []
     try {
@@ -69,7 +73,7 @@ export class PdfParser implements BookParser {
         await page.render({ canvasContext: context, viewport, canvas }).promise
         pages.push(await canvasToBlob(canvas, PAGE_IMAGE_TYPE, PAGE_IMAGE_QUALITY))
 
-        onProgress?.(15 + Math.round((pageNumber / doc.numPages) * 80))
+        onProgress?.(PROGRESS_DOC_LOADED + Math.round((pageNumber / doc.numPages) * PROGRESS_RENDER_SPAN))
       }
     } finally {
       await loadingTask.destroy()
