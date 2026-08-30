@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 
 import type { Annotation } from '@/types'
-import { buildAnnotationMarkdown, sanitizeFileName } from '@/utils/annotationExport'
+import { buildAnnotationMarkdown, buildMultiBookMarkdown, sanitizeFileName } from '@/utils/annotationExport'
 
 const makeAnnotation = (overrides: Partial<Annotation>): Annotation => ({
   id: 'a1',
@@ -119,5 +119,81 @@ describe('sanitizeFileName', () => {
   it('caps length and falls back to untitled', () => {
     expect(sanitizeFileName('长'.repeat(80)).length).toBe(50)
     expect(sanitizeFileName('///')).toBe('untitled')
+  })
+})
+
+describe('buildMultiBookMarkdown', () => {
+  it('总标题 + 每书二级标题 + 章节分组结构完整', () => {
+    const md = buildMultiBookMarkdown(
+      [
+        {
+          bookTitle: '夜航',
+          annotations: [
+            makeAnnotation({ id: 'a1', bookId: 'b1', chapterIndex: 0, chapterTitle: '第一章' }),
+            makeAnnotation({ id: 'a2', bookId: 'b1', chapterIndex: 1, chapterTitle: '第二章' }),
+          ],
+        },
+        {
+          bookTitle: '沙之书',
+          annotations: [makeAnnotation({ id: 'a3', bookId: 'b2', chapterIndex: 0, chapterTitle: '引子' })],
+        },
+      ],
+      EXPORTED_AT
+    )
+
+    expect(md).toContain('# 摘抄墙 · 全部手记')
+    expect(md).toContain('书目 2 · 手记 3')
+    expect(md).toContain('## 《夜航》')
+    expect(md).toContain('## 《沙之书》')
+    expect(md).toContain('## 第一章')
+    expect(md).toContain('## 引子')
+  })
+
+  it('各书按最新手记更新时间倒序（最近动过的在前）', () => {
+    const md = buildMultiBookMarkdown(
+      [
+        {
+          bookTitle: '旧书',
+          annotations: [makeAnnotation({ id: 'a1', updatedAt: new Date('2026-08-01T10:00:00') })],
+        },
+        {
+          bookTitle: '新书',
+          annotations: [makeAnnotation({ id: 'a2', updatedAt: new Date('2026-08-29T10:00:00') })],
+        },
+      ],
+      EXPORTED_AT
+    )
+    expect(md.indexOf('## 《新书》')).toBeLessThan(md.indexOf('## 《旧书》'))
+  })
+
+  it('空手记的书不入正文；全部为空则只有头部落款', () => {
+    const md = buildMultiBookMarkdown(
+      [
+        { bookTitle: '空书', annotations: [] },
+        { bookTitle: '有书', annotations: [makeAnnotation({ id: 'a1' })] },
+      ],
+      EXPORTED_AT
+    )
+    expect(md).toContain('书目 1')
+    expect(md).not.toContain('## 《空书》')
+    expect(md).not.toContain('## 《空书》')
+  })
+
+  it('孤儿组《已移出的书》与其他书同样正常分组', () => {
+    const md = buildMultiBookMarkdown(
+      [{ bookTitle: '已移出的书', annotations: [makeAnnotation({ id: 'a1' })] }],
+      EXPORTED_AT
+    )
+    expect(md).toContain('## 《已移出的书》')
+    expect(md).toContain('原文句子')
+  })
+
+  it('标签行随行输出', () => {
+    const md = buildMultiBookMarkdown(
+      [{ bookTitle: '书', annotations: [makeAnnotation({ id: 'a1', tagIds: ['t1'] })] }],
+      EXPORTED_AT,
+      new Map([['t1', '意象']])
+    )
+    expect(md).toContain('#意象')
   })
 })

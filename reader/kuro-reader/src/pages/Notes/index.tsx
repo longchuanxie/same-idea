@@ -8,11 +8,16 @@ import { annotationRepo } from '@/services/storage/annotationRepo';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import type { Annotation, Book } from '@/types';
 import {
+  exportMultiBookMarkdown,
+  type MultiBookEntry,
+} from '@/utils/annotationExport';
+import {
   EMPTY_ANNOTATION_FILTER,
   filterAnnotations,
   type AnnotationFilter,
   type AnnotationKind,
 } from '@/utils/annotationFilter';
+import { toast } from '@/utils/toast';
 
 /** 引文预览长度（字符） */
 const EXCERPT_CHARS = 80;
@@ -63,10 +68,43 @@ export const NotesPage: React.FC = () => {
   const setFilterPart = (part: Partial<AnnotationFilter>) =>
     setFilter((prev) => ({ ...prev, ...part }));
 
+  /** 整墙导出：孤儿手记归《已移出的书》组；墙空提示 */
+  const handleExportAll = () => {
+    if (sorted.length === 0) {
+      toast(COPY.toast.noAnnotations);
+      return;
+    }
+    const orphanTitle = '已移出的书';
+    const entries: MultiBookEntry[] = [...bookById.values()]
+      .map((book) => ({
+        bookTitle: book.title,
+        annotations: sorted.filter((ann) => ann.bookId === book.id),
+      }))
+      .filter((entry) => entry.annotations.length > 0);
+    const orphans = sorted.filter((ann) => !bookById.has(ann.bookId));
+    if (orphans.length > 0) {
+      entries.push({ bookTitle: orphanTitle, annotations: orphans });
+    }
+    const tagNames = new Map(tags.map((t) => [t.id, t.name]));
+    exportMultiBookMarkdown(entries, tagNames);
+  };
+
   return (
     <div className="max-w-max-width-content mx-auto px-margin-mobile md:px-0 pt-8 pb-8">
       <section className="flex flex-col gap-2 border-b border-outline-variant pb-6 mb-8">
-        <h2 className="font-display text-display-lg-mobile md:text-display-lg text-primary">摘抄墙</h2>
+        <div className="flex items-start justify-between gap-4">
+          <h2 className="font-display text-display-lg-mobile md:text-display-lg text-primary">摘抄墙</h2>
+          {sorted.length > 0 && (
+            <button
+              className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1 flex-shrink-0"
+              onClick={handleExportAll}
+              title={COPY.notesWall.exportAll}
+            >
+              <span className="material-symbols-outlined text-icon-md">ios_share</span>
+              导出
+            </button>
+          )}
+        </div>
         <p className="font-body text-body-md text-on-surface-variant">
           读过的句子都贴在这里——{sorted.length > 0 ? `共 ${sorted.length} 条手记` : '等你贴上第一张'}。
         </p>
