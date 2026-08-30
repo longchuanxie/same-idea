@@ -53,6 +53,10 @@ const DEFAULT_SETTINGS: UserSettings = {
   autoScrollSpeed: 2,
   textReadingMode: 'scroll',
   verticalWriting: false,
+  ttsEngine: 'auto',
+  ttsServerUrl: '',
+  ttsServerModel: '',
+  ttsServerVoice: '',
   auth: {
     isEnabled: false,
     method: 'auto',

@@ -29,6 +29,8 @@ export default defineConfig({
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
           'vendor-zustand': ['zustand'],
           'vendor-jszip': ['jszip'],
+          // 听书神经网络引擎(onnxruntime-web 等重依赖),仅在选用时随引擎动态加载
+          'vendor-tts': ['@mintplex-labs/piper-tts-web', 'onnxruntime-web'],
         },
       },
     },
