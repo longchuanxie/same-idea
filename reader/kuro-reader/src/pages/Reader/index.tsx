@@ -26,6 +26,7 @@ import { cn } from '@/utils/cn';
 import { buildPageNoteAnnotation, isPageNote } from '@/utils/pageAnnotation';
 import { computePaperOpacity, getPaperBaseOpacity, getPaperConfig } from '@/utils/paperTexture';
 import {
+  clampTrackRatio,
   getHorizontalPageSpread,
   getHorizontalPageStart,
   getHorizontalPageTurnTarget,
@@ -34,6 +35,7 @@ import {
   getPageTurnForSwipe,
   getPageTurnForTapZone,
   getTapZone,
+  pagePositionFromTrackRatio,
   type PageTurn,
 } from '@/utils/readerPagination';
 
@@ -131,6 +133,8 @@ export const ReaderPage: React.FC = () => {
   const progressTrackRef = useRef<HTMLDivElement>(null);
   const isDraggingProgressRef = useRef(false);
   const dragPageRef = useRef<number | null>(null);
+  /** 拖拽期间的轨道比例（0..1）：松手时按模式语义精确映射落点 */
+  const dragRatioRef = useRef<number | null>(null);
   const [dragPage, setDragPage] = useState<number | null>(null);
   const [uiAnimating, setUiAnimating] = useState(false);
   const [uiVisible, setUiVisible] = useState(false);
@@ -585,9 +589,10 @@ export const ReaderPage: React.FC = () => {
   // 垂直模式跳页：扩渲染窗口 → 预载周边页 → 滚动到页槽位（goToPage 只改状态，
   // 垂直模式的视口必须由这里驱动；水平模式 goToPage 即生效）
   const verticalJumpTokenRef = useRef(0);
-  const jumpToVerticalPage = useCallback((targetPage: number) => {
+  const jumpToVerticalPage = useCallback((targetPage: number, pageScrollRatio = DEFAULT_PAGE_SCROLL_RATIO) => {
     const page = Math.max(1, Math.min(targetPage, totalPages));
     if (totalPages === 0 || page === currentPage) return;
+    const inPageRatio = clampPageScrollRatio(pageScrollRatio);
     verticalJumpTokenRef.current += 1;
     const token = verticalJumpTokenRef.current;
     const isStale = () => token !== verticalJumpTokenRef.current;
@@ -615,7 +620,13 @@ export const ReaderPage: React.FC = () => {
       if (!slot) return;
       const containerRect = container.getBoundingClientRect();
       const slotRect = slot.getBoundingClientRect();
-      container.scrollTo({ top: slotRect.top - containerRect.top + container.scrollTop, behavior: 'instant' });
+      // 页内落点：进度条语义 pageScrollRatio = (scrollTop + 阅读锚点 - 页顶)/页高，
+      // 反解出目标 scrollTop，使松手后拇指与视口逐像素一致
+      const pageTop = slotRect.top - containerRect.top + container.scrollTop;
+      const anchorOffset = containerRect.height * READING_ANCHOR_RATIO;
+      const target = pageTop + inPageRatio * slotRect.height - anchorOffset;
+      const maxScroll = container.scrollHeight - container.clientHeight;
+      container.scrollTo({ top: Math.max(0, Math.min(target, maxScroll)), behavior: 'instant' });
       if (settleTimer) clearTimeout(settleTimer);
       settleTimer = setTimeout(finish, INITIAL_SCROLL_SETTLE_DELAY);
     };
@@ -640,6 +651,17 @@ export const ReaderPage: React.FC = () => {
       if (!isStale()) attempt();
     });
   }, [totalPages, currentPage, goToPage, setProgrammaticScroll, loadPage, smoothScrollContainerRef]);
+
+  /** 按阅读方向分发跳页：垂直走视口驱动（支持页内落点），水平直接 goToPage。
+   *  进度条拖拽/轨道点击/检索命中共用，保证松手后拇指、页码、视口三者一致。 */
+  const jumpToReaderPage = useCallback((page: number, pageScrollRatio = DEFAULT_PAGE_SCROLL_RATIO) => {
+    const target = Math.max(1, Math.min(page, totalPages));
+    if (direction === 'vertical') {
+      jumpToVerticalPage(target, pageScrollRatio);
+    } else {
+      goToPage(getHorizontalPageStart(target, totalPages, pageLayout));
+    }
+  }, [direction, totalPages, pageLayout, goToPage, jumpToVerticalPage]);
 
   // ── 页级手记（漫画/PDF） ──
 
@@ -1147,68 +1169,84 @@ export const ReaderPage: React.FC = () => {
     [toggleUi]
   );
 
+  /** 轨道坐标 → 拖拽比例（0..1，供统一映射） */
+  const getTrackRatioFromClientX = useCallback((clientX: number) => {
+    const track = progressTrackRef.current;
+    if (!track || totalPages === 0) return null;
+    const rect = track.getBoundingClientRect();
+    return clampTrackRatio((clientX - rect.left) / rect.width);
+  }, [totalPages]);
+
+  /** 轨道坐标 → 预览页码（拖拽标签） */
+  const getPageFromClientX = useCallback((clientX: number) => {
+    const ratio = getTrackRatioFromClientX(clientX);
+    if (ratio == null) return 1;
+    return pagePositionFromTrackRatio(ratio, totalPages, direction).page;
+  }, [getTrackRatioFromClientX, direction, totalPages]);
+
   const handleScrollTrackClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    const rawTargetPage = Math.max(1, Math.min(Math.round(ratio * totalPages), totalPages));
-    const targetPage = direction === 'horizontal'
-      ? getHorizontalPageStart(rawTargetPage, totalPages, pageLayout)
-      : rawTargetPage;
-    goToPage(targetPage);
+    const ratio = clampTrackRatio((e.clientX - rect.left) / rect.width);
+    const pos = pagePositionFromTrackRatio(ratio, totalPages, direction);
+    jumpToReaderPage(pos.page, pos.pageScrollRatio);
     isTogglingRef.current = true;
-  }, [direction, pageLayout, totalPages, goToPage]);
-
-  const getPageFromClientX = useCallback((clientX: number) => {
-    const track = progressTrackRef.current;
-    if (!track || totalPages === 0) return 1;
-    const rect = track.getBoundingClientRect();
-    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    const rawPage = Math.max(1, Math.min(Math.round(ratio * totalPages), totalPages));
-    return direction === 'horizontal'
-      ? getHorizontalPageStart(rawPage, totalPages, pageLayout)
-      : rawPage;
-  }, [direction, pageLayout, totalPages]);
+  }, [direction, totalPages, jumpToReaderPage]);
 
   const handleProgressMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     isDraggingProgressRef.current = true;
     isTogglingRef.current = true;
+    const ratio = getTrackRatioFromClientX(e.clientX);
+    if (ratio != null) dragRatioRef.current = ratio;
     const page = getPageFromClientX(e.clientX);
     dragPageRef.current = page;
     setDragPage(page);
-  }, [getPageFromClientX]);
+  }, [getTrackRatioFromClientX, getPageFromClientX]);
 
   const handleProgressTouchStart = useCallback((e: React.TouchEvent) => {
     isDraggingProgressRef.current = true;
     isTogglingRef.current = true;
     const touch = e.touches[0];
+    const ratio = getTrackRatioFromClientX(touch.clientX);
+    if (ratio != null) dragRatioRef.current = ratio;
     const page = getPageFromClientX(touch.clientX);
     dragPageRef.current = page;
     setDragPage(page);
-  }, [getPageFromClientX]);
+  }, [getTrackRatioFromClientX, getPageFromClientX]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDraggingProgressRef.current) return;
+      const ratio = getTrackRatioFromClientX(e.clientX);
+      if (ratio != null) dragRatioRef.current = ratio;
       const page = getPageFromClientX(e.clientX);
       dragPageRef.current = page;
       setDragPage(page);
     };
 
-    const handleMouseUp = () => {
-      if (!isDraggingProgressRef.current) return;
+    const releaseDrag = () => {
       isDraggingProgressRef.current = false;
+      const ratio = dragRatioRef.current;
       const page = dragPageRef.current;
       dragPageRef.current = null;
+      dragRatioRef.current = null;
       setDragPage(null);
-      if (page !== null) {
-        goToPage(page);
-      }
+      if (page === null || ratio === null) return;
+      // 松手落点用比例精确映射：垂直模式携带页内占比，拇指与视口逐像素一致
+      const pos = pagePositionFromTrackRatio(ratio, totalPages, direction);
+      jumpToReaderPage(pos.page, pos.pageScrollRatio);
+    };
+
+    const handleMouseUp = () => {
+      if (!isDraggingProgressRef.current) return;
+      releaseDrag();
     };
 
     const handleTouchMove = (e: TouchEvent) => {
       if (!isDraggingProgressRef.current) return;
       const touch = e.touches[0];
+      const ratio = getTrackRatioFromClientX(touch.clientX);
+      if (ratio != null) dragRatioRef.current = ratio;
       const page = getPageFromClientX(touch.clientX);
       dragPageRef.current = page;
       setDragPage(page);
@@ -1216,13 +1254,7 @@ export const ReaderPage: React.FC = () => {
 
     const handleTouchEnd = () => {
       if (!isDraggingProgressRef.current) return;
-      isDraggingProgressRef.current = false;
-      const page = dragPageRef.current;
-      dragPageRef.current = null;
-      setDragPage(null);
-      if (page !== null) {
-        goToPage(page);
-      }
+      releaseDrag();
     };
 
     window.addEventListener('mousemove', handleMouseMove);
@@ -1236,7 +1268,7 @@ export const ReaderPage: React.FC = () => {
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [getPageFromClientX, goToPage]);
+  }, [getTrackRatioFromClientX, getPageFromClientX, jumpToReaderPage, direction, totalPages]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -1885,18 +1917,13 @@ export const ReaderPage: React.FC = () => {
         />
       )}
 
-      {/* PDF 书内检索面板：命中页直达（chapterIndex 即页索引；垂直模式走滚动定位） */}
+      {/* PDF 书内检索面板：命中页直达（chapterIndex 即页索引；统一走方向分发跳页） */}
       {isSearchPanelOpen && pdfSearchChapters && (
         <InBookSearchPanel
           chapters={pdfSearchChapters}
           onSelectHit={(hit) => {
             setIsSearchPanelOpen(false);
-            const targetPage = hit.chapterIndex + PAGE_INDEX_TO_PAGE_OFFSET;
-            if (direction === 'vertical') {
-              jumpToVerticalPage(targetPage);
-            } else {
-              goToPage(targetPage);
-            }
+            jumpToReaderPage(hit.chapterIndex + PAGE_INDEX_TO_PAGE_OFFSET);
           }}
           onClose={() => setIsSearchPanelOpen(false)}
         />

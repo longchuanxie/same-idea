@@ -8,6 +8,8 @@ import {
   getPageTurnForSwipe,
   getPageTurnForTapZone,
   getTapZone,
+  clampTrackRatio,
+  pagePositionFromTrackRatio,
 } from './readerPagination';
 
 describe('readerPagination', () => {
@@ -74,3 +76,42 @@ describe('readerPagination', () => {
     expect(getPageTurnForKeyboard('Escape', 'horizontal', 'ltr')).toBeNull();
   });
 });
+
+describe('pagePositionFromTrackRatio', () => {
+  it('垂直模式：pos=ratio*T 拆为 floor+1 页与页内余量，落点与拇指一致', () => {
+    expect(pagePositionFromTrackRatio(0, 10, 'vertical')).toEqual({ page: 1, pageScrollRatio: 0 });
+    expect(pagePositionFromTrackRatio(0.15, 10, 'vertical')).toEqual({ page: 2, pageScrollRatio: 0.5 });
+    expect(pagePositionFromTrackRatio(0.5, 3, 'vertical')).toEqual({ page: 2, pageScrollRatio: 0.5 });
+    expect(pagePositionFromTrackRatio(1, 3, 'vertical')).toEqual({ page: 3, pageScrollRatio: 1 });
+  });
+
+  it('垂直模式：旧 round 映射会回跳的用例现在不回跳', () => {
+    // ratio=0.49,T=3: pos=1.47 → 第 2 页页内 0.47；round 会得第 1 页(拇指落到 0)
+    expect(pagePositionFromTrackRatio(0.49, 3, 'vertical')).toEqual({ page: 2, pageScrollRatio: 0.47 });
+  });
+
+  it('水平模式：按页对齐(round)，页内占比恒 0', () => {
+    expect(pagePositionFromTrackRatio(0.34, 3, 'horizontal')).toEqual({ page: 1, pageScrollRatio: 0 });
+    expect(pagePositionFromTrackRatio(0.5, 3, 'horizontal')).toEqual({ page: 2, pageScrollRatio: 0 });
+    expect(pagePositionFromTrackRatio(1, 3, 'horizontal')).toEqual({ page: 3, pageScrollRatio: 0 });
+    expect(pagePositionFromTrackRatio(0, 3, 'horizontal')).toEqual({ page: 1, pageScrollRatio: 0 });
+  });
+
+  it('比例与页数越界钳制', () => {
+    expect(pagePositionFromTrackRatio(-0.5, 3, 'vertical')).toEqual({ page: 1, pageScrollRatio: 0 });
+    expect(pagePositionFromTrackRatio(1.7, 3, 'vertical')).toEqual({ page: 3, pageScrollRatio: 1 });
+    expect(pagePositionFromTrackRatio(0.5, 0, 'vertical')).toEqual({ page: 1, pageScrollRatio: 0 });
+    expect(pagePositionFromTrackRatio(0.5, -2, 'horizontal')).toEqual({ page: 1, pageScrollRatio: 0 });
+  });
+
+  it('单页书任何比例都落在第 1 页', () => {
+    expect(pagePositionFromTrackRatio(0.3, 1, 'vertical')).toEqual({ page: 1, pageScrollRatio: 0.3 });
+    expect(pagePositionFromTrackRatio(0.9, 1, 'horizontal')).toEqual({ page: 1, pageScrollRatio: 0 });
+  });
+
+  it('clampTrackRatio 钳制 0..1', () => {
+    expect(clampTrackRatio(-1)).toBe(0);
+    expect(clampTrackRatio(0.42)).toBe(0.42);
+    expect(clampTrackRatio(2)).toBe(1);
+  });
+})

@@ -19,6 +19,40 @@ const clampPage = (page: number, totalPages: number): number => {
   return Math.max(FIRST_PAGE, Math.min(page, totalPages));
 };
 
+export const clampTrackRatio = (ratio: number): number => Math.max(0, Math.min(1, ratio));
+
+export interface TrackPagePosition {
+  /** 目标页码（1 起） */
+  page: number;
+  /** 页内占比（0=页顶）：垂直模式落点可停在页内，与拇指位置逐像素对应 */
+  pageScrollRatio: number;
+}
+
+/**
+ * 进度条拖拽/点击比例 → 目标页位置。
+ * 两种模式的进度语义不同，映射规则也不同：
+ * - vertical：进度 = (page-1+pageScrollRatio)/totalPages（滚动锚点可在页内），
+ *   故 pos = ratio*totalPages 拆为 floor+1 页与页内余量——落点与拇指重合，不回跳；
+ * - horizontal：进度 = page/totalPages（按页对齐），四舍五入取页，页内占比恒 0。
+ */
+export const pagePositionFromTrackRatio = (
+  ratio: number,
+  totalPages: number,
+  mode: ReaderMode
+): TrackPagePosition => {
+  if (totalPages <= 0) return { page: FIRST_PAGE, pageScrollRatio: 0 };
+  const clamped = clampTrackRatio(ratio);
+
+  if (mode === 'horizontal') {
+    return { page: clampPage(Math.round(clamped * totalPages), totalPages), pageScrollRatio: 0 };
+  }
+
+  const pos = clamped * totalPages;
+  const page = clampPage(Math.floor(pos) + FIRST_PAGE, totalPages);
+  const pageScrollRatio = clampTrackRatio(pos - (page - FIRST_PAGE));
+  return { page, pageScrollRatio };
+};
+
 export const getHorizontalPageStep = (pageLayout: ReaderPageLayout): number =>
   pageLayout === 'double' ? DOUBLE_PAGE_STEP : SINGLE_PAGE_STEP;
 
