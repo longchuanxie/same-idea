@@ -12,7 +12,7 @@ import { useLibraryStore } from '@/stores/useLibraryStore';
 import { useStatsStore } from '@/stores/useStatsStore';
 import type { Annotation, Book } from '@/types';
 import { describeLastRead } from '@/utils/readingProgress';
-import { findAnniversary, pickDailyRevisit } from '@/utils/revisit';
+import { findAnniversary, pickDailyRevisit, resolveRevisitTargets } from '@/utils/revisit';
 import { toast } from '@/utils/toast';
 
 const SEAT_FALLBACK_COUNT = 3;
@@ -146,11 +146,12 @@ export const HomePage: React.FC = () => {
     () => pickDailyRevisit(books, readingProgress, annotations),
     [books, readingProgress, annotations]
   );
-  /** 周年卡优先；无周年时展示回访卡 */
-  const anniversaryBook = anniversary?.kind === 'book-added' ? anniversary.book : undefined;
-  const anniversaryAnn = anniversary?.annotation;
-  const revisitCardBook = anniversaryBook ?? revisitPick?.book ?? null;
-  const revisitCardAnn = anniversaryAnn ?? revisitPick?.annotation ?? undefined;
+  const revisit = useMemo(
+    () => resolveRevisitTargets(anniversary, revisitPick, bookById),
+    [anniversary, revisitPick, bookById]
+  );
+  const revisitCardBook = revisit.book;
+  const revisitCardAnn = revisit.annotation;
   const hiddenRevisits = useHiddenRevisits();
 
   const handleDismissSeat = (bookId: string) => {
@@ -392,15 +393,15 @@ export const HomePage: React.FC = () => {
         if (!revisitCardBook) return null;
         if (hiddenRevisits.isHidden(revisitCardBook.id)) return null;
 
-        const reasonText = anniversaryAnn
-          ? COPY.revisit.anniversaryNote(anniversary?.yearsAgo ?? 1)
-          : anniversaryBook
-            ? COPY.revisit.anniversaryBook(anniversary?.yearsAgo ?? 1)
-            : revisitPick?.reason === 'annotated-long-unread'
-              ? COPY.revisit.revisitAnnotated
-              : revisitPick?.reason === 'long-unread'
-                ? COPY.revisit.revisitLongUnread
-                : COPY.revisit.revisitRandom;
+        const reasonText = anniversary
+          ? revisitCardAnn
+            ? COPY.revisit.anniversaryNote(anniversary.yearsAgo)
+            : COPY.revisit.anniversaryBook(anniversary.yearsAgo)
+          : revisitPick?.reason === 'annotated-long-unread'
+            ? COPY.revisit.revisitAnnotated
+            : revisitPick?.reason === 'long-unread'
+              ? COPY.revisit.revisitLongUnread
+              : COPY.revisit.revisitRandom;
 
         return (
           <section className="mb-10">

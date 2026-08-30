@@ -168,3 +168,35 @@ export function findRereadCandidates(
     })
     .sort((a, b) => (annotationsByBook.get(b.id) ?? 0) - (annotationsByBook.get(a.id) ?? 0));
 }
+
+export interface RevisitCardTargets {
+  /** 卡片展示与跳转的书（周年手记所属书 / 周年入藏书 / 当日回访书；书已移出时为 null） */
+  book: Book | null;
+  /** 卡片携带的手记（周年手记或回访书的一条手记） */
+  annotation?: Annotation;
+}
+
+/**
+ * 解析回望席卡片目标：周年优先——
+ * - 手记周年：书必须是该手记所属的书（此前错配为当日回访书，导致显示与跳转都指向无关的书）
+ * - 入藏周年：书即当年入藏的书（无手记）
+ * - 无周年：当日确定性回访
+ * 周年手记所属书已被移出时降级为当日回访；回访书缺失时为 null（区块不渲染）。
+ */
+export function resolveRevisitTargets(
+  anniversary: AnniversaryHit | null,
+  pick: RevisitPick | null,
+  bookById: ReadonlyMap<string, Book>
+): RevisitCardTargets {
+  if (anniversary) {
+    if (anniversary.kind === 'book-added' && anniversary.book) {
+      return { book: anniversary.book };
+    }
+    if (anniversary.annotation) {
+      const book = bookById.get(anniversary.annotation.bookId);
+      if (book) return { book, annotation: anniversary.annotation };
+    }
+  }
+  if (pick) return { book: pick.book, annotation: pick.annotation };
+  return { book: null };
+}

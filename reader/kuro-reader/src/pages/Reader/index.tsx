@@ -326,6 +326,10 @@ export const ReaderPage: React.FC = () => {
 
   useEffect(() => {
     if (bookId) {
+      // 直链/刷新进入时内存 books 为空：补一次加载，让标题/收藏态等元数据就位
+      if (useLibraryStore.getState().books.length === 0) {
+        useLibraryStore.getState().loadBooks();
+      }
       const progress = useLibraryStore.getState().readingProgress[bookId];
       initialScrollDoneRef.current = false;
       initialScrollRestoreKeyRef.current = '';
@@ -577,6 +581,65 @@ export const ReaderPage: React.FC = () => {
       setIsExtractingPdfText(false);
     }
   }, [bookId, pdfSearchChapters, showReaderNotice]);
+
+  // 垂直模式跳页：扩渲染窗口 → 预载周边页 → 滚动到页槽位（goToPage 只改状态，
+  // 垂直模式的视口必须由这里驱动；水平模式 goToPage 即生效）
+  const verticalJumpTokenRef = useRef(0);
+  const jumpToVerticalPage = useCallback((targetPage: number) => {
+    const page = Math.max(1, Math.min(targetPage, totalPages));
+    if (totalPages === 0 || page === currentPage) return;
+    verticalJumpTokenRef.current += 1;
+    const token = verticalJumpTokenRef.current;
+    const isStale = () => token !== verticalJumpTokenRef.current;
+
+    goToPage(page);
+    setVerticalBufferStartIndex(Math.max(0, page - PAGE_PROGRESS_OFFSET - VERTICAL_PREPEND_BATCH_SIZE));
+    setVerticalRenderStartIndex(Math.max(0, page - PAGE_PROGRESS_OFFSET));
+    setVerticalRenderEndIndex(page - PAGE_PROGRESS_OFFSET + VERTICAL_RESTORE_PRELOAD_COUNT);
+    setProgrammaticScroll(true);
+    setIsRestoringVerticalScroll(true);
+
+    let settleTimer: ReturnType<typeof setTimeout> | null = null;
+    let layoutTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const finish = () => {
+      if (isStale()) return;
+      setIsRestoringVerticalScroll(false);
+      setProgrammaticScroll(false);
+    };
+    const scrollToTarget = () => {
+      if (isStale()) return;
+      const container = smoothScrollContainerRef.current;
+      if (!container) return;
+      const slot = container.querySelector(`[data-page-index="${page - 1}"]`);
+      if (!slot) return;
+      const containerRect = container.getBoundingClientRect();
+      const slotRect = slot.getBoundingClientRect();
+      container.scrollTo({ top: slotRect.top - containerRect.top + container.scrollTop, behavior: 'instant' });
+      if (settleTimer) clearTimeout(settleTimer);
+      settleTimer = setTimeout(finish, INITIAL_SCROLL_SETTLE_DELAY);
+    };
+    const attempt = () => {
+      if (isStale()) return;
+      const container = smoothScrollContainerRef.current;
+      if (!container || !container.querySelector(`[data-page-index="${page - 1}"]`)) {
+        setTimeout(attempt, SCROLL_RETRY_INTERVAL);
+        return;
+      }
+      scrollToTarget();
+      // 图片加载会改变槽位高度：布局稳定后再校准一次
+      if (layoutTimer) clearTimeout(layoutTimer);
+      layoutTimer = setTimeout(scrollToTarget, LAYOUT_STABLE_DELAY);
+    };
+
+    const start = Math.max(0, page - PAGE_PROGRESS_OFFSET);
+    const end = Math.min(totalPages, start + VERTICAL_RESTORE_PRELOAD_COUNT);
+    const tasks: Promise<void>[] = [];
+    for (let i = start; i < end; i++) tasks.push(loadPage(i));
+    void Promise.all(tasks).then(() => {
+      if (!isStale()) attempt();
+    });
+  }, [totalPages, currentPage, goToPage, setProgrammaticScroll, loadPage, smoothScrollContainerRef]);
 
   // ── 页级手记（漫画/PDF） ──
 
@@ -1822,13 +1885,18 @@ export const ReaderPage: React.FC = () => {
         />
       )}
 
-      {/* PDF 书内检索面板：命中页直达（chapterIndex 即页索引） */}
+      {/* PDF 书内检索面板：命中页直达（chapterIndex 即页索引；垂直模式走滚动定位） */}
       {isSearchPanelOpen && pdfSearchChapters && (
         <InBookSearchPanel
           chapters={pdfSearchChapters}
           onSelectHit={(hit) => {
             setIsSearchPanelOpen(false);
-            goToPage(hit.chapterIndex + PAGE_INDEX_TO_PAGE_OFFSET);
+            const targetPage = hit.chapterIndex + PAGE_INDEX_TO_PAGE_OFFSET;
+            if (direction === 'vertical') {
+              jumpToVerticalPage(targetPage);
+            } else {
+              goToPage(targetPage);
+            }
           }}
           onClose={() => setIsSearchPanelOpen(false)}
         />

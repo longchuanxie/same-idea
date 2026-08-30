@@ -5,6 +5,7 @@ import {
   findAnniversary,
   pickDailyRevisit,
   findRereadCandidates,
+  resolveRevisitTargets,
   dateSeed,
   REVISIT_MAX_CARDS,
 } from '@/utils/revisit'
@@ -144,5 +145,48 @@ describe('findRereadCandidates', () => {
 
   it('展示上限常量为 2', () => {
     expect(REVISIT_MAX_CARDS).toBe(2)
+  })
+})
+
+describe('resolveRevisitTargets', () => {
+  const bookOf = (id: string) => makeBook({ id })
+  const bookMap = new Map([
+    ['b1', bookOf('b1')],
+    ['b2', bookOf('b2')],
+  ])
+  const pick = { book: bookOf('b2'), annotation: makeAnnotation({ id: 'ap', bookId: 'b2' }), reason: 'long-unread' as const }
+
+  it('手记周年：书必须取手记所属书(而非当日回访书)', () => {
+    const ann = makeAnnotation({ id: 'a1', bookId: 'b1', createdAt: new Date('2025-08-30T09:00:00') })
+    const hit = findAnniversary([ann], [], TODAY)
+    const result = resolveRevisitTargets(hit, pick, bookMap)
+    expect(result.book?.id).toBe('b1')
+    expect(result.annotation?.id).toBe('a1')
+  })
+
+  it('入藏周年：书即当年入藏书，无手记', () => {
+    const added = bookOf('b1')
+    added.addedAt = new Date('2024-08-30T10:00:00')
+    const hit = findAnniversary([], [added], TODAY)
+    const result = resolveRevisitTargets(hit, pick, bookMap)
+    expect(result.book?.id).toBe('b1')
+    expect(result.annotation).toBeUndefined()
+  })
+
+  it('周年手记所属书已被移出：降级为当日回访', () => {
+    const ann = makeAnnotation({ id: 'a1', bookId: 'ghost', createdAt: new Date('2025-08-30T09:00:00') })
+    const hit = findAnniversary([ann], [], TODAY)
+    const result = resolveRevisitTargets(hit, pick, bookMap)
+    expect(result.book?.id).toBe('b2')
+    expect(result.annotation?.id).toBe('ap')
+  })
+
+  it('无周年：当日确定性回访', () => {
+    const result = resolveRevisitTargets(null, pick, bookMap)
+    expect(result.book?.id).toBe('b2')
+  })
+
+  it('无周年无回访：book 为 null(区块不渲染)', () => {
+    expect(resolveRevisitTargets(null, null, bookMap).book).toBeNull()
   })
 })

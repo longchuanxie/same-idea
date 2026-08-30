@@ -406,6 +406,10 @@ export const TextReaderPage: React.FC = () => {
   // 加载文本内容
   useEffect(() => {
     if (!bookId) return;
+    // 直链/刷新进入时内存 books 为空：补一次加载，让标题/收藏态等元数据就位
+    if (useLibraryStore.getState().books.length === 0) {
+      useLibraryStore.getState().loadBooks();
+    }
     let cancelled = false;
     setIsLoading(true);
     loadTextContent(bookId).then(({ chapters: loadedChapters, isEpub: epub, isMarkdown: markdown }) => {
@@ -503,6 +507,13 @@ export const TextReaderPage: React.FC = () => {
       }
     }
   }, [bookId, chapterId, isLoading, textReadingMode, chapters, book?.chapters, requestPageAfterPagination]);
+
+  // 直链/刷新进入时 store 尚无书目（顶栏书名会显示「未知书籍」）：挂载补一次聚合读取
+  useEffect(() => {
+    if (!useLibraryStore.getState().books.length) {
+      void useLibraryStore.getState().loadBooks();
+    }
+  }, []);
 
   // 统计阅读时长（共享 Hook）
   useReadingStats(bookId);
