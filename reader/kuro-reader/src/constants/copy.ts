@@ -49,4 +49,15 @@ export const COPY = {
     noResults: '这本书里没有找到',
     hitCount: (n: number) => `找到 ${n} 处`,
   },
+  /** 摘抄墙 */
+  notesWall: {
+    searchPlaceholder: '找一句划过的句子',
+    filterAll: '全部',
+    filterHighlight: '纯划线',
+    filterNote: '批注',
+    filterBookAll: '所有书',
+    filterTagAll: '所有标签',
+    emptyFiltered: '没有符合条件的手记——换个词或放宽筛选',
+    exportAll: '导出整墙 Markdown',
+  },
 } as const;

@@ -84,6 +84,31 @@ describe('buildAnnotationMarkdown', () => {
     buildAnnotationMarkdown('书', undefined, annotations, EXPORTED_AT)
     expect(annotations[0].id).toBe('a2')
   })
+
+  it('tagged annotations emit Obsidian-style #tag lines via tagNames map', () => {
+    const md = buildAnnotationMarkdown(
+      '书',
+      undefined,
+      [makeAnnotation({ id: 'a1', tagIds: ['t1', 't2'] }), makeAnnotation({ id: 'a2' })],
+      EXPORTED_AT,
+      new Map([['t1', '意象'], ['t2', '夜']])
+    )
+    expect(md).toContain('#意象 #夜')
+    // 未打标签的手记不输出空标签行
+    const noteCount = (md.match(/#意象/g) ?? []).length
+    expect(noteCount).toBe(1)
+  })
+
+  it('tags without a matching map entry are skipped silently', () => {
+    const md = buildAnnotationMarkdown(
+      '书',
+      undefined,
+      [makeAnnotation({ tagIds: ['gone'] })],
+      EXPORTED_AT,
+      new Map()
+    )
+    expect(md).not.toContain('#gone')
+  })
 })
 
 describe('sanitizeFileName', () => {

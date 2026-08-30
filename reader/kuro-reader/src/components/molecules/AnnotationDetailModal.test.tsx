@@ -50,7 +50,7 @@ describe('AnnotationDetailModal', () => {
     fireEvent.change(textarea, { target: { value: '改后的笔记' } })
     fireEvent.click(screen.getByRole('button', { name: COPY.annotation.styleLabels.underline }))
     fireEvent.click(screen.getByRole('button', { name: COPY.annotation.save }))
-    expect(onEdit).toHaveBeenCalledWith({ id: 'ann-1', note: '改后的笔记', style: 'underline' })
+    expect(onEdit).toHaveBeenCalledWith({ id: 'ann-1', note: '改后的笔记', style: 'underline', tagIds: [] })
   })
 
   it('删除：回调 onDelete 并关闭弹窗', () => {

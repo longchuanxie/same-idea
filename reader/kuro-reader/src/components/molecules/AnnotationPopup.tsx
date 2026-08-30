@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 
 import { COPY } from '@/constants/copy';
 
+import { AnnotationTagPicker } from './AnnotationTagPicker';
 import type { AnnotationStyle } from '../../types';
 
 
@@ -12,8 +13,8 @@ const MAX_SELECTED_TEXT_CHARS = 150;
 interface AnnotationPopupProps {
   selectedText: string;
   position: { x: number; y: number } | null;
-  /** 笔记可为空——空笔记即纯划线 */
-  onSave: (note: string, style: AnnotationStyle) => void;
+  /** 笔记可为空——空笔记即纯划线；tagIds 为手记标签引用 */
+  onSave: (note: string, style: AnnotationStyle, tagIds: string[]) => void;
   onCancel: () => void;
 }
 
@@ -25,6 +26,7 @@ export const AnnotationPopup: React.FC<AnnotationPopupProps> = ({
 }) => {
   const [note, setNote] = useState('');
   const [style, setStyle] = useState<AnnotationStyle>('highlight');
+  const [tagIds, setTagIds] = useState<string[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -34,7 +36,7 @@ export const AnnotationPopup: React.FC<AnnotationPopupProps> = ({
   }, []);
 
   const handleSave = () => {
-    onSave(note.trim(), style);
+    onSave(note.trim(), style, tagIds);
   };
 
   if (!position) return null;
@@ -119,6 +121,9 @@ export const AnnotationPopup: React.FC<AnnotationPopupProps> = ({
             rows={3}
             className="w-full px-3 py-2 bg-surface-container-lowest border border-outline-variant/50 rounded-lg text-on-surface font-body text-body-sm resize-none focus:outline-none focus:border-primary placeholder:text-on-surface-variant/40"
           />
+          <div className="mt-2">
+            <AnnotationTagPicker selected={tagIds} onChange={setTagIds} allowCreate />
+          </div>
         </div>
 
         {/* 操作按钮 */}

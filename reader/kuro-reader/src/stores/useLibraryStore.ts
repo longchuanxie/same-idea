@@ -15,7 +15,7 @@ import type { Book, Chapter, ReadingProgress, SubLibrary, Tag } from '@/types';
 import { deriveMergedBookTitle, extractArchiveChapterInfo } from '@/utils/comicChapterSplit';
 import { extractTitleFromFileName } from '@/utils/extractTitle';
 
-interface LibraryState {
+export interface LibraryState {
   books: Book[];
   subLibraries: SubLibrary[];
   tags: Tag[];

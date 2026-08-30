@@ -3,11 +3,14 @@ import React, { useEffect, useState } from 'react';
 import { COPY } from '@/constants/copy';
 import type { Annotation, AnnotationStyle } from '@/types';
 
+import { AnnotationTagPicker } from './AnnotationTagPicker';
+
 /** 批注编辑补丁：只携带变化字段，id 必填 */
 export interface AnnotationEditPatch {
   id: string;
   note?: string;
   style?: AnnotationStyle;
+  tagIds?: string[];
 }
 
 interface AnnotationDetailModalProps {
@@ -34,16 +37,18 @@ export const AnnotationDetailModal: React.FC<AnnotationDetailModalProps> = ({
   const [editing, setEditing] = useState(false);
   const [note, setNote] = useState(annotation.note);
   const [style, setStyle] = useState<AnnotationStyle>(annotation.style ?? 'highlight');
+  const [tagIds, setTagIds] = useState<string[]>(annotation.tagIds ?? []);
 
   // 弹窗复用于不同批注时重置编辑态
   useEffect(() => {
     setEditing(false);
     setNote(annotation.note);
     setStyle(annotation.style ?? 'highlight');
-  }, [annotation.id, annotation.note, annotation.style]);
+    setTagIds(annotation.tagIds ?? []);
+  }, [annotation.id, annotation.note, annotation.style, annotation.tagIds]);
 
   const saveEdit = () => {
-    onEdit({ id: annotation.id, note: note.trim(), style });
+    onEdit({ id: annotation.id, note: note.trim(), style, tagIds });
     setEditing(false);
   };
 
@@ -93,6 +98,9 @@ export const AnnotationDetailModal: React.FC<AnnotationDetailModalProps> = ({
                 </button>
               ))}
             </div>
+            <div className="mt-2">
+              <AnnotationTagPicker selected={tagIds} onChange={setTagIds} allowCreate />
+            </div>
             <div className="flex justify-end gap-2 mt-3">
               <button
                 className="px-4 py-1.5 rounded-lg font-label text-label-sm text-on-surface-variant hover:bg-surface-variant transition-colors"
@@ -100,6 +108,7 @@ export const AnnotationDetailModal: React.FC<AnnotationDetailModalProps> = ({
                   setEditing(false);
                   setNote(annotation.note);
                   setStyle(annotation.style ?? 'highlight');
+                  setTagIds(annotation.tagIds ?? []);
                 }}
               >
                 {COPY.annotation.cancel}

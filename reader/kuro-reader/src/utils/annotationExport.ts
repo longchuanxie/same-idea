@@ -27,12 +27,14 @@ function toBlockquote(text: string): string {
 /**
  * 将某本书的全部批注构建为 Markdown 文本（按章节分组、按阅读位置排序），
  * 便于导入 Obsidian / Notion 等笔记工具。
+ * tagNames：手记标签 id → 名称映射（打标签的手记会输出 #标签 行）。
  */
 export function buildAnnotationMarkdown(
   bookTitle: string,
   author: string | undefined,
   annotations: Annotation[],
-  exportedAt: Date = new Date()
+  exportedAt: Date = new Date(),
+  tagNames?: ReadonlyMap<string, string>
 ): string {
   const lines: string[] = [`# 《${bookTitle}》批注`, ''];
 
@@ -61,6 +63,13 @@ export function buildAnnotationMarkdown(
     if (ann.note.trim()) {
       lines.push(`**笔记**：${ann.note.trim()}`, '');
     }
+    // Obsidian/Notion 兼容标签行
+    const tags = (ann.tagIds ?? [])
+      .map((id) => tagNames?.get(id))
+      .filter((name): name is string => Boolean(name));
+    if (tags.length > 0) {
+      lines.push(tags.map((name) => `#${name}`).join(' '), '');
+    }
     lines.push(`\`${STYLE_LABELS[ann.style ?? 'highlight']}\` · ${formatDateTime(new Date(ann.updatedAt))}`, '');
   }
 
@@ -88,9 +97,10 @@ export function downloadTextFile(filename: string, content: string, mime = 'text
 export function exportAnnotationsToMarkdown(
   bookTitle: string,
   author: string | undefined,
-  annotations: Annotation[]
+  annotations: Annotation[],
+  tagNames?: ReadonlyMap<string, string>
 ): void {
-  const markdown = buildAnnotationMarkdown(bookTitle, author, annotations);
+  const markdown = buildAnnotationMarkdown(bookTitle, author, annotations, new Date(), tagNames);
   const date = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
   const stamp = `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}`;

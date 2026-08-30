@@ -240,6 +240,8 @@ export interface Annotation {
   /** 稳定锚点（可选；旧数据无此字段时按偏移回退解析） */
   anchor?: AnnotationAnchor
   style?: AnnotationStyle // 默认 'highlight'
+  /** 手记标签（可选；引用 useLibraryStore 的 Tag.id，空/缺省为未分类） */
+  tagIds?: string[]
   createdAt: Date
   updatedAt: Date
 }

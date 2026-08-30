@@ -116,7 +116,8 @@ export const BookDetailPage: React.FC = () => {
       toast(COPY.toast.noAnnotations);
       return;
     }
-    exportAnnotationsToMarkdown(book.title, book.author || undefined, bookAnnotations);
+    const tagNames = new Map(tags.map((t) => [t.id, t.name]));
+    exportAnnotationsToMarkdown(book.title, book.author || undefined, bookAnnotations, tagNames);
   };
 
   if (!book) {

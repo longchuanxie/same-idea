@@ -22,13 +22,13 @@ describe('AnnotationPopup', () => {
     expect(container.firstElementChild).toBeNull()
   })
 
-  it('不写笔记可直接保存为纯划线（onSave 收到空字符串）', () => {
+  it('不写笔记可直接保存为纯划线（onSave 收到空笔记与空标签）', () => {
     const onSave = vi.fn()
     setup({ onSave })
     const saveButton = screen.getByRole('button', { name: COPY.annotation.saveHighlightOnly })
     expect(saveButton).not.toBeDisabled()
     fireEvent.click(saveButton)
-    expect(onSave).toHaveBeenCalledWith('', 'highlight')
+    expect(onSave).toHaveBeenCalledWith('', 'highlight', [])
   })
 
   it('写了笔记保存为批注，并携带所选样式', () => {
@@ -39,7 +39,7 @@ describe('AnnotationPopup', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: /下划线/ }))
     fireEvent.click(screen.getByRole('button', { name: COPY.annotation.saveNote }))
-    expect(onSave).toHaveBeenCalledWith('这里的比喻很妙', 'underline')
+    expect(onSave).toHaveBeenCalledWith('这里的比喻很妙', 'underline', [])
   })
 
   it('取消触发 onCancel', () => {

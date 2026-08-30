@@ -18,7 +18,10 @@ export const annotationRepo = {
     })
   },
 
-  async update(id: string, updates: Partial<Pick<Annotation, 'note' | 'style' | 'updatedAt'>>): Promise<void> {
+  async update(
+    id: string,
+    updates: Partial<Pick<Annotation, 'note' | 'style' | 'tagIds' | 'updatedAt'>>
+  ): Promise<void> {
     const db = await getDB()
     const existing = (await db.get(STORE_NAMES.annotations, id)) as StoredAnnotation | undefined
     if (!existing) return

@@ -2224,7 +2224,8 @@ export const TextReaderPage: React.FC = () => {
   const buildAnnotationFromSelection = useCallback((
     sel: Pick<TextSelectionInfo, 'text' | 'contentOffset' | 'contentEndOffset'>,
     note: string,
-    style: AnnotationStyle
+    style: AnnotationStyle,
+    tagIds: string[] = []
   ): Annotation | null => {
     if (!bookId || !currentChapter) return null;
 
@@ -2252,14 +2253,15 @@ export const TextReaderPage: React.FC = () => {
           ? computeAnnotationAnchor(content, startOffset, endOffset)
           : undefined,
       style,
+      tagIds: tagIds.length > 0 ? tagIds : undefined,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
   }, [bookId, currentChapter, currentChapterIndex]);
 
-  const handleAnnotationSave = useCallback(async (note: string, style: AnnotationStyle) => {
+  const handleAnnotationSave = useCallback(async (note: string, style: AnnotationStyle, tagIds: string[] = []) => {
     if (!selectionPopup) return;
-    const annotation = buildAnnotationFromSelection(selectionPopup, note, style);
+    const annotation = buildAnnotationFromSelection(selectionPopup, note, style, tagIds);
     if (!annotation) return;
 
     await annotationRepo.add(annotation);
@@ -2282,11 +2284,12 @@ export const TextReaderPage: React.FC = () => {
     isSelectingTextRef.current = false;
   }, [buildAnnotationFromSelection]);
 
-  // 批注编辑（补丁式：id 必填，note/style 可选；note 置空即转纯划线）
-  const handleAnnotationEdit = useCallback(async (updated: { id: string; note?: string; style?: AnnotationStyle }) => {
-    const updates: Partial<Pick<Annotation, 'note' | 'style' | 'updatedAt'>> = {};
+  // 批注编辑（补丁式：id 必填，note/style/tagIds 可选；note 置空即转纯划线）
+  const handleAnnotationEdit = useCallback(async (updated: { id: string; note?: string; style?: AnnotationStyle; tagIds?: string[] }) => {
+    const updates: Partial<Pick<Annotation, 'note' | 'style' | 'tagIds' | 'updatedAt'>> = {};
     if (updated.note !== undefined) updates.note = updated.note;
     if (updated.style !== undefined) updates.style = updated.style;
+    if (updated.tagIds !== undefined) updates.tagIds = updated.tagIds;
     await annotationRepo.update(updated.id, updates);
     setAnnotations((prev) => prev.map((a) => {
       if (a.id !== updated.id) return a;
@@ -2294,6 +2297,7 @@ export const TextReaderPage: React.FC = () => {
         ...a,
         ...(updated.note !== undefined ? { note: updated.note } : {}),
         ...(updated.style !== undefined ? { style: updated.style } : {}),
+        ...(updated.tagIds !== undefined ? { tagIds: updated.tagIds } : {}),
         updatedAt: new Date(),
       };
     }));
