@@ -18,6 +18,8 @@ interface PdfTextLayerOverlayProps {
   bookId: string;
   /** 章内页索引（0 起） */
   pageIndex: number;
+  /** 文本项来源（默认 PDF 文本层；漫画 OCR 等场景可注入） */
+  itemsProvider?: () => Promise<PositionedTextItem[]>;
   /** 该页已有划线高亮（跨多页批注中属于本页的矩形） */
   highlights: { id: string; rect: AnnotationRect }[];
   /** 选区回调（松开鼠标且选区在本文本层内时触发） */
@@ -37,6 +39,7 @@ interface PdfTextLayerOverlayProps {
 export const PdfTextLayerOverlay: React.FC<PdfTextLayerOverlayProps> = ({
   bookId,
   pageIndex,
+  itemsProvider,
   highlights,
   onSelect,
   onHighlightClick,
@@ -47,9 +50,11 @@ export const PdfTextLayerOverlay: React.FC<PdfTextLayerOverlayProps> = ({
 
   useEffect(() => {
     let cancelled = false;
-    getPdfTextItems(bookId)
-      .then((pages) => {
-        if (!cancelled) setItems(pages[pageIndex] ?? []);
+    const provider = itemsProvider
+      ?? (() => getPdfTextItems(bookId).then((pages) => pages[pageIndex] ?? []));
+    provider()
+      .then((result) => {
+        if (!cancelled) setItems(result);
       })
       .catch(() => {
         if (!cancelled) setItems([]);
@@ -57,7 +62,9 @@ export const PdfTextLayerOverlay: React.FC<PdfTextLayerOverlayProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [bookId, pageIndex]);
+    // itemsProvider 由调用方 useCallback 稳定提供
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookId, pageIndex, itemsProvider]);
 
   const handleMouseUp = (e: React.MouseEvent) => {
     if (!onSelect || !selectable) return;

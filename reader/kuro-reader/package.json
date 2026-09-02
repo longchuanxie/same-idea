@@ -41,6 +41,7 @@
     "react-dom": "^18.2.0",
     "react-router-dom": "6.20",
     "tailwind-merge": "^3.6.0",
+    "tesseract.js": "^7.0.0",
     "zustand": "4.4"
   },
   "devDependencies": {

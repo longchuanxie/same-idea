@@ -10,6 +10,8 @@ import { FullscreenViewer } from '@/components/molecules/FullscreenViewer';
 import { HorizontalReaderView } from '@/components/molecules/HorizontalReaderView';
 import { InBookSearchPanel } from '@/components/molecules/InBookSearchPanel';
 import { PdfTextLayerOverlay, type PdfTextSelection } from '@/components/molecules/PdfTextLayerOverlay';
+import { recognizeComicPage } from '@/services/ocrService';
+import type { PositionedTextItem } from '@/services/pdfTextLayer';
 import { LongPressActionMenu } from '@/components/molecules/LongPressActionMenu';
 import { ReaderBottomBar } from '@/components/molecules/ReaderBottomBar';
 import { ReaderProgressTrack } from '@/components/molecules/ReaderProgressTrack';
@@ -20,6 +22,7 @@ import { useReadingStats } from '@/hooks/useReadingStats';
 import { useSmoothScroll } from '@/hooks/useSmoothScroll';
 import { useVerticalVirtualWindow, type ReaderProgressSnapshot } from '@/hooks/useVerticalVirtualWindow';
 import { buildPdfSearchChapters, getPdfPageTexts } from '@/services/pdfText';
+import { getPdfTextItems } from '@/services/pdfTextLayer';
 import { annotationRepo } from '@/services/storage/annotationRepo';
 import type { TextChapter } from '@/services/textContent';
 import { useAppStore } from '@/stores/useAppStore';
@@ -139,6 +142,9 @@ export const ReaderPage: React.FC = () => {
   // PDF 文字级划线：选择模式开关 + 当前选区（弹窗锚定松手位置）
   const [pdfSelectMode, setPdfSelectMode] = useState(false);
   const [pdfSelection, setPdfSelection] = useState<PdfTextSelection | null>(null);
+  // 漫画 OCR（实验）：按页保存识别结果；识别完成的页临时开启文字可选
+  const [ocrItemsByPage, setOcrItemsByPage] = useState<Map<number, PositionedTextItem[]>>(new Map());
+  const [ocrRecognizingPage, setOcrRecognizingPage] = useState<number | null>(null);
 
   const {
     currentPage,
@@ -920,7 +926,6 @@ export const ReaderPage: React.FC = () => {
   /** PDF 文字级划线高亮：按页聚合（跨页批注拆枚到各自页） */
   const pdfHighlightsByPage = useMemo(() => {
     const byPage = new Map<number, { id: string; rect: AnnotationRect }[]>();
-    if (!isPdfBook) return byPage;
     for (const ann of bookAnnotations) {
       if (!ann.rects) continue;
       for (const rect of ann.rects) {
@@ -930,17 +935,60 @@ export const ReaderPage: React.FC = () => {
       }
     }
     return byPage;
-  }, [bookAnnotations, isPdfBook]);
+  }, [bookAnnotations]);
+
+  /** 漫画页 OCR（实验）：长按触发，识别结果按页缓存并临时开启该页文字可选 */
+  const handleOcrPage = useCallback(async (pageIndex: number) => {
+    if (!bookId) return;
+    const url = useReaderStore.getState().pageUrls[pageIndex];
+    if (!url) return;
+    setOcrRecognizingPage(pageIndex);
+    showReaderNotice('正在识别本页文字…');
+    try {
+      const size = await new Promise<{ w: number; h: number }>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+        img.onerror = () => reject(new Error('image load failed'));
+        img.src = url;
+      });
+      const items = await recognizeComicPage(bookId, pageIndex, url, size.w, size.h);
+      if (items.length === 0) {
+        showReaderNotice('未能识别出文字');
+        return;
+      }
+      setOcrItemsByPage((prev) => new Map(prev).set(pageIndex, items));
+      showReaderNotice('已识别，可拖选文字划线');
+    } catch {
+      showReaderNotice('识别失败，请重试');
+    } finally {
+      setOcrRecognizingPage(null);
+    }
+  }, [bookId, showReaderNotice]);
+
+  /** 页面文字层 provider：PDF 用文本层，漫画用已识别的 OCR 结果 */
+  const getTextLayerProvider = useCallback(
+    (pageIndex: number) => {
+      if (isPdfBook && bookId) {
+        return () => getPdfTextItems(bookId).then((pages) => pages[pageIndex] ?? []);
+      }
+      const cached = ocrItemsByPage.get(pageIndex);
+      if (cached) return () => Promise.resolve(cached);
+      return undefined;
+    },
+    [isPdfBook, bookId, ocrItemsByPage]
+  );
 
   /** PDF 页面叠加层（文字级划线：垂直/水平共用） */
   const renderPdfPageOverlay = useCallback(
     (pageIndex: number) => {
-      if (!isPdfBook || !bookId) return null;
+      const provider = getTextLayerProvider(pageIndex);
+      if (!provider) return null;
       return (
         <PdfTextLayerOverlay
-          bookId={bookId}
+          bookId={bookId ?? ''}
           pageIndex={pageIndex}
-          selectable={pdfSelectMode}
+          itemsProvider={provider}
+          selectable={pdfSelectMode || ocrItemsByPage.has(pageIndex)}
           highlights={pdfHighlightsByPage.get(pageIndex) ?? []}
           onSelect={setPdfSelection}
           onHighlightClick={(annotationId) => {
@@ -949,7 +997,7 @@ export const ReaderPage: React.FC = () => {
         />
       );
     },
-    [isPdfBook, bookId, pdfSelectMode, pdfHighlightsByPage, bookAnnotations]
+    [bookId, getTextLayerProvider, pdfSelectMode, ocrItemsByPage, pdfHighlightsByPage, bookAnnotations]
   );
 
   const progressPercent = totalPages > 0
@@ -1069,18 +1117,7 @@ export const ReaderPage: React.FC = () => {
                         draggable={false}
                         onClick={(e) => handleImageClick(idx, e)}
                       />
-                      {isPdfBook && bookId && (
-                        <PdfTextLayerOverlay
-                          bookId={bookId}
-                          pageIndex={idx}
-                          selectable={pdfSelectMode}
-                          highlights={pdfHighlightsByPage.get(idx) ?? []}
-                          onSelect={setPdfSelection}
-                          onHighlightClick={(annotationId) => {
-                            setEditingPageNote(bookAnnotations.find((a) => a.id === annotationId) ?? null);
-                          }}
-                        />
-                      )}
+                      {renderPdfPageOverlay(idx)}
                     </div>
                   ) : (
                     <div className="w-full aspect-[2/3] flex items-center justify-center bg-surface-container">
@@ -1363,6 +1400,19 @@ export const ReaderPage: React.FC = () => {
             setLongPressMenuPage(null);
             setBottomBarVisible(true);
           }}
+          extraAction={
+            book?.format === 'comic'
+              ? {
+                  label: '识别本页文字',
+                  icon: 'document_scanner',
+                  disabled: ocrRecognizingPage != null,
+                  onSelect: (page) => {
+                    setLongPressMenuPage(null);
+                    void handleOcrPage(page);
+                  },
+                }
+              : undefined
+          }
           onClose={() => setLongPressMenuPage(null)}
         />
       )}
