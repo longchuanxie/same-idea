@@ -148,6 +148,7 @@
 |--------|------|------|
 | ✅ P1（2026-08-30） | PDF 文本层保留 | `services/pdfText` 从原始 PDF 逐页提取文本（按书缓存）；PDF 顶栏检索直达页码——可检索落地 |
 | ✅ P1（2026-08-30） | 漫画/PDF 页级手记 | `Annotation.pageIndex` 页码锚定；长按弹出页级动作菜单；手记面板/详情编辑/摘抄墙 `?page=` 直达；筛选/导出/同步全兼容 |
-| P2 | 图片内文字批注（划线级） | 页级手记之上的进一步：渲染图上框选文字（需 OCR 或 PDF textLayer 坐标映射），列为观察项 |
+| ✅ P1（2026-09-02） | 云同步删除墓碑 | SYNC_VERSION 3：IndexedDB v7 tombstones store，删除写墓碑、合并先剔除再 LWW、墓碑随载荷多端传播、90 天过期清理 |
+| ✅ P2（2026-09-02） | 图片内文字批注（划线级） | PDF：pdfTextLayer 坐标文本项 + PdfTextLayerOverlay 透明可选层（Annotation.rects 矩形锚定，选择模式开关，划线/批注/高亮回显/点击直达详情）；漫画：Tesseract.js OCR 实验入口（长按识别本页文字，动态 import 不进主包）。OCR 质量待真实漫画验证，仍为观察项 |
+| ✅ P2（部分，2026-09-02） | 技术债 | Reader 2013→1300 行（垂直虚拟窗口 hook + 进度条/长按菜单组件）；TextReader 分页策略抽为 services/pagination 纯函数；Settings/Library/BookDetail 补冒烟测试（总用例 477→521）。TextReader 选区 effect 拆分暂缓 |
 | P2 | 分发反馈渠道 | APK/网页版建立最小用户触达，验证采集器官价值假设 |
-| P2 | 技术债 | TextReader/Reader 拆分、页面组件测试补齐（原持续工程线事项） |

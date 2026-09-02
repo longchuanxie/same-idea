@@ -1,6 +1,6 @@
 # Kuro Reader 项目现状梳理
 
-> 更新日期：2026-08-30，与 `comics` 分支提交基线对齐（阶段 4/5 知识闭环交付后）。
+> 更新日期：2026-09-02，与 `comics` 分支提交基线对齐（墓碑同步 / 阅读器拆分 / 文字级划线三轮交付后）。
 
 ## 一、项目概述
 
@@ -402,22 +402,22 @@ IndexedDB（`kuro-reader-db`，**v6**），9 个 Object Store，由 [db.ts](src/
 
 ### 8.1 阅读器大型文件（持续拆分中）
 
-- [TextReader/index.tsx](src/pages/TextReader/index.tsx) 约 **2710 行**（已从 3154 行拆出服务/5 个 Hook/7 个组件）
-- [Reader/index.tsx](src/pages/Reader/index.tsx) 约 **1660 行**（已从 1731 行拆出章节抽屉与统计 Hook）
+- [TextReader/index.tsx](src/pages/TextReader/index.tsx) 约 **3270 行**（2026-09-02 拆出 services/pagination 纯函数切分策略；此前已拆出服务/5 个 Hook/7 个组件）
+- [Reader/index.tsx](src/pages/Reader/index.tsx) 约 **1300 行**（2026-09-02 拆出 useVerticalVirtualWindow hook + ReaderProgressTrack/LongPressActionMenu 组件，2013 → 1300）
 
-仍内联的高耦合块（后续深度拆分候选）：TextReader 分页引擎（paginateMeasuredContent）、翻书动画状态、约 350 行文本选区 effect、进度保存/镜像 ref 体系；Reader 垂直虚拟窗口与滚动恢复。
+仍内联的高耦合块（后续深度拆分候选）：TextReader 翻书动画状态、约 350 行文本选区 effect、进度保存/镜像 ref 体系；TextReader 选区 effect 因与弹窗/批注状态深耦合暂缓抽 hook。
 
 ### 8.2 页面组件测试缺失
 
-14 个页面组件无测试（阅读器子组件除外）；云存储/FTP 客户端无测试；认证流程无集成测试。
+Settings/Library/BookDetail/CustomCloud 已有冒烟渲染测试（2026-09-02）；其余约 10 个页面组件无测试；云存储/FTP 客户端无测试；认证流程无集成测试。
 
 ### 8.2.1 阶段 4/5 遗留（采集器官边界外，见 ROADMAP.md 第五节）
 
 - ~~PDF 逐页转 JPEG 丢弃 textLayer——不可检索~~ → services/pdfText 逐页提取 + PDF 顶栏检索直达页码（2026-08-30）
 - ~~漫画/PDF 无批注~~ → 页级手记（Annotation.pageIndex 页码锚定：长按动作菜单/手记面板/摘抄墙 ?page= 直达，同步导出全兼容）（2026-08-30）
-- 图片内文字级批注（划线级）仍缺：需 OCR 或 textLayer 坐标映射，观察项（P2）
+- ~~图片内文字级批注（划线级）仍缺~~ → 双路交付（2026-09-02）：PDF 走 pdfTextLayer 坐标文本项 + PdfTextLayerOverlay 透明可选层（rects 批注，划线/批注/回显/`?ann=` 直达）；漫画走 Tesseract.js OCR 实验入口（长按「识别本页文字」，动态 import 不进主包，会话级缓存）。OCR 识别质量待真实漫画验证（观察项）
 - 分发反馈渠道未建立，采集器官价值假设待真实用户验证（P2）
-- 云同步 LWW 无删除墓碑：本地删除的条目可能被远端副本复活（已知边界）
+- ~~云同步 LWW 无删除墓碑：本地删除的条目可能被远端副本复活~~ → SYNC_VERSION 3 墓碑（tombstones store + 合并剔除 + 多端接力传播 + 90 天过期清理）（2026-09-02）
 
 ### 8.3 已解决（历史问题存档）
 
