@@ -402,10 +402,10 @@ IndexedDB（`kuro-reader-db`，**v6**），9 个 Object Store，由 [db.ts](src/
 
 ### 8.1 阅读器大型文件（持续拆分中）
 
-- [TextReader/index.tsx](src/pages/TextReader/index.tsx) 约 **2900 行**（2026-09-02 拆出 services/pagination 切分策略与 useTextSelection 选区检测 hook；此前已拆出服务/5 个 Hook/7 个组件）
+- [TextReader/index.tsx](src/pages/TextReader/index.tsx) 约 **2790 行**（2026-09-02 拆出 services/pagination 切分策略、useTextSelection 选区检测 hook 与 useBookFlipAnimation 翻书动画 hook；此前已拆出服务/5 个 Hook/7 个组件）
 - [Reader/index.tsx](src/pages/Reader/index.tsx) 约 **1300 行**（2026-09-02 拆出 useVerticalVirtualWindow hook + ReaderProgressTrack/LongPressActionMenu 组件，2013 → 1300）
 
-仍内联的高耦合块（后续深度拆分候选）：TextReader 翻书动画状态、进度保存/镜像 ref 体系。
+仍内联的高耦合块（后续深度拆分候选）：进度保存/镜像 ref 体系（防抖定时器嵌于滚动 handler 内部，与滚动监听 effect 深度交织，拆分需先重构滚动监听本身）。
 
 ### 8.2 页面组件测试缺失
 

@@ -28,6 +28,15 @@ import { useLandscapeViewport } from '@/hooks/useLandscapeViewport';
 import { useReadingStats } from '@/hooks/useReadingStats';
 import { useSpeech } from '@/hooks/useSpeech';
 import { useTextSelection, type TextSelectionInfo } from '@/hooks/useTextSelection';
+import {
+  useBookFlipAnimation,
+  FLIP_ROTATION_DEG,
+  FLIP_EXIT_SHADOW_MAX_OPACITY,
+  FLIP_ENTER_SHADOW_MAX_OPACITY,
+  FLIP_EXIT_SHADOW_GRADIENT_END_PCT,
+  FLIP_ENTER_SHADOW_GRADIENT_END_PCT,
+  FLIP_SPINE_OPACITY,
+} from '@/hooks/useBookFlipAnimation';
 import { useWakeLock } from '@/hooks/useWakeLock';
 import { revokeEpubObjectUrls } from '@/services/epubContent';
 import {
@@ -103,17 +112,6 @@ const PAGE_MEASURE_SIDE_PADDING_PX = 48;
 // 翻书动画
 const BOOK_FLIP_ANIMATION_MS = 900;
 const PAGE_SLIDE_ANIMATION_MS = 650;
-const FLIP_ANIMATION_COMPLETE_MS = 600;
-const FLIP_SNAPBACK_MS = 350;
-const FLIP_STATE_RESET_DELAY_MS = 50;
-const FLIP_ROTATION_DEG = 160;
-const FLIP_DRAG_RADIUS_RATIO = 0.6;
-const FLIP_COMMIT_PROGRESS_THRESHOLD = 0.35;
-const FLIP_EXIT_SHADOW_MAX_OPACITY = 0.25;
-const FLIP_ENTER_SHADOW_MAX_OPACITY = 0.3;
-const FLIP_EXIT_SHADOW_GRADIENT_END_PCT = 50;
-const FLIP_ENTER_SHADOW_GRADIENT_END_PCT = 40;
-const FLIP_SPINE_OPACITY = 0.5;
 // 听书跟读
 /** 跟随滚动时高亮目标的目标落点（视口高度比例，偏上） */
 const SPEECH_FOLLOW_ANCHOR_RATIO = 0.4;
@@ -188,11 +186,9 @@ export const TextReaderPage: React.FC = () => {
   const [previousPageIndex, setPreviousPageIndex] = useState<number | null>(null);
   const [pageDirection, setPageDirection] = useState<'left' | 'right' | null>(null);
   const [isPageAnimating, setIsPageAnimating] = useState(false);
-  const [flipProgress, setFlipProgress] = useState(0); // 翻书跟手进度 0~1
   const measureRef = useRef<HTMLDivElement>(null);
   const markdownMeasureRef = useRef<HTMLDivElement>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
-  const flipPageRef = useRef<HTMLDivElement>(null); // 翻书交互页面容器
 
   // 书签 & 批注状态
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
@@ -333,6 +329,28 @@ export const TextReaderPage: React.FC = () => {
   const verticalWriting = settings.verticalWriting && textReadingMode === 'scroll';
   const isColumnsLayoutActive = isColumnsReadingMode && isLandscapeViewport;
   const textPageStep = isColumnsLayoutActive ? TEXT_COLUMNS_PAGE_STEP : 1;
+
+  // 模拟翻书（book 模式）跟手动画收敛于 hook；与 goToPage 滑动动画共用下方分页状态
+  const {
+    flipProgress,
+    flipPageRef,
+    startFlip,
+    completeFlip,
+    handleFlipTouchStart,
+    handleFlipTouchMove,
+    handleFlipTouchEnd,
+  } = useBookFlipAnimation({
+    enabled: textReadingMode === 'book',
+    totalPages: textPages.length,
+    currentPageIndex,
+    setCurrentPageIndex,
+    isPageAnimating,
+    setIsPageAnimating,
+    pageDirection,
+    setPageDirection,
+    previousPageIndex,
+    setPreviousPageIndex,
+  });
 
   const book = bookId ? getBookById(bookId) : undefined;
   const title = book?.title ?? '未知书籍';
@@ -1407,88 +1425,7 @@ export const TextReaderPage: React.FC = () => {
   }, [textPages.length, isPageAnimating, currentPageIndex, textReadingMode]);
   goToPageRef.current = goToPage;
 
-  // ========== 翻书跟手交互 ==========
-
-  // 启动翻书动画（触摸开始时调用）
-  const startFlip = useCallback((targetIndex: number, direction: 'left' | 'right') => {
-    if (isPageAnimating) return;
-    if (targetIndex < 0 || targetIndex >= textPages.length) return;
-
-    setPreviousPageIndex(currentPageIndex);
-    setPageDirection(direction);
-    setIsPageAnimating(true);
-    setFlipProgress(0);
-    setCurrentPageIndex(targetIndex);
-  }, [isPageAnimating, textPages.length, currentPageIndex]);
-
-  // 通过变换完成翻书（松手后调用）
-  const completeFlip = useCallback(() => {
-    const el = flipPageRef.current;
-    if (!el) {
-      setTimeout(() => {
-        setIsPageAnimating(false);
-        setPageDirection(null);
-        setPreviousPageIndex(null);
-        setFlipProgress(0);
-      }, FLIP_STATE_RESET_DELAY_MS);
-      return;
-    }
-
-    const exitEl = el.querySelector('[data-flip-exit]') as HTMLElement | null;
-    const enterEl = el.querySelector('[data-flip-enter]') as HTMLElement | null;
-    const isForward = pageDirection === 'left';
-
-    if (exitEl) {
-      exitEl.classList.add('book-flip-complete-exit');
-      exitEl.style.transform = `rotateY(${isForward ? -FLIP_ROTATION_DEG : FLIP_ROTATION_DEG}deg)`;
-    }
-    if (enterEl) {
-      enterEl.classList.add('book-flip-complete-enter');
-      enterEl.style.transform = 'rotateY(0deg)';
-    }
-
-    setTimeout(() => {
-      setIsPageAnimating(false);
-      setPageDirection(null);
-      setPreviousPageIndex(null);
-      setFlipProgress(0);
-    }, FLIP_ANIMATION_COMPLETE_MS);
-  }, [pageDirection]);
-
-  // 弹回翻书（松手时未达到阈值）
-  const snapbackFlip = useCallback(() => {
-    const el = flipPageRef.current;
-    if (!el) {
-      setTimeout(() => {
-        setIsPageAnimating(false);
-        setPageDirection(null);
-        setPreviousPageIndex(null);
-        setFlipProgress(0);
-      }, FLIP_STATE_RESET_DELAY_MS);
-      return;
-    }
-
-    const exitEl = el.querySelector('[data-flip-exit]') as HTMLElement | null;
-    const enterEl = el.querySelector('[data-flip-enter]') as HTMLElement | null;
-    const isForward = pageDirection === 'left';
-
-    if (exitEl) {
-      exitEl.classList.add('book-flip-snapback');
-      exitEl.style.transform = 'rotateY(0deg)';
-    }
-    if (enterEl) {
-      enterEl.classList.add('book-flip-snapback');
-      enterEl.style.transform = `rotateY(${isForward ? FLIP_ROTATION_DEG : -FLIP_ROTATION_DEG}deg)`;
-    }
-
-    setTimeout(() => {
-      setCurrentPageIndex(previousPageIndex ?? currentPageIndex);
-      setIsPageAnimating(false);
-      setPageDirection(null);
-      setPreviousPageIndex(null);
-      setFlipProgress(0);
-    }, FLIP_SNAPBACK_MS);
-  }, [pageDirection, previousPageIndex, currentPageIndex]);
+  // 翻书跟手交互（startFlip/completeFlip/snapbackFlip）已迁出至 useBookFlipAnimation hook
 
   const goToNextPage = useCallback(() => {
     if (textReadingMode === 'book') {
@@ -1672,54 +1609,6 @@ export const TextReaderPage: React.FC = () => {
     // 中间 → 切换 UI
     if (tapAction === 'toggle-ui') toggleUi();
   }, [goToNextPage, goToPrevPage, toggleUi]);
-
-  // 翻书触摸开始
-  const handleFlipTouchStart = useCallback((e: React.TouchEvent) => {
-    if (textReadingMode !== 'book') return;
-    const touch = e.touches[0];
-    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
-  }, [textReadingMode]);
-
-  // 翻书触摸移动（跟手）
-  const handleFlipTouchMove = useCallback((e: React.TouchEvent) => {
-    if (textReadingMode !== 'book' || !touchStartRef.current) return;
-
-    const touch = e.touches[0];
-    const rawDx = touch.clientX - touchStartRef.current.x;
-    const dy = touch.clientY - touchStartRef.current.y;
-
-    // 开始翻书检测
-    if (!isPageAnimating && Math.abs(rawDx) > SWIPE_THRESHOLD && Math.abs(rawDx) > Math.abs(dy)) {
-      if (rawDx < 0 && currentPageIndex < textPages.length - 1) {
-        startFlip(currentPageIndex + 1, 'left');
-      } else if (rawDx > 0 && currentPageIndex > 0) {
-        startFlip(currentPageIndex - 1, 'right');
-      }
-      return;
-    }
-
-    // 跟手变换
-    if (isPageAnimating && pageDirection) {
-      // 翻书 surface 已设 touch-none，浏览器不会并发平移页面；React 合成事件的
-      // preventDefault 挂在 passive 监听上无效，这里不做也不需要
-      const containerWidth = window.innerWidth;
-      const isForward = pageDirection === 'left';
-      const adjustedDx = isForward ? (-rawDx - SWIPE_THRESHOLD) : (rawDx - SWIPE_THRESHOLD);
-      const progress = Math.max(0, Math.min(1, adjustedDx / (containerWidth * FLIP_DRAG_RADIUS_RATIO)));
-      setFlipProgress(progress);
-    }
-  }, [textReadingMode, isPageAnimating, currentPageIndex, textPages.length, pageDirection, startFlip]);
-
-  // 翻书触摸结束
-  const handleFlipTouchEnd = useCallback(() => {
-    if (textReadingMode !== 'book' || !isPageAnimating) return;
-
-    if (flipProgress > FLIP_COMMIT_PROGRESS_THRESHOLD) {
-      completeFlip();
-    } else {
-      snapbackFlip();
-    }
-  }, [textReadingMode, isPageAnimating, flipProgress, completeFlip, snapbackFlip]);
 
   // 翻页动画 class
   const getPageAnimClass = useCallback((isCurrentPage: boolean) => {
