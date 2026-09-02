@@ -150,5 +150,5 @@
 | ✅ P1（2026-08-30） | 漫画/PDF 页级手记 | `Annotation.pageIndex` 页码锚定；长按弹出页级动作菜单；手记面板/详情编辑/摘抄墙 `?page=` 直达；筛选/导出/同步全兼容 |
 | ✅ P1（2026-09-02） | 云同步删除墓碑 | SYNC_VERSION 3：IndexedDB v7 tombstones store，删除写墓碑、合并先剔除再 LWW、墓碑随载荷多端传播、90 天过期清理 |
 | ✅ P2（2026-09-02） | 图片内文字批注（划线级） | PDF：pdfTextLayer 坐标文本项 + PdfTextLayerOverlay 透明可选层（Annotation.rects 矩形锚定，选择模式开关，划线/批注/高亮回显/点击直达详情）；漫画：Tesseract.js OCR 实验入口（长按识别本页文字，动态 import 不进主包）。OCR 质量待真实漫画验证，仍为观察项 |
-| ✅ P2（部分，2026-09-02） | 技术债 | Reader 2013→1300 行（垂直虚拟窗口 hook + 进度条/长按菜单组件）；TextReader 分页策略抽为 services/pagination 纯函数；Settings/Library/BookDetail 补冒烟测试（总用例 477→521）。TextReader 选区 effect 拆分暂缓 |
+| ✅ P2（2026-09-02） | 技术债（拆分+测试） | Reader 2013→1300 行（垂直虚拟窗口 hook + 进度条/长按菜单组件）；TextReader 分页策略抽为 services/pagination 纯函数、约 350 行选区检测 effect 抽为 useTextSelection hook（3270→2900 行，附 6 个单测）；Settings/Library/BookDetail 补冒烟测试（总用例 477→527）。剩余：TextReader 翻书动画状态与进度 ref 体系 |
 | P2 | 分发反馈渠道 | APK/网页版建立最小用户触达，验证采集器官价值假设 |
