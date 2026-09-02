@@ -1,6 +1,7 @@
 import type { Annotation } from '@/types'
 
 import { getDB, STORE_NAMES } from './db'
+import { tombstoneRepo } from './tombstoneRepo'
 
 /** IndexedDB 中的存储形态：日期字段为 ISO 字符串 */
 type StoredAnnotation = Omit<Annotation, 'createdAt' | 'updatedAt'> & {
@@ -36,6 +37,7 @@ export const annotationRepo = {
   async remove(id: string): Promise<void> {
     const db = await getDB()
     await db.delete(STORE_NAMES.annotations, id)
+    await tombstoneRepo.record('annotation', id)
   },
 
   async getByBookId(bookId: string): Promise<Annotation[]> {
@@ -68,8 +70,9 @@ export const annotationRepo = {
     await db.clear(STORE_NAMES.annotations)
   },
 
-  /** 删书级联：清空指定书的全部批注（走 bookId 索引） */
+  /** 删书级联：清空指定书的全部批注（整书墓碑阻止远端复活） */
   async deleteByBookId(bookId: string): Promise<void> {
+    await tombstoneRepo.record('book', bookId)
     const db = await getDB()
     const keys = await db.getAllKeysFromIndex(STORE_NAMES.annotations, 'bookId', bookId)
     const tx = db.transaction(STORE_NAMES.annotations, 'readwrite')

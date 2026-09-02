@@ -4,10 +4,13 @@ import axios from 'axios';
 import { annotationRepo } from '@/services/storage/annotationRepo';
 import { bookmarkRepo } from '@/services/storage/bookmarkRepo';
 import { progressRepo } from '@/services/storage/progressRepo';
+import { tombstoneRepo, type TombstoneKind } from '@/services/storage/tombstoneRepo';
 import type { Annotation, Bookmark, ReadingProgress } from '@/types';
 
-/** 同步载荷版本：v2 起携带可选 stats（阅读时长簿） */
-const SYNC_VERSION = 2;
+/** 同步载荷版本：v2 起携带可选 stats；v3 起携带可选 tombstones（删除墓碑） */
+const SYNC_VERSION = 3;
+/** 墓碑保留期：超过后随合并清理，防止载荷无限膨胀 */
+const TOMBSTONE_TTL_DAYS = 90;
 /** 同步文件在 WebDAV 根下的固定路径 */
 const SYNC_FILE_PATH = '/kuro-reader-sync.json';
 /** WebDAV 404 = 远端尚无同步文件（首次同步），直接上传 */
@@ -17,6 +20,13 @@ const HTTP_NOT_FOUND = 404;
 export interface SyncedStats {
   readingSessions: { date: string; minutes: number; bookId: string }[];
   dailyGoalMinutes: number;
+}
+
+/** 载荷中的删除墓碑形态（与 tombstoneRepo.TombstoneRecord 同构，JSON 序列化安全） */
+export interface SyncTombstone {
+  kind: TombstoneKind;
+  key: string;
+  deletedAt: string;
 }
 
 export interface SyncCredentials {
@@ -34,6 +44,8 @@ export interface SyncPayload {
   annotations: Annotation[];
   /** v2 起：可选。旧载荷/旧客户端无此字段，合并时保留本地 */
   stats?: SyncedStats;
+  /** v3 起：可选。删除墓碑，合并时剔除双方已删除的记录 */
+  tombstones?: SyncTombstone[];
 }
 
 export type SyncDirection = 'pushed' | 'merged';
@@ -101,19 +113,61 @@ export function mergeSyncedStats(
   };
 }
 
+/** 归一化时间戳：ReadingProgress.updatedAt 是 epoch 毫秒，批注/书签日期经 JSON 往返后是 ISO 字符串 */
+function toTime(value: number | string | Date | undefined): number {
+  if (value == null) return 0;
+  if (typeof value === 'number') return value;
+  return +new Date(value);
+}
+
+/** 双方墓碑按 kind:key 归并取较新 deletedAt，并清理超过保留期的过期墓碑 */
+function mergeTombstones(local: SyncPayload, remote: SyncPayload): Map<string, SyncTombstone> {
+  const byId = new Map<string, SyncTombstone>();
+  const cutoff = Date.now() - TOMBSTONE_TTL_DAYS * 24 * 60 * 60 * 1000;
+  for (const t of [...(local.tombstones ?? []), ...(remote.tombstones ?? [])]) {
+    if (!t || !t.kind || !t.key) continue;
+    if (+new Date(t.deletedAt) < cutoff) continue; // 过期墓碑随合并清理
+    const id = `${t.kind}:${t.key}`;
+    const prev = byId.get(id);
+    if (!prev || +new Date(t.deletedAt) > +new Date(prev.deletedAt)) byId.set(id, t);
+  }
+  return byId;
+}
+
 /**
  * 逐条合并本地与远端载荷：
  * - 进度按 bookId、书签/批注按 id，取 updatedAt/createdAt 较新者
  * - stats（v2，可选）按 mergeSyncedStats 规则归并
+ * - tombstones（v3，可选）先归并，再剔除"删除时间晚于记录最后更新"的记录；
+ *   记录在删除之后被重新创建/编辑（时间戳晚于墓碑）时记录胜出，墓碑随之失效
  * - 载荷级 exportedAt 取较新者
  */
 export function mergeSyncPayloads(local: SyncPayload, remote: SyncPayload): SyncPayload {
+  const tombstones = mergeTombstones(local, remote);
+  /** 命中即判死：kind 匹配且删除时间晚于记录时间。'book' 墓碑按 bookId 级联命中三种记录。 */
+  const killedBy = (
+    recordKind: 'progress' | 'bookmark' | 'annotation',
+    recordKey: string,
+    bookId: string,
+    recordTime: number
+  ): SyncTombstone | undefined => {
+    for (const t of [tombstones.get(`${recordKind}:${recordKey}`), tombstones.get(`book:${bookId}`)]) {
+      if (t && +new Date(t.deletedAt) > recordTime) return t;
+    }
+    return undefined;
+  };
+
   const readingProgress: Record<string, ReadingProgress> = { ...local.readingProgress };
   for (const [bookId, remoteProgress] of Object.entries(remote.readingProgress)) {
     const localProgress = readingProgress[bookId];
     readingProgress[bookId] = localProgress
       ? newerOf(localProgress, remoteProgress, localProgress.updatedAt ?? 0, remoteProgress.updatedAt ?? 0)
       : remoteProgress;
+  }
+  const liveBookIds = new Set<string>();
+  for (const [bookId, progress] of Object.entries(readingProgress)) {
+    if (killedBy('progress', bookId, bookId, toTime(progress.updatedAt))) delete readingProgress[bookId];
+    else liveBookIds.add(bookId);
   }
 
   const bookmarkById = new Map(local.bookmarks.map((b) => [b.id, b]));
@@ -126,6 +180,13 @@ export function mergeSyncPayloads(local: SyncPayload, remote: SyncPayload): Sync
         : remoteBookmark
     );
   }
+  for (const [id, bookmark] of bookmarkById) {
+    if (killedBy('bookmark', id, bookmark.bookId, +new Date(bookmark.createdAt))) {
+      bookmarkById.delete(id);
+    } else {
+      liveBookIds.add(bookmark.bookId);
+    }
+  }
 
   const annotationById = new Map(local.annotations.map((a) => [a.id, a]));
   for (const remoteAnnotation of remote.annotations) {
@@ -137,6 +198,25 @@ export function mergeSyncPayloads(local: SyncPayload, remote: SyncPayload): Sync
         : remoteAnnotation
     );
   }
+  for (const [id, annotation] of annotationById) {
+    if (killedBy('annotation', id, annotation.bookId, toTime(annotation.updatedAt))) {
+      annotationById.delete(id);
+    } else {
+      liveBookIds.add(annotation.bookId);
+    }
+  }
+
+  // 失效墓碑清理：墓碑对应的记录在删除后又被重新创建/编辑而存活时，移除墓碑，
+  // 避免它继续误杀后续合并中的新记录
+  const liveTombstoneKeys = new Set<string>([
+    ...Object.keys(readingProgress).map((bookId) => `progress:${bookId}`),
+    ...[...bookmarkById.keys()].map((id) => `bookmark:${id}`),
+    ...[...annotationById.keys()].map((id) => `annotation:${id}`),
+    ...[...liveBookIds].map((bookId) => `book:${bookId}`),
+  ]);
+  for (const [id] of [...tombstones]) {
+    if (liveTombstoneKeys.has(id)) tombstones.delete(id);
+  }
 
   return {
     version: SYNC_VERSION,
@@ -145,6 +225,7 @@ export function mergeSyncPayloads(local: SyncPayload, remote: SyncPayload): Sync
     bookmarks: [...bookmarkById.values()],
     annotations: [...annotationById.values()],
     stats: mergeSyncedStats(local.stats, remote.stats, local.exportedAt, remote.exportedAt),
+    tombstones: [...tombstones.values()],
   };
 }
 
@@ -199,7 +280,8 @@ export async function runCloudSync(
  * 将合并结果落地本地（多端「拉取」环节）。
  * 进度/书签/批注写入 IndexedDB（repo 按键 upsert）；stats 存在时回写
  * useStatsStore（zustand persist 自行落 localStorage）。
- * 注：LWW 合并无删除墓碑，本地删除的条目会被远端副本复活——已知边界。
+ * v3 起：墓碑随载荷落地——先按墓碑删除本地对应记录（另一台设备删了，
+ * 本机同步后也删），再把墓碑存入本地 tombstones store，供下次上传携带。
  */
 export async function applyMergedPayloadToLocal(merged: SyncPayload): Promise<void> {
   for (const progress of Object.values(merged.readingProgress)) {
@@ -214,6 +296,29 @@ export async function applyMergedPayloadToLocal(merged: SyncPayload): Promise<vo
   if (merged.stats) {
     applyStatsToLocal(merged.stats);
   }
+
+  const tombstones = merged.tombstones ?? [];
+  if (tombstones.length > 0) {
+    for (const t of tombstones) {
+      if (t.kind === 'progress') await progressRepo.remove(t.key);
+      else if (t.kind === 'bookmark') await bookmarkRepo.remove(t.key);
+      else if (t.kind === 'annotation') await annotationRepo.remove(t.key);
+      else if (t.kind === 'book') await deleteBookRecords(t.key);
+    }
+    // 以合并结果整体覆盖本地墓碑表（remove 期间的临时写入被统一收敛）
+    await tombstoneRepo.replaceAll(tombstones.map((t) => ({ ...t, id: `${t.kind}:${t.key}` })));
+  }
+}
+
+/** 整书墓碑落地：删除该书名下全部进度/书签/批注 */
+async function deleteBookRecords(bookId: string): Promise<void> {
+  for (const annotation of await annotationRepo.getByBookId(bookId)) {
+    await annotationRepo.remove(annotation.id);
+  }
+  for (const bookmark of await bookmarkRepo.getByBookId(bookId)) {
+    await bookmarkRepo.remove(bookmark.id);
+  }
+  await progressRepo.remove(bookId);
 }
 
 /** 把同步后的阅读时长簿回写统计 store（模块注入避免 cloudSync ↔ store 循环依赖） */

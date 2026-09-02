@@ -16,6 +16,7 @@ import { bookmarkRepo } from '@/services/storage/bookmarkRepo'
 import { getDB, _resetDBForTesting } from '@/services/storage/db'
 import { progressRepo } from '@/services/storage/progressRepo'
 import type { Annotation, Bookmark } from '@/types'
+import { tombstoneRepo } from '@/services/storage/tombstoneRepo'
 
 vi.mock('axios')
 
@@ -169,6 +170,98 @@ describe('mergeSyncPayloads', () => {
   })
 })
 
+describe('mergeSyncPayloads: tombstones (v3)', () => {
+  const progressOf = (bookId: string, updatedAt: number) =>
+    ({ bookId, chapterId: 'c1', page: 1, totalPages: 10, percentage: 10, globalPageIndex: 0, totalImages: 10, updatedAt }) as never
+
+  it('本地删除（墓碑）后，远端旧副本不再复活', () => {
+    const local = makePayload({
+      tombstones: [{ kind: 'progress', key: 'b1', deletedAt: '2026-08-30T12:00:00Z' }],
+    })
+    const remote = makePayload({
+      readingProgress: { b1: progressOf('b1', Date.now() - 10 * 24 * 3600 * 1000) }, // 远端记录早于墓碑
+      annotations: [makeAnnotation('ann-1', '2026-08-20T10:00:00Z')],
+    })
+    local.tombstones!.push({ kind: 'annotation', key: 'ann-1', deletedAt: '2026-08-30T12:00:00Z' })
+
+    const merged = mergeSyncPayloads(local, remote)
+    expect(merged.readingProgress.b1).toBeUndefined()
+    expect(merged.annotations.map((a) => a.id)).toEqual([])
+    // 墓碑本身保留在合并载荷中（继续传播给其他设备）
+    expect(merged.tombstones?.map((t) => `${t.kind}:${t.key}`).sort()).toEqual(['annotation:ann-1', 'progress:b1'])
+  })
+
+  it('墓碑之后重新创建/编辑的记录胜出，墓碑随之失效', () => {
+    const local = makePayload({
+      readingProgress: { b1: progressOf('b1', Date.now()) }, // 删除后重新读到，晚于墓碑
+    })
+    const remote = makePayload({
+      tombstones: [{ kind: 'progress', key: 'b1', deletedAt: '2026-08-01T00:00:00Z' }],
+    })
+
+    const merged = mergeSyncPayloads(local, remote)
+    expect(merged.readingProgress.b1).toBeDefined()
+    expect(merged.tombstones).toEqual([])
+  })
+
+  it('整书墓碑级联剔除该书进度/书签/批注', () => {
+    const local = makePayload({
+      tombstones: [{ kind: 'book', key: 'b1', deletedAt: '2026-08-30T12:00:00Z' }],
+    })
+    const remote = makePayload({
+      readingProgress: { b1: progressOf('b1', 100) },
+      bookmarks: [makeBookmark('bm-1', '2026-08-20T10:00:00Z')],
+      annotations: [makeAnnotation('ann-1', '2026-08-20T10:00:00Z')],
+    })
+
+    const merged = mergeSyncPayloads(local, remote)
+    expect(merged.readingProgress.b1).toBeUndefined()
+    expect(merged.bookmarks).toEqual([])
+    expect(merged.annotations).toEqual([])
+  })
+
+  it('整书墓碑之后该书又有新批注时：新批注存活、整书墓碑失效', () => {
+    const local = makePayload({
+      annotations: [makeAnnotation('ann-new', '2026-09-01T10:00:00Z')], // 晚于墓碑
+    })
+    const remote = makePayload({
+      tombstones: [{ kind: 'book', key: 'b1', deletedAt: '2026-08-30T12:00:00Z' }],
+      annotations: [makeAnnotation('ann-old', '2026-08-20T10:00:00Z')],
+    })
+
+    const merged = mergeSyncPayloads(local, remote)
+    expect(merged.annotations.map((a) => a.id)).toEqual(['ann-new'])
+    expect(merged.tombstones).toEqual([])
+  })
+
+  it('双方墓碑按 kind:key 取较新 deletedAt；过期墓碑（>90 天）被清理', () => {
+    const local = makePayload({
+      tombstones: [
+        { kind: 'annotation', key: 'a1', deletedAt: '2026-08-01T00:00:00Z' },
+        { kind: 'bookmark', key: 'old-bm', deletedAt: '2026-01-01T00:00:00Z' }, // 过期
+      ],
+    })
+    const remote = makePayload({
+      tombstones: [{ kind: 'annotation', key: 'a1', deletedAt: '2026-08-15T00:00:00Z' }],
+    })
+
+    const merged = mergeSyncPayloads(local, remote)
+    const annT = merged.tombstones?.find((t) => t.key === 'a1')
+    expect(annT?.deletedAt).toBe('2026-08-15T00:00:00Z')
+    expect(merged.tombstones?.some((t) => t.key === 'old-bm')).toBe(false)
+  })
+
+  it('旧载荷（无 tombstones 字段）兼容：照常合并，不产生墓碑', () => {
+    const local = makePayload({ annotations: [makeAnnotation('ann-1', '2026-08-29T10:00:00Z')] })
+    const remote = makePayload({ annotations: [makeAnnotation('ann-2', '2026-08-29T11:00:00Z')] })
+    delete (remote as Partial<SyncPayload>).tombstones
+
+    const merged = mergeSyncPayloads(local, remote)
+    expect(merged.annotations).toHaveLength(2)
+    expect(merged.tombstones).toEqual([])
+  })
+})
+
 describe('runCloudSync', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -267,5 +360,43 @@ describe('applyMergedPayloadToLocal', () => {
     await applyMergedPayloadToLocal(payload)
     await applyMergedPayloadToLocal(payload)
     expect(await annotationRepo.getAll()).toHaveLength(1)
+  })
+
+  it('墓碑随载荷落地：删除本地对应记录并写入本地墓碑表', async () => {
+    // 本地已有 b1 进度 + ann-1 批注；另一台设备删了它们
+    await progressRepo.save({ bookId: 'b1', chapterId: 'c1', page: 3, totalPages: 10, percentage: 30, globalPageIndex: 2, totalImages: 10 } as never)
+    await annotationRepo.add(makeAnnotation('ann-1', '2026-08-20T10:00:00Z'))
+    await bookmarkRepo.add(makeBookmark('bm-1', '2026-08-20T10:00:00Z'))
+
+    const payload = makePayload({
+      tombstones: [
+        { kind: 'progress', key: 'b1', deletedAt: '2026-08-30T12:00:00Z' },
+        { kind: 'annotation', key: 'ann-1', deletedAt: '2026-08-30T12:00:00Z' },
+      ],
+    })
+    await applyMergedPayloadToLocal(payload)
+
+    expect((await progressRepo.getAll()).map((p) => p.bookId)).toEqual([])
+    expect(await annotationRepo.getAll()).toEqual([])
+    // 书签未被墓碑命中，原样保留
+    expect((await bookmarkRepo.getAll()).map((b) => b.id)).toEqual(['bm-1'])
+    // 墓碑已写入本地，下次上传会携带
+    const localTombstones = await tombstoneRepo.getAll()
+    expect(localTombstones.map((t) => t.id).sort()).toEqual(['annotation:ann-1', 'progress:b1'])
+  })
+
+  it('整书墓碑落地：删除该书名下全部记录', async () => {
+    await progressRepo.save({ bookId: 'b1', chapterId: 'c1', page: 3, totalPages: 10, percentage: 30, globalPageIndex: 2, totalImages: 10 } as never)
+    await annotationRepo.add(makeAnnotation('ann-1', '2026-08-20T10:00:00Z'))
+    await bookmarkRepo.add(makeBookmark('bm-1', '2026-08-20T10:00:00Z'))
+
+    const payload = makePayload({
+      tombstones: [{ kind: 'book', key: 'b1', deletedAt: '2026-08-30T12:00:00Z' }],
+    })
+    await applyMergedPayloadToLocal(payload)
+
+    expect(await progressRepo.getAll()).toEqual([])
+    expect(await annotationRepo.getAll()).toEqual([])
+    expect(await bookmarkRepo.getAll()).toEqual([])
   })
 })

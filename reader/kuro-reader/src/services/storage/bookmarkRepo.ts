@@ -1,6 +1,7 @@
 import type { Bookmark } from '@/types'
 
 import { getDB, STORE_NAMES } from './db'
+import { tombstoneRepo } from './tombstoneRepo'
 
 /** IndexedDB 中的存储形态：日期字段为 ISO 字符串 */
 type StoredBookmark = Omit<Bookmark, 'createdAt'> & {
@@ -21,6 +22,7 @@ export const bookmarkRepo = {
   async remove(id: string): Promise<void> {
     const db = await getDB()
     await db.delete(STORE_NAMES.bookmarks, id)
+    await tombstoneRepo.record('bookmark', id)
   },
 
   async getByBookId(bookId: string): Promise<Bookmark[]> {
@@ -45,8 +47,9 @@ export const bookmarkRepo = {
     await db.clear(STORE_NAMES.bookmarks)
   },
 
-  /** 删书级联：清空指定书的全部书签 */
+  /** 删书级联：清空指定书的全部书签（整书墓碑阻止远端复活） */
   async deleteByBookId(bookId: string): Promise<void> {
+    await tombstoneRepo.record('book', bookId)
     const db = await getDB()
     const all = (await db.getAll(STORE_NAMES.bookmarks)) as StoredBookmark[]
     const ids = all.filter((b) => b.bookId === bookId).map((b) => b.id)

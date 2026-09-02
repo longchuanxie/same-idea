@@ -14,8 +14,9 @@ const DB_NAME = 'kuro-reader-db'
  * - v4: 新增 bookFiles store（存储原始 TXT/Markdown/EPUB 文件）
  * - v5: 新增 bookmarks / annotations store
  * - v6: 新增 readingProgress store（阅读进度从 localStorage 迁入）
+ * - v7: 新增 tombstones store（云同步删除墓碑，防止本地删除被远端复活）
  */
-const DB_VERSION = 6
+const DB_VERSION = 7
 
 /**
  * v3 版本号常量（用于 upgrade 回调中的 oldVersion 比较）
@@ -44,6 +45,11 @@ const V5_BOOKMARKS_ANNOTATIONS = 5
 const V6_READING_PROGRESS = 6
 
 /**
+ * v7 版本常量
+ */
+const V7_TOMBSTONES = 7
+
+/**
  * 对象存储（object store）名称常量
  *
  * 所有 storage 子模块应通过此对象引用 store 名称，
@@ -62,6 +68,7 @@ export const STORE_NAMES = {
   bookmarks: 'bookmarks',
   annotations: 'annotations',
   readingProgress: 'readingProgress',
+  tombstones: 'tombstones',
 } as const
 
 /**
@@ -110,6 +117,9 @@ export function getDB(): Promise<IDBPDatabase> {
         }
         if (oldVersion < V6_READING_PROGRESS && !db.objectStoreNames.contains(STORE_NAMES.readingProgress)) {
           db.createObjectStore(STORE_NAMES.readingProgress, { keyPath: 'bookId' })
+        }
+        if (oldVersion < V7_TOMBSTONES && !db.objectStoreNames.contains(STORE_NAMES.tombstones)) {
+          db.createObjectStore(STORE_NAMES.tombstones, { keyPath: 'id' })
         }
       },
     })

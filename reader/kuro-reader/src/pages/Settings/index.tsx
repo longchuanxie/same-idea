@@ -9,6 +9,7 @@ import { applyMergedPayloadToLocal, runCloudSync, type SyncCredentials, type Syn
 import { annotationRepo } from '@/services/storage/annotationRepo';
 import { bookmarkRepo } from '@/services/storage/bookmarkRepo';
 import { progressRepo } from '@/services/storage/progressRepo';
+import { tombstoneRepo } from '@/services/storage/tombstoneRepo';
 import { useAppStore } from '@/stores/useAppStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import { useStatsStore } from '@/stores/useStatsStore';
@@ -247,21 +248,24 @@ export const SettingsPage: React.FC = () => {
         username: syncUsername || undefined,
         password: syncPassword || undefined,
       };
-      const [progressList, bookmarks, annotations] = await Promise.all([
+      const [progressList, bookmarks, annotations, tombstones] = await Promise.all([
         progressRepo.getAll(),
         bookmarkRepo.getAll(),
         annotationRepo.getAll(),
+        tombstoneRepo.getAll(),
       ]);
       const readingProgress: Record<string, ReadingProgress> = {};
       for (const p of progressList) readingProgress[p.bookId] = p;
 
       const statsState = useStatsStore.getState();
       const localPayload: SyncPayload = {
-        version: 2,
+        version: 3,
         exportedAt: new Date().toISOString(),
         readingProgress,
         bookmarks,
         annotations,
+        // v3 起：删除墓碑随载荷同步，阻止远端副本复活本地已删的记录
+        tombstones: tombstones.map(({ kind, key, deletedAt }) => ({ kind, key, deletedAt })),
         // v2 起：阅读时长簿随载荷同步（连击/热力图不再换机失忆）；
         // 明细超阈值时降级为按日聚合（牺牲按书维度，保住载荷体积）
         stats: {
