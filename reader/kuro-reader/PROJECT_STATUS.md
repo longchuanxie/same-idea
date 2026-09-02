@@ -402,14 +402,14 @@ IndexedDB（`kuro-reader-db`，**v6**），9 个 Object Store，由 [db.ts](src/
 
 ### 8.1 阅读器大型文件（持续拆分中）
 
-- [TextReader/index.tsx](src/pages/TextReader/index.tsx) 约 **2790 行**（2026-09-02 拆出 services/pagination 切分策略、useTextSelection 选区检测 hook 与 useBookFlipAnimation 翻书动画 hook；此前已拆出服务/5 个 Hook/7 个组件）
+- [TextReader/index.tsx](src/pages/TextReader/index.tsx) 约 **2570 行**（2026-09-02 拆出 services/pagination 切分策略、useTextSelection 选区检测、useBookFlipAnimation 翻书动画、useTextProgressSaving 进度保存、useSeamlessScrollTracking 滚动追踪五个模块；此前已拆出服务/5 个 Hook/7 个组件）
 - [Reader/index.tsx](src/pages/Reader/index.tsx) 约 **1300 行**（2026-09-02 拆出 useVerticalVirtualWindow hook + ReaderProgressTrack/LongPressActionMenu 组件，2013 → 1300）
 
-仍内联的高耦合块（后续深度拆分候选）：进度保存/镜像 ref 体系（防抖定时器嵌于滚动 handler 内部，与滚动监听 effect 深度交织，拆分需先重构滚动监听本身）。
+至此 TextReader 的既定拆分候选（分页策略/选区检测/翻书动画/进度保存/滚动追踪）全部收口；剩余内联块（听书控制、批注面板编排等）规模小、暂无拆分必要。
 
 ### 8.2 页面组件测试缺失
 
-Settings/Library/BookDetail/CustomCloud 已有冒烟渲染测试（2026-09-02）；其余约 10 个页面组件无测试；云存储/FTP 客户端无测试；认证流程无集成测试。
+Settings/Library/BookDetail/CustomCloud/TextReader 已有冒烟渲染测试（2026-09-02）；其余约 9 个页面组件无测试；云存储/FTP 客户端无测试；认证流程无集成测试。
 
 ### 8.2.1 阶段 4/5 遗留（采集器官边界外，见 ROADMAP.md 第五节）
 

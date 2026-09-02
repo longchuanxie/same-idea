@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useCallback, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useCallback, useRef, useState, useMemo } from 'react';
 
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
@@ -28,6 +28,8 @@ import { useLandscapeViewport } from '@/hooks/useLandscapeViewport';
 import { useReadingStats } from '@/hooks/useReadingStats';
 import { useSpeech } from '@/hooks/useSpeech';
 import { useTextSelection, type TextSelectionInfo } from '@/hooks/useTextSelection';
+import { useTextProgressSaving } from '@/hooks/useTextProgressSaving';
+import { useSeamlessScrollTracking } from '@/hooks/useSeamlessScrollTracking';
 import {
   useBookFlipAnimation,
   FLIP_ROTATION_DEG,
@@ -57,7 +59,6 @@ import { cn } from '@/utils/cn';
 import { computePaperOpacity, getPaperBaseOpacity, getPaperConfig } from '@/utils/paperTexture';
 import {
   getOverallReadingPercent,
-  getOverallReadingRatio,
 } from '@/utils/readingProgress';
 import {
   getMarkdownPaginationEnd,
@@ -69,16 +70,10 @@ import {
 } from '@/utils/textReaderNavigation';
 import type { SearchHit } from '@/utils/textSearch';
 
-const PROGRESS_SAVE_DEBOUNCE = 500;
 const PROGRESS_HINT_AUTO_HIDE_MS = 1400;
 const SWIPE_THRESHOLD = 50;
-const TEXT_SCROLL_END_THRESHOLD = 0.995;
-const TEXT_SCROLL_END_EPSILON_PX = 2;
 // 无缝续读窗口：视口所在章之后至少预拼接 AHEAD 章；窗口总量超 MAX 时裁剪远端，防止长章节数 DOM 无限增长
-const SCROLL_WINDOW_AHEAD = 1;
-const SCROLL_WINDOW_MAX = 6;
 // 向上回看：锚点进入窗口首章顶部该距离内即向前扩一章（带滚动补偿）
-const SCROLL_WINDOW_PREPEND_PX = 120;
 const TEXT_READER_DESKTOP_MEDIA_QUERY = '(min-width: 768px)';
 const TEXT_READER_COLUMNS_LG_MEDIA_QUERY = '(min-width: 1024px)';
 const TEXT_READER_COLUMNS_MEDIA_QUERY = '(orientation: landscape)';
@@ -150,17 +145,8 @@ export const TextReaderPage: React.FC = () => {
   /** 外部批注直达目标（?ann=<id>）；一次导航只消费一次 */
   const annTargetId = searchParams.get(ANNOTATION_QUERY_PARAM);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const progressSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const progressHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const uiAutoHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // 无缝续读：滚动模式下已拼接渲染的章节窗口 [start, end)；start 变化（向前扩窗/裁剪）时需滚动补偿
-  const [scrollWindow, setScrollWindow] = useState({ start: 0, end: 1 });
-  const scrollChapterElsRef = useRef<Map<number, HTMLElement>>(new Map());
-  const scrollCompensationRef = useRef<{ referenceChapter: number; docPos: number } | null>(null);
-  // 显式导航（goToChapter）后抑制一次视口追踪：scrollTo(0,0) 引发的 scroll 事件不应把当前章拉回窗口首章
-  const suppressViewTrackingRef = useRef(false);
-  // scroll 模式重新挂载（模式切换回来）时重置拼接窗口的判定基准
-  const wasScrollModeRef = useRef(false);
 
   const [chapters, setChapters] = useState<TextChapter[]>([]);
   const [currentChapterIndex, setCurrentChapterIndex] = useState(0);
@@ -545,47 +531,16 @@ export const TextReaderPage: React.FC = () => {
   // 统计阅读时长（共享 Hook）
   useReadingStats(bookId);
 
-  // 保存阅读进度的通用函数（使用 ref 避免循环依赖）
-  const bookRef = useRef(book);
-  bookRef.current = book;
-  const chaptersRef = useRef(chapters);
-  chaptersRef.current = chapters;
-  const textPagesLengthRef = useRef(textPages.length);
-  textPagesLengthRef.current = textPages.length;
-  const textPagesRef = useRef(textPages);
-  textPagesRef.current = textPages;
-
-  const saveTextProgress = useCallback((chapterIdx: number, pageIdx?: number, scrollRat?: number) => {
-    if (!bookId) return;
-    const b = bookRef.current;
-    const chs = chaptersRef.current;
-    const tpLen = textPagesLengthRef.current;
-    const chapterId = b?.chapters[chapterIdx]?.id ?? `${bookId}-ch${chapterIdx + 1}`;
-    const locator = JSON.stringify({
-      chapterIndex: chapterIdx,
-      pageIndex: pageIdx,
-      scrollRatio: scrollRat,
-    });
-    const ratio = scrollRat ?? (pageIdx != null && tpLen > 0 ? (pageIdx + 1) / tpLen : 0);
-    const overallRatio = getOverallReadingRatio(chapterIdx, chs.length, ratio);
-    // 保存时读取最新设置，供下次打开本书时按书恢复
-    const currentSettings = useAppStore.getState().settings;
-    updateProgress(bookId, {
-      bookId,
-      chapterId,
-      page: pageIdx != null ? pageIdx + 1 : 1,
-      pageScrollRatio: scrollRat,
-      chapterScrollRatio: ratio,
-      readingMode: 'vertical',
-      totalPages: tpLen || 1,
-      percentage: overallRatio * PERCENT_MULTIPLIER,
-      globalPageIndex: chapterIdx,
-      totalImages: chs.length,
-      locator,
-      textReadingMode: currentSettings.textReadingMode,
-      readingTheme: currentSettings.readingTheme,
-    });
-  }, [bookId, updateProgress]);
+  // 进度保存体系（镜像 ref + 组装 + 立即/防抖保存）收敛于 hook
+  const {
+    saveTextProgress,
+    scheduleProgressSave,
+    cancelPendingSave,
+    composeTextProgress,
+    chaptersRef,
+    textPagesLengthRef,
+    textPagesRef,
+  } = useTextProgressSaving({ bookId, book, chapters, textPages, updateProgress });
 
   // 进度条拖动
   const handleProgressSliderValueChange = useCallback((val: number) => {
@@ -643,181 +598,29 @@ export const TextReaderPage: React.FC = () => {
     showProgressHint();
   }, [dragPercent, textReadingMode, currentChapterIndex, textPages.length, currentPageIndex, isSeamlessReading, saveTextProgress, showProgressHint, verticalWriting]);
 
-  // 章节在滚动内容中的起点与尺寸（文档坐标，不随滚动变化；按排版轴抽象）
-  const chapterGeometry = useCallback((index: number): { start: number; size: number } | null => {
-    const host = scrollContainerRef.current;
-    const el = scrollChapterElsRef.current.get(index);
-    if (!host || !el) return null;
-    const hostRect = host.getBoundingClientRect();
-    const elRect = el.getBoundingClientRect();
-    if (verticalWriting) {
-      // vertical-rl：块流自右向左延伸，scrollLeft 为负方向，|scrollLeft| 即阅读推进距离
-      return {
-        start: Math.abs(host.scrollLeft) + (hostRect.right - elRect.right),
-        size: elRect.width,
-      };
-    }
-    return {
-      start: host.scrollTop + (elRect.top - hostRect.top),
-      size: elRect.height,
-    };
-  }, [verticalWriting]);
-
-  /** 记录滚动补偿基准：窗口增缩后按基准章的位移同步滚动位置，视口内容不跳动 */
-  const captureScrollCompensation = useCallback((refChapter: number): boolean => {
-    const geo = chapterGeometry(refChapter);
-    if (!geo) return false;
-    scrollCompensationRef.current = { referenceChapter: refChapter, docPos: geo.start };
-    return true;
-  }, [chapterGeometry]);
-
-  // 滚动进度追踪
-  const handleScroll = useCallback(() => {
-    const container = scrollContainerRef.current;
-    if (!container || !bookId) return;
-    const anchor = verticalWriting ? Math.abs(container.scrollLeft) : container.scrollTop;
-    const scrollable = verticalWriting
-      ? container.scrollWidth - container.clientWidth
-      : container.scrollHeight - container.clientHeight;
-    if (scrollable <= 0) return;
-    showProgressHint();
-
-    // —— 无缝续读：视口追踪所在章 + 章内百分比 + 预拼接窗口（听书期间让位播报，切章由 speech 播完回调独占） ——
-    if (isSeamlessReading && !ttsActive) {
-      const rendered = [...scrollChapterElsRef.current.keys()].sort((a, b) => a - b);
-      if (rendered.length > 0) {
-        let activeIndex = rendered[rendered.length - 1];
-        for (const idx of rendered) {
-          const geo = chapterGeometry(idx);
-          if (!geo) continue;
-          if (anchor >= geo.start) {
-            activeIndex = idx;
-          }
-        }
-        // 显式导航后的首个 scroll 事件：保持导航目标章，不做视口追踪
-        if (suppressViewTrackingRef.current) {
-          suppressViewTrackingRef.current = false;
-          if (scrollChapterElsRef.current.has(currentChapterIndex)) {
-            activeIndex = currentChapterIndex;
-          }
-        }
-        const activeGeo = chapterGeometry(activeIndex);
-        const activeStart = activeGeo?.start ?? 0;
-        const chapterRatio = activeGeo && activeGeo.size > 0
-          ? Math.min(1, Math.max(0, (anchor - activeStart) / activeGeo.size))
-          : 0;
-        if (activeIndex !== currentChapterIndex) {
-          setCurrentChapterIndex(activeIndex);
-        }
-        if (!isProgressDragging) {
-          setScrollPercent(Math.round(chapterRatio * PERCENT_MULTIPLIER));
-        }
-
-        // 窗口维护：向后预拼接 / 向前扩窗（带补偿）/ 超限裁剪（带补偿）
-        const win = scrollWindow;
-        let newStart = win.start;
-        let newEnd = Math.max(win.end, Math.min(chapters.length, activeIndex + 1 + SCROLL_WINDOW_AHEAD));
-        if (activeIndex === win.start && win.start > 0) {
-          const firstGeo = chapterGeometry(win.start);
-          if (firstGeo && anchor - firstGeo.start <= SCROLL_WINDOW_PREPEND_PX) {
-            if (captureScrollCompensation(win.start)) {
-              newStart = win.start - 1;
-            }
-          }
-        }
-        if (newEnd - newStart > SCROLL_WINDOW_MAX) {
-          if (activeIndex - newStart >= newEnd - 1 - activeIndex) {
-            // 视口偏窗口后部 → 裁掉前端（上方内容移除，需补偿；基准章取裁剪后仍在 DOM 的前一章）
-            if (captureScrollCompensation(activeIndex - 1)) {
-              newStart = activeIndex - 1;
-            }
-          } else {
-            newEnd = activeIndex + 1 + SCROLL_WINDOW_AHEAD + 1;
-          }
-          if (newEnd - newStart > SCROLL_WINDOW_MAX) {
-            newEnd = newStart + SCROLL_WINDOW_MAX;
-          }
-        }
-        if (newStart !== win.start || newEnd !== win.end) {
-          setScrollWindow({ start: Math.max(0, newStart), end: Math.min(chapters.length, newEnd) });
-        }
-
-        // 防抖保存进度（章内比例）
-        if (progressSaveTimerRef.current) clearTimeout(progressSaveTimerRef.current);
-        progressSaveTimerRef.current = setTimeout(() => {
-          saveTextProgress(activeIndex, undefined, chapterRatio);
-        }, PROGRESS_SAVE_DEBOUNCE);
-        return;
-      }
-    }
-
-    // —— 单章滚动（关闭自动衔接）：到底显示继续提示，手动续读 ——
-    const ratio = anchor / scrollable;
-    if (!isProgressDragging) {
-      setScrollPercent(Math.round(ratio * PERCENT_MULTIPLIER));
-    }
-    const hasNextChapter = currentChapterIndex < chapters.length - 1;
-    const endPosition = verticalWriting
-      ? anchor + container.clientWidth
-      : anchor + container.clientHeight;
-    const contentSize = verticalWriting ? container.scrollWidth : container.scrollHeight;
-    const isAtChapterEnd = ratio >= TEXT_SCROLL_END_THRESHOLD ||
-      endPosition >= contentSize - TEXT_SCROLL_END_EPSILON_PX;
-    // 听书期间章末提示让位播报进度，避免提前切换当前章的朗读内容
-    if (!ttsActive) {
-      setIsChapterEndPromptVisible(hasNextChapter && isAtChapterEnd);
-    }
-
-    // 防抖保存进度
-    if (progressSaveTimerRef.current) clearTimeout(progressSaveTimerRef.current);
-    progressSaveTimerRef.current = setTimeout(() => {
-      saveTextProgress(currentChapterIndex, undefined, ratio);
-    }, PROGRESS_SAVE_DEBOUNCE);
-  }, [bookId, currentChapterIndex, chapters.length, isSeamlessReading, ttsActive, scrollWindow, chapterGeometry, captureScrollCompensation, saveTextProgress, isProgressDragging, showProgressHint, verticalWriting]);
-
-  // 窗口 start 变化（向前扩窗/前端裁剪）后补偿滚动位置：上方内容增删了多少，滚动位置同步加减多少
-  useLayoutEffect(() => {
-    const comp = scrollCompensationRef.current;
-    if (!comp) return;
-    scrollCompensationRef.current = null;
-    const geo = chapterGeometry(comp.referenceChapter);
-    const container = scrollContainerRef.current;
-    if (!geo || !container) return;
-    const delta = geo.start - comp.docPos;
-    if (delta === 0) return;
-    if (verticalWriting) {
-      container.scrollLeft = -(Math.abs(container.scrollLeft) + delta);
-    } else {
-      container.scrollTop += delta;
-    }
-  }, [scrollWindow, chapterGeometry, verticalWriting]);
-
-  // 滚动模式重新挂载（从分页模式切回）时，重置拼接窗口与滚动位置到当前章
-  useEffect(() => {
-    const isScroll = textReadingMode === 'scroll';
-    const wasScroll = wasScrollModeRef.current;
-    wasScrollModeRef.current = isScroll;
-    if (!isScroll || wasScroll || isLoading) return;
-    scrollContainerRef.current?.scrollTo(0, 0);
-    setScrollPercent(0);
-    setScrollWindow({
-      start: Math.max(0, Math.min(currentChapterIndex, chapters.length - 1)),
-      end: Math.min(chapters.length, currentChapterIndex + 1 + SCROLL_WINDOW_AHEAD),
-    });
-  }, [textReadingMode, isLoading, currentChapterIndex, chapters.length]);
-
-  // 当前章落在拼接窗口之外时（进书恢复、深链等）重置窗口覆盖当前章；窗内则补足向后预拼接量
-  useEffect(() => {
-    if (!isSeamlessReading || isLoading || chapters.length === 0) return;
-    setScrollWindow((win) => {
-      const desiredEnd = Math.min(chapters.length, currentChapterIndex + 1 + SCROLL_WINDOW_AHEAD);
-      if (currentChapterIndex >= win.start && currentChapterIndex < win.end) {
-        return win.end >= desiredEnd ? win : { start: win.start, end: desiredEnd };
-      }
-      const start = Math.max(0, Math.min(currentChapterIndex, chapters.length - 1));
-      return { start, end: Math.min(chapters.length, start + 1 + SCROLL_WINDOW_AHEAD) };
-    });
-  }, [isSeamlessReading, isLoading, currentChapterIndex, chapters.length]);
+  // 滚动进度追踪 + 无缝续读窗口维护（视口追踪/预拼接/扩窗/补偿）收敛于 hook
+  const {
+    scrollWindow,
+    scrollChapterElsRef,
+    handleScroll,
+    navigateToChapter,
+  } = useSeamlessScrollTracking({
+    scrollContainerRef,
+    bookId,
+    chapters,
+    currentChapterIndex,
+    setCurrentChapterIndex,
+    isSeamlessReading,
+    textReadingMode,
+    isLoading,
+    ttsActive,
+    isProgressDragging,
+    verticalWriting,
+    showProgressHint,
+    setScrollPercent,
+    setIsChapterEndPromptVisible,
+    scheduleProgressSave,
+  });
 
   // 离开时保存最终进度 + 清理 UI 定时器 + 持久化阅读设置
   useEffect(() => {
@@ -825,9 +628,7 @@ export const TextReaderPage: React.FC = () => {
       if (toastTimerRef.current) {
         clearTimeout(toastTimerRef.current);
       }
-      if (progressSaveTimerRef.current) {
-        clearTimeout(progressSaveTimerRef.current);
-      }
+      cancelPendingSave();
       if (uiAutoHideTimerRef.current) {
         clearTimeout(uiAutoHideTimerRef.current);
       }
@@ -851,59 +652,35 @@ export const TextReaderPage: React.FC = () => {
       };
       useAppStore.getState().updateSettings(settingsUpdate);
 
-      // 保存最终阅读位置到继续阅读列表
+      // 保存最终阅读位置到继续阅读列表（载荷组装与常规保存共用 composeTextProgress）
       if (bookId) {
+        const mode = settingsRef.current.textReadingMode;
         const chapterIdx = currentChapterIndexRef.current;
         const pageIdx = currentPageIndexRef.current;
-        const b = bookRef.current;
-        const chs = chaptersRef.current;
-        const tpLen = textPagesLengthRef.current;
-        const mode = settingsRef.current.textReadingMode;
-        const chapterId = b?.chapters[chapterIdx]?.id ?? `${bookId}-ch${chapterIdx + 1}`;
-
         let scrollRatio: number | undefined;
-        let ratio: number;
-
         if (mode === 'scroll') {
           // 滚动模式：从滚动容器计算精确位置
           // 卸载时才读取 ref：loading 早退期间容器未挂载，无法在 effect 建立时捕获
-          // eslint-disable-next-line react-hooks/exhaustive-deps
           const container = scrollContainerRef.current;
           if (container) {
             const scrollable = container.scrollHeight - container.clientHeight;
             scrollRatio = scrollable > 0 ? container.scrollTop / scrollable : 0;
+          } else {
+            // 容器未挂载（loading 早退）：退回最近一次展示的滚动百分比
+            scrollRatio = scrollPercentRef.current / PERCENT_MULTIPLIER;
           }
-          ratio = scrollRatio ?? scrollPercentRef.current / PERCENT_MULTIPLIER;
-        } else {
-          // 分页/翻书模式
-          ratio = tpLen > 0 ? (pageIdx + 1) / tpLen : 0;
         }
-        const overallRatio = getOverallReadingRatio(chapterIdx, chs.length, ratio);
-
-        const locator = JSON.stringify({
-          chapterIndex: chapterIdx,
-          pageIndex: mode !== 'scroll' ? pageIdx : undefined,
-          scrollRatio: mode === 'scroll' ? scrollRatio : undefined,
-        });
-
-        useLibraryStore.getState().updateProgress(bookId, {
-          bookId,
-          chapterId,
-          page: mode !== 'scroll' ? pageIdx + 1 : 1,
-          pageScrollRatio: mode === 'scroll' ? scrollRatio : undefined,
-          chapterScrollRatio: ratio,
-          readingMode: 'vertical',
-          totalPages: tpLen || 1,
-          percentage: overallRatio * PERCENT_MULTIPLIER,
-          globalPageIndex: chapterIdx,
-          totalImages: chs.length,
-          locator,
-          textReadingMode: settingsRef.current.textReadingMode,
-          readingTheme: settingsRef.current.readingTheme,
-        });
+        const progress = composeTextProgress(
+          chapterIdx,
+          mode !== 'scroll' ? pageIdx : undefined,
+          mode === 'scroll' ? scrollRatio : undefined
+        );
+        if (progress) {
+          useLibraryStore.getState().updateProgress(progress.bookId, progress);
+        }
       }
     };
-  }, [bookId]);
+  }, [bookId, cancelPendingSave, composeTextProgress]);
 
   // 点击切换 UI
   const toggleUi = useCallback(() => {
@@ -935,15 +712,14 @@ export const TextReaderPage: React.FC = () => {
   // 章节切换（显式导航：目录/书签/检索/上下章按钮，保留硬切语义）
   const goToChapter = useCallback((index: number) => {
     if (index >= 0 && index < chapters.length) {
-      suppressViewTrackingRef.current = true;
       setCurrentChapterIndex(index);
       scrollContainerRef.current?.scrollTo(0, 0);
       setScrollPercent(0);
       setIsChapterEndPromptVisible(false);
-      setScrollWindow({ start: index, end: Math.min(chapters.length, index + 1 + SCROLL_WINDOW_AHEAD) });
+      navigateToChapter(index);
       setIsChapterDrawerOpen(false);
     }
-  }, [chapters.length]);
+  }, [chapters.length, navigateToChapter]);
 
   const goToNextChapter = useCallback(() => {
     goToChapter(currentChapterIndex + 1);
