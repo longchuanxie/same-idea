@@ -409,7 +409,7 @@ IndexedDB（`kuro-reader-db`，**v6**），9 个 Object Store，由 [db.ts](src/
 
 ### 8.2 页面组件测试缺失
 
-Settings/Library/BookDetail/CustomCloud/TextReader 已有冒烟渲染测试（2026-09-02）；其余约 9 个页面组件无测试；云存储/FTP 客户端无测试；认证流程无集成测试。
+除 Auth/Reader 外的全部 12 个页面均有冒烟渲染测试（2026-09-02，含共享 fixture 工厂 src/test/pageSmokeFactories.ts）；Auth（手势锁交互复杂）与 Reader 页（其分子组件已覆盖）暂缺页面级测试；云存储/FTP 客户端无测试；认证流程无集成测试。
 
 ### 8.2.1 阶段 4/5 遗留（采集器官边界外，见 ROADMAP.md 第五节）
 
