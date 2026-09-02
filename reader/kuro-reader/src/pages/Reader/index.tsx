@@ -9,6 +9,7 @@ import { ChapterListDrawer } from '@/components/molecules/ChapterListDrawer';
 import { FullscreenViewer } from '@/components/molecules/FullscreenViewer';
 import { HorizontalReaderView } from '@/components/molecules/HorizontalReaderView';
 import { InBookSearchPanel } from '@/components/molecules/InBookSearchPanel';
+import { PdfTextLayerOverlay, type PdfTextSelection } from '@/components/molecules/PdfTextLayerOverlay';
 import { LongPressActionMenu } from '@/components/molecules/LongPressActionMenu';
 import { ReaderBottomBar } from '@/components/molecules/ReaderBottomBar';
 import { ReaderProgressTrack } from '@/components/molecules/ReaderProgressTrack';
@@ -24,7 +25,7 @@ import type { TextChapter } from '@/services/textContent';
 import { useAppStore } from '@/stores/useAppStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import { useReaderStore } from '@/stores/useReaderStore';
-import type { Annotation } from '@/types';
+import type { Annotation, AnnotationRect } from '@/types';
 import { cn } from '@/utils/cn';
 import { buildPageNoteAnnotation, isPageNote } from '@/utils/pageAnnotation';
 import { computePaperOpacity, getPaperBaseOpacity, getPaperConfig } from '@/utils/paperTexture';
@@ -135,6 +136,9 @@ export const ReaderPage: React.FC = () => {
   const [isAnnotationPanelOpen, setIsAnnotationPanelOpen] = useState(false);
   const [bookAnnotations, setBookAnnotations] = useState<Annotation[]>([]);
   const [editingPageNote, setEditingPageNote] = useState<Annotation | null>(null);
+  // PDF 文字级划线：选择模式开关 + 当前选区（弹窗锚定松手位置）
+  const [pdfSelectMode, setPdfSelectMode] = useState(false);
+  const [pdfSelection, setPdfSelection] = useState<PdfTextSelection | null>(null);
 
   const {
     currentPage,
@@ -507,6 +511,47 @@ export const ReaderPage: React.FC = () => {
 
   // ── 页级手记（漫画/PDF） ──
 
+  /** PDF：打开即预载批注（文字级划线高亮回显依赖） */
+  useEffect(() => {
+    if (!bookId || book?.format !== 'pdf') return;
+    let cancelled = false;
+    annotationRepo.getByBookId(bookId).then((all) => {
+      if (!cancelled) setBookAnnotations(all);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [bookId, book?.format]);
+
+  /** PDF 文字选区保存为划线批注（rects 锚定，无 pageIndex） */
+  const handlePdfSelectionSave = useCallback(async (note: string, style: Annotation['style'], tagIds: string[] = []) => {
+    if (!bookId || !pdfSelection) return;
+    const chapter = chapters.find((ch) => ch.id === currentChapterId);
+    const chapterIndex = chapters.findIndex((ch) => ch.id === currentChapterId);
+    if (!chapter || chapterIndex < 0) return;
+    const now = new Date();
+    const annotation: Annotation = {
+      id: `pdfann-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+      bookId,
+      chapterIndex,
+      chapterTitle: chapter.title,
+      selectedText: pdfSelection.text,
+      note,
+      startOffset: 0,
+      endOffset: pdfSelection.text.length,
+      style: style ?? 'highlight',
+      tagIds: tagIds.length > 0 ? tagIds : undefined,
+      rects: pdfSelection.rects.map((r) => ({ ...r, page: pdfSelection.pageIndex })),
+      createdAt: now,
+      updatedAt: now,
+    };
+    await annotationRepo.add(annotation);
+    setBookAnnotations((prev) => [annotation, ...prev]);
+    setPdfSelection(null);
+    window.getSelection()?.removeAllRanges();
+    showReaderNotice(note.trim() ? '已记下这段' : '已划下这段');
+  }, [bookId, pdfSelection, chapters, currentChapterId, showReaderNotice]);
+
   /** 手记面板打开时懒加载本书手记 */
   const openAnnotationPanel = useCallback(async () => {
     if (!bookId) return;
@@ -871,6 +916,42 @@ export const ReaderPage: React.FC = () => {
     setDirection(nextDirection);
   }, [currentPage, setDirection, resetForVerticalEntry]);
 
+  const isPdfBook = book?.format === 'pdf';
+  /** PDF 文字级划线高亮：按页聚合（跨页批注拆枚到各自页） */
+  const pdfHighlightsByPage = useMemo(() => {
+    const byPage = new Map<number, { id: string; rect: AnnotationRect }[]>();
+    if (!isPdfBook) return byPage;
+    for (const ann of bookAnnotations) {
+      if (!ann.rects) continue;
+      for (const rect of ann.rects) {
+        const list = byPage.get(rect.page) ?? [];
+        list.push({ id: ann.id, rect });
+        byPage.set(rect.page, list);
+      }
+    }
+    return byPage;
+  }, [bookAnnotations, isPdfBook]);
+
+  /** PDF 页面叠加层（文字级划线：垂直/水平共用） */
+  const renderPdfPageOverlay = useCallback(
+    (pageIndex: number) => {
+      if (!isPdfBook || !bookId) return null;
+      return (
+        <PdfTextLayerOverlay
+          bookId={bookId}
+          pageIndex={pageIndex}
+          selectable={pdfSelectMode}
+          highlights={pdfHighlightsByPage.get(pageIndex) ?? []}
+          onSelect={setPdfSelection}
+          onHighlightClick={(annotationId) => {
+            setEditingPageNote(bookAnnotations.find((a) => a.id === annotationId) ?? null);
+          }}
+        />
+      );
+    },
+    [isPdfBook, bookId, pdfSelectMode, pdfHighlightsByPage, bookAnnotations]
+  );
+
   const progressPercent = totalPages > 0
     ? verticalProgressPercent ?? (
         direction === 'vertical'
@@ -967,26 +1048,40 @@ export const ReaderPage: React.FC = () => {
                   style={{ contain: 'layout style' }}
                 >
                   {url ? (
-                    <img
-                      src={url}
-                      alt={`Page ${idx + 1}`}
-                      className={cn(
-                        'w-full h-auto cursor-pointer landscape:max-w-none'
+                    <div className="relative w-full landscape:max-w-none">
+                      <img
+                        src={url}
+                        alt={`Page ${idx + 1}`}
+                        className={cn(
+                          'w-full h-auto cursor-pointer'
+                        )}
+                        style={{
+                          ...(paperModeEnabled && paperConfig ? { filter: paperConfig.imageFilter } : {}),
+                          willChange: 'transform',
+                        }}
+                        loading={
+                          isRestoringVerticalScroll ||
+                          idx < currentPage ||
+                          idx < verticalRenderStartIndex + VERTICAL_PREPEND_BATCH_SIZE
+                            ? 'eager'
+                            : 'lazy'
+                        }
+                        draggable={false}
+                        onClick={(e) => handleImageClick(idx, e)}
+                      />
+                      {isPdfBook && bookId && (
+                        <PdfTextLayerOverlay
+                          bookId={bookId}
+                          pageIndex={idx}
+                          selectable={pdfSelectMode}
+                          highlights={pdfHighlightsByPage.get(idx) ?? []}
+                          onSelect={setPdfSelection}
+                          onHighlightClick={(annotationId) => {
+                            setEditingPageNote(bookAnnotations.find((a) => a.id === annotationId) ?? null);
+                          }}
+                        />
                       )}
-                      style={{
-                        ...(paperModeEnabled && paperConfig ? { filter: paperConfig.imageFilter } : {}),
-                        willChange: 'transform',
-                      }}
-                      loading={
-                        isRestoringVerticalScroll ||
-                        idx < currentPage ||
-                        idx < verticalRenderStartIndex + VERTICAL_PREPEND_BATCH_SIZE
-                          ? 'eager'
-                          : 'lazy'
-                      }
-                      draggable={false}
-                      onClick={(e) => handleImageClick(idx, e)}
-                    />
+                    </div>
                   ) : (
                     <div className="w-full aspect-[2/3] flex items-center justify-center bg-surface-container">
                       <span className="material-symbols-outlined text-on-surface-variant text-3xl animate-spin">progress_activity</span>
@@ -1013,6 +1108,7 @@ export const ReaderPage: React.FC = () => {
             onSurfaceTouchMove={handleImageTouchMove}
             onSurfaceTouchEnd={handleImageTouchEnd}
             onImageClick={handleImageClick}
+            renderPageOverlay={renderPdfPageOverlay}
           />
         )}
       </main>
@@ -1068,6 +1164,25 @@ export const ReaderPage: React.FC = () => {
                     aria-label={COPY.searchInBook.search}
                   >
                     <span className="material-symbols-outlined text-headline-md">search</span>
+                  </button>
+                )}
+                {book?.format === 'pdf' && (
+                  <button
+                    className={`${pdfSelectMode ? 'text-primary' : 'text-on-surface-variant'} hover:text-primary transition-colors flex items-center justify-center w-11 h-11 rounded-full hover:bg-surface-variant/50`}
+                    onClick={() => {
+                      setPdfSelectMode((prev) => !prev);
+                      setPdfSelection(null);
+                      window.getSelection()?.removeAllRanges();
+                    }}
+                    data-ui-control
+                    aria-label={pdfSelectMode ? '退出文字选择' : '选择文字划线'}
+                  >
+                    <span
+                      className="material-symbols-outlined text-headline-md"
+                      style={pdfSelectMode ? { fontVariationSettings: "'FILL' 1" } : undefined}
+                    >
+                      text_select_start
+                    </span>
                   </button>
                 )}
                 <button
@@ -1259,6 +1374,19 @@ export const ReaderPage: React.FC = () => {
           position={{ x: window.innerWidth / 2, y: window.innerHeight / PAGE_NOTE_POPUP_VIEWPORT_DIVISOR }}
           onSave={handlePageNoteSave}
           onCancel={() => setPageNotePopupPage(null)}
+        />
+      )}
+
+      {/* PDF 文字选区弹窗：划线（空笔记）或写批注 */}
+      {pdfSelection && (
+        <AnnotationPopup
+          selectedText={pdfSelection.text}
+          position={pdfSelection.anchor}
+          onSave={handlePdfSelectionSave}
+          onCancel={() => {
+            setPdfSelection(null);
+            window.getSelection()?.removeAllRanges();
+          }}
         />
       )}
 

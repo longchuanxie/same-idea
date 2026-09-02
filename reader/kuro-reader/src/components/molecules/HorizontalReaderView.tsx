@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import type { FC, MouseEvent, TouchEvent } from 'react';
 
 import { cn } from '@/utils/cn';
@@ -23,9 +23,11 @@ interface HorizontalReaderViewProps {
   onSurfaceTouchMove: (event: TouchEvent) => void;
   onSurfaceTouchEnd: (event: TouchEvent) => void;
   onImageClick: (pageIndex: number, event: MouseEvent) => void;
+  /** 页面级叠加层渲染槽（PDF 文字层等；返回内容将绝对定位于页图之上） */
+  renderPageOverlay?: (pageIndex: number) => ReactNode;
 }
 
-const HORIZONTAL_VIEW_CLASSES = 'w-full h-full flex items-center justify-center overflow-hidden px-1 sm:px-2';
+const HORIZONTAL_VIEW_CLASSES = 'w-full h-full flex items-center justify-center overflow-hidden touch-none px-1 sm:px-2';
 const DOUBLE_SPREAD_CLASSES = 'flex items-center justify-center h-full w-full gap-1';
 const DOUBLE_PAGE_SLOT_CLASSES = 'h-full min-w-0 flex-1 flex items-center justify-center';
 const DOUBLE_IMAGE_CLASSES = 'max-w-full max-h-full object-contain cursor-pointer';
@@ -51,6 +53,7 @@ export const HorizontalReaderView: FC<HorizontalReaderViewProps> = ({
   onSurfaceTouchMove,
   onSurfaceTouchEnd,
   onImageClick,
+  renderPageOverlay,
 }) => {
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const suppressClickUntilRef = useRef(0);
@@ -145,15 +148,18 @@ export const HorizontalReaderView: FC<HorizontalReaderViewProps> = ({
             return (
               <div key={`${readingDirection}-${pageNumber}`} className={DOUBLE_PAGE_SLOT_CLASSES}>
                 {url ? (
-                  <img
-                    src={url}
-                    alt={`Page ${pageNumber}`}
-                    className={DOUBLE_IMAGE_CLASSES}
-                    style={imageStyle}
-                    loading="eager"
-                    draggable={false}
-                    onClick={(event) => handleImageClick(pageNumber - 1, event)}
-                  />
+                  <div className="relative">
+                    <img
+                      src={url}
+                      alt={`Page ${pageNumber}`}
+                      className={DOUBLE_IMAGE_CLASSES}
+                      style={imageStyle}
+                      loading="eager"
+                      draggable={false}
+                      onClick={(event) => handleImageClick(pageNumber - 1, event)}
+                    />
+                    {renderPageOverlay?.(pageNumber - 1)}
+                  </div>
                 ) : (
                   <div className={LOADING_SLOT_CLASSES} style={loadingSlotStyle}>
                     <span className="material-symbols-outlined text-on-surface-variant text-3xl animate-spin">progress_activity</span>
@@ -164,23 +170,25 @@ export const HorizontalReaderView: FC<HorizontalReaderViewProps> = ({
           })}
         </div>
       ) : pageUrls[currentPage - 1] ? (
-        <img
-          key={currentPage}
-          src={pageUrls[currentPage - 1]!}
-          alt={`Page ${currentPage}`}
-          className={cn(
-            SINGLE_IMAGE_CLASSES,
-            turnAnimClass,
-            zoomScale > 1 && 'transition-transform duration-200'
-          )}
-          style={{
-            ...imageStyle,
-            ...zoomStyle,
-          }}
-          loading="eager"
-          draggable={false}
-          onClick={(event) => handleImageClick(currentPage - 1, event)}
-        />
+        <div key={currentPage} className="relative flex items-center justify-center max-w-full max-h-full">
+          <img
+            src={pageUrls[currentPage - 1]!}
+            alt={`Page ${currentPage}`}
+            className={cn(
+              SINGLE_IMAGE_CLASSES,
+              turnAnimClass,
+              zoomScale > 1 && 'transition-transform duration-200'
+            )}
+            style={{
+              ...imageStyle,
+              ...zoomStyle,
+            }}
+            loading="eager"
+            draggable={false}
+            onClick={(event) => handleImageClick(currentPage - 1, event)}
+          />
+          {renderPageOverlay?.(currentPage - 1)}
+        </div>
       ) : (
         <div className={LOADING_FALLBACK_CLASSES}>
           <span className="material-symbols-outlined text-on-surface-variant text-4xl animate-spin">progress_activity</span>

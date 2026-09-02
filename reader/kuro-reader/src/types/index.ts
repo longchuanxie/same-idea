@@ -217,6 +217,16 @@ export interface Bookmark {
 /** 批注样式类型 */
 export type AnnotationStyle = 'underline' | 'wavy' | 'highlight'
 
+/** PDF 文字级划线的矩形：页面相对坐标（0..1），跨页选区多枚 */
+export interface AnnotationRect {
+  /** 章内页索引（0 起） */
+  page: number
+  x: number
+  y: number
+  w: number
+  h: number
+}
+
 /** 批注稳定锚点：选中文本前后的上下文指纹 + 出现序号，内容表示变化后仍可重定位 */
 export interface AnnotationAnchor {
   /** 选中文本前紧邻的上下文片段（已折叠空白，≤16 字符） */
@@ -244,6 +254,8 @@ export interface Annotation {
   tagIds?: string[]
   /** 页级手记（可选；仅漫画/PDF 等图页书，值为章内页索引 0 起；有此字段即页注而非文字划线） */
   pageIndex?: number
+  /** PDF 文字级划线矩形（可选；与 pageIndex 互斥——有 rects 即文字划线而非页注） */
+  rects?: AnnotationRect[]
   createdAt: Date
   updatedAt: Date
 }
