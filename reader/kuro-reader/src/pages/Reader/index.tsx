@@ -9,12 +9,15 @@ import { ChapterListDrawer } from '@/components/molecules/ChapterListDrawer';
 import { FullscreenViewer } from '@/components/molecules/FullscreenViewer';
 import { HorizontalReaderView } from '@/components/molecules/HorizontalReaderView';
 import { InBookSearchPanel } from '@/components/molecules/InBookSearchPanel';
+import { LongPressActionMenu } from '@/components/molecules/LongPressActionMenu';
 import { ReaderBottomBar } from '@/components/molecules/ReaderBottomBar';
+import { ReaderProgressTrack } from '@/components/molecules/ReaderProgressTrack';
 import { COPY } from '@/constants/copy';
 import { READER_PAGE_QUERY_PARAM } from '@/constants/routes';
 import { useBackHandler } from '@/hooks/useBackHandler';
 import { useReadingStats } from '@/hooks/useReadingStats';
 import { useSmoothScroll } from '@/hooks/useSmoothScroll';
+import { useVerticalVirtualWindow, type ReaderProgressSnapshot } from '@/hooks/useVerticalVirtualWindow';
 import { buildPdfSearchChapters, getPdfPageTexts } from '@/services/pdfText';
 import { annotationRepo } from '@/services/storage/annotationRepo';
 import type { TextChapter } from '@/services/textContent';
@@ -26,7 +29,6 @@ import { cn } from '@/utils/cn';
 import { buildPageNoteAnnotation, isPageNote } from '@/utils/pageAnnotation';
 import { computePaperOpacity, getPaperBaseOpacity, getPaperConfig } from '@/utils/paperTexture';
 import {
-  clampTrackRatio,
   getHorizontalPageSpread,
   getHorizontalPageStart,
   getHorizontalPageTurnTarget,
@@ -35,7 +37,6 @@ import {
   getPageTurnForSwipe,
   getPageTurnForTapZone,
   getTapZone,
-  pagePositionFromTrackRatio,
   type PageTurn,
 } from '@/utils/readerPagination';
 
@@ -47,19 +48,11 @@ const TOUCH_MOVE_THRESHOLD = 10;
 const SWIPE_THRESHOLD = 50;
 
 const SWIPE_TIMEOUT = 500;
-const SCROLL_RETRY_INTERVAL = 150;
-const LAYOUT_STABLE_DELAY = 100;
-const INITIAL_SCROLL_SETTLE_DELAY = 600;
-const INTERSECTION_ROOT_MARGIN = '800px 0px';
 const DOUBLE_CLICK_THRESHOLD = 300;
 // 双击判定距离（px）：两次点击需足够接近才视为双击缩放
 const DOUBLE_TAP_PROXIMITY_PX = 48;
-const PROGRESS_SAVE_DEBOUNCE = 300;
-const VERTICAL_RESTORE_PRELOAD_COUNT = 8;
 const VERTICAL_PREPEND_BATCH_SIZE = 6;
-const VERTICAL_APPEND_BATCH_SIZE = 8;
 const VERTICAL_PREPEND_THRESHOLD = 120;
-const VERTICAL_APPEND_THRESHOLD = 600;
 const FIRST_PAGE_NOTICE_DURATION = 1600;
 const FIRST_PAGE_NOTICE_TEXT = '已经到第一页';
 const LAST_PAGE_NOTICE_TEXT = '已经到最后一页';
@@ -103,7 +96,7 @@ export const ReaderPage: React.FC = () => {
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLongPressRef = useRef(false);
-  const progressRef = useRef({
+  const progressRef = useRef<ReaderProgressSnapshot>({
     bookId: '',
     chapterId: '',
     currentPage: 1,
@@ -116,37 +109,21 @@ export const ReaderPage: React.FC = () => {
     totalImages: 0,
     percentage: DEFAULT_PAGE_SCROLL_RATIO,
   });
-  const initialScrollDoneRef = useRef(false);
-  const initialScrollRestoreKeyRef = useRef('');
   const initialPageScrollRatioRef = useRef(DEFAULT_PAGE_SCROLL_RATIO);
   const initialChapterScrollRatioRef = useRef(DEFAULT_PAGE_SCROLL_RATIO);
-  const progressSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const firstPageNoticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isPrependingVerticalScrollRef = useRef(false);
-  const verticalTouchStartYRef = useRef(DEFAULT_PAGE_SCROLL_RATIO);
   const lastClickTimeRef = useRef<number>(0);
   const lastClickPageIndexRef = useRef<number>(-1);
   const lastClickXRef = useRef<number>(0);
   const lastClickYRef = useRef<number>(0);
   // 上一次单击的可回滚动作：双击时先回滚再缩放（单击零延迟方案）
   const lastClickRevertRef = useRef<(() => void) | null>(null);
-  const progressTrackRef = useRef<HTMLDivElement>(null);
-  const isDraggingProgressRef = useRef(false);
-  const dragPageRef = useRef<number | null>(null);
-  /** 拖拽期间的轨道比例（0..1）：松手时按模式语义精确映射落点 */
-  const dragRatioRef = useRef<number | null>(null);
-  const [dragPage, setDragPage] = useState<number | null>(null);
   const [uiAnimating, setUiAnimating] = useState(false);
   const [uiVisible, setUiVisible] = useState(false);
   const [showChapterEnd, setShowChapterEnd] = useState(false);
   const [showChapterList, setShowChapterList] = useState(false);
   const [zoomScale, setZoomScale] = useState(1);
   const [zoomOrigin, setZoomOrigin] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [verticalProgressPercent, setVerticalProgressPercent] = useState<number | null>(null);
-  const [isRestoringVerticalScroll, setIsRestoringVerticalScroll] = useState(false);
-  const [verticalBufferStartIndex, setVerticalBufferStartIndex] = useState(0);
-  const [verticalRenderStartIndex, setVerticalRenderStartIndex] = useState(0);
-  const [verticalRenderEndIndex, setVerticalRenderEndIndex] = useState(VERTICAL_RESTORE_PRELOAD_COUNT);
   const [readerNotice, setReaderNotice] = useState<string | null>(null);
   // PDF 文本层检索（漫画无文本不提供）：一次提取按书缓存于服务层
   const [isSearchPanelOpen, setIsSearchPanelOpen] = useState(false);
@@ -294,6 +271,57 @@ export const ReaderPage: React.FC = () => {
     return clampPageScrollRatio(container.scrollTop / scrollableDistance);
   }, [direction, smoothScrollContainerRef]);
 
+  const showReaderNotice = useCallback((notice: string) => {
+    setReaderNotice(notice);
+    if (firstPageNoticeTimerRef.current) {
+      clearTimeout(firstPageNoticeTimerRef.current);
+    }
+    firstPageNoticeTimerRef.current = setTimeout(() => {
+      setReaderNotice(null);
+      firstPageNoticeTimerRef.current = null;
+    }, FIRST_PAGE_NOTICE_DURATION);
+  }, []);
+
+  const showFirstPageNotice = useCallback(() => {
+    showReaderNotice(FIRST_PAGE_NOTICE_TEXT);
+  }, [showReaderNotice]);
+
+  const showLastPageNotice = useCallback(() => {
+    showReaderNotice(LAST_PAGE_NOTICE_TEXT);
+  }, [showReaderNotice]);
+
+  // 垂直（条漫）虚拟滚动窗口：渲染区间、进度恢复、跳页、边界扩窗
+  const {
+    isRestoringVerticalScroll,
+    verticalProgressPercent,
+    verticalPageIndices,
+    revealPreviousVerticalPage,
+    verticalRenderStartIndex,
+    verticalTouchStartYRef,
+    jumpToVerticalPage,
+    initializeWindow,
+    resetForVerticalEntry,
+    initialScrollDoneRef,
+  } = useVerticalVirtualWindow({
+    direction,
+    isLoading,
+    totalPages,
+    currentPage,
+    goToPage,
+    loadPage,
+    containerRef: smoothScrollContainerRef,
+    setProgrammaticScroll,
+    bookId,
+    currentChapterId,
+    imagesBeforeCurrentChapter,
+    totalImages,
+    progressRef,
+    updateProgress,
+    getCurrentVerticalReadingPosition,
+    getCurrentChapterScrollRatio,
+    showFirstPageNotice,
+  });
+
   useEffect(() => {
     if (direction === 'horizontal' && currentPage >= totalPages && totalPages > 0 && nextChapter) {
       setShowChapterEnd(true);
@@ -335,8 +363,6 @@ export const ReaderPage: React.FC = () => {
         useLibraryStore.getState().loadBooks();
       }
       const progress = useLibraryStore.getState().readingProgress[bookId];
-      initialScrollDoneRef.current = false;
-      initialScrollRestoreKeyRef.current = '';
       initialPageScrollRatioRef.current = progress && (!chapterId || progress.chapterId === chapterId)
         ? clampPageScrollRatio(progress.pageScrollRatio ?? DEFAULT_PAGE_SCROLL_RATIO)
         : DEFAULT_PAGE_SCROLL_RATIO;
@@ -346,9 +372,7 @@ export const ReaderPage: React.FC = () => {
       const initialVerticalTargetIndex = progress?.readingMode === 'vertical' && (!chapterId || progress.chapterId === chapterId)
         ? Math.max(0, (progress.page || 1) - 1)
         : 0;
-      setVerticalBufferStartIndex(Math.max(0, initialVerticalTargetIndex - VERTICAL_PREPEND_BATCH_SIZE));
-      setVerticalRenderStartIndex(initialVerticalTargetIndex);
-      setVerticalRenderEndIndex(initialVerticalTargetIndex + VERTICAL_RESTORE_PRELOAD_COUNT);
+      initializeWindow(initialVerticalTargetIndex);
       if (progress?.readingMode) {
         setDirection(progress.readingMode);
       }
@@ -378,7 +402,7 @@ export const ReaderPage: React.FC = () => {
       }
       closeReader();
     };
-  }, [bookId, chapterId, openBook, closeReader, updateProgress, setDirection, setPageLayout]);
+  }, [bookId, chapterId, openBook, closeReader, updateProgress, setDirection, setPageLayout, initializeWindow]);
 
   // 阅读时长统计（与 TextReader 共用）
   useReadingStats(bookId);
@@ -435,87 +459,6 @@ export const ReaderPage: React.FC = () => {
   ]);
 
   useEffect(() => {
-    if (isLoading) return;
-    if (direction !== 'vertical') {
-      setVerticalProgressPercent(null);
-      return;
-    }
-    const container = smoothScrollContainerRef.current;
-    if (!container) return;
-
-    const updateVerticalProgress = () => {
-      if (isPrependingVerticalScrollRef.current) return;
-      const position = getCurrentVerticalReadingPosition();
-      if (!position || !bookId || !currentChapterId || totalPages === 0) return;
-
-      const verticalGlobalPageIndex = imagesBeforeCurrentChapter + position.page;
-      const chapterScrollRatio = getCurrentChapterScrollRatio();
-      const percentage = getReadingPercentage(verticalGlobalPageIndex, totalImages, position.pageScrollRatio, direction);
-
-      progressRef.current = {
-        bookId,
-        chapterId: currentChapterId,
-        currentPage: position.page,
-        pageScrollRatio: position.pageScrollRatio,
-        chapterScrollRatio,
-        readingMode: direction,
-        pageLayout,
-        totalPages,
-        globalPageIndex: verticalGlobalPageIndex,
-        totalImages,
-        percentage,
-      };
-      setVerticalProgressPercent(percentage);
-
-      if (!initialScrollDoneRef.current) return;
-      if (progressSaveTimerRef.current) {
-        clearTimeout(progressSaveTimerRef.current);
-      }
-      progressSaveTimerRef.current = setTimeout(() => {
-        const latestProgress = progressRef.current;
-        if (!latestProgress.bookId || !latestProgress.chapterId) return;
-        updateProgress(latestProgress.bookId, {
-          bookId: latestProgress.bookId,
-          chapterId: latestProgress.chapterId,
-          page: latestProgress.currentPage,
-          pageScrollRatio: latestProgress.pageScrollRatio,
-          chapterScrollRatio: latestProgress.chapterScrollRatio,
-          readingMode: latestProgress.readingMode,
-          pageLayout: latestProgress.pageLayout,
-          totalPages: latestProgress.totalPages,
-          percentage: latestProgress.percentage,
-          globalPageIndex: latestProgress.globalPageIndex,
-          totalImages: latestProgress.totalImages,
-        });
-      }, PROGRESS_SAVE_DEBOUNCE);
-    };
-
-    container.addEventListener('scroll', updateVerticalProgress, { passive: true });
-    updateVerticalProgress();
-
-    return () => {
-      container.removeEventListener('scroll', updateVerticalProgress);
-      if (progressSaveTimerRef.current) {
-        clearTimeout(progressSaveTimerRef.current);
-        progressSaveTimerRef.current = null;
-      }
-    };
-  }, [
-    bookId,
-    currentChapterId,
-    direction,
-    isLoading,
-    pageLayout,
-    totalPages,
-    totalImages,
-    imagesBeforeCurrentChapter,
-    getCurrentVerticalReadingPosition,
-    getCurrentChapterScrollRatio,
-    smoothScrollContainerRef,
-    updateProgress,
-  ]);
-
-  useEffect(() => {
     setZoomScale(1);
   }, [currentPage, currentChapterId]);
 
@@ -526,41 +469,6 @@ export const ReaderPage: React.FC = () => {
       goToPage(alignedPage);
     }
   }, [currentPage, direction, goToPage, pageLayout, totalPages]);
-
-  useEffect(() => {
-    if (direction !== 'vertical' || totalPages <= 0) return;
-    setVerticalBufferStartIndex((startIndex) => Math.max(0, Math.min(startIndex, totalPages - 1)));
-    setVerticalRenderStartIndex((startIndex) => Math.max(0, Math.min(startIndex, totalPages - 1)));
-    setVerticalRenderEndIndex((endIndex) => Math.max(1, Math.min(endIndex, totalPages)));
-  }, [direction, totalPages]);
-
-  useEffect(() => {
-    if (direction !== 'vertical' || totalPages <= 0 || isLoading) return;
-    const startIndex = Math.max(0, Math.min(verticalBufferStartIndex, verticalRenderStartIndex, totalPages - 1));
-    const endIndex = Math.max(verticalRenderStartIndex + 1, Math.min(verticalRenderEndIndex, totalPages));
-    for (let pageIndex = startIndex; pageIndex < endIndex; pageIndex++) {
-      loadPage(pageIndex);
-    }
-  }, [
-    direction,
-    isLoading,
-    loadPage,
-    totalPages,
-    verticalBufferStartIndex,
-    verticalRenderEndIndex,
-    verticalRenderStartIndex,
-  ]);
-
-  const showReaderNotice = useCallback((notice: string) => {
-    setReaderNotice(notice);
-    if (firstPageNoticeTimerRef.current) {
-      clearTimeout(firstPageNoticeTimerRef.current);
-    }
-    firstPageNoticeTimerRef.current = setTimeout(() => {
-      setReaderNotice(null);
-      firstPageNoticeTimerRef.current = null;
-    }, FIRST_PAGE_NOTICE_DURATION);
-  }, []);
 
   // PDF 检索入口：首次打开时提取文本层（一页一章伪章节，复用文本检索面板）
   const openPdfSearch = useCallback(async () => {
@@ -585,72 +493,6 @@ export const ReaderPage: React.FC = () => {
       setIsExtractingPdfText(false);
     }
   }, [bookId, pdfSearchChapters, showReaderNotice]);
-
-  // 垂直模式跳页：扩渲染窗口 → 预载周边页 → 滚动到页槽位（goToPage 只改状态，
-  // 垂直模式的视口必须由这里驱动；水平模式 goToPage 即生效）
-  const verticalJumpTokenRef = useRef(0);
-  const jumpToVerticalPage = useCallback((targetPage: number, pageScrollRatio = DEFAULT_PAGE_SCROLL_RATIO) => {
-    const page = Math.max(1, Math.min(targetPage, totalPages));
-    if (totalPages === 0 || page === currentPage) return;
-    const inPageRatio = clampPageScrollRatio(pageScrollRatio);
-    verticalJumpTokenRef.current += 1;
-    const token = verticalJumpTokenRef.current;
-    const isStale = () => token !== verticalJumpTokenRef.current;
-
-    goToPage(page);
-    setVerticalBufferStartIndex(Math.max(0, page - PAGE_PROGRESS_OFFSET - VERTICAL_PREPEND_BATCH_SIZE));
-    setVerticalRenderStartIndex(Math.max(0, page - PAGE_PROGRESS_OFFSET));
-    setVerticalRenderEndIndex(page - PAGE_PROGRESS_OFFSET + VERTICAL_RESTORE_PRELOAD_COUNT);
-    setProgrammaticScroll(true);
-    setIsRestoringVerticalScroll(true);
-
-    let settleTimer: ReturnType<typeof setTimeout> | null = null;
-    let layoutTimer: ReturnType<typeof setTimeout> | null = null;
-
-    const finish = () => {
-      if (isStale()) return;
-      setIsRestoringVerticalScroll(false);
-      setProgrammaticScroll(false);
-    };
-    const scrollToTarget = () => {
-      if (isStale()) return;
-      const container = smoothScrollContainerRef.current;
-      if (!container) return;
-      const slot = container.querySelector(`[data-page-index="${page - 1}"]`);
-      if (!slot) return;
-      const containerRect = container.getBoundingClientRect();
-      const slotRect = slot.getBoundingClientRect();
-      // 页内落点：进度条语义 pageScrollRatio = (scrollTop + 阅读锚点 - 页顶)/页高，
-      // 反解出目标 scrollTop，使松手后拇指与视口逐像素一致
-      const pageTop = slotRect.top - containerRect.top + container.scrollTop;
-      const anchorOffset = containerRect.height * READING_ANCHOR_RATIO;
-      const target = pageTop + inPageRatio * slotRect.height - anchorOffset;
-      const maxScroll = container.scrollHeight - container.clientHeight;
-      container.scrollTo({ top: Math.max(0, Math.min(target, maxScroll)), behavior: 'instant' });
-      if (settleTimer) clearTimeout(settleTimer);
-      settleTimer = setTimeout(finish, INITIAL_SCROLL_SETTLE_DELAY);
-    };
-    const attempt = () => {
-      if (isStale()) return;
-      const container = smoothScrollContainerRef.current;
-      if (!container || !container.querySelector(`[data-page-index="${page - 1}"]`)) {
-        setTimeout(attempt, SCROLL_RETRY_INTERVAL);
-        return;
-      }
-      scrollToTarget();
-      // 图片加载会改变槽位高度：布局稳定后再校准一次
-      if (layoutTimer) clearTimeout(layoutTimer);
-      layoutTimer = setTimeout(scrollToTarget, LAYOUT_STABLE_DELAY);
-    };
-
-    const start = Math.max(0, page - PAGE_PROGRESS_OFFSET);
-    const end = Math.min(totalPages, start + VERTICAL_RESTORE_PRELOAD_COUNT);
-    const tasks: Promise<void>[] = [];
-    for (let i = start; i < end; i++) tasks.push(loadPage(i));
-    void Promise.all(tasks).then(() => {
-      if (!isStale()) attempt();
-    });
-  }, [totalPages, currentPage, goToPage, setProgrammaticScroll, loadPage, smoothScrollContainerRef]);
 
   /** 按阅读方向分发跳页：垂直走视口驱动（支持页内落点），水平直接 goToPage。
    *  进度条拖拽/轨道点击/检索命中共用，保证松手后拇指、页码、视口三者一致。 */
@@ -726,111 +568,6 @@ export const ReaderPage: React.FC = () => {
     }
   }, [chapters, currentChapterId, goToPage, openChapter]);
 
-  const showFirstPageNotice = useCallback(() => {
-    showReaderNotice(FIRST_PAGE_NOTICE_TEXT);
-  }, [showReaderNotice]);
-
-  const showLastPageNotice = useCallback(() => {
-    showReaderNotice(LAST_PAGE_NOTICE_TEXT);
-  }, [showReaderNotice]);
-
-  const saveVerticalProgressForPage = useCallback((page: number) => {
-    if (!bookId || !currentChapterId || totalPages === 0) return;
-    const verticalGlobalPageIndex = imagesBeforeCurrentChapter + page;
-    const percentage = getReadingPercentage(
-      verticalGlobalPageIndex,
-      totalImages,
-      DEFAULT_PAGE_SCROLL_RATIO,
-      'vertical'
-    );
-    const nextProgress = {
-      bookId,
-      chapterId: currentChapterId,
-      currentPage: page,
-      pageScrollRatio: DEFAULT_PAGE_SCROLL_RATIO,
-      chapterScrollRatio: getCurrentChapterScrollRatio(),
-      readingMode: 'vertical' as const,
-      pageLayout,
-      totalPages,
-      globalPageIndex: verticalGlobalPageIndex,
-      totalImages,
-      percentage,
-    };
-
-    progressRef.current = nextProgress;
-    setVerticalProgressPercent(percentage);
-    updateProgress(bookId, {
-      bookId,
-      chapterId: currentChapterId,
-      page,
-      pageScrollRatio: nextProgress.pageScrollRatio,
-      chapterScrollRatio: nextProgress.chapterScrollRatio,
-      readingMode: nextProgress.readingMode,
-      pageLayout,
-      totalPages,
-      percentage,
-      globalPageIndex: verticalGlobalPageIndex,
-      totalImages,
-    });
-  }, [
-    bookId,
-    currentChapterId,
-    getCurrentChapterScrollRatio,
-    imagesBeforeCurrentChapter,
-    pageLayout,
-    totalImages,
-    totalPages,
-    updateProgress,
-  ]);
-
-  const revealPreviousVerticalPage = useCallback(() => {
-    if (direction !== 'vertical' || isLoading || isRestoringVerticalScroll) return;
-    const container = smoothScrollContainerRef.current;
-    if (!container) return;
-    if (isPrependingVerticalScrollRef.current) return;
-    if (verticalRenderStartIndex <= 0) {
-      showFirstPageNotice();
-      return;
-    }
-
-    isPrependingVerticalScrollRef.current = true;
-    setProgrammaticScroll(true);
-    const previousPageIndex = verticalRenderStartIndex - PAGE_PROGRESS_OFFSET;
-    const nextBufferStartIndex = Math.min(verticalBufferStartIndex, previousPageIndex);
-
-    loadPage(previousPageIndex)
-      .finally(() => {
-        setVerticalBufferStartIndex(nextBufferStartIndex);
-        setVerticalRenderStartIndex(previousPageIndex);
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            const previousPageSlot = container.querySelector(`[data-page-index="${previousPageIndex}"]`);
-            if (previousPageSlot) {
-              const containerRect = container.getBoundingClientRect();
-              const previousPageTop = (previousPageSlot as HTMLElement).getBoundingClientRect().top - containerRect.top;
-              container.scrollTop += previousPageTop;
-            }
-            saveVerticalProgressForPage(previousPageIndex + PAGE_PROGRESS_OFFSET);
-            requestAnimationFrame(() => {
-              isPrependingVerticalScrollRef.current = false;
-              setProgrammaticScroll(false);
-            });
-          });
-        });
-      });
-  }, [
-    direction,
-    isLoading,
-    isRestoringVerticalScroll,
-    loadPage,
-    saveVerticalProgressForPage,
-    setProgrammaticScroll,
-    showFirstPageNotice,
-    smoothScrollContainerRef,
-    verticalBufferStartIndex,
-    verticalRenderStartIndex,
-  ]);
-
   const handleVerticalWheelCapture = useCallback(
     (event: React.WheelEvent<HTMLElement>) => {
       if (direction !== 'vertical' || event.deltaY >= DEFAULT_PAGE_SCROLL_RATIO) return;
@@ -865,104 +602,6 @@ export const ReaderPage: React.FC = () => {
     },
     [direction, revealPreviousVerticalPage, smoothScrollContainerRef]
   );
-
-  useEffect(() => {
-    if (
-      isLoading ||
-      direction !== 'vertical' ||
-      isRestoringVerticalScroll ||
-      !initialScrollDoneRef.current
-    ) return;
-    const container = smoothScrollContainerRef.current;
-    if (!container) return;
-
-    let touchStartY = DEFAULT_PAGE_SCROLL_RATIO;
-    const isReaderEvent = (event: Event): boolean =>
-      event.target instanceof Node && container.contains(event.target);
-
-    const handleWheel = (event: WheelEvent) => {
-      if (!isReaderEvent(event)) return;
-      if (event.deltaY < DEFAULT_PAGE_SCROLL_RATIO) {
-        if (container.scrollTop <= VERTICAL_PREPEND_THRESHOLD) {
-          event.preventDefault();
-        }
-        revealPreviousVerticalPage();
-      }
-    };
-
-    const handleTouchStart = (event: TouchEvent) => {
-      if (!isReaderEvent(event)) return;
-      touchStartY = event.touches[0]?.clientY ?? DEFAULT_PAGE_SCROLL_RATIO;
-    };
-
-    const handleTouchMove = (event: TouchEvent) => {
-      if (!isReaderEvent(event)) return;
-      const currentY = event.touches[0]?.clientY ?? touchStartY;
-      if (currentY - touchStartY > TOUCH_MOVE_THRESHOLD) {
-        if (container.scrollTop <= VERTICAL_PREPEND_THRESHOLD) {
-          event.preventDefault();
-        }
-        revealPreviousVerticalPage();
-        touchStartY = currentY;
-      }
-    };
-
-    const handleScroll = () => {
-      if (container.scrollTop <= VERTICAL_PREPEND_THRESHOLD) {
-        revealPreviousVerticalPage();
-      }
-    };
-
-    container.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('wheel', handleWheel, { capture: true, passive: false });
-    window.addEventListener('touchstart', handleTouchStart, { capture: true, passive: true });
-    window.addEventListener('touchmove', handleTouchMove, { capture: true, passive: false });
-
-    return () => {
-      container.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('wheel', handleWheel, { capture: true });
-      window.removeEventListener('touchstart', handleTouchStart, { capture: true });
-      window.removeEventListener('touchmove', handleTouchMove, { capture: true });
-      isPrependingVerticalScrollRef.current = false;
-      setProgrammaticScroll(false);
-    };
-  }, [
-    direction,
-    isLoading,
-    isRestoringVerticalScroll,
-    revealPreviousVerticalPage,
-    smoothScrollContainerRef,
-    setProgrammaticScroll,
-  ]);
-
-  useEffect(() => {
-    if (isLoading || direction !== 'vertical' || totalPages <= 0) return;
-    const container = smoothScrollContainerRef.current;
-    if (!container) return;
-
-    const appendNextPages = () => {
-      if (verticalRenderEndIndex >= totalPages) return;
-      const distanceToBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
-      if (distanceToBottom > VERTICAL_APPEND_THRESHOLD) return;
-      setVerticalRenderEndIndex((endIndex) =>
-        Math.min(totalPages, Math.max(endIndex, verticalRenderStartIndex + 1) + VERTICAL_APPEND_BATCH_SIZE)
-      );
-    };
-
-    container.addEventListener('scroll', appendNextPages, { passive: true });
-    appendNextPages();
-
-    return () => {
-      container.removeEventListener('scroll', appendNextPages);
-    };
-  }, [
-    direction,
-    isLoading,
-    smoothScrollContainerRef,
-    totalPages,
-    verticalRenderEndIndex,
-    verticalRenderStartIndex,
-  ]);
 
   const clearLongPress = useCallback(() => {
     if (longPressTimerRef.current) {
@@ -1169,107 +808,6 @@ export const ReaderPage: React.FC = () => {
     [toggleUi]
   );
 
-  /** 轨道坐标 → 拖拽比例（0..1，供统一映射） */
-  const getTrackRatioFromClientX = useCallback((clientX: number) => {
-    const track = progressTrackRef.current;
-    if (!track || totalPages === 0) return null;
-    const rect = track.getBoundingClientRect();
-    return clampTrackRatio((clientX - rect.left) / rect.width);
-  }, [totalPages]);
-
-  /** 轨道坐标 → 预览页码（拖拽标签） */
-  const getPageFromClientX = useCallback((clientX: number) => {
-    const ratio = getTrackRatioFromClientX(clientX);
-    if (ratio == null) return 1;
-    return pagePositionFromTrackRatio(ratio, totalPages, direction).page;
-  }, [getTrackRatioFromClientX, direction, totalPages]);
-
-  const handleScrollTrackClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const ratio = clampTrackRatio((e.clientX - rect.left) / rect.width);
-    const pos = pagePositionFromTrackRatio(ratio, totalPages, direction);
-    jumpToReaderPage(pos.page, pos.pageScrollRatio);
-    isTogglingRef.current = true;
-  }, [direction, totalPages, jumpToReaderPage]);
-
-  const handleProgressMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    isDraggingProgressRef.current = true;
-    isTogglingRef.current = true;
-    const ratio = getTrackRatioFromClientX(e.clientX);
-    if (ratio != null) dragRatioRef.current = ratio;
-    const page = getPageFromClientX(e.clientX);
-    dragPageRef.current = page;
-    setDragPage(page);
-  }, [getTrackRatioFromClientX, getPageFromClientX]);
-
-  const handleProgressTouchStart = useCallback((e: React.TouchEvent) => {
-    isDraggingProgressRef.current = true;
-    isTogglingRef.current = true;
-    const touch = e.touches[0];
-    const ratio = getTrackRatioFromClientX(touch.clientX);
-    if (ratio != null) dragRatioRef.current = ratio;
-    const page = getPageFromClientX(touch.clientX);
-    dragPageRef.current = page;
-    setDragPage(page);
-  }, [getTrackRatioFromClientX, getPageFromClientX]);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isDraggingProgressRef.current) return;
-      const ratio = getTrackRatioFromClientX(e.clientX);
-      if (ratio != null) dragRatioRef.current = ratio;
-      const page = getPageFromClientX(e.clientX);
-      dragPageRef.current = page;
-      setDragPage(page);
-    };
-
-    const releaseDrag = () => {
-      isDraggingProgressRef.current = false;
-      const ratio = dragRatioRef.current;
-      const page = dragPageRef.current;
-      dragPageRef.current = null;
-      dragRatioRef.current = null;
-      setDragPage(null);
-      if (page === null || ratio === null) return;
-      // 松手落点用比例精确映射：垂直模式携带页内占比，拇指与视口逐像素一致
-      const pos = pagePositionFromTrackRatio(ratio, totalPages, direction);
-      jumpToReaderPage(pos.page, pos.pageScrollRatio);
-    };
-
-    const handleMouseUp = () => {
-      if (!isDraggingProgressRef.current) return;
-      releaseDrag();
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      if (!isDraggingProgressRef.current) return;
-      const touch = e.touches[0];
-      const ratio = getTrackRatioFromClientX(touch.clientX);
-      if (ratio != null) dragRatioRef.current = ratio;
-      const page = getPageFromClientX(touch.clientX);
-      dragPageRef.current = page;
-      setDragPage(page);
-    };
-
-    const handleTouchEnd = () => {
-      if (!isDraggingProgressRef.current) return;
-      releaseDrag();
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-    window.addEventListener('touchmove', handleTouchMove, { passive: true });
-    window.addEventListener('touchend', handleTouchEnd);
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-      window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('touchend', handleTouchEnd);
-    };
-  }, [getTrackRatioFromClientX, getPageFromClientX, jumpToReaderPage, direction, totalPages]);
-
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (fullscreenImageUrl) return;
@@ -1296,201 +834,6 @@ export const ReaderPage: React.FC = () => {
       }
     }
   }, [direction, totalPages]);
-
-  useEffect(() => {
-    if (direction !== 'vertical' || totalPages === 0 || isLoading) return;
-    const container = smoothScrollContainerRef.current;
-    if (!container) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const pageIndex = Number((entry.target as HTMLElement).dataset.pageIndex);
-            if (!isNaN(pageIndex)) {
-              loadPage(pageIndex);
-            }
-          }
-        });
-      },
-      {
-        root: container,
-        rootMargin: INTERSECTION_ROOT_MARGIN,
-      }
-    );
-
-    const slots = container.querySelectorAll('[data-page-index]');
-    slots.forEach((slot) => observer.observe(slot));
-
-    return () => observer.disconnect();
-  }, [direction, totalPages, isLoading, loadPage, smoothScrollContainerRef]);
-
-  useEffect(() => {
-    if (direction !== 'vertical' || totalPages === 0 || isLoading) {
-      return;
-    }
-    const restoreKey = `${bookId ?? ''}:${currentChapterId ?? ''}:${totalPages}`;
-    if (initialScrollRestoreKeyRef.current === restoreKey) {
-      return;
-    }
-
-    const targetPage = currentPage;
-    if (targetPage <= 1) {
-      initialScrollRestoreKeyRef.current = restoreKey;
-      initialScrollDoneRef.current = true;
-      return;
-    }
-
-    initialScrollRestoreKeyRef.current = restoreKey;
-    initialScrollDoneRef.current = false;
-    setIsRestoringVerticalScroll(true);
-    setProgrammaticScroll(true);
-    let cancelled = false;
-    let settleTimer: ReturnType<typeof setTimeout> | null = null;
-    let layoutCheckTimer: ReturnType<typeof setTimeout> | null = null;
-
-    const onScrollSettled = () => {
-      if (!cancelled) {
-        initialScrollDoneRef.current = true;
-        setIsRestoringVerticalScroll(false);
-        setProgrammaticScroll(false);
-      }
-    };
-
-    const scrollToTarget = () => {
-      if (cancelled) return;
-      const container = smoothScrollContainerRef.current;
-      if (!container) return;
-      const targetSlot = container.querySelector(`[data-page-index="${targetPage - 1}"]`);
-      if (!targetSlot) return;
-      const containerRect = container.getBoundingClientRect();
-      const targetRect = targetSlot?.getBoundingClientRect();
-      const pageTop = targetRect
-        ? targetRect.top - containerRect.top + container.scrollTop
-        : DEFAULT_PAGE_SCROLL_RATIO;
-      container.scrollTo({ top: pageTop, behavior: 'instant' });
-      if (settleTimer) clearTimeout(settleTimer);
-      settleTimer = setTimeout(onScrollSettled, INITIAL_SCROLL_SETTLE_DELAY);
-    };
-
-    const onImageLoaded = () => {
-      if (cancelled) return;
-      if (layoutCheckTimer) clearTimeout(layoutCheckTimer);
-      layoutCheckTimer = setTimeout(() => {
-        if (!cancelled) {
-          scrollToTarget();
-        }
-      }, LAYOUT_STABLE_DELAY);
-    };
-
-    const loadPagesBeforeTarget = async () => {
-      const pageLoadTasks: Promise<void>[] = [];
-      const startPageIndex = Math.max(0, targetPage - PAGE_PROGRESS_OFFSET);
-      const endPageIndex = Math.min(totalPages, startPageIndex + VERTICAL_RESTORE_PRELOAD_COUNT);
-      for (let pageIndex = startPageIndex; pageIndex < endPageIndex; pageIndex++) {
-        pageLoadTasks.push(loadPage(pageIndex));
-      }
-      await Promise.all(pageLoadTasks);
-    };
-
-    const attemptScroll = () => {
-      if (cancelled) return;
-      const container = smoothScrollContainerRef.current;
-      if (!container) {
-        setTimeout(attemptScroll, SCROLL_RETRY_INTERVAL);
-        return;
-      }
-
-      const targetSlot = container.querySelector(`[data-page-index="${targetPage - 1}"]`);
-      if (!targetSlot) {
-        setTimeout(attemptScroll, SCROLL_RETRY_INTERVAL);
-        return;
-      }
-
-      const restoreSlots = Array.from(container.querySelectorAll('[data-page-index]'))
-        .filter((slot) => {
-          const pageIndex = Number((slot as HTMLElement).dataset.pageIndex);
-          const targetIndex = targetPage - PAGE_PROGRESS_OFFSET;
-          return !isNaN(pageIndex) && pageIndex >= targetIndex && pageIndex < targetIndex + VERTICAL_RESTORE_PRELOAD_COUNT;
-        });
-      const restoreImages = restoreSlots
-        .map((slot) => slot.querySelector('img'))
-        .filter((img): img is HTMLImageElement => img !== null);
-
-      if (restoreImages.length === 0) {
-        setTimeout(attemptScroll, SCROLL_RETRY_INTERVAL);
-        return;
-      }
-
-      restoreImages.forEach((img) => {
-        if (!img.complete || img.naturalHeight === 0) {
-          img.addEventListener('load', onImageLoaded, { once: true });
-        }
-      });
-
-      const hasUnreadyImage = restoreImages.some((img) => !img.complete || img.naturalHeight === 0);
-      if (hasUnreadyImage) {
-        const targetImg = targetSlot?.querySelector('img') ?? restoreImages.find((img) => !img.complete || img.naturalHeight === 0);
-        if (!targetImg) {
-          setTimeout(attemptScroll, SCROLL_RETRY_INTERVAL);
-          return;
-        }
-        const onLoad = () => {
-          cleanup();
-          requestAnimationFrame(() => {
-            requestAnimationFrame(scrollToTarget);
-          });
-        };
-        const onError = () => {
-          cleanup();
-          initialScrollDoneRef.current = true;
-          setIsRestoringVerticalScroll(false);
-          setProgrammaticScroll(false);
-        };
-        const cleanup = () => {
-          targetImg.removeEventListener('load', onLoad);
-          targetImg.removeEventListener('error', onError);
-        };
-        targetImg.addEventListener('load', onLoad, { once: false });
-        targetImg.addEventListener('error', onError, { once: true });
-        return;
-      }
-
-      requestAnimationFrame(() => {
-        requestAnimationFrame(scrollToTarget);
-      });
-    };
-
-    loadPagesBeforeTarget()
-      .then(() => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(attemptScroll);
-        });
-      })
-      .catch(() => {
-        initialScrollDoneRef.current = true;
-        setIsRestoringVerticalScroll(false);
-        setProgrammaticScroll(false);
-      });
-
-    return () => {
-      cancelled = true;
-      if (settleTimer) clearTimeout(settleTimer);
-      if (layoutCheckTimer) clearTimeout(layoutCheckTimer);
-      setIsRestoringVerticalScroll(false);
-      setProgrammaticScroll(false);
-    };
-  }, [
-    bookId,
-    currentChapterId,
-    direction,
-    totalPages,
-    currentPage,
-    isLoading,
-    loadPage,
-    smoothScrollContainerRef,
-    setProgrammaticScroll,
-  ]);
 
   useEffect(() => {
     return () => {
@@ -1521,18 +864,12 @@ export const ReaderPage: React.FC = () => {
 
   const handleReaderDirectionChange = useCallback((nextDirection: 'vertical' | 'horizontal') => {
     if (nextDirection === 'vertical') {
-      const nextTargetIndex = Math.max(0, currentPage - PAGE_PROGRESS_OFFSET);
-      setVerticalBufferStartIndex(Math.max(0, nextTargetIndex - VERTICAL_PREPEND_BATCH_SIZE));
-      setVerticalRenderStartIndex(nextTargetIndex);
-      setVerticalRenderEndIndex(nextTargetIndex + VERTICAL_RESTORE_PRELOAD_COUNT);
-      initialScrollDoneRef.current = false;
-      initialScrollRestoreKeyRef.current = '';
+      resetForVerticalEntry(currentPage);
       initialPageScrollRatioRef.current = DEFAULT_PAGE_SCROLL_RATIO;
       initialChapterScrollRatioRef.current = DEFAULT_PAGE_SCROLL_RATIO;
-      setVerticalProgressPercent(null);
     }
     setDirection(nextDirection);
-  }, [currentPage, setDirection]);
+  }, [currentPage, setDirection, resetForVerticalEntry]);
 
   const progressPercent = totalPages > 0
     ? verticalProgressPercent ?? (
@@ -1541,18 +878,6 @@ export const ReaderPage: React.FC = () => {
           : getReadingPercentage(currentPage, totalPages, progressRef.current.pageScrollRatio, direction)
       )
     : DEFAULT_PAGE_SCROLL_RATIO;
-  const verticalPageIndices = useMemo(
-    () => Array.from(
-      {
-        length: Math.max(
-          0,
-          Math.min(verticalRenderEndIndex, totalPages) - Math.max(0, verticalRenderStartIndex)
-        ),
-      },
-      (_, idx) => Math.max(0, verticalRenderStartIndex) + idx
-    ),
-    [totalPages, verticalRenderEndIndex, verticalRenderStartIndex]
-  );
   const horizontalPageSpread = useMemo(
     () => direction === 'horizontal'
       ? getHorizontalPageSpread(currentPage, totalPages, pageLayout, readingDirection)
@@ -1565,15 +890,10 @@ export const ReaderPage: React.FC = () => {
       : `${currentPage}`,
     [currentPage, direction, horizontalPageSpread, pageLayout]
   );
-  const dragPageLabel = useMemo(() => {
-    if (dragPage === null) return currentPageLabel;
-    if (direction !== 'horizontal' || pageLayout !== 'double') return `${dragPage}`;
-    return getPageSpreadLabel(getHorizontalPageSpread(dragPage, totalPages, pageLayout, readingDirection));
-  }, [currentPageLabel, direction, dragPage, pageLayout, readingDirection, totalPages]);
 
   if (isLoading) {
     return (
-      <div className="bg-background text-on-background min-h-screen flex items-center justify-center">
+      <div className="bg-background text-on-background min-h-[100dvh] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <span className="material-symbols-outlined text-primary text-4xl animate-spin">progress_activity</span>
           <p className="font-body text-body-md text-on-surface-variant">加载中...</p>
@@ -1584,7 +904,7 @@ export const ReaderPage: React.FC = () => {
 
   if (totalPages === 0) {
     return (
-      <div className="bg-background text-on-background min-h-screen flex items-center justify-center">
+      <div className="bg-background text-on-background min-h-[100dvh] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <span className="material-symbols-outlined text-on-surface-variant text-6xl">image_not_supported</span>
           <p className="font-body text-body-md text-on-surface-variant">无法加载页面</p>
@@ -1613,7 +933,7 @@ export const ReaderPage: React.FC = () => {
   return (
     <div
       className={cn(
-        'bg-background text-on-background font-body text-body-md min-h-screen relative overflow-hidden'
+        'bg-background text-on-background font-body text-body-md min-h-[100dvh] relative overflow-hidden'
       )}
       style={
         paperModeEnabled && paperConfig
@@ -1626,7 +946,7 @@ export const ReaderPage: React.FC = () => {
       )}
       <main
         ref={direction === 'vertical' ? smoothScrollContainerRef : scrollContainerRef}
-        className={`w-full h-screen overflow-auto relative z-0 ${
+        className={`w-full h-[100dvh] overflow-auto overscroll-contain relative z-0 ${
           direction === 'vertical' ? 'overflow-y-auto' : 'overflow-hidden flex items-center justify-center'
         }`}
         style={{ WebkitOverflowScrolling: 'touch', ...(displayFilter ? { filter: displayFilter } : {}) }}
@@ -1796,29 +1116,16 @@ export const ReaderPage: React.FC = () => {
             }`}
           >
             <div className="max-w-max-width-content mx-auto flex flex-col gap-3">
-              <div className="flex items-center justify-center gap-3">
-                <span className="font-label text-label-sm text-on-surface-variant tabular-nums min-w-10 text-right">
-                  {dragPageLabel}
-                </span>
-                <div
-                  ref={progressTrackRef}
-                  className="flex-1 h-3 bg-surface-container-high/80 relative rounded-full cursor-pointer touch-none select-none"
-                  onClick={handleScrollTrackClick}
-                  onMouseDown={handleProgressMouseDown}
-                  onTouchStart={handleProgressTouchStart}
-                  data-ui-control
-                >
-                  <div
-                    className="absolute left-0 top-0 h-full bg-primary/70 rounded-full transition-all duration-150"
-                    style={{ width: `${dragPage !== null ? ((dragPage / totalPages) * PERCENT_MULTIPLIER) : progressPercent}%` }}
-                  />
-                  <div
-                    className="absolute top-1/2 w-4 h-4 bg-primary rounded-full shadow-md ring-2 ring-surface"
-                    style={{ left: `${dragPage !== null ? ((dragPage / totalPages) * PERCENT_MULTIPLIER) : progressPercent}%`, transform: 'translate(-50%, -50%)' }}
-                  />
-                </div>
-                <span className="font-label text-label-sm text-on-surface-variant tabular-nums min-w-8">{totalPages}</span>
-              </div>
+              <ReaderProgressTrack
+                totalPages={totalPages}
+                direction={direction}
+                pageLayout={pageLayout}
+                readingDirection={readingDirection}
+                progressPercent={progressPercent}
+                currentPageLabel={currentPageLabel}
+                onJump={jumpToReaderPage}
+                onInteractStart={() => { isTogglingRef.current = true; }}
+              />
 
               {direction === 'horizontal' && (
                 <div className="flex justify-center gap-3 pb-2">
@@ -1931,36 +1238,18 @@ export const ReaderPage: React.FC = () => {
 
       {/* 长按页级动作菜单：页级手记 / 阅读设置 */}
       {longPressMenuPage != null && (
-        <div className="fixed inset-0 z-[46]" onClick={() => setLongPressMenuPage(null)}>
-          <div className="absolute inset-0 bg-on-background/30 animate-fade-in" />
-          <div
-            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-surface rounded-card-lg border border-outline-variant shadow-paper-up py-2 w-52 animate-scale-in"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              className="w-full text-left px-5 py-3 font-label text-label-md text-on-surface hover:bg-surface-container transition-colors flex items-center gap-2"
-              onClick={() => {
-                setPageNotePopupPage(longPressMenuPage);
-                setLongPressMenuPage(null);
-              }}
-              data-ui-control
-            >
-              <span className="material-symbols-outlined text-icon-md text-secondary">edit_note</span>
-              {COPY.annotation.addPageNote}
-            </button>
-            <button
-              className="w-full text-left px-5 py-3 font-label text-label-md text-on-surface hover:bg-surface-container transition-colors flex items-center gap-2"
-              onClick={() => {
-                setLongPressMenuPage(null);
-                setBottomBarVisible(true);
-              }}
-              data-ui-control
-            >
-              <span className="material-symbols-outlined text-icon-md text-on-surface-variant">tune</span>
-              {COPY.annotation.readerSettings}
-            </button>
-          </div>
-        </div>
+        <LongPressActionMenu
+          page={longPressMenuPage}
+          onAddPageNote={(page) => {
+            setPageNotePopupPage(page);
+            setLongPressMenuPage(null);
+          }}
+          onOpenReaderSettings={() => {
+            setLongPressMenuPage(null);
+            setBottomBarVisible(true);
+          }}
+          onClose={() => setLongPressMenuPage(null)}
+        />
       )}
 
       {/* 页注弹窗（复用批注弹窗；锚点/样式对页注无意义，由 buildPageNoteAnnotation 归一） */}
