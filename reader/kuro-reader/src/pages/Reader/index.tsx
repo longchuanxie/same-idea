@@ -9,10 +9,8 @@ import { ChapterListDrawer } from '@/components/molecules/ChapterListDrawer';
 import { FullscreenViewer } from '@/components/molecules/FullscreenViewer';
 import { HorizontalReaderView } from '@/components/molecules/HorizontalReaderView';
 import { InBookSearchPanel } from '@/components/molecules/InBookSearchPanel';
-import { PdfTextLayerOverlay, type PdfTextSelection } from '@/components/molecules/PdfTextLayerOverlay';
-import { recognizeComicPage } from '@/services/ocrService';
-import type { PositionedTextItem } from '@/services/pdfTextLayer';
 import { LongPressActionMenu } from '@/components/molecules/LongPressActionMenu';
+import { PdfTextLayerOverlay, type PdfTextSelection } from '@/components/molecules/PdfTextLayerOverlay';
 import { ReaderBottomBar } from '@/components/molecules/ReaderBottomBar';
 import { ReaderProgressTrack } from '@/components/molecules/ReaderProgressTrack';
 import { COPY } from '@/constants/copy';
@@ -21,7 +19,9 @@ import { useBackHandler } from '@/hooks/useBackHandler';
 import { useReadingStats } from '@/hooks/useReadingStats';
 import { useSmoothScroll } from '@/hooks/useSmoothScroll';
 import { useVerticalVirtualWindow, type ReaderProgressSnapshot } from '@/hooks/useVerticalVirtualWindow';
+import { recognizeComicPage } from '@/services/ocrService';
 import { buildPdfSearchChapters, getPdfPageTexts } from '@/services/pdfText';
+import type { PositionedTextItem } from '@/services/pdfTextLayer';
 import { getPdfTextItems } from '@/services/pdfTextLayer';
 import { annotationRepo } from '@/services/storage/annotationRepo';
 import type { TextChapter } from '@/services/textContent';
@@ -58,6 +58,8 @@ const DOUBLE_TAP_PROXIMITY_PX = 48;
 const VERTICAL_PREPEND_BATCH_SIZE = 6;
 const VERTICAL_PREPEND_THRESHOLD = 120;
 const FIRST_PAGE_NOTICE_DURATION = 1600;
+/** 页码徽标自动淡出延迟：翻页提示与首屏提示共用节奏 */
+const PAGE_BADGE_AUTOHIDE_MS = 1600;
 const FIRST_PAGE_NOTICE_TEXT = '已经到第一页';
 const LAST_PAGE_NOTICE_TEXT = '已经到最后一页';
 const DEFAULT_PAGE_SCROLL_RATIO = 0;
@@ -124,6 +126,9 @@ export const ReaderPage: React.FC = () => {
   const lastClickRevertRef = useRef<(() => void) | null>(null);
   const [uiAnimating, setUiAnimating] = useState(false);
   const [uiVisible, setUiVisible] = useState(false);
+  // 页码徽标：翻页/换章时短暂浮现提示位置，随后淡出，不常驻打扰沉浸阅读
+  const [pageBadgeVisible, setPageBadgeVisible] = useState(false);
+  const pageBadgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showChapterEnd, setShowChapterEnd] = useState(false);
   const [showChapterList, setShowChapterList] = useState(false);
   const [zoomScale, setZoomScale] = useState(1);
@@ -185,6 +190,16 @@ export const ReaderPage: React.FC = () => {
   });
   const { updateProgress, getBookById, toggleFavorite } = useLibraryStore();
   const { settings, theme } = useAppStore();
+
+  // 页码徽标：翻页/换章（含首次打开续读定位）短暂浮现，超时淡出
+  useEffect(() => {
+    setPageBadgeVisible(true);
+    if (pageBadgeTimerRef.current) clearTimeout(pageBadgeTimerRef.current);
+    pageBadgeTimerRef.current = setTimeout(() => setPageBadgeVisible(false), PAGE_BADGE_AUTOHIDE_MS);
+    return () => {
+      if (pageBadgeTimerRef.current) clearTimeout(pageBadgeTimerRef.current);
+    };
+  }, [currentPage, currentChapterId, totalPages]);
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
   const isDarkSurface = theme === 'dark' || (theme === 'auto' && prefersDark);
   const readingDirection = settings.readingDirection;
@@ -463,6 +478,7 @@ export const ReaderPage: React.FC = () => {
     imagesBeforeCurrentChapter,
     direction,
     pageLayout,
+    initialScrollDoneRef,
     getCurrentPageScrollRatio,
     getCurrentChapterScrollRatio,
     updateProgress,
@@ -636,7 +652,7 @@ export const ReaderPage: React.FC = () => {
       if (direction !== 'vertical') return;
       verticalTouchStartYRef.current = event.touches[0]?.clientY ?? DEFAULT_PAGE_SCROLL_RATIO;
     },
-    [direction]
+    [direction, verticalTouchStartYRef]
   );
 
   const handleVerticalTouchMoveCapture = useCallback(
@@ -651,7 +667,7 @@ export const ReaderPage: React.FC = () => {
       revealPreviousVerticalPage();
       verticalTouchStartYRef.current = currentY;
     },
-    [direction, revealPreviousVerticalPage, smoothScrollContainerRef]
+    [direction, revealPreviousVerticalPage, smoothScrollContainerRef, verticalTouchStartYRef]
   );
 
   const clearLongPress = useCallback(() => {
@@ -1150,7 +1166,11 @@ export const ReaderPage: React.FC = () => {
         )}
       </main>
 
-      <div className="fixed top-gutter right-margin-mobile z-40 pointer-events-none mt-safe">
+      <div
+        className={`fixed top-gutter right-margin-mobile z-40 pointer-events-none mt-safe transition-opacity duration-300 ${
+          uiVisible || uiAnimating || pageBadgeVisible ? 'opacity-100' : 'opacity-0'
+        }`}
+      >
         <div className="bg-on-surface/50 backdrop-blur-sm rounded-full px-3 py-1">
           <span className="font-label text-label-sm text-surface">{currentPageLabel} / {totalPages}</span>
         </div>
