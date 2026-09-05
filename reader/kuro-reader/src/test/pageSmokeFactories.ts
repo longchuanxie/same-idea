@@ -40,7 +40,7 @@ export function makeLibraryStoreState(overrides: Record<string, unknown> = {}) {
     tags: [makeTag()],
     coverUrls: {},
     readingProgress: {},
-    hiddenContinueIds: [],
+    hiddenContinueIds: [] as string[],
     isLoading: false,
     error: null,
     // actions
@@ -65,7 +65,7 @@ export function makeLibraryStoreState(overrides: Record<string, unknown> = {}) {
     removeTagFromBook: vi.fn(),
     getBookById: vi.fn(() => makeBook()),
     getBooksByTag: vi.fn(() => []),
-    getContinueReading: vi.fn(() => []),
+    getContinueReading: vi.fn((): Book[] => []),
     dismissContinueReading: vi.fn(),
     restoreContinueReading: vi.fn(),
     ...overrides,

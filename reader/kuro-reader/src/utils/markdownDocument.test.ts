@@ -100,6 +100,24 @@ describe('parseMarkdownDocument', () => {
     expect(document.spans.map((span) => span.type)).toEqual(expect.arrayContaining(['kbd', 'sub']))
   })
 
+  it('行内公式内的 LaTeX 转义不被 escape 切分打断', () => {
+    const document = parseMarkdownDocument('代入 $h = 85\\,\\mathrm{m}$，可得 $D \\approx 33\\,\\mathrm{km}$。')
+
+    const mathSpans = document.spans.filter((span) => span.type === 'math')
+    expect(mathSpans.map((span) => span.formula)).toEqual([
+      'h = 85\\,\\mathrm{m}',
+      'D \\approx 33\\,\\mathrm{km}',
+    ])
+    expect(document.text).toBe('代入 h = 85\\,\\mathrm{m}，可得 D \\approx 33\\,\\mathrm{km}。')
+  })
+
+  it('公式之外的行内转义照常还原为普通字符', () => {
+    const document = parseMarkdownDocument('星号 \\* 不强调，变量 $x \\geq 1$ 与逗号转义 a\\,b。')
+
+    expect(document.spans.filter((span) => span.type === 'math')).toHaveLength(1)
+    expect(document.text).toBe('星号 * 不强调，变量 x \\geq 1 与逗号转义 a,b。')
+  })
+
   it('keeps all source offsets inside the trimmed document', () => {
     const document = parseMarkdownDocument('**text**  \n\n| A |\n| - |\n| B |  \n\n')
 

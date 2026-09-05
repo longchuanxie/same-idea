@@ -16,7 +16,13 @@ interface MathRenderState {
 let katexLoader: Promise<typeof import('katex')> | null = null
 
 function loadKatex(): Promise<typeof import('katex')> {
-  if (!katexLoader) katexLoader = import('katex')
+  if (!katexLoader) {
+    // 失败后清空缓存：下次挂载可重试（此前失败会永久停在源码兜底态）
+    katexLoader = import('katex').catch((error: unknown) => {
+      katexLoader = null
+      throw error
+    })
+  }
   return katexLoader
 }
 
@@ -25,23 +31,28 @@ export const MarkdownMath: FC<MarkdownMathProps> = ({ formula, displayMode, sour
 
   useEffect(() => {
     let active = true
-    void loadKatex().then((katex) => {
-      try {
-        const html = katex.renderToString(formula, {
-          displayMode,
-          throwOnError: false,
-          strict: 'ignore',
-          trust: false,
-          output: 'htmlAndMathml',
-        })
-        if (active) {
-          setRendered({ html, failed: false })
-          window.dispatchEvent(new Event('markdown-media-load'))
+    void loadKatex()
+      .then((katex) => {
+        try {
+          const html = katex.renderToString(formula, {
+            displayMode,
+            throwOnError: false,
+            strict: 'ignore',
+            trust: false,
+            output: 'htmlAndMathml',
+          })
+          if (active) {
+            setRendered({ html, failed: false })
+            window.dispatchEvent(new Event('markdown-media-load'))
+          }
+        } catch {
+          if (active) setRendered({ html: '', failed: true })
         }
-      } catch {
+      })
+      // 加载失败（弱网/服务中断）：进入失败态显示源码，缓存已清、重挂载即重试
+      .catch(() => {
         if (active) setRendered({ html: '', failed: true })
-      }
-    })
+      })
     return () => {
       active = false
     }

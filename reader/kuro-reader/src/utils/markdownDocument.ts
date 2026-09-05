@@ -86,12 +86,23 @@ function appendText(builder: MarkdownDocumentBuilder, text: string): void {
   builder.text += text
 }
 
-function appendTextWithInlineMath(builder: MarkdownDocumentBuilder, text: string): void {
+/** 还原 Markdown 行内转义：`\,` → `,`、`\*` → `*`（仅作用于公式之外的正文） */
+function resolveMarkdownEscapes(text: string): string {
+  return text.replace(/\\([!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~])/g, '$1')
+}
+
+/**
+ * 行内公式切词。入参必须是相邻 text/escape token 的 **raw** 拼接：
+ * marked 会把 `\,` 这类转义拆成独立 escape token（text 只剩 `,`，丢掉反斜杠），
+ * 若按 token 分别喂进来，`$h = 85\,\mathrm{m}$` 会被切成三段、公式永远匹配不上；
+ * 公式命中段保留原始反斜杠（KaTeX 需要 `\,`/`\mathrm`），未命中段还原转义再入正文。
+ */
+function appendTextWithInlineMath(builder: MarkdownDocumentBuilder, raw: string): void {
   const pattern = /\$(?!\s)([^$\n]+?)(?<!\s)\$/g
   let cursor = 0
-  for (const match of text.matchAll(pattern)) {
+  for (const match of raw.matchAll(pattern)) {
     const matchIndex = match.index ?? cursor
-    appendText(builder, text.slice(cursor, matchIndex))
+    if (matchIndex > cursor) appendText(builder, resolveMarkdownEscapes(raw.slice(cursor, matchIndex)))
     const start = builder.text.length
     appendText(builder, match[1])
     builder.spans.push({
@@ -102,7 +113,7 @@ function appendTextWithInlineMath(builder: MarkdownDocumentBuilder, text: string
     })
     cursor = matchIndex + match[0].length
   }
-  appendText(builder, text.slice(cursor))
+  if (cursor < raw.length) appendText(builder, resolveMarkdownEscapes(raw.slice(cursor)))
 }
 
 function getChildTokens(token: Token): Token[] {
@@ -114,7 +125,16 @@ function appendInlineTokens(
   tokens: Token[],
   htmlStack: Array<{ tag: MarkdownSpanType; start: number }> = []
 ): void {
+  // 相邻 text/escape token 的 raw 缓冲：一次喂给公式切词，避免 escape 切分打断 $...$
+  let pendingRaw = ''
+  const flushPending = () => {
+    if (pendingRaw) {
+      appendTextWithInlineMath(builder, pendingRaw)
+      pendingRaw = ''
+    }
+  }
   for (const token of tokens) {
+    if (token.type !== 'text' && token.type !== 'escape') flushPending()
     switch (token.type) {
       case 'strong':
       case 'em':
@@ -188,20 +208,28 @@ function appendInlineTokens(
       case 'text': {
         const textToken = token as Tokens.Escape | Tokens.Text
         const childTokens = getChildTokens(token)
-        if (childTokens.length) appendInlineTokens(builder, childTokens, htmlStack)
-        else appendTextWithInlineMath(builder, textToken.text)
+        if (childTokens.length) {
+          flushPending()
+          appendInlineTokens(builder, childTokens, htmlStack)
+        } else {
+          // raw 保留 `\,` 的反斜杠（text 与 raw 相同；escape 的 text 已丢反斜杠）
+          pendingRaw += textToken.raw ?? textToken.text
+        }
         break
       }
       default: {
         const childTokens = getChildTokens(token)
-        if (childTokens.length) appendInlineTokens(builder, childTokens, htmlStack)
-        else if ('text' in token && typeof token.text === 'string') {
-          appendTextWithInlineMath(builder, token.text)
+        if (childTokens.length) {
+          flushPending()
+          appendInlineTokens(builder, childTokens, htmlStack)
+        } else if ('text' in token && typeof token.text === 'string') {
+          pendingRaw += token.raw ?? token.text
         }
         break
       }
     }
   }
+  flushPending()
 }
 
 function beginBlock(builder: MarkdownDocumentBuilder): number {
