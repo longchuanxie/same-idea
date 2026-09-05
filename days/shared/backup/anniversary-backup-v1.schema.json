@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "anniversary-backup-v1.schema.json",
+  "title": "Anniversary Backup v1",
+  "type": "object",
+  "required": ["schemaVersion", "exportedAt", "appVersion", "calendarRuleVersion", "events"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "exportedAt": { "type": "string", "format": "date-time" },
+    "appVersion": { "type": "string", "minLength": 1 },
+    "calendarRuleVersion": { "const": "lunar-rules-1.0.0" },
+    "events": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/event" }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "event": {
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "category",
+        "calendarType",
+        "datePayload",
+        "repeatRule",
+        "reminderRule",
+        "displayRule",
+        "note",
+        "isPinned",
+        "isArchived",
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "category": {
+          "type": "string",
+          "enum": ["BIRTHDAY", "FAMILY", "LOVE", "ANNIVERSARY", "LIFE", "OTHER"]
+        },
+        "calendarType": {
+          "type": "string",
+          "enum": ["GREGORIAN", "CHINESE_LUNAR"]
+        },
+        "datePayload": {
+          "oneOf": [
+            { "$ref": "#/$defs/gregorianDatePayload" },
+            { "$ref": "#/$defs/lunarDatePayload" }
+          ]
+        },
+        "repeatRule": { "$ref": "#/$defs/repeatRule" },
+        "reminderRule": { "$ref": "#/$defs/reminderRule" },
+        "displayRule": { "$ref": "#/$defs/displayRule" },
+        "note": { "type": "string" },
+        "isPinned": { "type": "boolean" },
+        "isArchived": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "calendarType": { "const": "GREGORIAN" } } },
+          "then": {
+            "properties": {
+              "datePayload": { "$ref": "#/$defs/gregorianDatePayload" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "calendarType": { "const": "CHINESE_LUNAR" } } },
+          "then": {
+            "properties": {
+              "datePayload": { "$ref": "#/$defs/lunarDatePayload" }
+            }
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "gregorianDatePayload": {
+      "type": "object",
+      "required": ["year", "month", "day", "timezone"],
+      "properties": {
+        "year": { "type": "integer", "minimum": 1901, "maximum": 2100 },
+        "month": { "type": "integer", "minimum": 1, "maximum": 12 },
+        "day": { "type": "integer", "minimum": 1, "maximum": 31 },
+        "timezone": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "lunarDatePayload": {
+      "type": "object",
+      "required": ["lunarYear", "lunarMonth", "lunarDay", "isLeapMonth", "timezoneBasis"],
+      "properties": {
+        "lunarYear": { "type": "integer", "minimum": 1900, "maximum": 2100 },
+        "lunarMonth": { "type": "integer", "minimum": 1, "maximum": 12 },
+        "lunarDay": { "type": "integer", "minimum": 1, "maximum": 30 },
+        "isLeapMonth": { "type": "boolean" },
+        "timezoneBasis": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "repeatRule": {
+      "type": "object",
+      "required": ["type", "leapDayPolicy", "missingLunarDayPolicy", "leapMonthPolicy"],
+      "properties": {
+        "type": { "type": "string", "enum": ["NONE", "YEARLY"] },
+        "leapDayPolicy": { "type": "string", "enum": ["FEB_28", "MAR_01", "SKIP"] },
+        "missingLunarDayPolicy": {
+          "type": "string",
+          "enum": ["LAST_DAY_OF_MONTH", "NEXT_MONTH_FIRST_DAY", "SKIP", "ASK"]
+        },
+        "leapMonthPolicy": {
+          "type": "string",
+          "enum": ["NORMAL_MONTH_FALLBACK", "ONLY_LEAP_MONTH", "ASK"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "reminderRule": {
+      "type": "object",
+      "required": ["enabled", "time", "advanceDays", "timezoneMode", "fixedTimezone"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "time": { "type": "string", "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$" },
+        "advanceDays": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0 },
+          "uniqueItems": true
+        },
+        "timezoneMode": { "type": "string", "enum": ["DEVICE", "FIXED"] },
+        "fixedTimezone": {
+          "anyOf": [
+            { "type": "string", "minLength": 1 },
+            { "type": "null" }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "displayRule": {
+      "type": "object",
+      "required": ["mainDisplay", "showLunar", "showGregorian"],
+      "properties": {
+        "mainDisplay": {
+          "type": "string",
+          "enum": ["COUNTDOWN", "ELAPSED_DAYS", "ANNIVERSARY_YEAR"]
+        },
+        "showLunar": { "type": "boolean" },
+        "showGregorian": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    }
+  }
+}
+

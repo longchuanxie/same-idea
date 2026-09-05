@@ -1,0 +1,3985 @@
+{
+  "$schema": "./calendar-regression-scenarios-v1.schema.json",
+  "version": "calendar-regression-scenarios-1.0.0",
+  "ruleVersion": "lunar-rules-1.0.0",
+  "ruleChecksum": "672afbe92debc305bbdac80434cbdbcd8a0295e46fb81e5b210355f6ca318c7c",
+  "goldenChecksum": "794c779615b721259c09336cd76a8b1047c4a4ac4bc5b678818707651cff134a",
+  "scenarios": [
+    {
+      "id": "GREGORIAN_YEARLY_001",
+      "category": "GREGORIAN_YEARLY",
+      "title": "公历 1-1",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "GREGORIAN",
+        "datePayload": {
+          "year": 2024,
+          "month": 1,
+          "day": 1,
+          "timezone": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2027-01-01",
+        "futureOccurrences": [
+          "2027-01-01",
+          "2028-01-01",
+          "2029-01-01",
+          "2030-01-01",
+          "2031-01-01"
+        ]
+      }
+    },
+    {
+      "id": "GREGORIAN_YEARLY_002",
+      "category": "GREGORIAN_YEARLY",
+      "title": "公历 1-31",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "GREGORIAN",
+        "datePayload": {
+          "year": 2024,
+          "month": 1,
+          "day": 31,
+          "timezone": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2027-01-31",
+        "futureOccurrences": [
+          "2027-01-31",
+          "2028-01-31",
+          "2029-01-31",
+          "2030-01-31",
+          "2031-01-31"
+        ]
+      }
+    },
+    {
+      "id": "GREGORIAN_YEARLY_003",
+      "category": "GREGORIAN_YEARLY",
+      "title": "公历 2-14",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "GREGORIAN",
+        "datePayload": {
+          "year": 2024,
+          "month": 2,
+          "day": 14,
+          "timezone": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2027-02-14",
+        "futureOccurrences": [
+          "2027-02-14",
+          "2028-02-14",
+          "2029-02-14",
+          "2030-02-14",
+          "2031-02-14"
+        ]
+      }
+    },
+    {
+      "id": "GREGORIAN_YEARLY_004",
+      "category": "GREGORIAN_YEARLY",
+      "title": "公历 3-8",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "GREGORIAN",
+        "datePayload": {
+          "year": 2024,
+          "month": 3,
+          "day": 8,
+          "timezone": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2027-03-08",
+        "futureOccurrences": [
+          "2027-03-08",
+          "2028-03-08",
+          "2029-03-08",
+          "2030-03-08",
+          "2031-03-08"
+        ]
+      }
+    },
+    {
+      "id": "GREGORIAN_YEARLY_005",
+      "category": "GREGORIAN_YEARLY",
+      "title": "公历 4-5",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "GREGORIAN",
+        "datePayload": {
+          "year": 2024,
+          "month": 4,
+          "day": 5,
+          "timezone": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2027-04-05",
+        "futureOccurrences": [
+          "2027-04-05",
+          "2028-04-05",
+          "2029-04-05",
+          "2030-04-05",
+          "2031-04-05"
+        ]
+      }
+    },
+    {
+      "id": "GREGORIAN_YEARLY_006",
+      "category": "GREGORIAN_YEARLY",
+      "title": "公历 5-20",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "GREGORIAN",
+        "datePayload": {
+          "year": 2024,
+          "month": 5,
+          "day": 20,
+          "timezone": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2027-05-20",
+        "futureOccurrences": [
+          "2027-05-20",
+          "2028-05-20",
+          "2029-05-20",
+          "2030-05-20",
+          "2031-05-20"
+        ]
+      }
+    },
+    {
+      "id": "GREGORIAN_YEARLY_007",
+      "category": "GREGORIAN_YEARLY",
+      "title": "公历 6-1",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "GREGORIAN",
+        "datePayload": {
+          "year": 2024,
+          "month": 6,
+          "day": 1,
+          "timezone": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2027-06-01",
+        "futureOccurrences": [
+          "2027-06-01",
+          "2028-06-01",
+          "2029-06-01",
+          "2030-06-01",
+          "2031-06-01"
+        ]
+      }
+    },
+    {
+      "id": "GREGORIAN_YEARLY_008",
+      "category": "GREGORIAN_YEARLY",
+      "title": "公历 7-7",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "GREGORIAN",
+        "datePayload": {
+          "year": 2024,
+          "month": 7,
+          "day": 7,
+          "timezone": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-07-07",
+        "futureOccurrences": [
+          "2026-07-07",
+          "2027-07-07",
+          "2028-07-07",
+          "2029-07-07",
+          "2030-07-07"
+        ]
+      }
+    },
+    {
+      "id": "GREGORIAN_YEARLY_009",
+      "category": "GREGORIAN_YEARLY",
+      "title": "公历 8-15",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "GREGORIAN",
+        "datePayload": {
+          "year": 2024,
+          "month": 8,
+          "day": 15,
+          "timezone": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-08-15",
+        "futureOccurrences": [
+          "2026-08-15",
+          "2027-08-15",
+          "2028-08-15",
+          "2029-08-15",
+          "2030-08-15"
+        ]
+      }
+    },
+    {
+      "id": "GREGORIAN_YEARLY_010",
+      "category": "GREGORIAN_YEARLY",
+      "title": "公历 9-10",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "GREGORIAN",
+        "datePayload": {
+          "year": 2024,
+          "month": 9,
+          "day": 10,
+          "timezone": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-09-10",
+        "futureOccurrences": [
+          "2026-09-10",
+          "2027-09-10",
+          "2028-09-10",
+          "2029-09-10",
+          "2030-09-10"
+        ]
+      }
+    },
+    {
+      "id": "GREGORIAN_YEARLY_011",
+      "category": "GREGORIAN_YEARLY",
+      "title": "公历 10-1",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "GREGORIAN",
+        "datePayload": {
+          "year": 2024,
+          "month": 10,
+          "day": 1,
+          "timezone": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-10-01",
+        "futureOccurrences": [
+          "2026-10-01",
+          "2027-10-01",
+          "2028-10-01",
+          "2029-10-01",
+          "2030-10-01"
+        ]
+      }
+    },
+    {
+      "id": "GREGORIAN_YEARLY_012",
+      "category": "GREGORIAN_YEARLY",
+      "title": "公历 10-31",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "GREGORIAN",
+        "datePayload": {
+          "year": 2024,
+          "month": 10,
+          "day": 31,
+          "timezone": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-10-31",
+        "futureOccurrences": [
+          "2026-10-31",
+          "2027-10-31",
+          "2028-10-31",
+          "2029-10-31",
+          "2030-10-31"
+        ]
+      }
+    },
+    {
+      "id": "GREGORIAN_YEARLY_013",
+      "category": "GREGORIAN_YEARLY",
+      "title": "公历 11-11",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "GREGORIAN",
+        "datePayload": {
+          "year": 2024,
+          "month": 11,
+          "day": 11,
+          "timezone": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-11-11",
+        "futureOccurrences": [
+          "2026-11-11",
+          "2027-11-11",
+          "2028-11-11",
+          "2029-11-11",
+          "2030-11-11"
+        ]
+      }
+    },
+    {
+      "id": "GREGORIAN_YEARLY_014",
+      "category": "GREGORIAN_YEARLY",
+      "title": "公历 12-24",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "GREGORIAN",
+        "datePayload": {
+          "year": 2024,
+          "month": 12,
+          "day": 24,
+          "timezone": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-12-24",
+        "futureOccurrences": [
+          "2026-12-24",
+          "2027-12-24",
+          "2028-12-24",
+          "2029-12-24",
+          "2030-12-24"
+        ]
+      }
+    },
+    {
+      "id": "GREGORIAN_YEARLY_015",
+      "category": "GREGORIAN_YEARLY",
+      "title": "公历 12-31",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "GREGORIAN",
+        "datePayload": {
+          "year": 2024,
+          "month": 12,
+          "day": 31,
+          "timezone": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-12-31",
+        "futureOccurrences": [
+          "2026-12-31",
+          "2027-12-31",
+          "2028-12-31",
+          "2029-12-31",
+          "2030-12-31"
+        ]
+      }
+    },
+    {
+      "id": "GREGORIAN_LEAP_DAY_001",
+      "category": "GREGORIAN_LEAP_DAY",
+      "title": "2 月 29 日 FEB_28",
+      "fromDate": "2025-01-01",
+      "event": {
+        "calendarType": "GREGORIAN",
+        "datePayload": {
+          "year": 2024,
+          "month": 2,
+          "day": 29,
+          "timezone": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2025-02-28",
+        "futureOccurrences": [
+          "2025-02-28",
+          "2026-02-28",
+          "2027-02-28",
+          "2028-02-29",
+          "2029-02-28"
+        ]
+      }
+    },
+    {
+      "id": "GREGORIAN_LEAP_DAY_002",
+      "category": "GREGORIAN_LEAP_DAY",
+      "title": "2 月 29 日 FEB_28",
+      "fromDate": "2027-12-31",
+      "event": {
+        "calendarType": "GREGORIAN",
+        "datePayload": {
+          "year": 2024,
+          "month": 2,
+          "day": 29,
+          "timezone": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2028-02-29",
+        "futureOccurrences": [
+          "2028-02-29",
+          "2029-02-28",
+          "2030-02-28",
+          "2031-02-28",
+          "2032-02-29"
+        ]
+      }
+    },
+    {
+      "id": "GREGORIAN_LEAP_DAY_003",
+      "category": "GREGORIAN_LEAP_DAY",
+      "title": "2 月 29 日 FEB_28",
+      "fromDate": "2028-01-01",
+      "event": {
+        "calendarType": "GREGORIAN",
+        "datePayload": {
+          "year": 2024,
+          "month": 2,
+          "day": 29,
+          "timezone": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2028-02-29",
+        "futureOccurrences": [
+          "2028-02-29",
+          "2029-02-28",
+          "2030-02-28",
+          "2031-02-28",
+          "2032-02-29"
+        ]
+      }
+    },
+    {
+      "id": "GREGORIAN_LEAP_DAY_004",
+      "category": "GREGORIAN_LEAP_DAY",
+      "title": "2 月 29 日 FEB_28",
+      "fromDate": "2099-01-01",
+      "event": {
+        "calendarType": "GREGORIAN",
+        "datePayload": {
+          "year": 2024,
+          "month": 2,
+          "day": 29,
+          "timezone": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2099-02-28",
+        "futureOccurrences": [
+          "2099-02-28",
+          "2100-02-28"
+        ]
+      }
+    },
+    {
+      "id": "GREGORIAN_LEAP_DAY_005",
+      "category": "GREGORIAN_LEAP_DAY",
+      "title": "2 月 29 日 MAR_01",
+      "fromDate": "2025-01-01",
+      "event": {
+        "calendarType": "GREGORIAN",
+        "datePayload": {
+          "year": 2024,
+          "month": 2,
+          "day": 29,
+          "timezone": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "MAR_01",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2025-03-01",
+        "futureOccurrences": [
+          "2025-03-01",
+          "2026-03-01",
+          "2027-03-01",
+          "2028-02-29",
+          "2029-03-01"
+        ]
+      }
+    },
+    {
+      "id": "GREGORIAN_LEAP_DAY_006",
+      "category": "GREGORIAN_LEAP_DAY",
+      "title": "2 月 29 日 MAR_01",
+      "fromDate": "2027-12-31",
+      "event": {
+        "calendarType": "GREGORIAN",
+        "datePayload": {
+          "year": 2024,
+          "month": 2,
+          "day": 29,
+          "timezone": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "MAR_01",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2028-02-29",
+        "futureOccurrences": [
+          "2028-02-29",
+          "2029-03-01",
+          "2030-03-01",
+          "2031-03-01",
+          "2032-02-29"
+        ]
+      }
+    },
+    {
+      "id": "GREGORIAN_LEAP_DAY_007",
+      "category": "GREGORIAN_LEAP_DAY",
+      "title": "2 月 29 日 MAR_01",
+      "fromDate": "2028-01-01",
+      "event": {
+        "calendarType": "GREGORIAN",
+        "datePayload": {
+          "year": 2024,
+          "month": 2,
+          "day": 29,
+          "timezone": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "MAR_01",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2028-02-29",
+        "futureOccurrences": [
+          "2028-02-29",
+          "2029-03-01",
+          "2030-03-01",
+          "2031-03-01",
+          "2032-02-29"
+        ]
+      }
+    },
+    {
+      "id": "GREGORIAN_LEAP_DAY_008",
+      "category": "GREGORIAN_LEAP_DAY",
+      "title": "2 月 29 日 MAR_01",
+      "fromDate": "2099-01-01",
+      "event": {
+        "calendarType": "GREGORIAN",
+        "datePayload": {
+          "year": 2024,
+          "month": 2,
+          "day": 29,
+          "timezone": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "MAR_01",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2099-03-01",
+        "futureOccurrences": [
+          "2099-03-01",
+          "2100-03-01"
+        ]
+      }
+    },
+    {
+      "id": "GREGORIAN_LEAP_DAY_009",
+      "category": "GREGORIAN_LEAP_DAY",
+      "title": "2 月 29 日 SKIP",
+      "fromDate": "2025-01-01",
+      "event": {
+        "calendarType": "GREGORIAN",
+        "datePayload": {
+          "year": 2024,
+          "month": 2,
+          "day": 29,
+          "timezone": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "SKIP",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2028-02-29",
+        "futureOccurrences": [
+          "2028-02-29",
+          "2032-02-29",
+          "2036-02-29",
+          "2040-02-29",
+          "2044-02-29"
+        ]
+      }
+    },
+    {
+      "id": "GREGORIAN_LEAP_DAY_010",
+      "category": "GREGORIAN_LEAP_DAY",
+      "title": "2 月 29 日 SKIP",
+      "fromDate": "2027-12-31",
+      "event": {
+        "calendarType": "GREGORIAN",
+        "datePayload": {
+          "year": 2024,
+          "month": 2,
+          "day": 29,
+          "timezone": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "SKIP",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2028-02-29",
+        "futureOccurrences": [
+          "2028-02-29",
+          "2032-02-29",
+          "2036-02-29",
+          "2040-02-29",
+          "2044-02-29"
+        ]
+      }
+    },
+    {
+      "id": "GREGORIAN_LEAP_DAY_011",
+      "category": "GREGORIAN_LEAP_DAY",
+      "title": "2 月 29 日 SKIP",
+      "fromDate": "2028-01-01",
+      "event": {
+        "calendarType": "GREGORIAN",
+        "datePayload": {
+          "year": 2024,
+          "month": 2,
+          "day": 29,
+          "timezone": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "SKIP",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2028-02-29",
+        "futureOccurrences": [
+          "2028-02-29",
+          "2032-02-29",
+          "2036-02-29",
+          "2040-02-29",
+          "2044-02-29"
+        ]
+      }
+    },
+    {
+      "id": "GREGORIAN_LEAP_DAY_012",
+      "category": "GREGORIAN_LEAP_DAY",
+      "title": "2 月 29 日 SKIP",
+      "fromDate": "2099-01-01",
+      "event": {
+        "calendarType": "GREGORIAN",
+        "datePayload": {
+          "year": 2024,
+          "month": 2,
+          "day": 29,
+          "timezone": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "SKIP",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "OUT_OF_RANGE",
+        "nextOccurrence": null,
+        "futureOccurrences": []
+      }
+    },
+    {
+      "id": "LUNAR_YEARLY_001",
+      "category": "LUNAR_YEARLY",
+      "title": "农历 1-1",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 1,
+          "lunarDay": 1,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2027-02-06",
+        "futureOccurrences": [
+          "2027-02-06",
+          "2028-01-26",
+          "2029-02-13",
+          "2030-02-03",
+          "2031-01-23"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_YEARLY_002",
+      "category": "LUNAR_YEARLY",
+      "title": "农历 1-15",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 1,
+          "lunarDay": 15,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2027-02-20",
+        "futureOccurrences": [
+          "2027-02-20",
+          "2028-02-09",
+          "2029-02-27",
+          "2030-02-17",
+          "2031-02-06"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_YEARLY_003",
+      "category": "LUNAR_YEARLY",
+      "title": "农历 2-2",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 2,
+          "lunarDay": 2,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2027-03-09",
+        "futureOccurrences": [
+          "2027-03-09",
+          "2028-02-26",
+          "2029-03-16",
+          "2030-03-05",
+          "2031-02-22"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_YEARLY_004",
+      "category": "LUNAR_YEARLY",
+      "title": "农历 3-3",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 3,
+          "lunarDay": 3,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2027-04-09",
+        "futureOccurrences": [
+          "2027-04-09",
+          "2028-03-28",
+          "2029-04-16",
+          "2030-04-05",
+          "2031-03-25"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_YEARLY_005",
+      "category": "LUNAR_YEARLY",
+      "title": "农历 4-8",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 4,
+          "lunarDay": 8,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2027-05-13",
+        "futureOccurrences": [
+          "2027-05-13",
+          "2028-05-02",
+          "2029-05-20",
+          "2030-05-09",
+          "2031-05-28"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_YEARLY_006",
+      "category": "LUNAR_YEARLY",
+      "title": "农历 5-5",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 5,
+          "lunarDay": 5,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-06-19",
+        "futureOccurrences": [
+          "2026-06-19",
+          "2027-06-09",
+          "2028-05-28",
+          "2029-06-16",
+          "2030-06-05"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_YEARLY_007",
+      "category": "LUNAR_YEARLY",
+      "title": "农历 6-6",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 6,
+          "lunarDay": 6,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-07-19",
+        "futureOccurrences": [
+          "2026-07-19",
+          "2027-07-09",
+          "2028-07-27",
+          "2029-07-16",
+          "2030-07-06"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_YEARLY_008",
+      "category": "LUNAR_YEARLY",
+      "title": "农历 7-7",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 7,
+          "lunarDay": 7,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-08-19",
+        "futureOccurrences": [
+          "2026-08-19",
+          "2027-08-08",
+          "2028-08-26",
+          "2029-08-16",
+          "2030-08-05"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_YEARLY_009",
+      "category": "LUNAR_YEARLY",
+      "title": "农历 8-3",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 8,
+          "lunarDay": 3,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-09-13",
+        "futureOccurrences": [
+          "2026-09-13",
+          "2027-09-03",
+          "2028-09-21",
+          "2029-09-10",
+          "2030-08-31"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_YEARLY_010",
+      "category": "LUNAR_YEARLY",
+      "title": "农历 8-15",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 8,
+          "lunarDay": 15,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-09-25",
+        "futureOccurrences": [
+          "2026-09-25",
+          "2027-09-15",
+          "2028-10-03",
+          "2029-09-22",
+          "2030-09-12"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_YEARLY_011",
+      "category": "LUNAR_YEARLY",
+      "title": "农历 9-9",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 9,
+          "lunarDay": 9,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-10-18",
+        "futureOccurrences": [
+          "2026-10-18",
+          "2027-10-08",
+          "2028-10-26",
+          "2029-10-16",
+          "2030-10-05"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_YEARLY_012",
+      "category": "LUNAR_YEARLY",
+      "title": "农历 10-1",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 10,
+          "lunarDay": 1,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-11-09",
+        "futureOccurrences": [
+          "2026-11-09",
+          "2027-10-29",
+          "2028-11-16",
+          "2029-11-06",
+          "2030-10-27"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_YEARLY_013",
+      "category": "LUNAR_YEARLY",
+      "title": "农历 10-15",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 10,
+          "lunarDay": 15,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-11-23",
+        "futureOccurrences": [
+          "2026-11-23",
+          "2027-11-12",
+          "2028-11-30",
+          "2029-11-20",
+          "2030-11-10"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_YEARLY_014",
+      "category": "LUNAR_YEARLY",
+      "title": "农历 11-11",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 11,
+          "lunarDay": 11,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-12-19",
+        "futureOccurrences": [
+          "2026-12-19",
+          "2027-12-08",
+          "2028-12-26",
+          "2029-12-15",
+          "2030-12-05"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_YEARLY_015",
+      "category": "LUNAR_YEARLY",
+      "title": "农历 12-8",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 12,
+          "lunarDay": 8,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2027-01-15",
+        "futureOccurrences": [
+          "2027-01-15",
+          "2028-01-04",
+          "2029-01-22",
+          "2030-01-11",
+          "2031-01-01"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_YEARLY_016",
+      "category": "LUNAR_YEARLY",
+      "title": "农历 12-23",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 12,
+          "lunarDay": 23,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2027-01-30",
+        "futureOccurrences": [
+          "2027-01-30",
+          "2028-01-19",
+          "2029-02-06",
+          "2030-01-26",
+          "2031-01-16"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_YEARLY_017",
+      "category": "LUNAR_YEARLY",
+      "title": "农历 12-24",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 12,
+          "lunarDay": 24,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2027-01-31",
+        "futureOccurrences": [
+          "2027-01-31",
+          "2028-01-20",
+          "2029-02-07",
+          "2030-01-27",
+          "2031-01-17"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_YEARLY_018",
+      "category": "LUNAR_YEARLY",
+      "title": "农历 12-29",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 12,
+          "lunarDay": 29,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2027-02-05",
+        "futureOccurrences": [
+          "2027-02-05",
+          "2028-01-25",
+          "2029-02-12",
+          "2030-02-01",
+          "2031-01-22"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_YEARLY_019",
+      "category": "LUNAR_YEARLY",
+      "title": "农历 6-18",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 6,
+          "lunarDay": 18,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-07-31",
+        "futureOccurrences": [
+          "2026-07-31",
+          "2027-07-21",
+          "2028-08-08",
+          "2029-07-28",
+          "2030-07-18"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_YEARLY_020",
+      "category": "LUNAR_YEARLY",
+      "title": "农历 9-21",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 9,
+          "lunarDay": 21,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-10-30",
+        "futureOccurrences": [
+          "2026-10-30",
+          "2027-10-20",
+          "2028-11-07",
+          "2029-10-28",
+          "2030-10-17"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_LEAP_MONTH_001",
+      "category": "LUNAR_LEAP_MONTH",
+      "title": "2020 闰4月 NORMAL_MONTH_FALLBACK",
+      "fromDate": "2020-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 4,
+          "lunarDay": 1,
+          "isLeapMonth": true,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2020-05-23",
+        "futureOccurrences": [
+          "2020-05-23",
+          "2021-05-12",
+          "2022-05-01",
+          "2023-05-19",
+          "2024-05-08"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_LEAP_MONTH_002",
+      "category": "LUNAR_LEAP_MONTH",
+      "title": "2020 闰4月十五 NORMAL_MONTH_FALLBACK",
+      "fromDate": "2020-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 4,
+          "lunarDay": 15,
+          "isLeapMonth": true,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2020-06-06",
+        "futureOccurrences": [
+          "2020-06-06",
+          "2021-05-26",
+          "2022-05-15",
+          "2023-06-02",
+          "2024-05-22"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_LEAP_MONTH_003",
+      "category": "LUNAR_LEAP_MONTH",
+      "title": "2020 闰4月 ONLY_LEAP_MONTH",
+      "fromDate": "2020-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 4,
+          "lunarDay": 1,
+          "isLeapMonth": true,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "ONLY_LEAP_MONTH"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2020-05-23",
+        "futureOccurrences": [
+          "2020-05-23",
+          "2058-05-22",
+          "2069-05-21",
+          "2077-05-22",
+          "2088-05-21"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_LEAP_MONTH_004",
+      "category": "LUNAR_LEAP_MONTH",
+      "title": "2020 闰4月十五 ONLY_LEAP_MONTH",
+      "fromDate": "2020-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 4,
+          "lunarDay": 15,
+          "isLeapMonth": true,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "ONLY_LEAP_MONTH"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2020-06-06",
+        "futureOccurrences": [
+          "2020-06-06",
+          "2058-06-05",
+          "2069-06-04",
+          "2077-06-05",
+          "2088-06-04"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_LEAP_MONTH_005",
+      "category": "LUNAR_LEAP_MONTH",
+      "title": "2023 闰2月 NORMAL_MONTH_FALLBACK",
+      "fromDate": "2023-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 2,
+          "lunarDay": 1,
+          "isLeapMonth": true,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2023-03-22",
+        "futureOccurrences": [
+          "2023-03-22",
+          "2024-03-10",
+          "2025-02-28",
+          "2026-03-19",
+          "2027-03-08"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_LEAP_MONTH_006",
+      "category": "LUNAR_LEAP_MONTH",
+      "title": "2023 闰2月十五 NORMAL_MONTH_FALLBACK",
+      "fromDate": "2023-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 2,
+          "lunarDay": 15,
+          "isLeapMonth": true,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2023-04-05",
+        "futureOccurrences": [
+          "2023-04-05",
+          "2024-03-24",
+          "2025-03-14",
+          "2026-04-02",
+          "2027-03-22"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_LEAP_MONTH_007",
+      "category": "LUNAR_LEAP_MONTH",
+      "title": "2023 闰2月 ONLY_LEAP_MONTH",
+      "fromDate": "2023-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 2,
+          "lunarDay": 1,
+          "isLeapMonth": true,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "ONLY_LEAP_MONTH"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2023-03-22",
+        "futureOccurrences": [
+          "2023-03-22",
+          "2042-03-22",
+          "2099-03-22"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_LEAP_MONTH_008",
+      "category": "LUNAR_LEAP_MONTH",
+      "title": "2023 闰2月十五 ONLY_LEAP_MONTH",
+      "fromDate": "2023-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 2,
+          "lunarDay": 15,
+          "isLeapMonth": true,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "ONLY_LEAP_MONTH"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2023-04-05",
+        "futureOccurrences": [
+          "2023-04-05",
+          "2042-04-05",
+          "2099-04-05"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_LEAP_MONTH_009",
+      "category": "LUNAR_LEAP_MONTH",
+      "title": "2025 闰6月 NORMAL_MONTH_FALLBACK",
+      "fromDate": "2025-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 6,
+          "lunarDay": 1,
+          "isLeapMonth": true,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2025-07-25",
+        "futureOccurrences": [
+          "2025-07-25",
+          "2026-07-14",
+          "2027-07-04",
+          "2028-07-22",
+          "2029-07-11"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_LEAP_MONTH_010",
+      "category": "LUNAR_LEAP_MONTH",
+      "title": "2025 闰6月十五 NORMAL_MONTH_FALLBACK",
+      "fromDate": "2025-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 6,
+          "lunarDay": 15,
+          "isLeapMonth": true,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2025-08-08",
+        "futureOccurrences": [
+          "2025-08-08",
+          "2026-07-28",
+          "2027-07-18",
+          "2028-08-05",
+          "2029-07-25"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_LEAP_MONTH_011",
+      "category": "LUNAR_LEAP_MONTH",
+      "title": "2025 闰6月 ONLY_LEAP_MONTH",
+      "fromDate": "2025-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 6,
+          "lunarDay": 1,
+          "isLeapMonth": true,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "ONLY_LEAP_MONTH"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2025-07-25",
+        "futureOccurrences": [
+          "2025-07-25",
+          "2036-07-23",
+          "2055-07-24",
+          "2074-07-24",
+          "2093-07-23"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_LEAP_MONTH_012",
+      "category": "LUNAR_LEAP_MONTH",
+      "title": "2025 闰6月十五 ONLY_LEAP_MONTH",
+      "fromDate": "2025-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 6,
+          "lunarDay": 15,
+          "isLeapMonth": true,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "ONLY_LEAP_MONTH"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2025-08-08",
+        "futureOccurrences": [
+          "2025-08-08",
+          "2036-08-06",
+          "2055-08-07",
+          "2074-08-07",
+          "2093-08-06"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_LEAP_MONTH_013",
+      "category": "LUNAR_LEAP_MONTH",
+      "title": "2028 闰5月 NORMAL_MONTH_FALLBACK",
+      "fromDate": "2028-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 5,
+          "lunarDay": 1,
+          "isLeapMonth": true,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2028-06-23",
+        "futureOccurrences": [
+          "2028-06-23",
+          "2029-06-12",
+          "2030-06-01",
+          "2031-06-20",
+          "2032-06-08"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_LEAP_MONTH_014",
+      "category": "LUNAR_LEAP_MONTH",
+      "title": "2028 闰5月十五 NORMAL_MONTH_FALLBACK",
+      "fromDate": "2028-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 5,
+          "lunarDay": 15,
+          "isLeapMonth": true,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2028-07-07",
+        "futureOccurrences": [
+          "2028-07-07",
+          "2029-06-26",
+          "2030-06-15",
+          "2031-07-04",
+          "2032-06-22"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_LEAP_MONTH_015",
+      "category": "LUNAR_LEAP_MONTH",
+      "title": "2028 闰5月 ONLY_LEAP_MONTH",
+      "fromDate": "2028-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 5,
+          "lunarDay": 1,
+          "isLeapMonth": true,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "ONLY_LEAP_MONTH"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2028-06-23",
+        "futureOccurrences": [
+          "2028-06-23",
+          "2039-06-22",
+          "2047-06-23",
+          "2066-06-23",
+          "2085-06-22"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_LEAP_MONTH_016",
+      "category": "LUNAR_LEAP_MONTH",
+      "title": "2028 闰5月十五 ONLY_LEAP_MONTH",
+      "fromDate": "2028-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 5,
+          "lunarDay": 15,
+          "isLeapMonth": true,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "ONLY_LEAP_MONTH"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2028-07-07",
+        "futureOccurrences": [
+          "2028-07-07",
+          "2039-07-06",
+          "2047-07-07",
+          "2066-07-07",
+          "2085-07-06"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_LEAP_MONTH_017",
+      "category": "LUNAR_LEAP_MONTH",
+      "title": "2031 闰3月 NORMAL_MONTH_FALLBACK",
+      "fromDate": "2031-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 3,
+          "lunarDay": 1,
+          "isLeapMonth": true,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2031-04-22",
+        "futureOccurrences": [
+          "2031-04-22",
+          "2032-04-10",
+          "2033-03-31",
+          "2034-04-19",
+          "2035-04-08"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_LEAP_MONTH_018",
+      "category": "LUNAR_LEAP_MONTH",
+      "title": "2031 闰3月十五 NORMAL_MONTH_FALLBACK",
+      "fromDate": "2031-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 3,
+          "lunarDay": 15,
+          "isLeapMonth": true,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2031-05-06",
+        "futureOccurrences": [
+          "2031-05-06",
+          "2032-04-24",
+          "2033-04-14",
+          "2034-05-03",
+          "2035-04-22"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_LEAP_MONTH_019",
+      "category": "LUNAR_LEAP_MONTH",
+      "title": "2031 闰3月 ONLY_LEAP_MONTH",
+      "fromDate": "2031-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 3,
+          "lunarDay": 1,
+          "isLeapMonth": true,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "ONLY_LEAP_MONTH"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2031-04-22",
+        "futureOccurrences": [
+          "2031-04-22",
+          "2050-04-21",
+          "2061-04-20",
+          "2080-04-20"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_LEAP_MONTH_020",
+      "category": "LUNAR_LEAP_MONTH",
+      "title": "2031 闰3月十五 ONLY_LEAP_MONTH",
+      "fromDate": "2031-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 3,
+          "lunarDay": 15,
+          "isLeapMonth": true,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "ONLY_LEAP_MONTH"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2031-05-06",
+        "futureOccurrences": [
+          "2031-05-06",
+          "2050-05-05",
+          "2061-05-04",
+          "2080-05-04"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_MISSING_DAY_001",
+      "category": "LUNAR_MISSING_DAY",
+      "title": "农历 1 月三十 fallback",
+      "fromDate": "2026-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 1,
+          "lunarDay": 30,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-03-18",
+        "futureOccurrences": [
+          "2026-03-18",
+          "2027-03-07",
+          "2028-02-24",
+          "2029-03-14",
+          "2030-03-03"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_MISSING_DAY_002",
+      "category": "LUNAR_MISSING_DAY",
+      "title": "农历 2 月三十 fallback",
+      "fromDate": "2026-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 2,
+          "lunarDay": 30,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-04-16",
+        "futureOccurrences": [
+          "2026-04-16",
+          "2027-04-06",
+          "2028-03-25",
+          "2029-04-13",
+          "2030-04-02"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_MISSING_DAY_003",
+      "category": "LUNAR_MISSING_DAY",
+      "title": "农历 4 月三十 fallback",
+      "fromDate": "2026-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 4,
+          "lunarDay": 30,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-06-14",
+        "futureOccurrences": [
+          "2026-06-14",
+          "2027-06-04",
+          "2028-05-23",
+          "2029-06-11",
+          "2030-05-31"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_MISSING_DAY_004",
+      "category": "LUNAR_MISSING_DAY",
+      "title": "农历 5 月三十 fallback",
+      "fromDate": "2026-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 5,
+          "lunarDay": 30,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-07-13",
+        "futureOccurrences": [
+          "2026-07-13",
+          "2027-07-03",
+          "2028-06-22",
+          "2029-07-10",
+          "2030-06-30"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_MISSING_DAY_005",
+      "category": "LUNAR_MISSING_DAY",
+      "title": "农历 7 月三十 fallback",
+      "fromDate": "2026-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 7,
+          "lunarDay": 30,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-09-10",
+        "futureOccurrences": [
+          "2026-09-10",
+          "2027-08-31",
+          "2028-09-18",
+          "2029-09-07",
+          "2030-08-28"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_MISSING_DAY_006",
+      "category": "LUNAR_MISSING_DAY",
+      "title": "农历 8 月三十 fallback",
+      "fromDate": "2026-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 8,
+          "lunarDay": 30,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-10-09",
+        "futureOccurrences": [
+          "2026-10-09",
+          "2027-09-29",
+          "2028-10-17",
+          "2029-10-07",
+          "2030-09-26"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_MISSING_DAY_007",
+      "category": "LUNAR_MISSING_DAY",
+      "title": "农历 9 月三十 fallback",
+      "fromDate": "2026-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 9,
+          "lunarDay": 30,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-11-08",
+        "futureOccurrences": [
+          "2026-11-08",
+          "2027-10-28",
+          "2028-11-15",
+          "2029-11-05",
+          "2030-10-26"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_MISSING_DAY_008",
+      "category": "LUNAR_MISSING_DAY",
+      "title": "农历 10 月三十 fallback",
+      "fromDate": "2026-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 10,
+          "lunarDay": 30,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-12-08",
+        "futureOccurrences": [
+          "2026-12-08",
+          "2027-11-27",
+          "2028-12-15",
+          "2029-12-04",
+          "2030-11-24"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_MISSING_DAY_009",
+      "category": "LUNAR_MISSING_DAY",
+      "title": "农历 11 月三十 fallback",
+      "fromDate": "2026-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 11,
+          "lunarDay": 30,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2027-01-07",
+        "futureOccurrences": [
+          "2027-01-07",
+          "2027-12-27",
+          "2029-01-14",
+          "2030-01-03",
+          "2030-12-24"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_MISSING_DAY_010",
+      "category": "LUNAR_MISSING_DAY",
+      "title": "农历 12 月三十 fallback",
+      "fromDate": "2026-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 12,
+          "lunarDay": 30,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2027-02-05",
+        "futureOccurrences": [
+          "2027-02-05",
+          "2028-01-25",
+          "2029-02-12",
+          "2030-02-02",
+          "2031-01-22"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_MISSING_DAY_011",
+      "category": "LUNAR_MISSING_DAY",
+      "title": "农历 2 月三十 skip",
+      "fromDate": "2026-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 2,
+          "lunarDay": 30,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "SKIP",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2027-04-06",
+        "futureOccurrences": [
+          "2027-04-06",
+          "2028-03-25",
+          "2029-04-13",
+          "2030-04-02",
+          "2031-03-22"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_MISSING_DAY_012",
+      "category": "LUNAR_MISSING_DAY",
+      "title": "农历 5 月三十 skip",
+      "fromDate": "2026-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 5,
+          "lunarDay": 30,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "SKIP",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2028-06-22",
+        "futureOccurrences": [
+          "2028-06-22",
+          "2030-06-30",
+          "2033-06-26",
+          "2034-07-15",
+          "2039-06-21"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_MISSING_DAY_013",
+      "category": "LUNAR_MISSING_DAY",
+      "title": "农历 8 月三十 skip",
+      "fromDate": "2026-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 8,
+          "lunarDay": 30,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "SKIP",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2029-10-07",
+        "futureOccurrences": [
+          "2029-10-07",
+          "2038-09-28",
+          "2039-10-17",
+          "2040-10-05",
+          "2042-10-13"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_MISSING_DAY_014",
+      "category": "LUNAR_MISSING_DAY",
+      "title": "农历 11 月三十 skip",
+      "fromDate": "2026-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 11,
+          "lunarDay": 30,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "SKIP",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2027-01-07",
+        "futureOccurrences": [
+          "2027-01-07",
+          "2027-12-27",
+          "2029-01-14",
+          "2030-01-03",
+          "2030-12-24"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_MISSING_DAY_015",
+      "category": "LUNAR_MISSING_DAY",
+      "title": "农历 12 月三十 skip",
+      "fromDate": "2026-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 12,
+          "lunarDay": 30,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "SKIP",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2030-02-02",
+        "futureOccurrences": [
+          "2030-02-02",
+          "2033-01-30",
+          "2034-02-18",
+          "2035-02-07",
+          "2036-01-27"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_EVE_001",
+      "category": "LUNAR_EVE",
+      "title": "除夕 fallback",
+      "fromDate": "2026-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 12,
+          "lunarDay": 30,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2027-02-05",
+        "futureOccurrences": [
+          "2027-02-05",
+          "2028-01-25",
+          "2029-02-12",
+          "2030-02-02",
+          "2031-01-22"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_EVE_002",
+      "category": "LUNAR_EVE",
+      "title": "除夕 fallback",
+      "fromDate": "2027-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 12,
+          "lunarDay": 30,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2028-01-25",
+        "futureOccurrences": [
+          "2028-01-25",
+          "2029-02-12",
+          "2030-02-02",
+          "2031-01-22",
+          "2032-02-10"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_EVE_003",
+      "category": "LUNAR_EVE",
+      "title": "除夕 fallback",
+      "fromDate": "2028-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 12,
+          "lunarDay": 30,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2029-02-12",
+        "futureOccurrences": [
+          "2029-02-12",
+          "2030-02-02",
+          "2031-01-22",
+          "2032-02-10",
+          "2033-01-30"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_EVE_004",
+      "category": "LUNAR_EVE",
+      "title": "除夕 fallback",
+      "fromDate": "2029-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 12,
+          "lunarDay": 30,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2030-02-02",
+        "futureOccurrences": [
+          "2030-02-02",
+          "2031-01-22",
+          "2032-02-10",
+          "2033-01-30",
+          "2034-02-18"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_EVE_005",
+      "category": "LUNAR_EVE",
+      "title": "除夕 fallback",
+      "fromDate": "2030-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 12,
+          "lunarDay": 30,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2031-01-22",
+        "futureOccurrences": [
+          "2031-01-22",
+          "2032-02-10",
+          "2033-01-30",
+          "2034-02-18",
+          "2035-02-07"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_EVE_006",
+      "category": "LUNAR_EVE",
+      "title": "除夕 fallback",
+      "fromDate": "2031-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 12,
+          "lunarDay": 30,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2032-02-10",
+        "futureOccurrences": [
+          "2032-02-10",
+          "2033-01-30",
+          "2034-02-18",
+          "2035-02-07",
+          "2036-01-27"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_EVE_007",
+      "category": "LUNAR_EVE",
+      "title": "除夕 fallback",
+      "fromDate": "2032-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 12,
+          "lunarDay": 30,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2033-01-30",
+        "futureOccurrences": [
+          "2033-01-30",
+          "2034-02-18",
+          "2035-02-07",
+          "2036-01-27",
+          "2037-02-14"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_EVE_008",
+      "category": "LUNAR_EVE",
+      "title": "除夕 fallback",
+      "fromDate": "2033-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 12,
+          "lunarDay": 30,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2034-02-18",
+        "futureOccurrences": [
+          "2034-02-18",
+          "2035-02-07",
+          "2036-01-27",
+          "2037-02-14",
+          "2038-02-03"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_EVE_009",
+      "category": "LUNAR_EVE",
+      "title": "除夕 fallback",
+      "fromDate": "2034-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 12,
+          "lunarDay": 30,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2035-02-07",
+        "futureOccurrences": [
+          "2035-02-07",
+          "2036-01-27",
+          "2037-02-14",
+          "2038-02-03",
+          "2039-01-23"
+        ]
+      }
+    },
+    {
+      "id": "LUNAR_EVE_010",
+      "category": "LUNAR_EVE",
+      "title": "除夕 fallback",
+      "fromDate": "2035-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 12,
+          "lunarDay": 30,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2036-01-27",
+        "futureOccurrences": [
+          "2036-01-27",
+          "2037-02-14",
+          "2038-02-03",
+          "2039-01-23",
+          "2040-02-11"
+        ]
+      }
+    },
+    {
+      "id": "SPRING_BOUNDARY_001",
+      "category": "SPRING_BOUNDARY",
+      "title": "春节边界",
+      "fromDate": "2026-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 1,
+          "lunarDay": 1,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-02-17",
+        "futureOccurrences": [
+          "2026-02-17",
+          "2027-02-06",
+          "2028-01-26",
+          "2029-02-13",
+          "2030-02-03"
+        ]
+      }
+    },
+    {
+      "id": "SPRING_BOUNDARY_002",
+      "category": "SPRING_BOUNDARY",
+      "title": "春节边界",
+      "fromDate": "2026-02-18",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 1,
+          "lunarDay": 1,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2027-02-06",
+        "futureOccurrences": [
+          "2027-02-06",
+          "2028-01-26",
+          "2029-02-13",
+          "2030-02-03",
+          "2031-01-23"
+        ]
+      }
+    },
+    {
+      "id": "SPRING_BOUNDARY_003",
+      "category": "SPRING_BOUNDARY",
+      "title": "春节边界",
+      "fromDate": "2027-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 1,
+          "lunarDay": 1,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2027-02-06",
+        "futureOccurrences": [
+          "2027-02-06",
+          "2028-01-26",
+          "2029-02-13",
+          "2030-02-03",
+          "2031-01-23"
+        ]
+      }
+    },
+    {
+      "id": "SPRING_BOUNDARY_004",
+      "category": "SPRING_BOUNDARY",
+      "title": "春节边界",
+      "fromDate": "2028-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 1,
+          "lunarDay": 1,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2028-01-26",
+        "futureOccurrences": [
+          "2028-01-26",
+          "2029-02-13",
+          "2030-02-03",
+          "2031-01-23",
+          "2032-02-11"
+        ]
+      }
+    },
+    {
+      "id": "SPRING_BOUNDARY_005",
+      "category": "SPRING_BOUNDARY",
+      "title": "春节边界",
+      "fromDate": "2029-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 1,
+          "lunarDay": 1,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2029-02-13",
+        "futureOccurrences": [
+          "2029-02-13",
+          "2030-02-03",
+          "2031-01-23",
+          "2032-02-11",
+          "2033-01-31"
+        ]
+      }
+    },
+    {
+      "id": "SPRING_BOUNDARY_006",
+      "category": "SPRING_BOUNDARY",
+      "title": "春节边界",
+      "fromDate": "2030-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 1,
+          "lunarDay": 1,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2030-02-03",
+        "futureOccurrences": [
+          "2030-02-03",
+          "2031-01-23",
+          "2032-02-11",
+          "2033-01-31",
+          "2034-02-19"
+        ]
+      }
+    },
+    {
+      "id": "SPRING_BOUNDARY_007",
+      "category": "SPRING_BOUNDARY",
+      "title": "春节边界",
+      "fromDate": "2031-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 1,
+          "lunarDay": 1,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2031-01-23",
+        "futureOccurrences": [
+          "2031-01-23",
+          "2032-02-11",
+          "2033-01-31",
+          "2034-02-19",
+          "2035-02-08"
+        ]
+      }
+    },
+    {
+      "id": "SPRING_BOUNDARY_008",
+      "category": "SPRING_BOUNDARY",
+      "title": "春节边界",
+      "fromDate": "2032-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 1,
+          "lunarDay": 1,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2032-02-11",
+        "futureOccurrences": [
+          "2032-02-11",
+          "2033-01-31",
+          "2034-02-19",
+          "2035-02-08",
+          "2036-01-28"
+        ]
+      }
+    },
+    {
+      "id": "SPRING_BOUNDARY_009",
+      "category": "SPRING_BOUNDARY",
+      "title": "春节边界",
+      "fromDate": "2033-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 1,
+          "lunarDay": 1,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2033-01-31",
+        "futureOccurrences": [
+          "2033-01-31",
+          "2034-02-19",
+          "2035-02-08",
+          "2036-01-28",
+          "2037-02-15"
+        ]
+      }
+    },
+    {
+      "id": "SPRING_BOUNDARY_010",
+      "category": "SPRING_BOUNDARY",
+      "title": "春节边界",
+      "fromDate": "2034-01-01",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 1,
+          "lunarDay": 1,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2034-02-19",
+        "futureOccurrences": [
+          "2034-02-19",
+          "2035-02-08",
+          "2036-01-28",
+          "2037-02-15",
+          "2038-02-04"
+        ]
+      }
+    },
+    {
+      "id": "FUTURE_PREVIEW_001",
+      "category": "FUTURE_PREVIEW",
+      "title": "未来 5 年 8-3",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 8,
+          "lunarDay": 3,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-09-13",
+        "futureOccurrences": [
+          "2026-09-13",
+          "2027-09-03",
+          "2028-09-21",
+          "2029-09-10",
+          "2030-08-31"
+        ]
+      }
+    },
+    {
+      "id": "FUTURE_PREVIEW_002",
+      "category": "FUTURE_PREVIEW",
+      "title": "未来 5 年 1-15",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 1,
+          "lunarDay": 15,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2027-02-20",
+        "futureOccurrences": [
+          "2027-02-20",
+          "2028-02-09",
+          "2029-02-27",
+          "2030-02-17",
+          "2031-02-06"
+        ]
+      }
+    },
+    {
+      "id": "FUTURE_PREVIEW_003",
+      "category": "FUTURE_PREVIEW",
+      "title": "未来 5 年 5-5",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 5,
+          "lunarDay": 5,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-06-19",
+        "futureOccurrences": [
+          "2026-06-19",
+          "2027-06-09",
+          "2028-05-28",
+          "2029-06-16",
+          "2030-06-05"
+        ]
+      }
+    },
+    {
+      "id": "FUTURE_PREVIEW_004",
+      "category": "FUTURE_PREVIEW",
+      "title": "未来 5 年 7-7",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 7,
+          "lunarDay": 7,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-08-19",
+        "futureOccurrences": [
+          "2026-08-19",
+          "2027-08-08",
+          "2028-08-26",
+          "2029-08-16",
+          "2030-08-05"
+        ]
+      }
+    },
+    {
+      "id": "FUTURE_PREVIEW_005",
+      "category": "FUTURE_PREVIEW",
+      "title": "未来 5 年 8-15",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 8,
+          "lunarDay": 15,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-09-25",
+        "futureOccurrences": [
+          "2026-09-25",
+          "2027-09-15",
+          "2028-10-03",
+          "2029-09-22",
+          "2030-09-12"
+        ]
+      }
+    },
+    {
+      "id": "FUTURE_PREVIEW_006",
+      "category": "FUTURE_PREVIEW",
+      "title": "未来 5 年 9-9",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 9,
+          "lunarDay": 9,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-10-18",
+        "futureOccurrences": [
+          "2026-10-18",
+          "2027-10-08",
+          "2028-10-26",
+          "2029-10-16",
+          "2030-10-05"
+        ]
+      }
+    },
+    {
+      "id": "FUTURE_PREVIEW_007",
+      "category": "FUTURE_PREVIEW",
+      "title": "未来 5 年 12-8",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 12,
+          "lunarDay": 8,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2027-01-15",
+        "futureOccurrences": [
+          "2027-01-15",
+          "2028-01-04",
+          "2029-01-22",
+          "2030-01-11",
+          "2031-01-01"
+        ]
+      }
+    },
+    {
+      "id": "FUTURE_PREVIEW_008",
+      "category": "FUTURE_PREVIEW",
+      "title": "未来 5 年 12-30",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 12,
+          "lunarDay": 30,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2027-02-05",
+        "futureOccurrences": [
+          "2027-02-05",
+          "2028-01-25",
+          "2029-02-12",
+          "2030-02-02",
+          "2031-01-22"
+        ]
+      }
+    },
+    {
+      "id": "FUTURE_PREVIEW_009",
+      "category": "FUTURE_PREVIEW",
+      "title": "未来 5 年 4-8",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 4,
+          "lunarDay": 8,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2027-05-13",
+        "futureOccurrences": [
+          "2027-05-13",
+          "2028-05-02",
+          "2029-05-20",
+          "2030-05-09",
+          "2031-05-28"
+        ]
+      }
+    },
+    {
+      "id": "FUTURE_PREVIEW_010",
+      "category": "FUTURE_PREVIEW",
+      "title": "未来 5 年 10-15",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 10,
+          "lunarDay": 15,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-11-23",
+        "futureOccurrences": [
+          "2026-11-23",
+          "2027-11-12",
+          "2028-11-30",
+          "2029-11-20",
+          "2030-11-10"
+        ]
+      }
+    },
+    {
+      "id": "CONSISTENCY_001",
+      "category": "CONSISTENCY",
+      "title": "一致性公历 1-1",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "GREGORIAN",
+        "datePayload": {
+          "year": 2024,
+          "month": 1,
+          "day": 1,
+          "timezone": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2027-01-01",
+        "futureOccurrences": [
+          "2027-01-01",
+          "2028-01-01",
+          "2029-01-01",
+          "2030-01-01",
+          "2031-01-01"
+        ]
+      }
+    },
+    {
+      "id": "CONSISTENCY_002",
+      "category": "CONSISTENCY",
+      "title": "一致性公历 2-14",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "GREGORIAN",
+        "datePayload": {
+          "year": 2024,
+          "month": 2,
+          "day": 14,
+          "timezone": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2027-02-14",
+        "futureOccurrences": [
+          "2027-02-14",
+          "2028-02-14",
+          "2029-02-14",
+          "2030-02-14",
+          "2031-02-14"
+        ]
+      }
+    },
+    {
+      "id": "CONSISTENCY_003",
+      "category": "CONSISTENCY",
+      "title": "一致性公历 5-20",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "GREGORIAN",
+        "datePayload": {
+          "year": 2024,
+          "month": 5,
+          "day": 20,
+          "timezone": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2027-05-20",
+        "futureOccurrences": [
+          "2027-05-20",
+          "2028-05-20",
+          "2029-05-20",
+          "2030-05-20",
+          "2031-05-20"
+        ]
+      }
+    },
+    {
+      "id": "CONSISTENCY_004",
+      "category": "CONSISTENCY",
+      "title": "一致性公历 8-15",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "GREGORIAN",
+        "datePayload": {
+          "year": 2024,
+          "month": 8,
+          "day": 15,
+          "timezone": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-08-15",
+        "futureOccurrences": [
+          "2026-08-15",
+          "2027-08-15",
+          "2028-08-15",
+          "2029-08-15",
+          "2030-08-15"
+        ]
+      }
+    },
+    {
+      "id": "CONSISTENCY_005",
+      "category": "CONSISTENCY",
+      "title": "一致性公历 12-31",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "GREGORIAN",
+        "datePayload": {
+          "year": 2024,
+          "month": 12,
+          "day": 31,
+          "timezone": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-12-31",
+        "futureOccurrences": [
+          "2026-12-31",
+          "2027-12-31",
+          "2028-12-31",
+          "2029-12-31",
+          "2030-12-31"
+        ]
+      }
+    },
+    {
+      "id": "CONSISTENCY_006",
+      "category": "CONSISTENCY",
+      "title": "一致性农历 1-1",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 1,
+          "lunarDay": 1,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2027-02-06",
+        "futureOccurrences": [
+          "2027-02-06",
+          "2028-01-26",
+          "2029-02-13",
+          "2030-02-03",
+          "2031-01-23"
+        ]
+      }
+    },
+    {
+      "id": "CONSISTENCY_007",
+      "category": "CONSISTENCY",
+      "title": "一致性农历 5-5",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 5,
+          "lunarDay": 5,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-06-19",
+        "futureOccurrences": [
+          "2026-06-19",
+          "2027-06-09",
+          "2028-05-28",
+          "2029-06-16",
+          "2030-06-05"
+        ]
+      }
+    },
+    {
+      "id": "CONSISTENCY_008",
+      "category": "CONSISTENCY",
+      "title": "一致性农历 8-3",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 8,
+          "lunarDay": 3,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-09-13",
+        "futureOccurrences": [
+          "2026-09-13",
+          "2027-09-03",
+          "2028-09-21",
+          "2029-09-10",
+          "2030-08-31"
+        ]
+      }
+    },
+    {
+      "id": "CONSISTENCY_009",
+      "category": "CONSISTENCY",
+      "title": "一致性农历 8-15",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 8,
+          "lunarDay": 15,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2026-09-25",
+        "futureOccurrences": [
+          "2026-09-25",
+          "2027-09-15",
+          "2028-10-03",
+          "2029-09-22",
+          "2030-09-12"
+        ]
+      }
+    },
+    {
+      "id": "CONSISTENCY_010",
+      "category": "CONSISTENCY",
+      "title": "一致性农历 12-30",
+      "fromDate": "2026-06-19",
+      "event": {
+        "calendarType": "CHINESE_LUNAR",
+        "datePayload": {
+          "lunarYear": 2024,
+          "lunarMonth": 12,
+          "lunarDay": 30,
+          "isLeapMonth": false,
+          "timezoneBasis": "Asia/Shanghai"
+        },
+        "repeatRule": {
+          "type": "YEARLY",
+          "leapDayPolicy": "FEB_28",
+          "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+          "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+        }
+      },
+      "expected": {
+        "status": "VALID",
+        "nextOccurrence": "2027-02-05",
+        "futureOccurrences": [
+          "2027-02-05",
+          "2028-01-25",
+          "2029-02-12",
+          "2030-02-02",
+          "2031-01-22"
+        ]
+      }
+    }
+  ]
+}

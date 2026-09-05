@@ -1,0 +1,33 @@
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    prefer_single_quotes: true
+    avoid_print: true
+    always_declare_return_types: true
+    annotate_overrides: true
+    avoid_empty_else: true
+    avoid_redundant_argument_values: true
+    avoid_unnecessary_containers: true
+    avoid_unused_constructor_parameters: true
+    curly_braces_in_flow_control_structures: true
+    directives_ordering: true
+    empty_constructor_bodies: true
+    file_names: true
+    no_leading_underscores_for_local_identifiers: true
+    prefer_const_constructors: true
+    prefer_const_constructors_in_immutables: true
+    prefer_const_declarations: true
+    prefer_const_literals_to_create_immutables: true
+    prefer_final_fields: true
+    prefer_final_locals: true
+    prefer_interpolation_to_compose_strings: true
+    prefer_typing_uninitialized_variables: true
+    sized_box_for_whitespace: true
+    sort_child_properties_last: true
+    unnecessary_const: true
+    unnecessary_new: true
+    unnecessary_null_in_if_null_operators: true
+    unnecessary_string_escapes: true
+    unnecessary_string_interpolations: true
+    use_key_in_widget_constructors: true

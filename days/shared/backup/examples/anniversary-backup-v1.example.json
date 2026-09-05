@@ -1,0 +1,80 @@
+{
+  "schemaVersion": "1.0.0",
+  "exportedAt": "2026-06-19T10:00:00+08:00",
+  "appVersion": "1.0.0",
+  "calendarRuleVersion": "lunar-rules-1.0.0",
+  "events": [
+    {
+      "id": "event_lunar_001",
+      "title": "妈妈生日",
+      "category": "FAMILY",
+      "calendarType": "CHINESE_LUNAR",
+      "datePayload": {
+        "lunarYear": 1968,
+        "lunarMonth": 8,
+        "lunarDay": 3,
+        "isLeapMonth": false,
+        "timezoneBasis": "Asia/Shanghai"
+      },
+      "repeatRule": {
+        "type": "YEARLY",
+        "leapDayPolicy": "FEB_28",
+        "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+        "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+      },
+      "reminderRule": {
+        "enabled": true,
+        "time": "09:00",
+        "advanceDays": [7, 0],
+        "timezoneMode": "DEVICE",
+        "fixedTimezone": null
+      },
+      "displayRule": {
+        "mainDisplay": "COUNTDOWN",
+        "showLunar": true,
+        "showGregorian": true
+      },
+      "note": "",
+      "isPinned": false,
+      "isArchived": false,
+      "createdAt": "2026-06-19T10:00:00+08:00",
+      "updatedAt": "2026-06-19T10:00:00+08:00"
+    },
+    {
+      "id": "event_gregorian_001",
+      "title": "在一起",
+      "category": "LOVE",
+      "calendarType": "GREGORIAN",
+      "datePayload": {
+        "year": 2023,
+        "month": 1,
+        "day": 1,
+        "timezone": "Asia/Shanghai"
+      },
+      "repeatRule": {
+        "type": "YEARLY",
+        "leapDayPolicy": "FEB_28",
+        "missingLunarDayPolicy": "LAST_DAY_OF_MONTH",
+        "leapMonthPolicy": "NORMAL_MONTH_FALLBACK"
+      },
+      "reminderRule": {
+        "enabled": false,
+        "time": "09:00",
+        "advanceDays": [],
+        "timezoneMode": "DEVICE",
+        "fixedTimezone": null
+      },
+      "displayRule": {
+        "mainDisplay": "ELAPSED_DAYS",
+        "showLunar": false,
+        "showGregorian": true
+      },
+      "note": "",
+      "isPinned": true,
+      "isArchived": false,
+      "createdAt": "2026-06-19T10:00:00+08:00",
+      "updatedAt": "2026-06-19T10:00:00+08:00"
+    }
+  ]
+}
+

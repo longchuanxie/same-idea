@@ -1,0 +1,195 @@
+{
+  "document_version": "V2.0 Modern UI",
+  "source_ui": "local_reader_ui_prototype_v4_modern",
+  "target_reader": "LLM agents",
+  "non_negotiables": [
+    "以 V4 Modern UI 为最新 UI 基准",
+    "禁止回退到复古纸感主视觉",
+    "书架页禁止无限下拉",
+    "禁止登录注册账号体系",
+    "禁止在线书源、在线书城、爬虫、推荐流",
+    "默认不上传用户文件",
+    "默认不删除、不移动、不改写用户原始文件",
+    "无 emoji，无强烈 AI 风",
+    "业务逻辑不得写入 Widget"
+  ],
+  "ui_modules": [
+    "Modern AppShell",
+    "Bento Home",
+    "Paged Shelf",
+    "Command Search",
+    "Book Detail",
+    "Series Aggregation",
+    "ReaderShell",
+    "ReaderToolbar",
+    "Theme Switch",
+    "Density Switch"
+  ],
+  "implementation_order": [
+    {
+      "phase": 0,
+      "name": "上下文冻结",
+      "tasks": [
+        "更新 docs/llm_context.md",
+        "标记 V4 Modern UI 为最新基准",
+        "废弃旧纸感 UI",
+        "写入书架禁止无限下拉规则"
+      ]
+    },
+    {
+      "phase": 1,
+      "name": "工程框架与 Design System",
+      "tasks": [
+        "Flutter 工程",
+        "Riverpod",
+        "go_router",
+        "Theme Token",
+        "Density Token",
+        "Motion Token",
+        "AppShell",
+        "TopBar",
+        "SideNav",
+        "BottomNav"
+      ]
+    },
+    {
+      "phase": 2,
+      "name": "数据库与领域模型",
+      "tasks": [
+        "books",
+        "series",
+        "tags",
+        "reading_progress",
+        "notes",
+        "shelf_preferences",
+        "reader_settings",
+        "app_settings",
+        "search_fts"
+      ]
+    },
+    {
+      "phase": 3,
+      "name": "首页 Bento 与书架数据服务",
+      "tasks": [
+        "HomeService",
+        "HomeViewState",
+        "LibraryMetrics",
+        "ShelfService",
+        "ShelfSection",
+        "分页查询",
+        "系列聚合"
+      ]
+    },
+    {
+      "phase": 4,
+      "name": "导入扫描与元数据",
+      "tasks": [
+        "文件选择",
+        "目录扫描",
+        "拖拽导入",
+        "格式识别",
+        "重复检测",
+        "元数据提取",
+        "封面提取",
+        "文件丢失处理"
+      ]
+    },
+    {
+      "phase": 5,
+      "name": "详情、标签、系列",
+      "tasks": [
+        "书籍详情",
+        "元数据编辑",
+        "标签管理",
+        "系列列表",
+        "系列详情",
+        "卷序调整"
+      ]
+    },
+    {
+      "phase": 6,
+      "name": "Command Search 与全文索引",
+      "tasks": [
+        "Command UI",
+        "书库搜索",
+        "命令搜索",
+        "正文索引",
+        "PDF 文本索引",
+        "笔记索引",
+        "结果跳转"
+      ]
+    },
+    {
+      "phase": 7,
+      "name": "文本阅读器",
+      "tasks": [
+        "TXT",
+        "EPUB",
+        "Markdown",
+        "HTML",
+        "分页",
+        "滚动",
+        "阅读设置",
+        "目录",
+        "搜索",
+        "书签",
+        "笔记"
+      ]
+    },
+    {
+      "phase": 8,
+      "name": "漫画阅读器",
+      "tasks": [
+        "CBZ",
+        "ZIP",
+        "图片目录",
+        "图片排序",
+        "单页",
+        "双页",
+        "条漫",
+        "缩略图",
+        "裁边",
+        "预加载"
+      ]
+    },
+    {
+      "phase": 9,
+      "name": "PDF 阅读器",
+      "tasks": [
+        "PdfAdapter",
+        "打开",
+        "缩放",
+        "目录",
+        "搜索",
+        "高亮",
+        "批注",
+        "书签"
+      ]
+    },
+    {
+      "phase": 10,
+      "name": "笔记、备份、缓存、隐私",
+      "tasks": [
+        "笔记列表",
+        "导出",
+        "备份导出",
+        "备份导入",
+        "缓存清理",
+        "隐私说明"
+      ]
+    },
+    {
+      "phase": 11,
+      "name": "跨端适配与性能",
+      "tasks": [
+        "Android SAF",
+        "Windows 拖拽",
+        "iOS 文件 App",
+        "iPadOS 分屏",
+        "高 DPI",
+        "视觉降级",
+        "性能测试"
+      ]
+    }
+  ]
+}

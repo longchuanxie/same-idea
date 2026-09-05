@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="今念 logo">
+  <defs>
+    <clipPath id="app-icon-shape">
+      <rect x="44" y="44" width="936" height="936" rx="214"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#app-icon-shape)">
+    <rect x="44" y="44" width="936" height="936" rx="214" fill="#5f857b"/>
+    <circle cx="240" cy="210" r="410" fill="#7ea49a" opacity=".32"/>
+    <circle cx="930" cy="960" r="280" fill="#41685f" opacity=".36"/>
+  </g>
+  <rect x="224" y="180" width="576" height="670" rx="88" fill="#fff8ee"/>
+  <path d="M312 180h400a88 88 0 0 1 88 88v60H224v-60a88 88 0 0 1 88-88Z" fill="#efe3d4"/>
+  <g>
+    <rect x="336" y="122" width="72" height="130" rx="34" fill="#41685f"/>
+    <rect x="354" y="146" width="36" height="80" rx="18" fill="#fff8ee"/>
+    <rect x="616" y="122" width="72" height="130" rx="34" fill="#41685f"/>
+    <rect x="634" y="146" width="36" height="80" rx="18" fill="#fff8ee"/>
+  </g>
+  <path d="M706 180h94v94Z" fill="#f7eddf"/>
+  <path d="M706 180 800 274" fill="none" stroke="#dcccb8" stroke-width="10"/>
+  <path d="M372 470 512 362l140 108" fill="none" stroke="#41685f" stroke-width="58" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="478" y="440" width="68" height="192" rx="34" fill="#41685f"/>
+  <rect x="356" y="628" width="312" height="68" rx="34" fill="#41685f"/>
+  <rect x="390" y="744" width="244" height="62" rx="31" fill="#314b45"/>
+  <circle cx="712" cy="668" r="50" fill="#e6a08b"/>
+</svg>

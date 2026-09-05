@@ -1,0 +1,44 @@
+name: local_reader
+description: "MoYun - A local-first, cross-platform reading workstation"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.5.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # State management
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+
+  # Routing
+  go_router: ^14.2.7
+
+  # Database
+  drift: ^2.18.0
+  sqlite3_flutter_libs: ^0.5.24
+
+  # File picking
+  file_picker: ^8.0.7
+
+  # Utilities
+  path_provider: ^2.1.4
+  path: ^1.9.0
+  collection: ^1.18.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+  # Code generation
+  build_runner: ^2.4.12
+  riverpod_generator: ^2.4.2
+  drift_dev: ^2.18.0
+
+flutter:
+  uses-material-design: true

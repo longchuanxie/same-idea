@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "calendar-runtime-rules-v1.schema.json",
+  "title": "Anniversary Calendar Runtime Rules v1",
+  "type": "object",
+  "required": ["version", "range", "source", "checksum", "years"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "const": "lunar-rules-1.0.0" },
+    "range": {
+      "type": "object",
+      "required": ["start", "end"],
+      "properties": {
+        "start": { "const": "1901-01-01" },
+        "end": { "const": "2100-12-31" }
+      },
+      "additionalProperties": false
+    },
+    "source": { "type": "object" },
+    "boundary": { "type": "object" },
+    "checksum": {
+      "type": "object",
+      "required": ["algorithm", "dataSha256"],
+      "properties": {
+        "algorithm": { "const": "SHA-256" },
+        "dataSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "years": {
+      "type": "array",
+      "minItems": 200,
+      "maxItems": 200,
+      "items": {
+        "type": "object",
+        "required": ["lunarYear", "lunarNewYear", "leapMonth", "months"],
+        "properties": {
+          "lunarYear": { "type": "integer", "minimum": 1901, "maximum": 2100 },
+          "lunarNewYear": { "type": "string", "format": "date" },
+          "leapMonth": {
+            "anyOf": [
+              { "type": "integer", "minimum": 1, "maximum": 12 },
+              { "type": "null" }
+            ]
+          },
+          "months": {
+            "type": "array",
+            "minItems": 12,
+            "maxItems": 13,
+            "items": {
+              "type": "object",
+              "required": ["month", "isLeap", "days", "startGregorian"],
+              "properties": {
+                "month": { "type": "integer", "minimum": 1, "maximum": 12 },
+                "isLeap": { "type": "boolean" },
+                "days": { "type": "integer", "enum": [29, 30] },
+                "startGregorian": { "type": "string", "format": "date" },
+                "completion": { "type": "string" }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

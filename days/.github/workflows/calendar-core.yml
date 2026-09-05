@@ -1,0 +1,29 @@
+name: Calendar Core
+
+on:
+  push:
+    paths:
+      - "calendar_core/**"
+      - "shared/calendar/**"
+      - "tools/calendar/**"
+      - ".github/workflows/calendar-core.yml"
+  pull_request:
+    paths:
+      - "calendar_core/**"
+      - "shared/calendar/**"
+      - "tools/calendar/**"
+      - ".github/workflows/calendar-core.yml"
+
+jobs:
+  calendar-core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: dart-lang/setup-dart@v1
+      - name: Install Python test dependencies
+        run: python -m pip install jsonschema
+      - name: Run calendar checks
+        run: python tools/calendar/run_calendar_checks.py

@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>本地阅读器现代化原型 UI</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="studio">
+    <aside class="studio-nav">
+      <div class="brand">
+        <div class="brand-logo">LR</div>
+        <div>
+          <h1>本地阅读器</h1>
+          <p>Modern UI Prototype</p>
+        </div>
+      </div>
+
+      <section class="nav-section">
+        <span class="section-label">设备画布</span>
+        <div class="segmented" id="deviceSwitch">
+          <button class="active" data-device="phone">手机</button>
+          <button data-device="pad">平板</button>
+          <button data-device="desktop">桌面</button>
+        </div>
+      </section>
+
+      <section class="nav-section">
+        <span class="section-label">页面</span>
+        <div class="screen-list" id="screenList">
+          <button class="active" data-screen="home">首页</button>
+          <button data-screen="shelf">书架</button>
+          <button data-screen="discover">搜索</button>
+          <button data-screen="detail">详情</button>
+          <button data-screen="bookEdit">编辑</button>
+          <button data-screen="series">系列</button>
+          <button data-screen="text">文本阅读</button>
+          <button data-screen="comic">漫画阅读</button>
+          <button data-screen="pdf">PDF 阅读</button>
+          <button data-screen="notes">笔记</button>
+          <button data-screen="noteDetail">笔记详情</button>
+          <button data-screen="import">导入扫描</button>
+          <button data-screen="settings">设置</button>
+          <button data-screen="backup">备份</button>
+          <button data-screen="cache">缓存</button>
+          <button data-screen="privacy">隐私</button>
+          <button data-screen="viewAll">全部书籍</button>
+          <button data-screen="onboarding">引导</button>
+        </div>
+      </section>
+
+      <section class="nav-section note">
+        <span class="section-label">本版调整</span>
+        <p>从复古纸感转向现代产品感：更清晰的导航、更强的信息层级、更现代的玻璃面板、Bento 概览、分页书架和命令式操作入口。</p>
+      </section>
+    </aside>
+
+    <section class="stage">
+      <header class="stage-header">
+        <div>
+          <strong id="stageTitle">首页</strong>
+          <span id="stageDesc">现代化阅读工作台首页</span>
+        </div>
+        <div class="stage-actions">
+          <button id="themeToggle">夜读主题</button>
+          <button id="densityToggle">紧凑密度</button>
+        </div>
+      </header>
+
+      <div class="device phone" id="device">
+        <div class="device-bar">
+          <span>9:41</span>
+          <span>Local</span>
+        </div>
+        <div class="app" id="app"></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="overlay hidden" id="dialogOverlay">
+    <div class="dialog" id="dialog"></div>
+  </div>
+  <div class="command-overlay hidden" id="commandOverlay">
+    <div class="command-palette" id="commandPalette"></div>
+  </div>
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="./app.js"></script>
+</body>
+</html>

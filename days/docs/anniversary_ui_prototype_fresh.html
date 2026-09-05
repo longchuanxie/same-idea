@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>纪念日 App UI 原型｜年轻清新方向</title>
+  <style>
+    :root {
+      --bg: #f6f3ee;
+      --panel: #fffdf8;
+      --panel-2: #f0ebe3;
+      --ink: #2f2b26;
+      --muted: #81786d;
+      --muted-2: #aaa197;
+      --line: rgba(58, 49, 40, 0.12);
+      --brand: #6f6557;
+      --brand-2: #a99072;
+      --soft: #e8dfd1;
+      --green: #72806d;
+      --red: #a86d5d;
+      --yellow: #d9c398;
+      --shadow: 0 28px 70px rgba(68, 55, 38, .16);
+      --radius-xl: 32px;
+      --radius-lg: 24px;
+      --radius-md: 18px;
+      --radius-sm: 12px;
+      --phone-w: 390px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", "Microsoft YaHei", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 15% 0%, rgba(217,195,152,.38), transparent 32%),
+        radial-gradient(circle at 90% 10%, rgba(114,128,109,.22), transparent 34%),
+        linear-gradient(135deg, #f9f6ef, #ede6dc);
+      min-height: 100vh;
+    }
+
+    .shell {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 30px 22px;
+      border-right: 1px solid var(--line);
+      background: rgba(255, 253, 248, .72);
+      backdrop-filter: blur(18px);
+      overflow: auto;
+    }
+
+    .brand-lockup {
+      padding: 14px 12px 24px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 20px;
+    }
+
+    .brand-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 18px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(145deg, #fff8eb, #dfd0bb);
+      box-shadow: 0 10px 22px rgba(91,70,45,.16);
+      font-weight: 700;
+      font-size: 22px;
+      margin-bottom: 14px;
+    }
+
+    .brand-title {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -.02em;
+      margin: 0 0 8px;
+    }
+
+    .brand-subtitle {
+      font-size: 13px;
+      line-height: 1.65;
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .nav-title {
+      font-size: 12px;
+      color: var(--muted-2);
+      padding: 12px 12px 8px;
+      letter-spacing: .08em;
+    }
+
+    .nav a, .nav button {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 12px;
+      margin: 4px 0;
+      color: var(--ink);
+      text-decoration: none;
+      border-radius: 14px;
+      border: 0;
+      background: transparent;
+      font-size: 14px;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .nav a:hover, .nav button:hover, .nav a.active {
+      background: rgba(111,101,87,.10);
+    }
+
+    .nav .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--brand-2);
+      opacity: .6;
+    }
+
+    .content {
+      padding: 36px 42px 80px;
+      max-width: 1440px;
+      width: 100%;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(360px, 1fr) auto;
+      gap: 36px;
+      align-items: center;
+      margin-bottom: 40px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.58);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 18px;
+    }
+
+    .hero h1 {
+      font-size: clamp(34px, 5vw, 64px);
+      line-height: 1.08;
+      letter-spacing: -.055em;
+      margin: 0 0 20px;
+      max-width: 780px;
+    }
+
+    .hero p {
+      color: var(--muted);
+      max-width: 650px;
+      font-size: 16px;
+      line-height: 1.8;
+      margin: 0 0 26px;
+    }
+
+    .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+    .btn {
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 18px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--ink);
+      background: rgba(255,255,255,.72);
+      border: 1px solid var(--line);
+      box-shadow: 0 10px 24px rgba(70,56,40,.08);
+    }
+    .btn.primary { background: #2f2b26; color: #fffdf8; border-color: #2f2b26; }
+    .btn.ghost { box-shadow: none; }
+    .btn.small { padding: 8px 12px; font-size: 12px; }
+
+    .section { margin: 56px 0; }
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 22px;
+    }
+    .section h2 {
+      font-size: 30px;
+      letter-spacing: -.04em;
+      margin: 0 0 8px;
+    }
+    .section-desc {
+      color: var(--muted);
+      line-height: 1.7;
+      margin: 0;
+      max-width: 720px;
+    }
+
+    .grid { display: grid; gap: 22px; }
+    .grid.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid.cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+    .card {
+      background: rgba(255, 253, 248, .74);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 20px 45px rgba(70,56,40,.08);
+      padding: 22px;
+      backdrop-filter: blur(18px);
+    }
+    .card h3 { margin: 0 0 10px; font-size: 17px; letter-spacing: -.02em; }
+    .card p { margin: 0; color: var(--muted); line-height: 1.7; font-size: 14px; }
+
+    .pill-list { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+    .pill {
+      padding: 8px 11px;
+      border-radius: 999px;
+      background: rgba(111,101,87,.09);
+      color: var(--brand);
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .prototype-stage {
+      display: grid;
+      grid-template-columns: auto minmax(320px, 1fr);
+      gap: 30px;
+      align-items: start;
+    }
+
+    .phone {
+      width: var(--phone-w);
+      border-radius: 46px;
+      padding: 14px;
+      background: #191816;
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 28px;
+    }
+
+    .screen {
+      height: 812px;
+      overflow: hidden;
+      border-radius: 36px;
+      background: var(--bg);
+      position: relative;
+      border: 1px solid rgba(255,255,255,.08);
+    }
+
+    .statusbar {
+      height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--ink);
+    }
+    .camera {
+      position: absolute;
+      left: 50%; top: 12px; transform: translateX(-50%);
+      width: 78px; height: 24px;
+      border-radius: 999px;
+      background: #171615;
+      z-index: 10;
+    }
+    .app-page {
+      display: none;
+      height: calc(100% - 42px);
+      overflow-y: auto;
+      padding: 12px 20px 92px;
+      scrollbar-width: none;
+    }
+    .app-page::-webkit-scrollbar { display: none; }
+    .app-page.active { display: block; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 4px 0 18px;
+    }
+    .topbar h2 { margin: 0; font-size: 26px; letter-spacing: -.05em; }
+    .avatar {
+      width: 38px; height: 38px;
+      border-radius: 15px;
+      background: #e2d6c6;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+    }
+
+    .quiet-card {
+      background: linear-gradient(160deg, rgba(255,253,248,.92), rgba(235,226,211,.92));
+      border: 1px solid rgba(58,49,40,.09);
+      border-radius: 28px;
+      padding: 22px;
+      box-shadow: 0 20px 38px rgba(68,55,38,.10);
+    }
+
+    .today-card {
+      min-height: 160px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+    .card-label { color: var(--muted); font-size: 13px; font-weight: 700; }
+    .hero-number { font-size: 70px; line-height: .92; letter-spacing: -.07em; margin: 14px 0 4px; font-weight: 850; }
+    .hero-unit { font-size: 19px; color: var(--muted); font-weight: 700; }
+    .event-title { font-size: 20px; margin: 0 0 4px; letter-spacing: -.03em; }
+    .event-sub { color: var(--muted); font-size: 13px; line-height: 1.55; }
+
+    .mini-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      background: rgba(255,253,248,.72);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 15px;
+      margin: 10px 0;
+      cursor: pointer;
+    }
+    .mini-row:hover { background: #fffdf8; }
+    .mini-title { font-weight: 800; margin-bottom: 4px; }
+    .mini-meta { color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .mini-days { text-align: right; font-weight: 850; font-size: 22px; letter-spacing: -.04em; min-width: 70px; }
+    .mini-days span { display: block; font-size: 11px; color: var(--muted); letter-spacing: 0; font-weight: 700; }
+
+    .fab {
+      position: absolute;
+      right: 22px;
+      bottom: 86px;
+      width: 58px; height: 58px;
+      border-radius: 22px;
+      display: grid;
+      place-items: center;
+      background: #2f2b26;
+      color: #fff;
+      border: none;
+      font-size: 30px;
+      box-shadow: 0 16px 30px rgba(45,35,22,.30);
+      cursor: pointer;
+      z-index: 6;
+    }
+
+    .tabbar {
+      position: absolute;
+      left: 16px; right: 16px; bottom: 14px;
+      height: 62px;
+      border-radius: 25px;
+      background: rgba(255,253,248,.88);
+      border: 1px solid var(--line);
+      backdrop-filter: blur(18px);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      padding: 7px;
+      z-index: 5;
+      box-shadow: 0 12px 30px rgba(68,55,38,.10);
+    }
+    .tabbar button {
+      border: 0;
+      background: transparent;
+      border-radius: 18px;
+      color: var(--muted);
+      font-size: 11px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .tabbar button.active { background: rgba(111,101,87,.12); color: var(--ink); }
+
+    .form-card {
+      background: rgba(255,253,248,.78);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 18px;
+      margin: 12px 0;
+    }
+    .field { margin: 14px 0; }
+    .field label { display: block; color: var(--muted); font-size: 12px; font-weight: 800; margin-bottom: 8px; }
+    .input, .select {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.58);
+      border-radius: 16px;
+      padding: 13px 14px;
+      font: inherit;
+      color: var(--ink);
+      outline: none;
+    }
+    .segmented {
+      display: grid;
+      grid-template-columns: repeat(2,1fr);
+      gap: 8px;
+      padding: 5px;
+      background: rgba(111,101,87,.08);
+      border-radius: 17px;
+    }
+    .segmented button {
+      border: 0;
+      padding: 11px 12px;
+      border-radius: 13px;
+      background: transparent;
+      font-weight: 800;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .segmented button.active { background: #fffdf8; color: var(--ink); box-shadow: 0 8px 18px rgba(68,55,38,.08); }
+
+    .date-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .hint-box {
+      background: rgba(114,128,109,.10);
+      border: 1px solid rgba(114,128,109,.20);
+      color: #4f5a4c;
+      border-radius: 18px;
+      padding: 12px 13px;
+      line-height: 1.55;
+      font-size: 12px;
+    }
+    .warning-box {
+      background: rgba(168,109,93,.10);
+      border: 1px solid rgba(168,109,93,.18);
+      color: #7e4d41;
+      border-radius: 18px;
+      padding: 12px 13px;
+      line-height: 1.55;
+      font-size: 12px;
+      display: none;
+    }
+
+    .future-list { margin: 10px 0 0; }
+    .future-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 11px 0;
+      border-bottom: 1px solid var(--line);
+      font-size: 13px;
+    }
+    .future-item:last-child { border-bottom: 0; }
+    .future-item b { font-weight: 850; }
+    .future-item span { color: var(--muted); }
+
+    .detail-hero {
+      padding: 26px 18px;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .detail-hero h1 { margin: 0; font-size: 22px; letter-spacing: -.03em; }
+    .detail-hero .big { font-size: 88px; font-weight: 900; letter-spacing: -.08em; line-height: 1; margin-top: 18px; }
+    .detail-hero .unit { color: var(--muted); font-weight: 800; }
+
+    .kv { display: grid; gap: 10px; margin: 12px 0; }
+    .kv-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 13px 0;
+      border-bottom: 1px solid var(--line);
+      font-size: 14px;
+    }
+    .kv-row:last-child { border-bottom: 0; }
+    .kv-row span:first-child { color: var(--muted); }
+    .kv-row span:last-child { font-weight: 800; text-align: right; }
+
+    .settings-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 15px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .settings-row:last-child { border-bottom: 0; }
+    .settings-row strong { display:block; font-size: 14px; margin-bottom: 3px; }
+    .settings-row span { color: var(--muted); font-size: 12px; }
+    .toggle {
+      width: 48px;
+      height: 28px;
+      border-radius: 999px;
+      background: #2f2b26;
+      position: relative;
+      flex: 0 0 auto;
+    }
+    .toggle:after {
+      content: '';
+      width: 22px; height: 22px;
+      background: #fff;
+      border-radius: 50%;
+      position: absolute;
+      right: 3px; top: 3px;
+    }
+
+    .widget-board {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .android-widget {
+      border-radius: 30px;
+      padding: 22px;
+      background: linear-gradient(145deg, rgba(255,253,248,.96), rgba(226,214,198,.94));
+      box-shadow: 0 22px 45px rgba(68,55,38,.12);
+      border: 1px solid rgba(58,49,40,.10);
+      min-height: 154px;
+    }
+    .android-widget.dark {
+      background: linear-gradient(145deg, #302d28, #1f1d1a);
+      color: #fff9ef;
+    }
+    .android-widget.dark .muted, .android-widget.dark small { color: rgba(255,249,239,.62); }
+    .android-widget.compact { min-height: 96px; border-radius: 22px; padding: 16px; }
+    .android-widget .num { font-size: 56px; line-height: 1; font-weight: 900; letter-spacing: -.07em; margin: 8px 0 2px; }
+    .android-widget .title { font-weight: 900; font-size: 18px; letter-spacing: -.03em; }
+    .android-widget .muted, .android-widget small { color: var(--muted); }
+    .widget-row { display: flex; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid rgba(58,49,40,.10); font-size: 13px; }
+    .widget-row:last-child { border-bottom: 0; }
+
+    .windows-stage {
+      border-radius: 34px;
+      background:
+        linear-gradient(145deg, rgba(32,35,39,.84), rgba(70,64,57,.9)),
+        radial-gradient(circle at 20% 20%, rgba(217,195,152,.2), transparent 32%);
+      min-height: 520px;
+      padding: 28px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255,255,255,.12);
+    }
+    .win-taskbar {
+      position: absolute;
+      left: 24px; right: 24px; bottom: 20px;
+      height: 48px;
+      background: rgba(255,255,255,.18);
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 18px;
+      backdrop-filter: blur(18px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+    }
+    .task-dot { width: 24px; height: 24px; border-radius: 8px; background: rgba(255,255,255,.45); }
+    .win-widget {
+      width: 330px;
+      border-radius: 26px;
+      background: rgba(255,253,248,.84);
+      backdrop-filter: blur(22px);
+      border: 1px solid rgba(255,255,255,.36);
+      box-shadow: 0 32px 80px rgba(0,0,0,.20);
+      padding: 20px;
+      position: absolute;
+      top: 54px;
+      right: 48px;
+      color: var(--ink);
+    }
+    .win-widget.small { width: 220px; top: 260px; right: 120px; padding: 16px; border-radius: 20px; }
+    .win-widget h4 { margin: 0 0 14px; font-size: 15px; }
+    .win-row { display: flex; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+    .win-row:last-child { border-bottom: 0; }
+    .win-row span:last-child { font-weight: 900; }
+    .win-note { color: var(--muted); font-size: 12px; margin-top: 12px; }
+    .window-controls { position:absolute; right:16px; top:14px; display:flex; gap:6px; }
+    .window-controls i { width:10px; height:10px; border-radius:50%; background:rgba(47,43,38,.25); }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-top: 18px;
+    }
+    .flow-step {
+      position: relative;
+      padding: 18px;
+      border-radius: 20px;
+      background: rgba(255,253,248,.72);
+      border: 1px solid var(--line);
+      min-height: 130px;
+    }
+    .flow-step b { display:block; font-size: 15px; margin-bottom: 8px; }
+    .flow-step p { color: var(--muted); font-size: 13px; line-height: 1.6; margin:0; }
+    .flow-no {
+      width: 28px; height: 28px;
+      border-radius: 10px;
+      background: #2f2b26;
+      color: #fff;
+      display: grid;
+      place-items:center;
+      font-size: 12px;
+      font-weight: 900;
+      margin-bottom: 12px;
+    }
+
+    .spec-table {
+      width: 100%; border-collapse: collapse; overflow: hidden; border-radius: 20px; background: rgba(255,253,248,.72); border:1px solid var(--line);
+    }
+    .spec-table th, .spec-table td { padding: 14px 16px; border-bottom:1px solid var(--line); text-align:left; font-size: 14px; vertical-align:top; }
+    .spec-table th { color: var(--muted); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; background: rgba(111,101,87,.06); }
+    .spec-table tr:last-child td { border-bottom: 0; }
+    .risk { display:inline-flex; padding:4px 8px; border-radius:999px; font-size:11px; font-weight:800; }
+    .risk.high { background:rgba(168,109,93,.13); color:#8f584a; }
+    .risk.mid { background:rgba(217,195,152,.28); color:#7b6740; }
+    .risk.low { background:rgba(114,128,109,.14); color:#54634d; }
+
+    .toast {
+      position: fixed;
+      left: 50%; bottom: 28px;
+      transform: translateX(-50%) translateY(30px);
+      opacity: 0;
+      pointer-events: none;
+      background: #2f2b26;
+      color: #fffdf8;
+      padding: 12px 16px;
+      border-radius: 999px;
+      font-size: 13px;
+      box-shadow: 0 16px 40px rgba(47,43,38,.28);
+      transition: .28s ease;
+      z-index: 100;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    @media (max-width: 1180px) {
+      .shell { grid-template-columns: 1fr; }
+      .sidebar { position: relative; height: auto; border-right: 0; border-bottom: 1px solid var(--line); }
+      .nav { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+      .content { padding: 28px 20px 70px; }
+      .hero, .prototype-stage { grid-template-columns: 1fr; }
+      .phone { position: relative; top: 0; margin: 0 auto; }
+      .grid.cols-3, .grid.cols-4, .flow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 760px) {
+      :root { --phone-w: min(390px, calc(100vw - 34px)); }
+      .hero h1 { font-size: 40px; }
+      .grid.cols-2, .grid.cols-3, .grid.cols-4, .widget-board, .flow { grid-template-columns: 1fr; }
+      .section-head { display: block; }
+      .windows-stage { min-height: 620px; }
+      .win-widget { left: 22px; right: 22px; width: auto; }
+      .win-widget.small { left: 70px; right: 70px; width: auto; top: 330px; }
+      .nav { grid-template-columns: repeat(2, 1fr); }
+    }
+  
+
+    /* ================= Fresh UI Direction Overrides =================
+       视觉目标：年轻、清新、轻量；保留准确、克制、长期可用的产品底色。
+    ================================================================= */
+    :root {
+      --bg: #f4fbf7;
+      --panel: #ffffff;
+      --panel-2: #eaf8f1;
+      --ink: #20302b;
+      --muted: #6d7d77;
+      --muted-2: #98aaa3;
+      --line: rgba(47, 120, 100, 0.13);
+      --brand: #39b98f;
+      --brand-2: #78cfe9;
+      --soft: #e7f8f0;
+      --green: #56c49b;
+      --red: #f08c9a;
+      --yellow: #ffd78a;
+      --peach: #ffb59f;
+      --lavender: #c8c4ff;
+      --shadow: 0 30px 80px rgba(64, 158, 136, .16);
+    }
+
+    body {
+      background:
+        radial-gradient(circle at 8% 4%, rgba(137, 217, 241, .45), transparent 28%),
+        radial-gradient(circle at 92% 8%, rgba(255, 190, 175, .38), transparent 30%),
+        radial-gradient(circle at 28% 92%, rgba(97, 214, 163, .32), transparent 32%),
+        linear-gradient(135deg, #f7fffb 0%, #eefaf6 45%, #fff7f2 100%);
+    }
+    body::before, body::after {
+      content: '';
+      position: fixed;
+      width: 340px;
+      height: 340px;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: -1;
+      filter: blur(8px);
+      opacity: .42;
+    }
+    body::before { right: -120px; top: 220px; background: radial-gradient(circle, rgba(120,207,233,.5), transparent 68%); }
+    body::after { left: -120px; bottom: 80px; background: radial-gradient(circle, rgba(255,181,159,.42), transparent 68%); }
+
+    .sidebar {
+      background: rgba(255,255,255,.66);
+      box-shadow: 12px 0 40px rgba(59, 165, 136, .06);
+    }
+    .brand-icon {
+      color: #137a60;
+      background:
+        radial-gradient(circle at 30% 24%, rgba(255,255,255,.95), transparent 38%),
+        linear-gradient(145deg, #dffbf0, #9be6cf 55%, #95dff4);
+      box-shadow: 0 14px 28px rgba(57,185,143,.22);
+    }
+    .brand-title, .hero h1, .section h2, .topbar h2 {
+      letter-spacing: -.06em;
+    }
+    .nav a:hover, .nav button:hover, .nav a.active {
+      background: rgba(57,185,143,.12);
+      color: #137a60;
+    }
+    .nav .dot { background: linear-gradient(135deg, var(--brand), var(--brand-2)); opacity: .85; }
+
+    .eyebrow {
+      background: rgba(255,255,255,.72);
+      border-color: rgba(57,185,143,.16);
+      color: #2f8d75;
+      box-shadow: 0 12px 24px rgba(57,185,143,.09);
+    }
+    .eyebrow::before { content: '🌿'; font-size: 14px; }
+    .btn {
+      background: rgba(255,255,255,.76);
+      border-color: rgba(57,185,143,.16);
+      box-shadow: 0 12px 28px rgba(57,185,143,.10);
+    }
+    .btn.primary {
+      color: #fff;
+      border-color: transparent;
+      background: linear-gradient(135deg, #32bd91, #68cce6);
+      box-shadow: 0 18px 34px rgba(57,185,143,.26);
+    }
+    .btn.ghost { background: rgba(255,255,255,.48); }
+
+    .card, .form-card, .flow-step, .spec-table {
+      background: rgba(255,255,255,.72);
+      border-color: rgba(57,185,143,.13);
+      box-shadow: 0 22px 52px rgba(72, 162, 139, .10);
+    }
+    .card {
+      position: relative;
+      overflow: hidden;
+    }
+    .card::after {
+      content: '';
+      position: absolute;
+      right: -42px;
+      top: -42px;
+      width: 112px;
+      height: 112px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(120,207,233,.20), transparent 68%);
+      pointer-events: none;
+    }
+    .pill {
+      background: rgba(57,185,143,.11);
+      color: #178265;
+      border: 1px solid rgba(57,185,143,.10);
+    }
+
+    .phone {
+      background: linear-gradient(145deg, #eafff6, #c9f2e4 48%, #d7f4ff);
+      box-shadow: 0 38px 90px rgba(37, 141, 119, .24);
+    }
+    .screen {
+      background:
+        radial-gradient(circle at 82% 4%, rgba(255,181,159,.38), transparent 28%),
+        radial-gradient(circle at 4% 28%, rgba(120,207,233,.35), transparent 32%),
+        linear-gradient(180deg, #f7fffb 0%, #effbf7 58%, #fff7f3 100%);
+      border-color: rgba(255,255,255,.72);
+    }
+    .camera { background: rgba(29, 58, 50, .78); }
+    .avatar {
+      color: #157a62;
+      background: linear-gradient(145deg, #dffbf1, #afead9);
+    }
+    .quiet-card {
+      background:
+        radial-gradient(circle at 92% 14%, rgba(255,214,138,.44), transparent 34%),
+        radial-gradient(circle at 12% 88%, rgba(120,207,233,.28), transparent 34%),
+        linear-gradient(155deg, rgba(255,255,255,.92), rgba(229,250,241,.88));
+      border-color: rgba(57,185,143,.13);
+      box-shadow: 0 24px 54px rgba(64, 158, 136, .16);
+    }
+    .card-label { color: #289475; }
+    .hero-number, .detail-hero .big, .mini-days, .android-widget .num {
+      color: #1f7f67;
+    }
+    .event-title::before { content: '✦ '; color: #53c9a5; }
+    .mini-row {
+      background: rgba(255,255,255,.64);
+      border-color: rgba(57,185,143,.12);
+      box-shadow: 0 10px 24px rgba(64,158,136,.07);
+    }
+    .mini-row:hover {
+      background: rgba(255,255,255,.90);
+      transform: translateY(-1px);
+    }
+    .fab {
+      border-radius: 23px;
+      background: linear-gradient(135deg, #32bd91, #78cfe9);
+      box-shadow: 0 18px 34px rgba(57,185,143,.32);
+    }
+    .tabbar {
+      background: rgba(255,255,255,.76);
+      border-color: rgba(57,185,143,.14);
+      box-shadow: 0 16px 36px rgba(64,158,136,.12);
+    }
+    .tabbar button.active {
+      background: linear-gradient(135deg, rgba(57,185,143,.18), rgba(120,207,233,.22));
+      color: #14785f;
+    }
+    .input, .select {
+      background: rgba(255,255,255,.72);
+      border-color: rgba(57,185,143,.15);
+    }
+    .input:focus, .select:focus { border-color: rgba(57,185,143,.55); box-shadow: 0 0 0 4px rgba(57,185,143,.12); }
+    .segmented { background: rgba(57,185,143,.10); }
+    .segmented button.active { color: #137a60; background: #fff; }
+    .hint-box {
+      background: linear-gradient(135deg, rgba(57,185,143,.12), rgba(120,207,233,.12));
+      border-color: rgba(57,185,143,.18);
+      color: #207c65;
+    }
+    .warning-box {
+      background: rgba(255,181,159,.18);
+      border-color: rgba(240,140,154,.18);
+      color: #a25561;
+    }
+    .toggle { background: linear-gradient(135deg, #39b98f, #78cfe9); }
+
+    .android-widget {
+      background:
+        radial-gradient(circle at 90% 8%, rgba(255,214,138,.42), transparent 30%),
+        radial-gradient(circle at 10% 100%, rgba(120,207,233,.28), transparent 36%),
+        linear-gradient(145deg, rgba(255,255,255,.94), rgba(226,251,241,.90));
+      border-color: rgba(57,185,143,.15);
+      box-shadow: 0 24px 56px rgba(64,158,136,.15);
+    }
+    .android-widget.dark {
+      background:
+        radial-gradient(circle at 88% 12%, rgba(120,207,233,.22), transparent 32%),
+        linear-gradient(145deg, #17382f, #10251f);
+      color: #effff9;
+    }
+    .android-widget.dark .num { color: #b6f3df; }
+    .widget-row { border-bottom-color: rgba(57,185,143,.11); }
+
+    .windows-stage {
+      background:
+        radial-gradient(circle at 18% 18%, rgba(120,207,233,.45), transparent 28%),
+        radial-gradient(circle at 82% 14%, rgba(255,181,159,.32), transparent 32%),
+        linear-gradient(145deg, #dff8f1, #bcefe4 44%, #effcff);
+      border-color: rgba(255,255,255,.62);
+    }
+    .win-widget {
+      background: rgba(255,255,255,.72);
+      border-color: rgba(255,255,255,.72);
+      box-shadow: 0 34px 86px rgba(37,141,119,.20);
+    }
+    .win-taskbar {
+      background: rgba(255,255,255,.44);
+      border-color: rgba(255,255,255,.58);
+    }
+    .task-dot { background: linear-gradient(135deg, rgba(57,185,143,.46), rgba(120,207,233,.58)); }
+    .window-controls i:nth-child(1) { background: #ffb59f; }
+    .window-controls i:nth-child(2) { background: #ffd78a; }
+    .window-controls i:nth-child(3) { background: #56c49b; }
+
+    .flow-no {
+      background: linear-gradient(135deg, #39b98f, #78cfe9);
+      box-shadow: 0 12px 22px rgba(57,185,143,.20);
+    }
+    .risk.high { background:rgba(240,140,154,.16); color:#b65363; }
+    .risk.mid { background:rgba(255,215,138,.28); color:#927037; }
+    .risk.low { background:rgba(57,185,143,.14); color:#178265; }
+    .toast {
+      background: linear-gradient(135deg, #32bd91, #68cce6);
+      box-shadow: 0 18px 42px rgba(57,185,143,.28);
+    }
+
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand-lockup">
+        <div class="brand-icon">日</div>
+        <h1 class="brand-title">今天的纪念日 Fresh UI</h1>
+        <p class="brand-subtitle">年轻、清新、轻量，但仍然保持准确和长期可用。前期聚焦 Android 主应用、Android 小组件与 Windows 桌面轻量组件。</p>
+      </div>
+      <div class="nav-title">原型导航</div>
+      <nav class="nav">
+        <a href="#overview" class="active"><span class="dot"></span>设计总览</a>
+        <a href="#android"><span class="dot"></span>Android 主应用</a>
+        <a href="#widgets"><span class="dot"></span>Android 小组件</a>
+        <a href="#windows"><span class="dot"></span>Windows 桌面组件</a>
+        <a href="#flow"><span class="dot"></span>核心流程</a>
+        <a href="#tech"><span class="dot"></span>工程标注</a>
+      </nav>
+      <div class="nav-title">手机原型页面</div>
+      <nav class="nav">
+        <button data-page="home"><span class="dot"></span>首页</button>
+        <button data-page="add"><span class="dot"></span>新增纪念日</button>
+        <button data-page="detail"><span class="dot"></span>详情页</button>
+        <button data-page="settings"><span class="dot"></span>设置页</button>
+      </nav>
+    </aside>
+
+    <main class="content">
+      <section class="hero" id="overview">
+        <div>
+          <div class="eyebrow">Fresh UI Prototype · Android + Windows Widget</div>
+          <h1>把今天的纪念日，轻轻放进每天的桌面。</h1>
+          <p>该版本将视觉方向调整为年轻、清新、轻量：用薄荷绿、晴空蓝、蜜桃粉和大面积留白降低工具感；同时保留农历准确、未来预览、小组件优先和本地备份等核心要求。</p>
+          <div class="hero-actions">
+            <a class="btn primary" href="#android">查看 Android 原型</a>
+            <a class="btn" href="#widgets">查看小组件</a>
+            <a class="btn ghost" href="#tech">查看工程标注</a>
+          </div>
+        </div>
+        <div class="card" style="max-width:380px">
+          <h3>首版设计边界</h3>
+          <p>不做广告流、不做礼物商城、不做复杂社交。先把“日期准确、提醒清楚、小组件清新耐看、数据可备份”做到稳定。</p>
+          <div class="pill-list">
+            <span class="pill">清新低饱和</span>
+            <span class="pill">本地优先</span>
+            <span class="pill">农历支持</span>
+            <span class="pill">未来预览</span>
+            <span class="pill">小组件优先</span>
+            <span class="pill">Windows 轻量</span>
+            <span class="pill">年轻桌面感</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <div>
+            <h2>年轻清新的 UI 原则</h2>
+            <p class="section-desc">从视觉层面弱化传统工具感，让它更像一个清爽、温柔、每天都愿意看一眼的桌面日子卡片。</p>
+          </div>
+        </div>
+        <div class="grid cols-4">
+          <div class="card"><h3>清爽首页</h3><p>首页只展示今日、即将到来和用户置顶日子，用空气感留白和轻色块减少压迫感。</p></div>
+          <div class="card"><h3>结果一眼懂</h3><p>农历不解释复杂规则，直接展示“今年哪天过”和“未来几年预览”，减少理解成本。</p></div>
+          <div class="card"><h3>桌面清新感</h3><p>卡片使用大数字、短文案、半透明清透色，适合长期停留在手机和电脑桌面。</p></div>
+          <div class="card"><h3>私密也轻松</h3><p>小组件提供隐私模式：可隐藏名称，只显示“今天的纪念日”和剩余天数，不尴尬。</p></div>
+        </div>
+      </section>
+
+      <section class="section" id="android">
+        <div class="section-head">
+          <div>
+            <h2>Android 主应用原型</h2>
+            <p class="section-desc">左侧为可点击切换的手机原型。整体强调年轻清新、低负担录入、清楚的农历结果预览和轻量提醒。</p>
+          </div>
+          <div class="hero-actions">
+            <button class="btn small" data-page="home">首页</button>
+            <button class="btn small" data-page="add">新增</button>
+            <button class="btn small" data-page="detail">详情</button>
+            <button class="btn small" data-page="settings">设置</button>
+          </div>
+        </div>
+
+        <div class="prototype-stage">
+          <div class="phone">
+            <div class="camera"></div>
+            <div class="screen">
+              <div class="statusbar"><span>09:41</span><span>●●●  86%</span></div>
+
+              <section class="app-page active" id="page-home">
+                <div class="topbar">
+                  <h2>今天的纪念日</h2>
+                  <div class="avatar">安</div>
+                </div>
+
+                <div class="quiet-card today-card">
+                  <div>
+                    <div class="card-label">最近的纪念日</div>
+                    <div class="hero-number">7</div>
+                    <div class="hero-unit">天后</div>
+                  </div>
+                  <div>
+                    <h3 class="event-title">妈妈生日</h3>
+                    <div class="event-sub">农历八月初三 · 今年对应 2026 年 9 月 13 日</div>
+                  </div>
+                </div>
+
+                <div class="mini-row" data-page="detail">
+                  <div>
+                    <div class="mini-title">在一起</div>
+                    <div class="mini-meta">2023 年 1 月 1 日开始 · 包含起始日</div>
+                  </div>
+                  <div class="mini-days">1268<span>第几天</span></div>
+                </div>
+                <div class="mini-row">
+                  <div>
+                    <div class="mini-title">结婚纪念日</div>
+                    <div class="mini-meta">公历 10 月 6 日 · 第 5 周年</div>
+                  </div>
+                  <div class="mini-days">21<span>天后</span></div>
+                </div>
+                <div class="mini-row">
+                  <div>
+                    <div class="mini-title">春节</div>
+                    <div class="mini-meta">农历正月初一 · 传统节日</div>
+                  </div>
+                  <div class="mini-days">42<span>天后</span></div>
+                </div>
+                <div class="mini-row">
+                  <div>
+                    <div class="mini-title">宝宝生日</div>
+                    <div class="mini-meta">公历 2024 年 3 月 18 日</div>
+                  </div>
+                  <div class="mini-days">83<span>天后</span></div>
+                </div>
+
+                <button class="fab" data-page="add">+</button>
+              </section>
+
+              <section class="app-page" id="page-add">
+                <div class="topbar">
+                  <button class="btn small" data-page="home">返回</button>
+                  <h2 style="font-size:22px">新增纪念日</h2>
+                  <button class="btn small" onclick="showToast('已保存原型事件')">保存</button>
+                </div>
+
+                <div class="form-card">
+                  <div class="field">
+                    <label>名称</label>
+                    <input class="input" value="妈妈生日" />
+                  </div>
+                  <div class="field">
+                    <label>日期类型</label>
+                    <div class="segmented">
+                      <button id="gregorianBtn">公历</button>
+                      <button id="lunarBtn" class="active">农历</button>
+                    </div>
+                  </div>
+
+                  <div id="gregorianFields" style="display:none">
+                    <div class="field">
+                      <label>公历日期</label>
+                      <div class="date-grid">
+                        <select class="select"><option>2026 年</option><option>2024 年</option><option>2023 年</option></select>
+                        <select class="select"><option>6 月</option><option>2 月</option><option>10 月</option></select>
+                        <select class="select" id="gregorianDay"><option>19 日</option><option>29 日</option><option>20 日</option></select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div id="lunarFields">
+                    <div class="field">
+                      <label>农历日期</label>
+                      <div class="date-grid">
+                        <select class="select"><option>农历年</option><option>丙午年</option><option>乙巳年</option></select>
+                        <select class="select" id="lunarMonth"><option>八月</option><option>闰二月</option><option>腊月</option></select>
+                        <select class="select" id="lunarDay"><option>初三</option><option>十五</option><option>三十</option></select>
+                      </div>
+                    </div>
+                    <div class="hint-box">系统会按农历日期为你计算每年的提醒时间。你不需要手动换算每年的公历日期。</div>
+                    <div class="warning-box" id="specialDateWarning">不是每年都有这个农历日期。保存前请选择没有对应日期时的提醒方式。</div>
+                  </div>
+
+                  <div class="field">
+                    <label>重复</label>
+                    <select class="select"><option>每年提醒</option><option>不重复</option></select>
+                  </div>
+                  <div class="field">
+                    <label>提醒</label>
+                    <select class="select"><option>提前 7 天，当天 9:00</option><option>当天 9:00</option><option>关闭提醒</option></select>
+                  </div>
+                </div>
+
+                <div class="form-card">
+                  <h3 style="margin:0 0 10px;font-size:16px">未来日期预览</h3>
+                  <div class="future-list" id="futureList">
+                    <div class="future-item"><b>2026 年 9 月 13 日</b><span>农历八月初三</span></div>
+                    <div class="future-item"><b>2027 年 9 月 3 日</b><span>农历八月初三</span></div>
+                    <div class="future-item"><b>2028 年 9 月 21 日</b><span>农历八月初三</span></div>
+                    <div class="future-item"><b>2029 年 9 月 10 日</b><span>农历八月初三</span></div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="app-page" id="page-detail">
+                <div class="topbar">
+                  <button class="btn small" data-page="home">返回</button>
+                  <h2 style="font-size:22px">详情</h2>
+                  <button class="btn small" data-page="add">编辑</button>
+                </div>
+
+                <div class="quiet-card detail-hero">
+                  <h1>妈妈生日</h1>
+                  <div class="big">7</div>
+                  <div class="unit">天后提醒</div>
+                </div>
+
+                <div class="form-card">
+                  <div class="kv">
+                    <div class="kv-row"><span>原始日期</span><span>农历八月初三</span></div>
+                    <div class="kv-row"><span>今年对应</span><span>2026 年 9 月 13 日</span></div>
+                    <div class="kv-row"><span>提醒</span><span>提前 7 天，当天 9:00</span></div>
+                    <div class="kv-row"><span>分类</span><span>家人 · 生日</span></div>
+                  </div>
+                </div>
+
+                <div class="form-card">
+                  <h3 style="margin:0 0 10px;font-size:16px">未来几年</h3>
+                  <div class="future-list">
+                    <div class="future-item"><b>2026 年 9 月 13 日</b><span>农历八月初三</span></div>
+                    <div class="future-item"><b>2027 年 9 月 3 日</b><span>农历八月初三</span></div>
+                    <div class="future-item"><b>2028 年 9 月 21 日</b><span>农历八月初三</span></div>
+                    <div class="future-item"><b>2029 年 9 月 10 日</b><span>农历八月初三</span></div>
+                    <div class="future-item"><b>2030 年 8 月 31 日</b><span>农历八月初三</span></div>
+                  </div>
+                </div>
+
+                <div class="form-card">
+                  <h3 style="margin:0 0 8px;font-size:16px">备注</h3>
+                  <p style="margin:0;color:var(--muted);line-height:1.6;font-size:13px">提前准备电话和礼物。小组件隐私模式下可隐藏名称。</p>
+                </div>
+              </section>
+
+              <section class="app-page" id="page-settings">
+                <div class="topbar">
+                  <h2>设置</h2>
+                  <div class="avatar">设</div>
+                </div>
+
+                <div class="form-card">
+                  <div class="settings-row"><div><strong>通知提醒</strong><span>提前提醒、当天提醒、权限检测</span></div><div class="toggle"></div></div>
+                  <div class="settings-row"><div><strong>小组件隐私模式</strong><span>隐藏事件名称，只显示今天的纪念日</span></div><div class="toggle"></div></div>
+                  <div class="settings-row"><div><strong>深色模式</strong><span>跟随系统</span></div><div class="toggle"></div></div>
+                </div>
+
+                <div class="form-card">
+                  <div class="settings-row"><div><strong>本地备份</strong><span>导出 anniversary_backup.json</span></div><button class="btn small" onclick="showToast('已模拟导出备份')">导出</button></div>
+                  <div class="settings-row"><div><strong>恢复数据</strong><span>从备份文件恢复</span></div><button class="btn small" onclick="showToast('已模拟导入备份')">导入</button></div>
+                  <div class="settings-row"><div><strong>日期显示</strong><span>同时显示公历与农历</span></div><button class="btn small">设置</button></div>
+                </div>
+
+                <div class="form-card">
+                  <p style="margin:0;color:var(--muted);line-height:1.7;font-size:13px">当前原型定位：本地优先、无广告、无强制登录。云同步和家庭共享作为后续版本能力。</p>
+                </div>
+              </section>
+
+              <div class="tabbar">
+                <button class="active" data-page="home">首页</button>
+                <button data-page="detail">详情</button>
+                <button data-page="add">新增</button>
+                <button data-page="settings">设置</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid cols-2">
+            <div class="card">
+              <h3>首页 UI 要点</h3>
+              <p>一个主卡片只讲最近的今天的纪念日；列表只保留名称、日期类型、对应日期和天数。避免把首页做成万年历。</p>
+              <div class="pill-list"><span class="pill">大数字</span><span class="pill">清新低饱和</span><span class="pill">最近优先</span></div>
+            </div>
+            <div class="card">
+              <h3>新增页 UI 要点</h3>
+              <p>默认路径为“名称 → 日期 → 提醒 → 保存”。只有选择闰月、农历三十、2 月 29 日时才出现策略提示。</p>
+              <div class="pill-list"><span class="pill">结果预览</span><span class="pill">异常才提示</span><span class="pill">不讲术语</span></div>
+            </div>
+            <div class="card">
+              <h3>详情页 UI 要点</h3>
+              <p>详情页承担信任建立：原始日期、本年对应、未来几年预览、提醒规则必须清楚。</p>
+              <div class="pill-list"><span class="pill">原始日期</span><span class="pill">未来 5 年</span><span class="pill">提醒清晰</span></div>
+            </div>
+            <div class="card">
+              <h3>设置页 UI 要点</h3>
+              <p>将隐私、备份、日期显示偏好放在设置页。云同步不出现在首版主流程里。</p>
+              <div class="pill-list"><span class="pill">本地备份</span><span class="pill">隐私模式</span><span class="pill">权限检测</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="widgets">
+        <div class="section-head">
+          <div>
+            <h2>Android 小组件清新视觉原型</h2>
+            <p class="section-desc">小组件是首版体验重点。新的视觉方向更年轻：清透卡片、柔和渐变、大数字、轻装饰，不做复杂动画和主题商城。</p>
+          </div>
+        </div>
+        <div class="widget-board">
+          <div class="android-widget">
+            <div class="title">妈妈生日</div>
+            <div class="num">7</div>
+            <small>天后 · 农历八月初三</small>
+          </div>
+          <div class="android-widget dark">
+            <div class="title">在一起</div>
+            <div class="num">1268</div>
+            <small>第几天 · 2023 年 1 月 1 日开始</small>
+          </div>
+          <div class="android-widget">
+            <div class="title">最近的纪念日</div>
+            <div style="margin-top:12px">
+              <div class="widget-row"><span>妈妈生日</span><b>7 天</b></div>
+              <div class="widget-row"><span>结婚纪念日</span><b>21 天</b></div>
+              <div class="widget-row"><span>春节</span><b>42 天</b></div>
+            </div>
+          </div>
+          <div class="android-widget compact">
+            <div class="title">今天的纪念日</div>
+            <div style="display:flex;align-items:end;gap:8px;margin-top:8px"><b style="font-size:42px;line-height:.85">7</b><small>天后</small></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="windows">
+        <div class="section-head">
+          <div>
+            <h2>Windows 桌面清新组件原型</h2>
+            <p class="section-desc">前期不做完整 Windows 客户端，而是托盘常驻 + 桌面悬浮清透卡片 + JSON 导入。避免 Windows Widgets Board 的形态误判。</p>
+          </div>
+        </div>
+        <div class="windows-stage">
+          <div class="win-widget">
+            <div class="window-controls"><i></i><i></i><i></i></div>
+            <h4>最近的纪念日</h4>
+            <div class="win-row"><span>妈妈生日</span><span>7 天</span></div>
+            <div class="win-row"><span>结婚纪念日</span><span>21 天</span></div>
+            <div class="win-row"><span>春节</span><span>42 天</span></div>
+            <div class="win-note">数据来自本地备份 · 手动刷新</div>
+          </div>
+          <div class="win-widget small">
+            <div class="window-controls"><i></i><i></i><i></i></div>
+            <h4>在一起</h4>
+            <div style="font-size:48px;font-weight:900;letter-spacing:-.07em;line-height:1">1268</div>
+            <div class="win-note">第几天</div>
+          </div>
+          <div class="win-taskbar"><div class="task-dot"></div><div class="task-dot"></div><div class="task-dot"></div><div class="task-dot"></div></div>
+        </div>
+      </section>
+
+      <section class="section" id="flow">
+        <div class="section-head">
+          <div>
+            <h2>核心用户流程</h2>
+            <p class="section-desc">围绕低心智路径设计：用户只需输入日期，系统给出清楚、轻松、可信的结果和预览。</p>
+          </div>
+        </div>
+        <div class="flow">
+          <div class="flow-step"><div class="flow-no">1</div><b>记录日子</b><p>输入名称，选择公历或农历日期。普通日期不出现复杂规则设置。</p></div>
+          <div class="flow-step"><div class="flow-no">2</div><b>查看结果</b><p>系统展示今年对应日期和未来几年预览，替代复杂规则解释。</p></div>
+          <div class="flow-step"><div class="flow-no">3</div><b>设置提醒</b><p>支持当天、提前 1/3/7 天提醒；检测通知权限并给出清晰提示。</p></div>
+          <div class="flow-step"><div class="flow-no">4</div><b>放到桌面</b><p>Android 小组件和 Windows 桌面卡片持续展示，不需要频繁打开 App。</p></div>
+        </div>
+      </section>
+
+      <section class="section" id="tech">
+        <div class="section-head">
+          <div>
+            <h2>工程实现标注</h2>
+            <p class="section-desc">UI 原型已经对应 CTO 风险判断：日期引擎、提醒、小组件刷新、备份协议需要独立模块化。</p>
+          </div>
+        </div>
+        <table class="spec-table">
+          <thead><tr><th>模块</th><th>UI 中体现</th><th>工程建议</th><th>风险</th></tr></thead>
+          <tbody>
+            <tr><td>农历日期</td><td>新增页农历选择 + 详情页未来预览</td><td>独立 CalendarEngine，保存原始农历日期，不只存公历 occurrence</td><td><span class="risk high">高</span></td></tr>
+            <tr><td>提醒权限</td><td>设置页通知提醒入口</td><td>Android 13+ 通知权限检测；精确提醒作为高级权限</td><td><span class="risk high">高</span></td></tr>
+            <tr><td>小组件刷新</td><td>Android 2x2 / 4x2 小组件</td><td>零点刷新 + 用户编辑后主动刷新 + 打开 App 校准</td><td><span class="risk mid">中</span></td></tr>
+            <tr><td>Windows 组件</td><td>桌面悬浮卡片与托盘形态</td><td>首版 WPF/.NET 或轻量桌面方案；不优先做 Windows Widgets Board</td><td><span class="risk mid">中</span></td></tr>
+            <tr><td>备份恢复</td><td>设置页导入/导出</td><td>JSON schema 版本化，Android 与 Windows 共用数据协议</td><td><span class="risk mid">中</span></td></tr>
+            <tr><td>隐私模式</td><td>小组件可隐藏名称</td><td>Widget display_rule 支持 NORMAL / PRIVATE / MINIMAL</td><td><span class="risk low">低</span></td></tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast">已操作</div>
+
+  <script>
+    const pages = ['home', 'add', 'detail', 'settings'];
+    function setPage(page) {
+      pages.forEach(p => {
+        document.getElementById('page-' + p).classList.toggle('active', p === page);
+      });
+      document.querySelectorAll('[data-page]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.page === page);
+      });
+    }
+    document.querySelectorAll('[data-page]').forEach(el => {
+      el.addEventListener('click', () => setPage(el.dataset.page));
+    });
+
+    function showToast(text) {
+      const toast = document.getElementById('toast');
+      toast.textContent = text;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 1800);
+    }
+
+    const gregorianBtn = document.getElementById('gregorianBtn');
+    const lunarBtn = document.getElementById('lunarBtn');
+    const gregorianFields = document.getElementById('gregorianFields');
+    const lunarFields = document.getElementById('lunarFields');
+    const futureList = document.getElementById('futureList');
+    const warning = document.getElementById('specialDateWarning');
+
+    function setCalendar(type) {
+      const isLunar = type === 'lunar';
+      lunarBtn.classList.toggle('active', isLunar);
+      gregorianBtn.classList.toggle('active', !isLunar);
+      lunarFields.style.display = isLunar ? 'block' : 'none';
+      gregorianFields.style.display = isLunar ? 'none' : 'block';
+      warning.style.display = 'none';
+      futureList.innerHTML = isLunar ? `
+        <div class="future-item"><b>2026 年 9 月 13 日</b><span>农历八月初三</span></div>
+        <div class="future-item"><b>2027 年 9 月 3 日</b><span>农历八月初三</span></div>
+        <div class="future-item"><b>2028 年 9 月 21 日</b><span>农历八月初三</span></div>
+        <div class="future-item"><b>2029 年 9 月 10 日</b><span>农历八月初三</span></div>` : `
+        <div class="future-item"><b>2026 年 6 月 19 日</b><span>公历日期</span></div>
+        <div class="future-item"><b>2027 年 6 月 19 日</b><span>公历日期</span></div>
+        <div class="future-item"><b>2028 年 6 月 19 日</b><span>公历日期</span></div>
+        <div class="future-item"><b>2029 年 6 月 19 日</b><span>公历日期</span></div>`;
+    }
+    gregorianBtn.addEventListener('click', () => setCalendar('gregorian'));
+    lunarBtn.addEventListener('click', () => setCalendar('lunar'));
+
+    document.getElementById('lunarMonth').addEventListener('change', (e) => {
+      const val = e.target.value;
+      warning.style.display = val.includes('闰') ? 'block' : 'none';
+      if (val.includes('闰')) {
+        futureList.innerHTML = `
+        <div class="future-item"><b>2026 年</b><span>按普通二月初八提醒</span></div>
+        <div class="future-item"><b>2027 年</b><span>无闰二月，按所选策略处理</span></div>
+        <div class="future-item"><b>2028 年</b><span>无闰二月，按所选策略处理</span></div>
+        <div class="future-item"><b>2029 年</b><span>有对应日期时自动提醒</span></div>`;
+      }
+    });
+    document.getElementById('lunarDay').addEventListener('change', (e) => {
+      warning.style.display = e.target.value === '三十' ? 'block' : 'none';
+    });
+
+    document.querySelectorAll('.nav a').forEach(a => {
+      a.addEventListener('click', () => {
+        document.querySelectorAll('.nav a').forEach(x => x.classList.remove('active'));
+        a.classList.add('active');
+      });
+    });
+  </script>
+</body>
+</html>

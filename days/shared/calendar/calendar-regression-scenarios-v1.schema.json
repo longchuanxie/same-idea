@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "calendar-regression-scenarios-v1.schema.json",
+  "title": "Anniversary Calendar Regression Scenarios v1",
+  "type": "object",
+  "required": ["version", "ruleVersion", "ruleChecksum", "goldenChecksum", "scenarios"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "const": "calendar-regression-scenarios-1.0.0" },
+    "ruleVersion": { "const": "lunar-rules-1.0.0" },
+    "ruleChecksum": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "goldenChecksum": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "scenarios": {
+      "type": "array",
+      "minItems": 120,
+      "items": {
+        "type": "object",
+        "required": ["id", "category", "title", "fromDate", "event", "expected"],
+        "properties": {
+          "id": { "type": "string" },
+          "category": { "type": "string" },
+          "title": { "type": "string" },
+          "fromDate": { "type": "string", "format": "date" },
+          "event": { "type": "object" },
+          "expected": { "type": "object" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
