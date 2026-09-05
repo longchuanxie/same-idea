@@ -17,10 +17,23 @@ function loadModule(): Promise<PiperModule> {
   return modulePromise;
 }
 
-/** 复用推理会话:模型加载/worker 启动只发生一次 */
+/** 复用推理会话:模型加载/worker 启动只发生一次;失败后清空缓存以便重试 */
 function getSession(): Promise<PiperSession> {
-  sessionPromise ??= loadModule().then((tts) => tts.TtsSession.create({ voiceId: PIPER_VOICE_ID }));
+  sessionPromise ??= loadModule()
+    .then((tts) => tts.TtsSession.create({ voiceId: PIPER_VOICE_ID }))
+    .catch((error) => {
+      sessionPromise = null;
+      throw error;
+    });
   return sessionPromise;
+}
+
+/**
+ * 预下载音色模型并初始化推理会话(复用 getSession,不阻塞调用方之外的状态)。
+ * 供设置确认后立即触发下载,避免用户被反复提示"需要下载"。
+ */
+export async function preloadPiperModel(): Promise<void> {
+  await getSession();
 }
 
 /** 音色模型是否已缓存到本机(OPFS),供设置 UI 提示是否需要下载 */

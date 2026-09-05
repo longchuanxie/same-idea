@@ -112,9 +112,9 @@ export const MainLayout: React.FC = () => {
   };
 
   return (
-    <div>
+    <div className="h-full">
       <div
-        className="bg-background text-on-background min-h-screen paper-texture relative"
+        className="bg-background text-on-background h-full overflow-y-auto overscroll-contain paper-texture relative"
         style={{ isolation: 'isolate' }}
       >
         {settings.paperMode && (

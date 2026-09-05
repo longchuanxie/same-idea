@@ -41,6 +41,7 @@ const fullSettings = {
   textReadingMode: 'scroll' as const,
   verticalWriting: false,
   ttsEngine: 'auto' as const,
+  ttsModelPromptDismissed: false,
   ttsServerUrl: '',
   ttsServerModel: '',
   ttsServerVoice: '',
@@ -101,7 +102,10 @@ vi.mock('@/services/storage/annotationRepo', () => ({
 vi.mock('@/services/storage/bookmarkRepo', () => ({
   bookmarkRepo: { getByBookId: vi.fn(async () => []), add: vi.fn(), remove: vi.fn() },
 }))
-vi.mock('@/services/tts/piperEngine', () => ({ piperModelStored: vi.fn(async () => false) }))
+vi.mock('@/services/tts/piperEngine', () => ({
+  piperModelStored: vi.fn(async () => false),
+  preloadPiperModel: vi.fn(async () => {}),
+}))
 vi.mock('@/hooks/useSpeech', () => ({
   useSpeech: vi.fn(() => ({
     supported: false,

@@ -141,6 +141,8 @@ export interface UserSettings {
   verticalWriting: boolean
   /** 听书发音引擎;auto=原生环境走设备语音、桌面走系统语音 */
   ttsEngine: TtsEngineOption
+  /** 用户已取消过音色包下载确认,不再重复弹窗(再次主动选择神经网络视为同意) */
+  ttsModelPromptDismissed: boolean
   /** 自定义 TTS 服务(OpenAI 兼容 /v1/audio/speech) */
   ttsServerUrl: string
   ttsServerModel: string

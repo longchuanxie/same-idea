@@ -49,7 +49,7 @@ import {
 import { annotationRepo } from '@/services/storage/annotationRepo';
 import { bookmarkRepo } from '@/services/storage/bookmarkRepo';
 import { loadTextContent, resolveTextChapterIndex, type TextChapter } from '@/services/textContent';
-import { piperModelStored } from '@/services/tts/piperEngine';
+import { piperModelStored, preloadPiperModel } from '@/services/tts/piperEngine';
 import { useAppStore } from '@/stores/useAppStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import type { Bookmark, Annotation, AnnotationStyle, TtsEngineOption } from '@/types';
@@ -755,7 +755,9 @@ export const TextReaderPage: React.FC = () => {
   // 听书引擎切换:神经网络首次启用前确认音色包下载体积
   const [pendingNeuralConfirm, setPendingNeuralConfirm] = useState(false);
   const handleTtsEngineChange = useCallback(async (engine: TtsEngineOption) => {
-    if (engine === 'neural' && !(await piperModelStored())) {
+    // 已取消过下载确认的用户不再重复打扰:再次主动选择即视为同意,直接启用
+    const dismissed = useAppStore.getState().settings.ttsModelPromptDismissed;
+    if (engine === 'neural' && !dismissed && !(await piperModelStored())) {
       setPendingNeuralConfirm(true);
       return;
     }
@@ -2467,8 +2469,15 @@ export const TextReaderPage: React.FC = () => {
         onConfirm={() => {
           setPendingNeuralConfirm(false);
           useAppStore.getState().updateSettings({ ttsEngine: 'neural' });
+          showToast('正在后台下载离线语音包，期间朗读先走系统语音');
+          void preloadPiperModel()
+            .then(() => showToast('离线语音包已就绪，之后可离线朗读'))
+            .catch(() => showToast('语音包下载失败，将在下次朗读时自动重试'));
         }}
-        onCancel={() => setPendingNeuralConfirm(false)}
+        onCancel={() => {
+          setPendingNeuralConfirm(false);
+          useAppStore.getState().updateSettings({ ttsModelPromptDismissed: true });
+        }}
       />
 
       {/* 章节目录抽屉 */}

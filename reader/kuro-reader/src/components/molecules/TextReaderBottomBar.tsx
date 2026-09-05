@@ -81,11 +81,11 @@ const TTS_INPUT_CLASS =
   'w-full h-10 rounded-lg border border-outline-variant bg-surface-container-high px-3 font-body text-body-sm text-on-surface placeholder:text-on-surface-faint focus:outline-none focus:border-primary';
 
 const AUTO_ADVANCE_TEXT_CHAPTER_LABELS = {
-  title: '\u7ae0\u672b\u81ea\u52a8\u4e0b\u4e00\u7ae0',
-  enabled: '\u6eda\u52a8\u5230\u5e95\u81ea\u52a8\u8fdb\u5165\u4e0b\u4e00\u7ae0',
-  disabled: '\u6eda\u52a8\u5230\u5e95\u663e\u793a\u7ee7\u7eed\u63d0\u793a',
-  enableAria: '\u5f00\u542f\u7ae0\u672b\u81ea\u52a8\u4e0b\u4e00\u7ae0',
-  disableAria: '\u5173\u95ed\u7ae0\u672b\u81ea\u52a8\u4e0b\u4e00\u7ae0',
+  title: '章末自动衔接',
+  enabled: '无缝续读：读完自动衔接下一章',
+  disabled: '章末显示继续提示',
+  enableAria: '开启章末自动衔接下一章',
+  disableAria: '关闭章末自动衔接下一章',
 } as const;
 
 export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
