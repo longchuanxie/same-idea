@@ -40,6 +40,7 @@ export function makeLibraryStoreState(overrides: Record<string, unknown> = {}) {
     tags: [makeTag()],
     coverUrls: {},
     readingProgress: {},
+    hiddenContinueIds: [],
     isLoading: false,
     error: null,
     // actions

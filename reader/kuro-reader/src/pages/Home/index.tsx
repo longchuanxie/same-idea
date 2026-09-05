@@ -81,11 +81,14 @@ export const HomePage: React.FC = () => {
     getContinueReading,
     dismissContinueReading,
     restoreContinueReading,
+    hiddenContinueIds,
   } = useLibraryStore();
   const { dailyGoalMinutes, getTodayMinutes } = useStatsStore();
 
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [seatMenuFor, setSeatMenuFor] = useState<string | null>(null);
+  /** 座位区编辑态：显示每张卡的移出叉钮，卡片点击不再跳阅读器 */
+  const [isSeatEditing, setIsSeatEditing] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -122,6 +125,13 @@ export const HomePage: React.FC = () => {
   const goalLit = goalPct >= 100;
 
   const bookById = useMemo(() => new Map(books.map((b) => [b.id, b])), [books]);
+  /** 已移出座位且仍存在于书架的书（已删书籍的残留 id 不计数、恢复也无害） */
+  const hiddenSeatIds = useMemo(
+    () => hiddenContinueIds.filter((id) => bookById.has(id)),
+    [hiddenContinueIds, bookById]
+  );
+  /** 全部移出后座位区仍保留，给「全部恢复」留入口 */
+  const showSeatSection = seatBook !== undefined || hiddenSeatIds.length > 0;
   const excerpts = useMemo(
     () =>
       [...annotations]
@@ -163,6 +173,18 @@ export const HomePage: React.FC = () => {
     });
   };
 
+  const toggleSeatEditing = () => {
+    setSeatMenuFor(null);
+    setIsSeatEditing((v) => !v);
+  };
+
+  const handleRestoreAllSeats = () => {
+    if (hiddenSeatIds.length === 0) return;
+    const ids = [...hiddenSeatIds];
+    ids.forEach((id) => restoreContinueReading(id));
+    toast(`已恢复 ${ids.length} 本到座位`);
+  };
+
   const openExcerpt = (ann: Annotation, book: Book) => {
     const chapter = book.chapters[ann.chapterIndex];
     // 文本书带 ?ann= 直达批注原句处
@@ -201,115 +223,198 @@ export const HomePage: React.FC = () => {
   return (
     <div className="max-w-max-width-content mx-auto px-margin-mobile md:px-0 pt-8 pb-8">
       {/* 问候 + 你的座位 */}
-      {seatBook && (
+      {showSeatSection && (
         <section className="mb-10">
-          <div className="flex items-end justify-between mb-4">
+          <div className="flex items-end justify-between mb-4 gap-3">
             <h2 className="font-display text-display-lg-mobile text-primary leading-tight">
               {getGreeting(new Date().getHours())}。
               <span className="block text-headline-sm text-on-surface-variant mt-1">
-                {describeLastRead(seatBook.lastReadAt) || '这一次'}，你在读——
+                {seatBook
+                  ? `${describeLastRead(seatBook.lastReadAt) || '这一次'}，你在读——`
+                  : '座位已清空，进度都还在'}
               </span>
             </h2>
+            {seatBook && (
+              <button
+                aria-label={isSeatEditing ? '结束编辑座位列表' : '编辑座位列表'}
+                className="flex-shrink-0 pb-1 font-label text-label-md text-on-surface-variant hover:text-primary transition-colors"
+                onClick={toggleSeatEditing}
+              >
+                {isSeatEditing ? '完成' : '编辑'}
+              </button>
+            )}
           </div>
 
-          {(() => {
-            const progress = readingProgress[seatBook.id];
-            const pct = progress ? Math.round(progress.percentage) : 0;
-            const chapter = progress?.chapterId
-              ? seatBook.chapters.find((ch) => ch.id === progress.chapterId) ?? seatBook.chapters[0]
-              : seatBook.chapters[0];
-            return (
-              <article
-                className="relative flex border border-outline-variant rounded-card-lg shadow-paper overflow-hidden bg-surface-container-low cursor-pointer group"
-                onClick={() => navigate(readerPathForBook(seatBook, chapter?.id))}
-              >
-                <div className="w-1/3 md:w-1/4 flex-shrink-0 border-r border-outline-variant bg-surface-container relative">
-                  {renderCover(seatBook, 'aspect-[2/3]')}
-                  {/* 进度丝带：书脊上的缎带，长度即进度 */}
-                  <div
-                    aria-hidden="true"
-                    className="absolute top-2 right-0 w-1.5 bg-seal rounded-l-sm"
-                    style={{ height: `calc(${pct}% - 8px)`, minHeight: 8 }}
-                  />
-                </div>
-                <div className="p-4 md:p-6 flex flex-col justify-between flex-1 min-w-0">
-                  <div>
-                    <div className="flex items-start gap-2 mb-1">
-                      <h3 className="font-display text-headline-md text-primary leading-tight truncate flex-1">
-                        {seatBook.title}
-                      </h3>
-                      <div className="relative flex-shrink-0" ref={menuRef}>
+          {seatBook ? (
+            <>
+              {(() => {
+                const progress = readingProgress[seatBook.id];
+                const pct = progress ? Math.round(progress.percentage) : 0;
+                const chapter = progress?.chapterId
+                  ? seatBook.chapters.find((ch) => ch.id === progress.chapterId) ?? seatBook.chapters[0]
+                  : seatBook.chapters[0];
+                return (
+                  <article
+                    className={`relative flex border border-outline-variant rounded-card-lg shadow-paper overflow-hidden bg-surface-container-low group ${
+                      isSeatEditing ? '' : 'cursor-pointer'
+                    }`}
+                    onClick={isSeatEditing ? undefined : () => navigate(readerPathForBook(seatBook, chapter?.id))}
+                  >
+                    <div className="w-1/3 md:w-1/4 flex-shrink-0 border-r border-outline-variant bg-surface-container relative">
+                      {renderCover(seatBook, 'aspect-[2/3]')}
+                      {/* 编辑态叉钮：移出座位（进度保留） */}
+                      {isSeatEditing && (
                         <button
-                          aria-label="座位选项"
-                          className="w-8 h-8 -mt-1 -mr-1 flex items-center justify-center rounded text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors"
+                          aria-label={`移出《${seatBook.title}》`}
+                          className="absolute top-2 left-2 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-surface-bright/95 border border-outline-variant text-on-surface-variant shadow-paper hover:text-primary transition-colors"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSeatMenuFor(seatMenuFor === seatBook.id ? null : seatBook.id);
+                            handleDismissSeat(seatBook.id);
                           }}
                         >
-                          <span className="material-symbols-outlined text-icon-md">more_vert</span>
+                          <span className="material-symbols-outlined text-icon-md">close</span>
                         </button>
-                        {seatMenuFor === seatBook.id && (
-                          <div className="absolute right-0 top-full mt-1 w-44 bg-surface-bright border border-outline-variant rounded-card shadow-paper-up z-menu py-1 animate-scale-in origin-top-right">
-                            <button
-                              className="w-full text-left px-4 py-2.5 font-label text-label-md text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDismissSeat(seatBook.id);
-                              }}
-                            >
-                              不再显示（进度保留）
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <p className="font-label text-label-sm text-on-surface-variant">
-                      {chapter
-                        ? `第 ${chapter.number} ${seatBook.format === 'text' ? '章' : '话'}`
-                        : `${seatBook.totalChapters} 话`}
-                      <span className="font-mono ml-2">{pct}%</span>
-                    </p>
-                  </div>
-                  <div className="mt-auto">
-                    <div className="w-full h-0.5 bg-surface-container-highest mb-3" aria-hidden="true">
+                      )}
+                      {/* 进度丝带：书脊上的缎带，长度即进度 */}
                       <div
-                        className="h-full bg-seal transition-all duration-flow"
-                        style={{ width: `${pct}%` }}
+                        aria-hidden="true"
+                        className="absolute top-2 right-0 w-1.5 bg-seal rounded-l-sm"
+                        style={{ height: `calc(${pct}% - 8px)`, minHeight: 8 }}
                       />
                     </div>
-                    <Button variant="accent" size="md" className="w-full">
-                      继续阅读
-                    </Button>
-                  </div>
-                </div>
-              </article>
-            );
-          })()}
+                    <div className="p-4 md:p-6 flex flex-col justify-between flex-1 min-w-0">
+                      <div>
+                        <div className="flex items-start gap-2 mb-1">
+                          <h3 className="font-display text-headline-md text-primary leading-tight truncate flex-1">
+                            {seatBook.title}
+                          </h3>
+                          {!isSeatEditing && (
+                            <div className="relative flex-shrink-0" ref={menuRef}>
+                              <button
+                                aria-label="座位选项"
+                                className="w-8 h-8 -mt-1 -mr-1 flex items-center justify-center rounded text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSeatMenuFor(seatMenuFor === seatBook.id ? null : seatBook.id);
+                                }}
+                              >
+                                <span className="material-symbols-outlined text-icon-md">more_vert</span>
+                              </button>
+                              {seatMenuFor === seatBook.id && (
+                                <div className="absolute right-0 top-full mt-1 w-44 bg-surface-bright border border-outline-variant rounded-card shadow-paper-up z-menu py-1 animate-scale-in origin-top-right">
+                                  <button
+                                    className="w-full text-left px-4 py-2.5 font-label text-label-md text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDismissSeat(seatBook.id);
+                                    }}
+                                  >
+                                    不再显示（进度保留）
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <p className="font-label text-label-sm text-on-surface-variant">
+                          {chapter
+                            ? `第 ${chapter.number} ${seatBook.format === 'text' ? '章' : '话'}`
+                            : `${seatBook.totalChapters} 话`}
+                          <span className="font-mono ml-2">{pct}%</span>
+                        </p>
+                      </div>
+                      <div className="mt-auto">
+                        <div className="w-full h-0.5 bg-surface-container-highest mb-3" aria-hidden="true">
+                          <div
+                            className="h-full bg-seal transition-all duration-flow"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <Button variant="accent" size="md" className="w-full">
+                          继续阅读
+                        </Button>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })()}
 
-          {otherSeats.map((book) => {
-            const progress = readingProgress[book.id];
-            const pct = progress ? Math.round(progress.percentage) : 0;
-            return (
-              <button
-                key={book.id}
-                className="w-full flex items-center gap-3 py-2.5 px-2 -mx-2 rounded-card hover:bg-surface-container-low transition-colors text-left"
-                onClick={() => navigate(readerPathForBook(book))}
-              >
-                <div className="w-9 h-12 flex-shrink-0 rounded-sm overflow-hidden bg-surface-container border border-outline-variant">
-                  {renderCover(book, '')}
+              {otherSeats.map((book) => {
+                const progress = readingProgress[book.id];
+                const pct = progress ? Math.round(progress.percentage) : 0;
+                const rowContent = (
+                  <>
+                    <div className="w-9 h-12 flex-shrink-0 rounded-sm overflow-hidden bg-surface-container border border-outline-variant">
+                      {renderCover(book, '')}
+                    </div>
+                    <span className="font-body text-body-md text-primary truncate flex-1">{book.title}</span>
+                    <span className="font-mono text-label-sm text-on-surface-variant flex-shrink-0">{pct}%</span>
+                    <span
+                      aria-hidden="true"
+                      className="w-16 h-0.5 bg-surface-container-highest flex-shrink-0 overflow-hidden rounded-full"
+                    >
+                      <span className="block h-full bg-seal" style={{ width: `${pct}%` }} />
+                    </span>
+                  </>
+                );
+                // 编辑态行换成 div（不能 button 套 button），点击不跳转、行尾出叉钮
+                if (isSeatEditing) {
+                  return (
+                    <div
+                      key={book.id}
+                      className="w-full flex items-center gap-3 py-2.5 px-2 -mx-2 rounded-card bg-surface-container-low text-left"
+                    >
+                      {rowContent}
+                      <button
+                        aria-label={`移出《${book.title}》`}
+                        className="w-8 h-8 -mr-1 flex-shrink-0 flex items-center justify-center rounded text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors"
+                        onClick={() => handleDismissSeat(book.id)}
+                      >
+                        <span className="material-symbols-outlined text-icon-md">close</span>
+                      </button>
+                    </div>
+                  );
+                }
+                return (
+                  <button
+                    key={book.id}
+                    className="w-full flex items-center gap-3 py-2.5 px-2 -mx-2 rounded-card hover:bg-surface-container-low transition-colors text-left"
+                    onClick={() => navigate(readerPathForBook(book))}
+                  >
+                    {rowContent}
+                  </button>
+                );
+              })}
+
+              {/* 编辑态：被隐藏书目的恢复入口 */}
+              {isSeatEditing && hiddenSeatIds.length > 0 && (
+                <div className="flex items-center justify-between py-2 px-2 -mx-2">
+                  <span className="font-label text-label-sm text-on-surface-variant">
+                    已隐藏 {hiddenSeatIds.length} 本在读
+                  </span>
+                  <button
+                    className="font-label text-label-md text-primary hover:opacity-80 transition-opacity"
+                    onClick={handleRestoreAllSeats}
+                  >
+                    全部恢复
+                  </button>
                 </div>
-                <span className="font-body text-body-md text-primary truncate flex-1">{book.title}</span>
-                <span className="font-mono text-label-sm text-on-surface-variant flex-shrink-0">{pct}%</span>
-                <span
-                  aria-hidden="true"
-                  className="w-16 h-0.5 bg-surface-container-highest flex-shrink-0 overflow-hidden rounded-full"
-                >
-                  <span className="block h-full bg-seal" style={{ width: `${pct}%` }} />
-                </span>
+              )}
+            </>
+          ) : (
+            /* 座位清空后的兜底：不给出入口，隐藏的书就再也回不来了 */
+            <div className="flex items-center justify-between py-3 px-3 rounded-card bg-surface-container-low">
+              <span className="font-body text-body-md text-on-surface-variant">
+                已隐藏 {hiddenSeatIds.length} 本在读
+              </span>
+              <button
+                className="font-label text-label-md text-primary hover:opacity-80 transition-opacity"
+                onClick={handleRestoreAllSeats}
+              >
+                全部恢复
               </button>
-            );
-          })}
+            </div>
+          )}
         </section>
       )}
 
