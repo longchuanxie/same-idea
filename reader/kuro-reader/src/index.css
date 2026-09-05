@@ -974,40 +974,36 @@
 }
 
 /* ============================== 批注高亮：水彩笔手工涂抹 ============================== */
-/* 默认批注高亮模拟水彩笔涂抹：墨迹形状由 SVG 笔触的 mask 通道驱动——
-   中央墨芯全实心（被涂抹的文字保持锐利），上下边缘呈不规则晕染、两端收笔变细；
-   box-decoration-break: clone 让跨行批注的每一行都独立完整落笔。
-   三套笔触形态（-v0/-v1/-v2）按批注 id 散列选取，避免连续批注纹理重复；
+/* 默认批注高亮模拟手工涂抹的记号笔：
+   - 墨色是纯背景层，永远垫在文字之下——结构上不可能裁到字形；
+   - 手工感来自三处：端部在 padding 内的渐变收笔、不对称圆角的笔形、
+     以及按批注 id 散列的三套圆角组合（相邻批注形态各异、刷新后稳定）；
+   - box-decoration-break: clone 让跨行批注的每一行都独立完整落笔。
    墨色由使用方通过 --annotation-marker-color 注入，未注入时回退为文字色淡染。
-   preserveAspectRatio='none' 让笔触随片段盒拉伸铺满（SVG 默认等比缩放会信箱化留空）。 */
+   历史教训（勿走回头路）：分片内联盒上用 mask 做笔触——单层拉伸（端部削字）、
+   双层并集（渲染缺失）、九宫格切片（跨片段错位）三种方案均已实测否定。 */
 .annotation-marker {
-  background-color: var(--annotation-marker-color, color-mix(in srgb, currentColor 27%, transparent));
-  padding: 0.08em 0.18em;
-  margin: -0.08em -0.18em;
+  --annotation-ink: var(--annotation-marker-color, color-mix(in srgb, currentColor 27%, transparent));
+  background-color: transparent;
+  background-image: linear-gradient(to right,
+    transparent 0,
+    var(--annotation-ink) 0.55em,
+    var(--annotation-ink) calc(100% - 0.55em),
+    transparent 100%);
+  padding: 0.08em 0.55em;
+  margin: -0.08em -0.55em;
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
 }
 
-.annotation-marker-v0,
-.annotation-marker-v1,
-.annotation-marker-v2 {
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-size: 100% 100%;
-  mask-size: 100% 100%;
-}
-
 .annotation-marker-v0 {
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 40' preserveAspectRatio='none'%3E%3Cpath fill='%23fff' d='M2 22.5C2.5 16 4.5 9 11 6.5C28 3.5 50 7 72 5C94 3 112 6 130 5C144 4.5 154 8.5 157 15C158.3 18.5 158.3 22 157 24.5C153.5 32 142 35.5 124 36.5C102 38 84 34 64 36.5C46 38.5 24 37 9.5 30.5C4.5 27.5 2.8 25 2 22.5Z'/%3E%3Cpath fill='%23fff' fill-opacity='.45' d='M8 30C2 24 4 14 14 10.5C30 7.5 50 12 66 10C88 8 108 11 128 10C146 9 156 13.5 157.5 20C158.3 24 156.5 27.5 152 30C138 34 118 32 98 33C76 34 58 30 40 32C26 33.5 14 33 8 30Z'/%3E%3Ccircle cx='12' cy='10' r='1.6' fill='%23fff' fill-opacity='.4'/%3E%3Ccircle cx='149' cy='31' r='1.8' fill='%23fff' fill-opacity='.35'/%3E%3Ccircle cx='96' cy='1.8' r='1.2' fill='%23fff' fill-opacity='.3'/%3E%3Ccircle cx='40' cy='38.5' r='1.1' fill='%23fff' fill-opacity='.3'/%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 40' preserveAspectRatio='none'%3E%3Cpath fill='%23fff' d='M2 22.5C2.5 16 4.5 9 11 6.5C28 3.5 50 7 72 5C94 3 112 6 130 5C144 4.5 154 8.5 157 15C158.3 18.5 158.3 22 157 24.5C153.5 32 142 35.5 124 36.5C102 38 84 34 64 36.5C46 38.5 24 37 9.5 30.5C4.5 27.5 2.8 25 2 22.5Z'/%3E%3Cpath fill='%23fff' fill-opacity='.45' d='M8 30C2 24 4 14 14 10.5C30 7.5 50 12 66 10C88 8 108 11 128 10C146 9 156 13.5 157.5 20C158.3 24 156.5 27.5 152 30C138 34 118 32 98 33C76 34 58 30 40 32C26 33.5 14 33 8 30Z'/%3E%3Ccircle cx='12' cy='10' r='1.6' fill='%23fff' fill-opacity='.4'/%3E%3Ccircle cx='149' cy='31' r='1.8' fill='%23fff' fill-opacity='.35'/%3E%3Ccircle cx='96' cy='1.8' r='1.2' fill='%23fff' fill-opacity='.3'/%3E%3Ccircle cx='40' cy='38.5' r='1.1' fill='%23fff' fill-opacity='.3'/%3E%3C/svg%3E");
+  border-radius: 1.5em 1.05em 1.62em 1.22em / 0.64em 0.5em 0.68em 0.55em;
 }
 
 .annotation-marker-v1 {
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 40' preserveAspectRatio='none'%3E%3Cpath fill='%23fff' d='M3 20C5 13 9 8.5 17 7C36 4.5 60 9 78 7.5C98 5.5 116 8 134 7C148 6.5 155 10 157 16.5C158.3 20 158 24.5 156 26.5C150 33 138 35 122 36C100 37.5 82 33 62 35C44 36.5 18 36.5 7.5 29.5C4.5 27 3.3 23 3 20Z'/%3E%3Cpath fill='%23fff' fill-opacity='.4' d='M10 27C4 22 6 13 16 10.5C34 7.5 52 12 70 10C90 7.5 110 11 130 10C145 9.5 154 13 156 19C157 23 154 27 148 29.5C132 33.5 112 31 92 32.5C70 34 50 30 32 32C20 33 13 31 10 27Z'/%3E%3Ccircle cx='20' cy='3.5' r='1.3' fill='%23fff' fill-opacity='.35'/%3E%3Ccircle cx='140' cy='36.5' r='1.5' fill='%23fff' fill-opacity='.3'/%3E%3Ccircle cx='74' cy='1.5' r='1.1' fill='%23fff' fill-opacity='.3'/%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 40' preserveAspectRatio='none'%3E%3Cpath fill='%23fff' d='M3 20C5 13 9 8.5 17 7C36 4.5 60 9 78 7.5C98 5.5 116 8 134 7C148 6.5 155 10 157 16.5C158.3 20 158 24.5 156 26.5C150 33 138 35 122 36C100 37.5 82 33 62 35C44 36.5 18 36.5 7.5 29.5C4.5 27 3.3 23 3 20Z'/%3E%3Cpath fill='%23fff' fill-opacity='.4' d='M10 27C4 22 6 13 16 10.5C34 7.5 52 12 70 10C90 7.5 110 11 130 10C145 9.5 154 13 156 19C157 23 154 27 148 29.5C132 33.5 112 31 92 32.5C70 34 50 30 32 32C20 33 13 31 10 27Z'/%3E%3Ccircle cx='20' cy='3.5' r='1.3' fill='%23fff' fill-opacity='.35'/%3E%3Ccircle cx='140' cy='36.5' r='1.5' fill='%23fff' fill-opacity='.3'/%3E%3Ccircle cx='74' cy='1.5' r='1.1' fill='%23fff' fill-opacity='.3'/%3E%3C/svg%3E");
+  border-radius: 1.18em 1.58em 1.12em 1.52em / 0.54em 0.66em 0.52em 0.6em;
 }
 
 .annotation-marker-v2 {
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 40' preserveAspectRatio='none'%3E%3Cpath fill='%23fff' d='M2.5 23.5C3.5 18 6.5 12 14 10C34 6.5 56 10 74 8.5C92 7 110 9.5 128 8.5C142 8 151 10.5 155 16C156.8 18.5 157 22 155.5 24.5C150 32.5 138 36 120 37C98 38 80 34.5 60 36.5C42 38 20 36 8.5 29.5C4 27 3 25 2.5 23.5Z'/%3E%3Cpath fill='%23fff' fill-opacity='.5' d='M9 28C3.5 23 5.5 14.5 15.5 12C33 8.5 50 13 68 11C88 9 108 12.5 128 11.5C144 11 152.5 14 154.5 19.5C155.5 23 153 26.5 147 29C130 33.5 110 31.5 90 32.5C68 34 48 31 30 33C19 34 12 31.5 9 28Z'/%3E%3Ccircle cx='150' cy='8' r='1.4' fill='%23fff' fill-opacity='.35'/%3E%3Ccircle cx='16' cy='32' r='1.4' fill='%23fff' fill-opacity='.3'/%3E%3Ccircle cx='110' cy='38' r='1.2' fill='%23fff' fill-opacity='.3'/%3E%3Ccircle cx='56' cy='2.5' r='1.1' fill='%23fff' fill-opacity='.3'/%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 40' preserveAspectRatio='none'%3E%3Cpath fill='%23fff' d='M2.5 23.5C3.5 18 6.5 12 14 10C34 6.5 56 10 74 8.5C92 7 110 9.5 128 8.5C142 8 151 10.5 155 16C156.8 18.5 157 22 155.5 24.5C150 32.5 138 36 120 37C98 38 80 34.5 60 36.5C42 38 20 36 8.5 29.5C4 27 3 25 2.5 23.5Z'/%3E%3Cpath fill='%23fff' fill-opacity='.5' d='M9 28C3.5 23 5.5 14.5 15.5 12C33 8.5 50 13 68 11C88 9 108 12.5 128 11.5C144 11 152.5 14 154.5 19.5C155.5 23 153 26.5 147 29C130 33.5 110 31.5 90 32.5C68 34 48 31 30 33C19 34 12 31.5 9 28Z'/%3E%3Ccircle cx='150' cy='8' r='1.4' fill='%23fff' fill-opacity='.35'/%3E%3Ccircle cx='16' cy='32' r='1.4' fill='%23fff' fill-opacity='.3'/%3E%3Ccircle cx='110' cy='38' r='1.2' fill='%23fff' fill-opacity='.3'/%3E%3Ccircle cx='56' cy='2.5' r='1.1' fill='%23fff' fill-opacity='.3'/%3E%3C/svg%3E");
+  border-radius: 1.66em 1.2em 1.5em 1.08em / 0.6em 0.56em 0.64em 0.5em;
 }
