@@ -149,6 +149,10 @@
     white-space: nowrap;
     word-wrap: normal;
     direction: ltr;
+    /* 护栏：图标字体万一加载失败，连字源文本（bookmark_add 之类）
+       被裁剪在图标位宽内，不会横向撑爆按钮/顶栏 */
+    max-width: 1.5em;
+    overflow: hidden;
     font-feature-settings: 'liga';
     -webkit-font-feature-settings: 'liga';
     -webkit-font-smoothing: antialiased;
