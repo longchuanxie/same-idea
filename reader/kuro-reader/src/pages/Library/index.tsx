@@ -814,7 +814,7 @@ export const LibraryPage: React.FC = () => {
               </div>
               <div className="flex items-center gap-1.5 mb-0.5">
                 <FormatBadge format={book.format} />
-                <h4 className={`font-body text-body-lg leading-tight truncate ${
+                <h4 className={`font-body text-body-lg leading-tight truncate min-w-0 ${
                   isSelectMode && isSelected ? 'text-primary' : 'text-primary'
                 }`}>{book.title}</h4>
               </div>

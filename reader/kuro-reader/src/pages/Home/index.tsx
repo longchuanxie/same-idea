@@ -285,9 +285,9 @@ export const HomePage: React.FC = () => {
                     <div className="p-4 md:p-6 flex flex-col justify-between flex-1 min-w-0">
                       <div>
                         <div className="flex items-start gap-2 mb-1">
-                          <h3 className="font-display text-headline-md text-primary leading-tight truncate flex-1">
-                            {seatBook.title}
-                          </h3>
+                      <h3 className="font-display text-headline-md text-primary leading-tight truncate flex-1 min-w-0">
+                        {seatBook.title}
+                      </h3>
                           {!isSeatEditing && (
                             <div className="relative flex-shrink-0" ref={menuRef}>
                               <button
@@ -347,7 +347,7 @@ export const HomePage: React.FC = () => {
                     <div className="w-9 h-12 flex-shrink-0 rounded-sm overflow-hidden bg-surface-container border border-outline-variant">
                       {renderCover(book, '')}
                     </div>
-                    <span className="font-body text-body-md text-primary truncate flex-1">{book.title}</span>
+                    <span className="font-body text-body-md text-primary truncate flex-1 min-w-0">{book.title}</span>
                     <span className="font-mono text-label-sm text-on-surface-variant flex-shrink-0">{pct}%</span>
                     <span
                       aria-hidden="true"
@@ -576,7 +576,7 @@ export const HomePage: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-1.5">
                   <FormatBadge format={book.format} />
-                  <span className="font-body text-body-sm text-primary truncate">{book.title}</span>
+                  <span className="font-body text-body-sm text-primary truncate min-w-0">{book.title}</span>
                 </div>
               </button>
             ))}
