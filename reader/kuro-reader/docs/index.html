@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Kuro Reader — 沉浸式本地阅读器 | 漫画 & 文本</title>
-  <meta name="description" content="Kuro Reader 是一款专注本地阅读体验的跨平台应用，支持漫画（ZIP/CBZ/RAR/CBR）与文本（TXT/EPUB）格式，提供双模式阅读、手势密码保护等功能。" />
+  <title>Kuro Reader — 你的私人图书馆 | 漫画 · 文本 · PDF</title>
+  <meta name="description" content="Kuro Reader 是一款本地优先的跨平台私人图书馆：漫画（ZIP/CBZ/RAR/CBR）、文本（TXT/Markdown/EPUB）与 PDF 统一阅读，划线批注、摘抄墙、书内检索、Markdown 导出与多端同步，支持 Web 与 Android。" />
   <meta name="theme-color" content="#0A0A0A" />
   <meta property="og:title" content="Kuro Reader" />
-  <meta property="og:description" content="沉浸式本地阅读器 — 漫画 & 文本 | 支持 Web & Android" />
+  <meta property="og:description" content="本地优先的私人图书馆 — 漫画 · 文本 · PDF + 手记采集 | 支持 Web & Android" />
   <meta property="og:type" content="website" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -367,7 +367,7 @@
   </div>
   <h1>Kuro <em>Reader</em></h1>
   <p class="hero-sub">
-    一款专注于本地阅读体验的跨平台应用。支持漫画与文本阅读，覆盖 Web 与 Android，提供沉浸式阅读与流畅交互动画。
+    一座只属于你、不断生长的私人图书馆。漫画、文本与 PDF 统一阅读；每一句划线都能贴上摘抄墙、被检索、被回访、被一键带走。覆盖 Web 与 Android。
   </p>
   <div class="hero-actions">
     <a id="hero-dl-btn" href="#download" class="btn btn-primary">
@@ -380,8 +380,8 @@
     </a>
   </div>
   <div class="hero-screens">
-    <img src="screenshots/home.png" alt="Kuro Reader 主页" loading="lazy" />
-    <img src="screenshots/reader.png" alt="Kuro Reader 阅读器" loading="lazy" />
+    <img src="screenshots/demo-comic-reader.png" alt="Kuro Reader 漫画阅读器《夜航》" loading="lazy" />
+    <img src="screenshots/demo-text-reader.png" alt="Kuro Reader 文本阅读与划线" loading="lazy" />
   </div>
 </section>
 
@@ -390,44 +390,86 @@
   <div class="section-inner">
     <div class="reveal">
       <div class="section-label">功能特性</div>
-      <h2 class="section-title">为阅读而生</h2>
-      <p class="section-desc">从漫画到文本，从本地到云端，Kuro Reader 覆盖你所需的一切阅读功能。</p>
+      <h2 class="section-title">为阅读，也为留下痕迹</h2>
+      <p class="section-desc">读的时候是一座馆，读完后还是一个手记采集器官。从导入到回望，覆盖阅读与沉淀的完整链路。</p>
     </div>
     <div class="features-grid">
       <div class="feat-card reveal">
         <div class="feat-icon fi-red">
           <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
         </div>
-        <h3>多格式支持</h3>
-        <p>支持漫画压缩格式 ZIP/CBZ/RAR/CBR，以及文本格式 TXT/EPUB，直接导入即可阅读。</p>
+        <h3>全格式支持</h3>
+        <p>漫画 ZIP/CBZ/RAR/CBR、文本 TXT/Markdown/EPUB 与 PDF 统一导入；Markdown 支持数学公式、代码高亮与 Mermaid 图表。</p>
       </div>
       <div class="feat-card reveal">
         <div class="feat-icon fi-green">
-          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12" y2="18"/></svg>
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
         </div>
-        <h3>双模式阅读</h3>
-        <p>漫画支持条漫/页漫模式自由切换、双页模式；文本支持自定义字体与排版，阅读体验舒适。</p>
+        <h3>双模式沉浸阅读</h3>
+        <p>条漫/页漫自由切换、双页布局与纸张质感；文本提供滚动、分页、仿真书、多栏四种模式，支持竖排书写与 8 种中文字体。</p>
+      </div>
+      <div class="feat-card reveal">
+        <div class="feat-icon fi-yellow">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        </div>
+        <h3>手记采集</h3>
+        <p>划线/批注分离，水彩笔、下划线、波浪线三种笔触；批注带稳定锚点，重排换字号也不漂移；漫画与 PDF 支持页级手记与文字级划线。</p>
+      </div>
+      <div class="feat-card reveal">
+        <div class="feat-icon fi-purple">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </div>
+        <h3>摘抄墙与书内检索</h3>
+        <p>书内全文检索一键定位；跨书摘抄墙聚合全部手记，按关键词、书籍、标签、形态四维过滤，点击直达原句。</p>
+      </div>
+      <div class="feat-card reveal">
+        <div class="feat-icon fi-cyan">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+        <h3>回望与导出</h3>
+        <p>门厅「回望席」在周年与当日呼出旧日手记；单书与整墙一键导出 Markdown，无缝嫁接 Obsidian / Notion。</p>
       </div>
       <div class="feat-card reveal">
         <div class="feat-icon fi-blue">
           <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
         </div>
-        <h3>云端连接</h3>
-        <p>支持 WebDAV、NAS、FTP 等多种云端来源，随时随地同步你的书库。</p>
+        <h3>云端书库连接</h3>
+        <p>WebDAV、NAS、FTP 浏览下载，OPDS 目录支持 Calibre / Komga / Kavita——连接自己的存储，随时随地取书。</p>
+      </div>
+      <div class="feat-card reveal">
+        <div class="feat-icon fi-red">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+        </div>
+        <h3>智能书库管理</h3>
+        <p>子书库分类、标签与收藏；文件夹批量导入自动建库，一话一文件自动合并为一书多章，导入期章节自动识别。</p>
+      </div>
+      <div class="feat-card reveal">
+        <div class="feat-icon fi-green">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        </div>
+        <h3>多端同步</h3>
+        <p>阅读进度、批注、书签与统计经 WebDAV 多端同步，逐条 LWW 合并；删除墓碑机制让本机删除不被远端副本复活。</p>
       </div>
       <div class="feat-card reveal">
         <div class="feat-icon fi-yellow">
-          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
         </div>
-        <h3>隐私保护</h3>
-        <p>手势密码锁保护你的私密内容，所有数据存储在本地，隐私完全由你掌控。</p>
+        <h3>TTS 听书</h3>
+        <p>系统语音、神经语音与自建服务端三路引擎可切换；倍速与悬浮控制，从当前位置起播，章末自动续播下一章。</p>
       </div>
       <div class="feat-card reveal">
         <div class="feat-icon fi-purple">
-          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
         </div>
-        <h3>智能管理</h3>
-        <p>子书库分类、标签系统、收藏功能，配合批量导入，轻松管理海量书籍。</p>
+        <h3>阅读统计</h3>
+        <p>15 周日历热力图记录你的阅读年轮；每日目标与连续达标天数，统计纳入云同步与备份，换机不失忆。</p>
+      </div>
+      <div class="feat-card reveal">
+        <div class="feat-icon fi-blue">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <h3>隐私保护</h3>
+        <p>九宫格手势密码锁，SHA-256 加盐存储、失败锁定与自动锁定超时；所有数据留在本地，隐私完全由你掌控。</p>
       </div>
       <div class="feat-card reveal">
         <div class="feat-icon fi-cyan">
@@ -446,20 +488,22 @@
     <div class="reveal">
       <div class="section-label">应用截图</div>
       <h2 class="section-title">一览阅读体验</h2>
-      <p class="section-desc">Material Design 3 纯黑主色 + 暖白背景，打造沉浸式阅读界面。</p>
+      <p class="section-desc">截图来自真实应用会话——从导入《夜航》《星海拾遗》等演示书籍，到划线、批注、摘抄墙与回望席的完整流程。</p>
     </div>
     <div class="shots-scroll">
-      <div class="shot-item"><img src="screenshots/home.png" alt="主页" loading="lazy"/></div>
-      <div class="shot-item"><img src="screenshots/test-02-library.png" alt="书库" loading="lazy"/></div>
-      <div class="shot-item"><img src="screenshots/test-05-search.png" alt="搜索" loading="lazy"/></div>
-      <div class="shot-item"><img src="screenshots/reader.png" alt="阅读器" loading="lazy"/></div>
-      <div class="shot-item"><img src="screenshots/test-09-book-detail.png" alt="书籍详情" loading="lazy"/></div>
-      <div class="shot-item"><img src="screenshots/test-04-settings.png" alt="设置" loading="lazy"/></div>
-      <div class="shot-item"><img src="screenshots/test-tag-management.png" alt="标签管理" loading="lazy"/></div>
-      <div class="shot-item"><img src="screenshots/test-text-selection-04-annotation-popup.png" alt="文本批注" loading="lazy"/></div>
-      <div class="shot-item"><img src="screenshots/menu-test-02-text-reader-initial.png" alt="文本阅读器" loading="lazy"/></div>
-      <div class="shot-item"><img src="screenshots/browser-test-text-reader-ch1.png" alt="文本阅读章节" loading="lazy"/></div>
-      <div class="shot-item"><img src="screenshots/test-text-selection-07-text-selected.png" alt="文本选中" loading="lazy"/></div>
+      <div class="shot-item"><img src="screenshots/demo-home.png" alt="首页 · 继续阅读与今日之灯" loading="lazy"/></div>
+      <div class="shot-item"><img src="screenshots/demo-library.png" alt="书库 · 五本演示书籍网格" loading="lazy"/></div>
+      <div class="shot-item"><img src="screenshots/demo-comic-reader.png" alt="漫画阅读器《夜航》" loading="lazy"/></div>
+      <div class="shot-item"><img src="screenshots/demo-text-reader.png" alt="文本阅读 · 水彩笔划线" loading="lazy"/></div>
+      <div class="shot-item"><img src="screenshots/demo-text-marks.png" alt="波浪线与下划线笔触" loading="lazy"/></div>
+      <div class="shot-item"><img src="screenshots/demo-annotation-popup.png" alt="批注弹窗 · 笔记与标签" loading="lazy"/></div>
+      <div class="shot-item"><img src="screenshots/demo-notes-wall.png" alt="摘抄墙 · 跨书手记聚合" loading="lazy"/></div>
+      <div class="shot-item"><img src="screenshots/demo-home-revisit.png" alt="回望席 · 周年手记" loading="lazy"/></div>
+      <div class="shot-item"><img src="screenshots/demo-stats.png" alt="阅读统计 · 15 周热力图" loading="lazy"/></div>
+      <div class="shot-item"><img src="screenshots/demo-search.png" alt="搜索" loading="lazy"/></div>
+      <div class="shot-item"><img src="screenshots/demo-book-detail.png" alt="书籍详情" loading="lazy"/></div>
+      <div class="shot-item"><img src="screenshots/demo-settings.png" alt="设置 · 云端同步" loading="lazy"/></div>
+      <div class="shot-item"><img src="screenshots/demo-tags.png" alt="标签管理" loading="lazy"/></div>
     </div>
   </div>
 </section>
@@ -548,7 +592,7 @@
           <div class="step-num">4</div>
           <div class="step-content">
             <h4>导入书籍</h4>
-            <p>通过应用内的导入功能，选择本地 ZIP/CBZ/RAR/CBR 漫画文件或 TXT/EPUB 文本文件，也可连接 WebDAV / FTP 云端来源批量导入。</p>
+            <p>通过应用内的导入功能，选择本地 ZIP/CBZ/RAR/CBR 漫画、TXT/Markdown/EPUB 文本或 PDF 文档；也可连接 WebDAV / FTP / OPDS 云端来源浏览并批量导入。</p>
           </div>
         </li>
       </ul>
@@ -647,6 +691,10 @@
       <div class="tech-chip">IndexedDB<small>本地存储</small></div>
       <div class="tech-chip">JSZip<small>压缩包解析</small></div>
       <div class="tech-chip">libarchive.js<small>RAR 支持</small></div>
+      <div class="tech-chip">pdfjs-dist<small>PDF 渲染</small></div>
+      <div class="tech-chip">marked<small>Markdown 解析</small></div>
+      <div class="tech-chip">KaTeX<small>数学公式</small></div>
+      <div class="tech-chip">mermaid<small>图表渲染</small></div>
     </div>
   </div>
 </section>
