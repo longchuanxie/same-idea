@@ -7,6 +7,7 @@ import { Button } from '@/components/atoms/Button';
 import { FormatBadge } from '@/components/atoms/FormatBadge';
 import { TopAppBar } from '@/components/atoms/TopAppBar';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
+import { KnowledgeSection } from '@/components/molecules/knowledge/KnowledgeSection';
 import { COPY } from '@/constants/copy';
 import { ROUTES, readerPathForBook } from '@/constants/routes';
 import { annotationRepo } from '@/services/storage/annotationRepo';
@@ -526,6 +527,9 @@ export const BookDetailPage: React.FC = () => {
             </div>
           </section>
         )}
+
+        {/* 知识库区块：AI 通读生成的图谱/导图入口 */}
+        <KnowledgeSection book={book} />
 
         {/* 手记区块（手记动线的书内聚合）：最近 3 条，点击回跳原文 */}
         {annotations.length > 0 && (

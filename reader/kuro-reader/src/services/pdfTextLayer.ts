@@ -33,13 +33,16 @@ function evictIfNeeded(): void {
   }
 }
 
+/** 拉丁字符宽度的字号占比（pdfjs 未给 width 时的估算系数） */
+const LATIN_CHAR_WIDTH_RATIO = 0.5;
+
 /** 从 pdfjs 文本项换算页面相对坐标（viewport scale=1；PDF y 轴向上 → 翻转为自顶部） */
 function toPositionedItem(item: PdfTextItem, pageWidth: number, pageHeight: number): PositionedTextItem | null {
   if (!item.str || !item.transform || pageWidth <= 0 || pageHeight <= 0) return null;
   const [a, b, , d, e, f] = item.transform;
   // 字高取变换矩阵的纵向模长（近似字号，含旋转容忍）
   const fontHeight = Math.hypot(b, d) || Math.abs(d) || 1;
-  const width = item.width ?? (Math.abs(a) * item.str.length * 0.5);
+  const width = item.width ?? (Math.abs(a) * item.str.length * LATIN_CHAR_WIDTH_RATIO);
   return {
     str: item.str,
     // 文本基点 (e,f) 在基线左端：向上抬一个字高近似覆盖字形主体

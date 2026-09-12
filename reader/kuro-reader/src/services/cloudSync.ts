@@ -3,12 +3,13 @@ import axios from 'axios';
 
 import { annotationRepo } from '@/services/storage/annotationRepo';
 import { bookmarkRepo } from '@/services/storage/bookmarkRepo';
+import { knowledgeRepo } from '@/services/storage/knowledgeRepo';
 import { progressRepo } from '@/services/storage/progressRepo';
 import { tombstoneRepo, type TombstoneKind } from '@/services/storage/tombstoneRepo';
-import type { Annotation, Bookmark, ReadingProgress } from '@/types';
+import type { Annotation, Bookmark, KnowledgeArtifact, ReadingProgress } from '@/types';
 
-/** 同步载荷版本：v2 起携带可选 stats；v3 起携带可选 tombstones（删除墓碑） */
-const SYNC_VERSION = 3;
+/** 同步载荷版本：v2 起携带可选 stats；v3 起携带可选 tombstones（删除墓碑）；v4 起携带可选 knowledgeArtifacts */
+const SYNC_VERSION = 4;
 /** 墓碑保留期：超过后随合并清理，防止载荷无限膨胀 */
 const TOMBSTONE_TTL_DAYS = 90;
 /** 同步文件在 WebDAV 根下的固定路径 */
@@ -46,6 +47,8 @@ export interface SyncPayload {
   stats?: SyncedStats;
   /** v3 起：可选。删除墓碑，合并时剔除双方已删除的记录 */
   tombstones?: SyncTombstone[];
+  /** v4 起：可选。知识库产物（人物图谱/思维导图），按 id LWW 合并 */
+  knowledgeArtifacts?: KnowledgeArtifact[];
 }
 
 export type SyncDirection = 'pushed' | 'merged';
@@ -59,6 +62,7 @@ export interface SyncResult {
     progress: number;
     bookmarks: number;
     annotations: number;
+    knowledge: number;
   };
 }
 
@@ -146,7 +150,7 @@ export function mergeSyncPayloads(local: SyncPayload, remote: SyncPayload): Sync
   const tombstones = mergeTombstones(local, remote);
   /** 命中即判死：kind 匹配且删除时间晚于记录时间。'book' 墓碑按 bookId 级联命中三种记录。 */
   const killedBy = (
-    recordKind: 'progress' | 'bookmark' | 'annotation',
+    recordKind: 'progress' | 'bookmark' | 'annotation' | 'knowledge',
     recordKey: string,
     bookId: string,
     recordTime: number
@@ -206,12 +210,33 @@ export function mergeSyncPayloads(local: SyncPayload, remote: SyncPayload): Sync
     }
   }
 
+  // 知识库产物（v4，可选）：按 id 取 updatedAt 较新者；缺字段一方保留另一方
+  const knowledgeById = new Map((local.knowledgeArtifacts ?? []).map((a) => [a.id, a]));
+  for (const remoteArtifact of remote.knowledgeArtifacts ?? []) {
+    if (!remoteArtifact || typeof remoteArtifact !== 'object' || !remoteArtifact.id) continue;
+    const localArtifact = knowledgeById.get(remoteArtifact.id);
+    knowledgeById.set(
+      remoteArtifact.id,
+      localArtifact
+        ? newerOf(localArtifact, remoteArtifact, toTime(localArtifact.updatedAt), toTime(remoteArtifact.updatedAt))
+        : remoteArtifact
+    );
+  }
+  for (const [id, artifact] of knowledgeById) {
+    if (killedBy('knowledge', id, artifact.bookId, toTime(artifact.updatedAt))) {
+      knowledgeById.delete(id);
+    } else {
+      liveBookIds.add(artifact.bookId);
+    }
+  }
+
   // 失效墓碑清理：墓碑对应的记录在删除后又被重新创建/编辑而存活时，移除墓碑，
   // 避免它继续误杀后续合并中的新记录
   const liveTombstoneKeys = new Set<string>([
     ...Object.keys(readingProgress).map((bookId) => `progress:${bookId}`),
     ...[...bookmarkById.keys()].map((id) => `bookmark:${id}`),
     ...[...annotationById.keys()].map((id) => `annotation:${id}`),
+    ...[...knowledgeById.keys()].map((id) => `knowledge:${id}`),
     ...[...liveBookIds].map((bookId) => `book:${bookId}`),
   ]);
   for (const [id] of [...tombstones]) {
@@ -226,6 +251,7 @@ export function mergeSyncPayloads(local: SyncPayload, remote: SyncPayload): Sync
     annotations: [...annotationById.values()],
     stats: mergeSyncedStats(local.stats, remote.stats, local.exportedAt, remote.exportedAt),
     tombstones: [...tombstones.values()],
+    knowledgeArtifacts: [...knowledgeById.values()],
   };
 }
 
@@ -272,6 +298,7 @@ export async function runCloudSync(
       progress: Object.keys(payload.readingProgress).length,
       bookmarks: payload.bookmarks.length,
       annotations: payload.annotations.length,
+      knowledge: payload.knowledgeArtifacts?.length ?? 0,
     },
   };
 }
@@ -293,6 +320,9 @@ export async function applyMergedPayloadToLocal(merged: SyncPayload): Promise<vo
   for (const annotation of merged.annotations) {
     await annotationRepo.add(annotation);
   }
+  for (const artifact of merged.knowledgeArtifacts ?? []) {
+    await knowledgeRepo.save(artifact);
+  }
   if (merged.stats) {
     applyStatsToLocal(merged.stats);
   }
@@ -303,6 +333,7 @@ export async function applyMergedPayloadToLocal(merged: SyncPayload): Promise<vo
       if (t.kind === 'progress') await progressRepo.remove(t.key);
       else if (t.kind === 'bookmark') await bookmarkRepo.remove(t.key);
       else if (t.kind === 'annotation') await annotationRepo.remove(t.key);
+      else if (t.kind === 'knowledge') await knowledgeRepo.remove(t.key);
       else if (t.kind === 'book') await deleteBookRecords(t.key);
     }
     // 以合并结果整体覆盖本地墓碑表（remove 期间的临时写入被统一收敛）
@@ -310,7 +341,7 @@ export async function applyMergedPayloadToLocal(merged: SyncPayload): Promise<vo
   }
 }
 
-/** 整书墓碑落地：删除该书名下全部进度/书签/批注 */
+/** 整书墓碑落地：删除该书名下全部进度/书签/批注/知识产物 */
 async function deleteBookRecords(bookId: string): Promise<void> {
   for (const annotation of await annotationRepo.getByBookId(bookId)) {
     await annotationRepo.remove(annotation.id);
@@ -318,6 +349,7 @@ async function deleteBookRecords(bookId: string): Promise<void> {
   for (const bookmark of await bookmarkRepo.getByBookId(bookId)) {
     await bookmarkRepo.remove(bookmark.id);
   }
+  await knowledgeRepo.deleteByBookId(bookId);
   await progressRepo.remove(bookId);
 }
 

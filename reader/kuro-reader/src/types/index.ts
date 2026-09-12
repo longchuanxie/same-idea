@@ -35,6 +35,8 @@ export interface Book {
   isFavorite: boolean
   /** 书籍格式。undefined 视为 'comic' 以兼容旧数据。 */
   format?: BookFormat
+  /** 知识库内容类型偏好（小说/学术/自动检测）；缺省 'auto' */
+  contentKind?: ContentKindPreference
 }
 
 /** @deprecated Use `Book` instead. Kept for incremental migration. */
@@ -76,8 +78,6 @@ export interface ReadingProgress {
   locator?: string
   /** 按书记忆的文本阅读模式（未设置时使用全局设置） */
   textReadingMode?: TextReadingMode
-  /** 按书记忆的阅读主题（未设置时使用全局设置） */
-  readingTheme?: ReadingTheme
   /** 最近更新时间戳（ms），云端同步合并用 */
   updatedAt?: number
 }
@@ -90,9 +90,6 @@ export interface Collection {
 }
 
 export type PaperType = 'coated' | 'rice' | 'kraft' | 'newsprint' | 'matte' | 'eink' | 'green' | 'night'
-
-/** 阅读主题预设 */
-export type ReadingTheme = 'light' | 'green' | 'sepia' | 'dark'
 
 /** 文本字体族 */
 export type TextFontFamily =
@@ -128,7 +125,6 @@ export interface UserSettings {
   colorTemperature: number
   auth: AuthConfig
   /** 文本阅读专属设置 */
-  readingTheme: ReadingTheme
   textFontFamily: TextFontFamily
   textAlign: TextAlign
   firstLineIndent: boolean
@@ -147,6 +143,10 @@ export interface UserSettings {
   ttsServerUrl: string
   ttsServerModel: string
   ttsServerVoice: string
+  /** 知识库 AI 服务(OpenAI 兼容 /v1/chat/completions;人物图谱/思维导图生成用,仅用户主动触发时调用) */
+  knowledgeAiUrl: string
+  knowledgeAiKey: string
+  knowledgeAiModel: string
 }
 
 export interface SecurityQuestion {
@@ -202,7 +202,24 @@ export interface SubLibrary {
   updatedAt: Date
 }
 
-export type NavItem = 'home' | 'library' | 'import' | 'settings'
+export type NavItem = 'home' | 'library' | 'knowledge' | 'import' | 'settings'
+
+/** 图谱生成详细度：核心（只主要人物）/ 标准 / 详尽（含重要配角） */
+export type GraphDetailLevel = 'core' | 'standard' | 'rich'
+
+/** 生成范围（0 起章索引闭区间；to 省略 = 到末尾，适配连载书增量） */
+export interface KnowledgeScopeRange {
+  from: number
+  to?: number
+}
+
+/** 生成选项：范围 / 增量补充 / 详细度（详细度仅人物图谱消费） */
+export interface KnowledgeGenerationOptions {
+  scope?: KnowledgeScopeRange
+  /** true = 在现有同类型产物上并入新内容（旧证据坐标原样保留） */
+  incremental?: boolean
+  detail?: GraphDetailLevel
+}
 
 /** 书签 */
 export interface Bookmark {
@@ -258,6 +275,111 @@ export interface Annotation {
   pageIndex?: number
   /** PDF 文字级划线矩形（可选；与 pageIndex 互斥——有 rects 即文字划线而非页注） */
   rects?: AnnotationRect[]
+  createdAt: Date
+  updatedAt: Date
+}
+
+/** 书籍内容类型：决定知识库生成哪套任务（小说=人物/情节；学术=论点/术语） */
+export type ContentKind = 'fiction' | 'academic'
+
+/** 书籍的知识库内容类型偏好（'auto' 按文本启发式检测；存于书档案，随书记忆） */
+export type ContentKindPreference = ContentKind | 'auto'
+
+/** 知识产物类型：人物关系图谱 / 思维导图 / 概念术语卡（注册表见 services/ai/knowledgeTasks） */
+export type KnowledgeArtifactType = 'character-graph' | 'mindmap' | 'glossary'
+
+/** 人物图谱节点 */
+export interface CharacterNode {
+  /** 稳定 id（人物名归一化生成，merge 时同名合并） */
+  id: string
+  name: string
+  /** 人物身份，如「主角 · 剑客」 */
+  role?: string
+  /** 一句话人物小传 */
+  description?: string
+  /** 重要性权重（关系数归一，仅展示排序用） */
+  weight?: number
+  /** 出现章节（0 起章索引；PDF 为页索引；升序去重）——图谱回原文的跳转目标 */
+  chapters?: number[]
+}
+
+/** 原文依据坐标：AI 逐字摘句经本地校验后定位（offsetRatio = 章内偏移/章长）。
+ *  图谱关系边与术语卡定义共用此结构。 */
+export interface KnowledgeEvidence {
+  /** 逐字摘自原文的短句 */
+  quote: string
+  /** 0 起章索引 */
+  chapterIndex: number
+  /** 章内偏移占比（0..1，4 位小数），阅读器 ?goto= 直达用 */
+  offsetRatio: number
+}
+
+/** 人物关系边（语义无向；source/target 仅决定描述视角） */
+export interface CharacterEdge {
+  source: string
+  target: string
+  /** 关系名，如「师徒」「恋人」「宿敌」 */
+  relation: string
+  description?: string
+  /** 原文依据（本地校验通过才有；失败时用 chapters 章级回退） */
+  evidence?: KnowledgeEvidence
+  /** 关系出现的章节（0 起章索引；证据未定位时的跳转目标） */
+  chapters?: number[]
+}
+
+/** 术语卡条目：关键概念/术语 + 书内定义 + 定义原文坐标 */
+export interface GlossaryTerm {
+  /** 归一化术语名（merge 去重键） */
+  id: string
+  term: string
+  /** 书中给出的定义或解释 */
+  definition?: string
+  /** 定义原文（本地校验通过才有；失败时用 chapters 章级回退） */
+  evidence?: KnowledgeEvidence
+  /** 术语出现/被定义的章节（0 起章索引） */
+  chapters?: number[]
+}
+
+/** 概念术语卡数据 */
+export interface GlossaryData {
+  terms: GlossaryTerm[]
+}
+
+/** 人物关系图谱数据 */
+export interface CharacterGraphData {
+  nodes: CharacterNode[]
+  edges: CharacterEdge[]
+}
+
+/** 思维导图节点（递归树；根节点 title 即导图名） */
+export interface MindmapNodeData {
+  title: string
+  detail?: string
+  children?: MindmapNodeData[]
+}
+
+/** 知识产物：由书本内容生成（或手工构建）的结构化知识件，按书归档 */
+export interface KnowledgeArtifact {
+  id: string
+  bookId: string
+  type: KnowledgeArtifactType
+  title: string
+  data: CharacterGraphData | MindmapNodeData | GlossaryData
+  /** 生成来源元信息：内容指纹用于书本内容变化后提示重新生成 */
+  meta?: {
+    /** 实际进入语料的章节数（范围生成时 < 原书总章数） */
+    chapterCount: number
+    contentFingerprint: string
+    /** 生成时采用的内容视角（小说=人物情节 / 学术=论点术语） */
+    contentKind?: ContentKind
+    /** 生成时原书总章数（增量补充的基准：书变长即可续读新章） */
+    bookChapterCount?: number
+    /** 本次生成的章节范围（省略 = 全书） */
+    scope?: KnowledgeScopeRange
+    /** 图谱生成详细度（仅 character-graph） */
+    detail?: GraphDetailLevel
+  }
+  generator: 'ai' | 'manual'
   createdAt: Date
   updatedAt: Date
 }

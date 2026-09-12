@@ -1074,27 +1074,42 @@ export const ReaderPage: React.FC = () => {
         mixBlendMode: paperConfig.blendMode as 'multiply' | 'screen',
       }
     : null;
+  // 纸色层：页面像素 multiply 到纸型底色上。PDF/漫画页是不透明位图，纸层垫在
+  // 内容之下会被完全遮住（纸张模式不生效），故统一以覆盖层叠在内容之上。
+  // 深色纸（screen 混合，如夜读纸）不能叠 multiply——黑字会没入暗底；
+  // 改为反转内容色相（白底黑字 → 暗底亮字）再走暖化压光
+  const paperIsDark = paperConfig?.blendMode === 'screen';
+  const paperTintLayer = paperModeEnabled && paperConfig && !paperIsDark
+    ? { backgroundColor: paperConfig.bgColor, mixBlendMode: 'multiply' as const }
+    : null;
+  const paperInvertFilter = paperModeEnabled && paperIsDark
+    ? 'invert(1) hue-rotate(180deg) sepia(0.25) brightness(0.9)'
+    : null;
 
   return (
     <div
       className={cn(
         'bg-background text-on-background font-body text-body-md min-h-[100dvh] relative overflow-hidden'
       )}
-      style={
-        paperModeEnabled && paperConfig
-          ? { backgroundColor: paperConfig.bgColor, isolation: 'isolate' }
-          : undefined
-      }
+      style={paperModeEnabled && paperConfig ? { isolation: 'isolate' } : undefined}
     >
+      {paperTintLayer && (
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-10" style={paperTintLayer} />
+      )}
       {paperTextureLayer && (
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[-1]" style={paperTextureLayer} />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-10" style={paperTextureLayer} />
       )}
       <main
         ref={direction === 'vertical' ? smoothScrollContainerRef : scrollContainerRef}
         className={`w-full h-[100dvh] overflow-auto overscroll-contain relative z-0 ${
           direction === 'vertical' ? 'overflow-y-auto' : 'overflow-hidden flex items-center justify-center'
         }`}
-        style={{ WebkitOverflowScrolling: 'touch', ...(displayFilter ? { filter: displayFilter } : {}) }}
+        style={{
+          WebkitOverflowScrolling: 'touch',
+          ...(displayFilter || paperInvertFilter
+            ? { filter: [paperInvertFilter, displayFilter].filter(Boolean).join(' ') }
+            : {}),
+        }}
         onClick={handleMainClick}
         onWheelCapture={handleVerticalWheelCapture}
         onTouchStartCapture={handleVerticalTouchStartCapture}

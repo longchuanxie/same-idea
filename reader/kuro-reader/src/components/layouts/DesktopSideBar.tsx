@@ -32,6 +32,12 @@ const NAV_ITEMS: NavItemConfig[] = [
     match: (p) => p === '/library',
   },
   { label: '手记', icon: 'edit_note', path: ROUTES.NOTES, match: (p) => p.startsWith('/notes') },
+  {
+    label: '知识库',
+    icon: 'psychology',
+    path: ROUTES.KNOWLEDGE_HUB,
+    match: (p) => p.startsWith('/knowledge'),
+  },
   { label: '台账', icon: 'bar_chart', path: ROUTES.STATS, match: (p) => p.startsWith('/stats') },
   {
     label: '设置',

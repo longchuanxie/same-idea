@@ -72,7 +72,9 @@ export const ReaderBottomBar: FC<ReaderBottomBarProps> = ({
             </button>
           </div>
 
-          <div className="flex gap-3 mb-4">
+          {/* 控制区限高滚动：横屏（视口矮）时面板整体仍不超出屏幕，预留标题行与安全区高度 */}
+          <div className="max-h-[calc(100vh-9rem)] overflow-y-auto overscroll-contain scrollbar-hide">
+            <div className="flex gap-3 mb-4">
             <button
               className={cn(
                 'flex-1 flex flex-col items-center gap-2 py-3 rounded-card-lg border transition-colors',
@@ -189,7 +191,7 @@ export const ReaderBottomBar: FC<ReaderBottomBarProps> = ({
           {paperModeEnabled && (
             <div className="py-3 px-4 bg-surface-container-lowest rounded-card-lg border border-outline-variant">
               <p className="font-label text-label-md text-on-surface mb-3">纸张类型</p>
-              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+              <div className="flex flex-wrap gap-2">
                 {paperTypes.map(({ type, config }) => (
                   <button
                     key={type}
@@ -262,6 +264,7 @@ export const ReaderBottomBar: FC<ReaderBottomBarProps> = ({
               className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-primary"
               style={{ background: `linear-gradient(to right, #ffffff, #ffcc80)` }}
             />
+          </div>
           </div>
         </div>
       </div>

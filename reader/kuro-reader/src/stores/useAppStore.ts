@@ -43,7 +43,6 @@ const DEFAULT_SETTINGS: UserSettings = {
   fontFamily: 'literata',
   brightness: 100,
   colorTemperature: 0,
-  readingTheme: 'light',
   textFontFamily: 'serif',
   textAlign: 'justify',
   firstLineIndent: true,
@@ -59,6 +58,9 @@ const DEFAULT_SETTINGS: UserSettings = {
   ttsServerUrl: '',
   ttsServerModel: '',
   ttsServerVoice: '',
+  knowledgeAiUrl: '',
+  knowledgeAiKey: '',
+  knowledgeAiModel: '',
   auth: {
     isEnabled: false,
     method: 'auto',

@@ -14,9 +14,10 @@ import {
 import { annotationRepo } from '@/services/storage/annotationRepo'
 import { bookmarkRepo } from '@/services/storage/bookmarkRepo'
 import { getDB, _resetDBForTesting } from '@/services/storage/db'
+import { knowledgeRepo } from '@/services/storage/knowledgeRepo'
 import { progressRepo } from '@/services/storage/progressRepo'
-import type { Annotation, Bookmark } from '@/types'
 import { tombstoneRepo } from '@/services/storage/tombstoneRepo'
+import type { Annotation, Bookmark, KnowledgeArtifact } from '@/types'
 
 vi.mock('axios')
 
@@ -174,12 +175,16 @@ describe('mergeSyncPayloads: tombstones (v3)', () => {
   const progressOf = (bookId: string, updatedAt: number) =>
     ({ bookId, chapterId: 'c1', page: 1, totalPages: 10, percentage: 10, globalPageIndex: 0, totalImages: 10, updatedAt }) as never
 
+  const DAY_MS = 24 * 3600 * 1000
+  // 时间基准全部相对 Date.now()，避免固定日期随日历推进越过交叉点后用例腐烂
+  const tombstoneAt = (daysAgo: number) => new Date(Date.now() - daysAgo * DAY_MS).toISOString()
+
   it('本地删除（墓碑）后，远端旧副本不再复活', () => {
     const local = makePayload({
-      tombstones: [{ kind: 'progress', key: 'b1', deletedAt: '2026-08-30T12:00:00Z' }],
+      tombstones: [{ kind: 'progress', key: 'b1', deletedAt: tombstoneAt(5) }],
     })
     const remote = makePayload({
-      readingProgress: { b1: progressOf('b1', Date.now() - 10 * 24 * 3600 * 1000) }, // 远端记录早于墓碑
+      readingProgress: { b1: progressOf('b1', Date.now() - 10 * DAY_MS) }, // 远端记录早于墓碑
       annotations: [makeAnnotation('ann-1', '2026-08-20T10:00:00Z')],
     })
     local.tombstones!.push({ kind: 'annotation', key: 'ann-1', deletedAt: '2026-08-30T12:00:00Z' })
@@ -196,7 +201,7 @@ describe('mergeSyncPayloads: tombstones (v3)', () => {
       readingProgress: { b1: progressOf('b1', Date.now()) }, // 删除后重新读到，晚于墓碑
     })
     const remote = makePayload({
-      tombstones: [{ kind: 'progress', key: 'b1', deletedAt: '2026-08-01T00:00:00Z' }],
+      tombstones: [{ kind: 'progress', key: 'b1', deletedAt: tombstoneAt(5) }],
     })
 
     const merged = mergeSyncPayloads(local, remote)
@@ -398,5 +403,94 @@ describe('applyMergedPayloadToLocal', () => {
     expect(await progressRepo.getAll()).toEqual([])
     expect(await annotationRepo.getAll()).toEqual([])
     expect(await bookmarkRepo.getAll()).toEqual([])
+  })
+})
+
+// ---- v4：知识库产物 ----
+
+const makeKnowledgeArtifact = (id: string, updatedAt: string, bookId = 'b1'): KnowledgeArtifact => ({
+  id,
+  bookId,
+  type: 'character-graph',
+  title: '人物关系图谱',
+  data: { nodes: [{ id: 'n1', name: '张三' }], edges: [] },
+  generator: 'ai',
+  createdAt: new Date(updatedAt),
+  updatedAt: new Date(updatedAt),
+})
+
+describe('mergeSyncPayloads · knowledgeArtifacts（v4）', () => {
+  it('按 id LWW：较新 updatedAt 胜出，单方存在时保留', () => {
+    const local = makePayload({ knowledgeArtifacts: [makeKnowledgeArtifact('kn-1', '2026-09-01T10:00:00Z')] })
+    const remote = makePayload({
+      knowledgeArtifacts: [
+        makeKnowledgeArtifact('kn-1', '2026-09-02T10:00:00Z'),
+        makeKnowledgeArtifact('kn-2', '2026-09-02T10:00:00Z'),
+      ],
+    })
+
+    const merged = mergeSyncPayloads(local, remote)
+    expect(merged.knowledgeArtifacts).toHaveLength(2)
+    expect(merged.version).toBe(4)
+    const kn1 = merged.knowledgeArtifacts!.find((a) => a.id === 'kn-1')!
+    expect(+new Date(kn1.updatedAt)).toBe(+new Date('2026-09-02T10:00:00Z'))
+  })
+
+  it('旧载荷（无 knowledgeArtifacts）不吞掉本地知识件', () => {
+    const local = makePayload({ knowledgeArtifacts: [makeKnowledgeArtifact('kn-1', '2026-09-01T10:00:00Z')] })
+    const remote = makePayload()
+    const merged = mergeSyncPayloads(local, remote)
+    expect(merged.knowledgeArtifacts).toHaveLength(1)
+  })
+
+  it('knowledge 墓碑剔除双方已删的知识件；删除后重新生成的胜出', () => {
+    const local = makePayload({
+      knowledgeArtifacts: [makeKnowledgeArtifact('kn-1', '2026-09-03T10:00:00Z')],
+      tombstones: [{ kind: 'knowledge', key: 'kn-1', deletedAt: '2026-09-02T10:00:00Z' }],
+    })
+    const remote = makePayload({
+      knowledgeArtifacts: [makeKnowledgeArtifact('kn-1', '2026-09-01T10:00:00Z')],
+    })
+
+    // kn-1 在墓碑（09-02）之后被重新生成（09-03）→ 记录胜出
+    const merged = mergeSyncPayloads(local, remote)
+    expect(merged.knowledgeArtifacts).toHaveLength(1)
+    // 墓碑因记录复活而失效清理
+    expect(merged.tombstones).toEqual([])
+  })
+
+  it('整书墓碑级联剔除该书包知识件', () => {
+    const local = makePayload({
+      tombstones: [{ kind: 'book', key: 'b1', deletedAt: '2026-09-02T10:00:00Z' }],
+    })
+    const remote = makePayload({
+      knowledgeArtifacts: [
+        makeKnowledgeArtifact('kn-1', '2026-09-01T10:00:00Z'),
+        makeKnowledgeArtifact('kn-other', '2026-09-01T10:00:00Z', 'b2'),
+      ],
+    })
+
+    const merged = mergeSyncPayloads(local, remote)
+    expect(merged.knowledgeArtifacts!.map((a) => a.id)).toEqual(['kn-other'])
+  })
+})
+
+describe('applyMergedPayloadToLocal · knowledgeArtifacts（v4）', () => {
+  it('合并结果写入知识件仓库', async () => {
+    const payload = makePayload({ knowledgeArtifacts: [makeKnowledgeArtifact('kn-1', '2026-09-01T10:00:00Z')] })
+    await applyMergedPayloadToLocal(payload)
+
+    const artifacts = await knowledgeRepo.getByBookId('b1')
+    expect(artifacts.map((a) => a.id)).toEqual(['kn-1'])
+    expect(artifacts[0].updatedAt instanceof Date).toBe(true)
+  })
+
+  it('knowledge 墓碑落地：删除本地对应知识件', async () => {
+    await knowledgeRepo.save(makeKnowledgeArtifact('kn-1', '2026-08-20T10:00:00Z'))
+    const payload = makePayload({
+      tombstones: [{ kind: 'knowledge', key: 'kn-1', deletedAt: '2026-09-02T10:00:00Z' }],
+    })
+    await applyMergedPayloadToLocal(payload)
+    expect(await knowledgeRepo.getAll()).toEqual([])
   })
 })

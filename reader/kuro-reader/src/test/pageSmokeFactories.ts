@@ -114,7 +114,6 @@ export function makeAppStoreState(overrides: Record<string, unknown> = {}) {
       brightness: 100,
       colorTemperature: 0,
       auth: { isEnabled: false, lockTimeout: 300000, maxAttempts: 5 },
-      readingTheme: 'default',
       textFontFamily: 'literata',
       textAlign: 'left',
       firstLineIndent: true,

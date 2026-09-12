@@ -15,6 +15,7 @@ import { computePaperOpacity, getPaperBaseOpacity, getPaperConfig } from '@/util
  *  stats/search/profile 不属于任何底栏 tab，就近归属其入口页：统计与检索从首页/书库顶栏进入。 */
 const resolveNav = (pathname: string): NavItem => {
   if (pathname.startsWith('/library')) return 'library';
+  if (pathname.startsWith('/knowledge')) return 'knowledge';
   if (pathname.startsWith('/import')) return 'import';
   if (pathname.startsWith('/settings') || pathname.startsWith('/profile')) return 'settings';
   if (pathname.startsWith('/stats')) return 'home';
@@ -59,6 +60,9 @@ const getAppBarConfig = (pathname: string): AppBarConfig => {
   }
   if (pathname === '/notes') {
     return { variant: 'back', title: '手记' };
+  }
+  if (pathname === '/knowledge-hub') {
+    return { variant: 'back', title: '知识库' };
   }
   if (pathname === '/tags') {
     return { variant: 'back', title: '分类目录' };

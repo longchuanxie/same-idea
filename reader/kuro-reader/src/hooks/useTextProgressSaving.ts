@@ -1,9 +1,9 @@
 import { useCallback, useRef } from 'react';
 
-import { getOverallReadingRatio } from '@/utils/readingProgress';
+import type { TextChapter } from '@/services/textContent';
 import { useAppStore } from '@/stores/useAppStore';
 import type { Book, ReadingProgress } from '@/types';
-import type { TextChapter } from '@/services/textContent';
+import { getOverallReadingRatio } from '@/utils/readingProgress';
 
 /** 进度防抖保存间隔（ms） */
 const PROGRESS_SAVE_DEBOUNCE = 500;
@@ -82,7 +82,6 @@ export function useTextProgressSaving({
       totalImages: chs.length,
       locator,
       textReadingMode: currentSettings.textReadingMode,
-      readingTheme: currentSettings.readingTheme,
     };
   }, [bookId]);
 

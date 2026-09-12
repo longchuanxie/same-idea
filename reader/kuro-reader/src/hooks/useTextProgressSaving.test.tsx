@@ -1,13 +1,14 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { useTextProgressSaving } from './useTextProgressSaving'
 import type { Book, ReadingProgress } from '@/types'
+
+import { useTextProgressSaving } from './useTextProgressSaving'
 
 vi.mock('@/stores/useAppStore', () => ({
   useAppStore: {
     getState: () => ({
-      settings: { textReadingMode: 'scroll', readingTheme: 'paper' },
+      settings: { textReadingMode: 'scroll' },
     }),
   },
 }))
@@ -63,7 +64,6 @@ describe('useTextProgressSaving', () => {
     expect(progress.percentage).toBe(75)
     expect(progress.totalImages).toBe(2)
     expect(progress.textReadingMode).toBe('scroll')
-    expect(progress.readingTheme).toBe('paper')
     expect(JSON.parse(progress.locator ?? '')).toEqual({
       chapterIndex: 1,
       pageIndex: undefined,

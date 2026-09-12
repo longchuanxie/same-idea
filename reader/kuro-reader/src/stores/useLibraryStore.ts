@@ -41,7 +41,7 @@ export interface LibraryState {
   toggleFavorite: (id: string) => Promise<void>;
   batchDelete: (ids: string[]) => Promise<void>;
   batchMarkAsRead: (ids: string[]) => void;
-  updateBook: (id: string, updates: Partial<Pick<Book, 'title' | 'author' | 'description' | 'status' | 'tags'>>) => Promise<void>;
+  updateBook: (id: string, updates: Partial<Pick<Book, 'title' | 'author' | 'description' | 'status' | 'tags' | 'contentKind'>>) => Promise<void>;
   getContinueReading: () => Book[];
   removeContinueReading: (bookId: string) => void;
   /** 仅把书移出门厅「你的座位」，阅读进度保留（可经 restoreContinueReading 撤销） */

@@ -30,7 +30,6 @@ const fullSettings = {
   brightness: 100,
   colorTemperature: 0,
   auth: { isEnabled: false, lockTimeout: 300000, maxAttempts: 5 },
-  readingTheme: 'default' as const,
   textFontFamily: 'literata' as const,
   textAlign: 'left' as const,
   firstLineIndent: true,

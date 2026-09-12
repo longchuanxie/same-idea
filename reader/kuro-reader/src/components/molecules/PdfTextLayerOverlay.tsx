@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
-import type { AnnotationRect } from '@/types';
 import type { PositionedTextItem } from '@/services/pdfTextLayer';
 import { getPdfTextItems } from '@/services/pdfTextLayer';
+import type { AnnotationRect } from '@/types';
 import { cn } from '@/utils/cn';
 
 export interface PdfTextSelection {
@@ -13,6 +13,9 @@ export interface PdfTextSelection {
   /** 弹窗锚点（松手时指针的视口坐标） */
   anchor: { x: number; y: number };
 }
+
+/** 选区矩形越界容差：相对坐标超出页面 5% 的碎片（亚像素换算噪声）直接丢弃 */
+const RECT_VIEWPORT_TOLERANCE = 0.05;
 
 interface PdfTextLayerOverlayProps {
   bookId: string;
@@ -62,8 +65,6 @@ export const PdfTextLayerOverlay: React.FC<PdfTextLayerOverlayProps> = ({
     return () => {
       cancelled = true;
     };
-    // itemsProvider 由调用方 useCallback 稳定提供
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookId, pageIndex, itemsProvider]);
 
   const handleMouseUp = (e: React.MouseEvent) => {
@@ -84,7 +85,7 @@ export const PdfTextLayerOverlay: React.FC<PdfTextLayerOverlayProps> = ({
       const y = (domRect.top - containerRect.top) / containerRect.height;
       const w = domRect.width / containerRect.width;
       const h = domRect.height / containerRect.height;
-      if (w <= 0 || h <= 0 || x < -0.05 || x > 1.05) continue;
+      if (w <= 0 || h <= 0 || x < -RECT_VIEWPORT_TOLERANCE || x > 1 + RECT_VIEWPORT_TOLERANCE) continue;
       rects.push({ x, y, w, h });
     }
     const text = sel.toString().replace(/\s+/g, ' ').trim();

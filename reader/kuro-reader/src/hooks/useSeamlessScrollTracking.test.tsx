@@ -1,9 +1,11 @@
-import { act, render } from '@testing-library/react'
 import React, { useRef } from 'react'
+
+import { act, render } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { useSeamlessScrollTracking } from './useSeamlessScrollTracking'
 import type { TextChapter } from '@/services/textContent'
+
+import { useSeamlessScrollTracking } from './useSeamlessScrollTracking'
 
 /** 等长章节：文档坐标第 i 章顶部 = i * 1000，章高 1000 */
 const CHAPTER_SPACING = 1000
@@ -60,7 +62,7 @@ function createHarness(overrides: Record<string, unknown> = {}) {
         captured.chapterEndPrompt = v
       },
       scheduleProgressSave: (...args: unknown[]) => {
-        ;(captured.saves ||= []).push(args)
+        (captured.saves ||= []).push(args)
       },
       ...ov,
     } as Parameters<typeof useSeamlessScrollTracking>[0])

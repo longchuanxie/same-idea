@@ -19,17 +19,10 @@ import { TextReaderBottomBar } from '@/components/molecules/TextReaderBottomBar'
 import { TextReaderFooter } from '@/components/molecules/TextReaderFooter';
 import { TextReaderHeader } from '@/components/molecules/TextReaderHeader';
 import { UndoToast } from '@/components/molecules/UndoToast';
-import { ANNOTATION_QUERY_PARAM } from '@/constants/routes';
+import { ANNOTATION_QUERY_PARAM, READER_GOTO_QUERY_PARAM, parseGotoParam } from '@/constants/routes';
 import { getTextReaderFontFamily } from '@/constants/textReaderFonts';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { useBackHandler } from '@/hooks/useBackHandler';
-import { useEstimatedTimeLeft } from '@/hooks/useEstimatedTimeLeft';
-import { useLandscapeViewport } from '@/hooks/useLandscapeViewport';
-import { useReadingStats } from '@/hooks/useReadingStats';
-import { useSpeech } from '@/hooks/useSpeech';
-import { useTextSelection, type TextSelectionInfo } from '@/hooks/useTextSelection';
-import { useTextProgressSaving } from '@/hooks/useTextProgressSaving';
-import { useSeamlessScrollTracking } from '@/hooks/useSeamlessScrollTracking';
 import {
   useBookFlipAnimation,
   FLIP_ROTATION_DEG,
@@ -39,6 +32,13 @@ import {
   FLIP_ENTER_SHADOW_GRADIENT_END_PCT,
   FLIP_SPINE_OPACITY,
 } from '@/hooks/useBookFlipAnimation';
+import { useEstimatedTimeLeft } from '@/hooks/useEstimatedTimeLeft';
+import { useLandscapeViewport } from '@/hooks/useLandscapeViewport';
+import { useReadingStats } from '@/hooks/useReadingStats';
+import { useSeamlessScrollTracking } from '@/hooks/useSeamlessScrollTracking';
+import { useSpeech } from '@/hooks/useSpeech';
+import { useTextProgressSaving } from '@/hooks/useTextProgressSaving';
+import { useTextSelection, type TextSelectionInfo } from '@/hooks/useTextSelection';
 import { useWakeLock } from '@/hooks/useWakeLock';
 import { revokeEpubObjectUrls } from '@/services/epubContent';
 import {
@@ -56,7 +56,12 @@ import type { Bookmark, Annotation, AnnotationStyle, TtsEngineOption } from '@/t
 import { computeAnnotationAnchor, resolveAnnotationOffsets } from '@/utils/annotationAnchor';
 import { getAnnotationPresentation } from '@/utils/annotationHighlight';
 import { cn } from '@/utils/cn';
-import { computePaperOpacity, getPaperBaseOpacity, getPaperConfig } from '@/utils/paperTexture';
+import {
+  PAPER_INK_COLOR,
+  computePaperOpacity,
+  getPaperBaseOpacity,
+  getPaperConfig,
+} from '@/utils/paperTexture';
 import {
   getOverallReadingPercent,
 } from '@/utils/readingProgress';
@@ -86,8 +91,6 @@ const SELECTION_POPUP_OFFSET_X = 160;
 const SELECTION_POPUP_OFFSET_Y = 40;
 // 百分比与比例换算
 const PERCENT_MULTIPLIER = 100;
-/** 纸型底色上的正文字色（暖墨，与漫画纸底一致的可读性） */
-const PAPER_INK_COLOR = '#3a352c';
 
 const TEXT_SEPIA_MAX_INTENSITY = 0.4; // 色温滤镜最大 sepia 强度
 const HALF_DIVISOR = 2; // 二分查找中点 / 选区弹窗中心点 / 页边距均分
@@ -144,6 +147,8 @@ export const TextReaderPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   /** 外部批注直达目标（?ann=<id>）；一次导航只消费一次 */
   const annTargetId = searchParams.get(ANNOTATION_QUERY_PARAM);
+  /** 知识库原文直达（?goto=chapterIndex,offsetRatio）；一次导航只消费一次 */
+  const gotoTarget = parseGotoParam(searchParams.get(READER_GOTO_QUERY_PARAM));
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const progressHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const uiAutoHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -247,6 +252,7 @@ export const TextReaderPage: React.FC = () => {
       }
       pendingPageRequestRef.current = request;
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- ref 跨渲染稳定，列为依赖无意义
     []
   );
 
@@ -358,9 +364,6 @@ export const TextReaderPage: React.FC = () => {
     return getTextReaderFontFamily(textFontFamily);
   }, [textFontFamily]);
 
-  // 阅读主题样式（单源定义见 @/constants/readerThemes）
-
-
   // 阅读外观 = 纸型（与漫画阅读同源）：底色恒纸型色、文字恒暖墨；
   // 纹理层 multiply 混入纸色（paperMode 关闭时仅无噪声，底色不变）
   const paperConfigForBg = getPaperConfig(settings.paperType);
@@ -439,6 +442,9 @@ export const TextReaderPage: React.FC = () => {
   // 恢复阅读位置（增强：支持章节+分页恢复）
   useEffect(() => {
     if (!bookId || isLoading) return;
+    // 显式直达意图（?ann= / ?goto=）优先于进度/章节恢复：无缝滚动窗口就位会重放本 effect，
+    // 其 scrollTo(0,0) 会把直达定位归零——有直达参数时整体让位（直达自行设置章节与位置）
+    if (annTargetId || gotoTarget) return;
     if (chapterId) {
       const targetChapterIndex = resolveTextChapterIndex(chapters, book?.chapters, bookId, chapterId);
       if (targetChapterIndex >= 0) {
@@ -636,7 +642,6 @@ export const TextReaderPage: React.FC = () => {
       const s = settingsRef.current;
       const settingsUpdate: Partial<import('@/types').UserSettings> = {
         // 全局设置（实时同步的，这里作为安全保底的最终写入）
-        readingTheme: s.readingTheme,
         textFontFamily: s.textFontFamily,
         textAlign: s.textAlign,
         firstLineIndent: s.firstLineIndent,
@@ -661,6 +666,7 @@ export const TextReaderPage: React.FC = () => {
         if (mode === 'scroll') {
           // 滚动模式：从滚动容器计算精确位置
           // 卸载时才读取 ref：loading 早退期间容器未挂载，无法在 effect 建立时捕获
+          // eslint-disable-next-line react-hooks/exhaustive-deps -- 卸载时才读 ref：loading 早退期间容器未挂载，无法在 effect 建立时捕获
           const container = scrollContainerRef.current;
           if (container) {
             const scrollable = container.scrollHeight - container.clientHeight;
@@ -739,6 +745,7 @@ export const TextReaderPage: React.FC = () => {
     } else {
       setTtsActive(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- TTS 回调经 ref 中转（chaptersRef/goToNextChapterRef），保持零依赖避免播音中重建
   }, []), useCallback((message: string) => {
     showToast(message);
   }, [showToast]));
@@ -819,6 +826,7 @@ export const TextReaderPage: React.FC = () => {
     }
     speechStart(slice, baseOffset);
     return () => speechStop();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- 分页镜像 ref 跨渲染稳定，列为依赖会引发听书期间无谓重建
   }, [ttsActive, currentChapterIndex, chapterSpeechText, textReadingMode, speechStart, speechStop]);
 
   // 滚动模式跟读滚动：高亮目标越出视口舒适区时平滑滚到落点（听书时匀速自动滚动已挂起，不会互相打断）
@@ -931,6 +939,7 @@ export const TextReaderPage: React.FC = () => {
       scrollContainerRef.current?.scrollBy({ top: height * TAP_ZONE_PAGE_SCROLL_RATIO, behavior: 'smooth' });
       return;
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- 选区状态 ref 跨渲染稳定，列为依赖无意义
   }, [tapZoneEnabled, toggleUi, verticalWriting]);
 
   // 分页引擎：将文本按视口高度拆分为多页
@@ -1386,6 +1395,7 @@ export const TextReaderPage: React.FC = () => {
     }
     // 中间 → 切换 UI
     if (tapAction === 'toggle-ui') toggleUi();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- 选区手势 ref 跨渲染稳定，列为依赖无意义
   }, [goToNextPage, goToPrevPage, toggleUi]);
 
   // 翻页动画 class
@@ -1625,6 +1635,7 @@ export const TextReaderPage: React.FC = () => {
     setSelectionInfo(null);
     window.getSelection()?.removeAllRanges();
     isSelectingTextRef.current = false;
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- 选区/手势 ref 跨渲染稳定，列为依赖无意义
   }, [buildAnnotationFromSelection]);
 
   // 批注编辑（补丁式：id 必填，note/style/tagIds 可选；note 置空即转纯划线）
@@ -1698,6 +1709,7 @@ export const TextReaderPage: React.FC = () => {
     const chapter = chaptersRef.current[ann.chapterIndex];
     const ratio = chapter && chapter.content.length > 0 ? ann.startOffset / chapter.content.length : 0;
     jumpToChapterRatio(ann.chapterIndex, ratio);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- 章节表 ref 跨渲染稳定，列为依赖无意义
   }, [jumpToChapterRatio]);
 
   // 书内检索命中定位：命中偏移与 textLength 同坐标系，占比直接可用
@@ -1767,6 +1779,19 @@ export const TextReaderPage: React.FC = () => {
       cancelled = true;
     };
   }, [bookId, annTargetId, isLoading, chapters.length]);
+
+  // 知识库原文直达（图谱人物/关系带 ?goto=chapterIndex,ratio）：同走定位原语，一次导航只消费一次
+  const jumpToChapterRatioRef = useRef(jumpToChapterRatio);
+  jumpToChapterRatioRef.current = jumpToChapterRatio;
+  const gotoDoneRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!gotoTarget || isLoading || chapters.length === 0) return;
+    if (gotoTarget.chapterIndex >= chapters.length) return;
+    const key = `${gotoTarget.chapterIndex},${gotoTarget.ratio}`;
+    if (gotoDoneRef.current === key) return;
+    gotoDoneRef.current = key;
+    jumpToChapterRatioRef.current(gotoTarget.chapterIndex, gotoTarget.ratio);
+  }, [gotoTarget, isLoading, chapters.length]);
 
   if (isLoading) {
     return (

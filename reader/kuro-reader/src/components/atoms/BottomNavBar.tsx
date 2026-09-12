@@ -16,6 +16,7 @@ interface NavConfig {
 const NAV_ITEMS: NavConfig[] = [
   { key: 'home', label: '首页', icon: 'home', path: '/' },
   { key: 'library', label: '书库', icon: 'auto_stories', path: '/library' },
+  { key: 'knowledge', label: '知识库', icon: 'psychology', path: '/knowledge-hub' },
   { key: 'import', label: '导入', icon: 'upload_file', path: '/import' },
   { key: 'settings', label: '设置', icon: 'settings', path: '/settings' },
 ];

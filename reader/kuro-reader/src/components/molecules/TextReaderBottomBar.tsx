@@ -366,7 +366,7 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
           {paperModeEnabled && (
             <div className="py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant mb-4">
               <p className="font-label text-label-md text-on-surface mb-3">纸张类型</p>
-              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+              <div className="flex flex-wrap gap-2">
                 {paperTypes.map(({ type, config }) => (
                   <button
                     key={type}

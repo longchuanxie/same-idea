@@ -1,26 +1,43 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 
 import { Collapsible } from '@/components/atoms/Collapsible';
+import { DropdownSelect } from '@/components/atoms/DropdownSelect';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
 import { GestureLock } from '@/components/organisms/GestureLock';
 import { COPY } from '@/constants/copy';
 import { STORAGE_KEYS } from '@/constants/storage';
+import { listModels, normalizeAiBaseUrl } from '@/services/ai/aiClient';
+import {
+  CUSTOM_PROVIDER_ID,
+  KNOWLEDGE_AI_PROVIDERS,
+  findKnowledgeAiProvider,
+  matchProviderByBaseUrl,
+} from '@/services/ai/providers';
 import { applyMergedPayloadToLocal, runCloudSync, type SyncCredentials, type SyncPayload } from '@/services/cloudSync';
 import { annotationRepo } from '@/services/storage/annotationRepo';
 import { bookmarkRepo } from '@/services/storage/bookmarkRepo';
+import { knowledgeRepo } from '@/services/storage/knowledgeRepo';
 import { progressRepo } from '@/services/storage/progressRepo';
 import { tombstoneRepo } from '@/services/storage/tombstoneRepo';
 import { useAppStore } from '@/stores/useAppStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import { useStatsStore } from '@/stores/useStatsStore';
-import type { Annotation, Bookmark, PaperType, ReadingProgress, UserSettings } from '@/types';
-import { getAllPaperTypes } from '@/utils/paperTexture';
+import type { Annotation, Bookmark, KnowledgeArtifact, PaperType, ReadingProgress, UserSettings } from '@/types';
+import { isNativePlatform } from '@/utils/capacitor';
+import {
+  PAPER_INK_COLOR,
+  computePaperOpacity,
+  getAllPaperTypes,
+  getPaperBaseOpacity,
+  getPaperConfig,
+} from '@/utils/paperTexture';
 import { getStorageUsage } from '@/utils/storage';
 import { toast } from '@/utils/toast';
 
-/** 备份格式版本：v2 起包含书签与批注；v3 起包含阅读时长簿；导入时兼容 v1/v2 */
-const BACKUP_VERSION = 3;
-const LEGACY_BACKUP_VERSIONS = [1, 2];
+/** 备份格式版本：v2 起包括书签与批注；v3 起包括阅读时长簿；v4 起包括知识库产物。导入时兼容 v1-v3 */
+const BACKUP_VERSION = 4;
+// eslint-disable-next-line no-magic-numbers -- 历史备份版本号枚举，无业务阈值语义
+const LEGACY_BACKUP_VERSIONS = [1, 2, 3];
 
 /** 待确认恢复的备份内容（经版本校验后暂存，用户确认覆盖后才写入） */
 interface PendingBackup {
@@ -29,10 +46,14 @@ interface PendingBackup {
   bookmarks?: Bookmark[];
   annotations?: Annotation[];
   stats?: { readingSessions: { date: string; minutes: number; bookId: string }[]; dailyGoalMinutes: number };
+  /** v4 起：知识库产物 */
+  knowledgeArtifacts?: KnowledgeArtifact[];
 }
 
 const TEXTURE_INTENSITY_WEAK_MAX = 33;
 const TEXTURE_INTENSITY_MEDIUM_MAX = 66;
+/** 输完地址/密钥后自动测试连接的防抖间隔 */
+const AI_AUTO_TEST_DELAY_MS = 800;
 /** 阅读时长簿序列化体积护栏（字节）：超出降级为按日聚合（牺牲按书维度保住载荷体积） */
 const STATS_SESSIONS_PAYLOAD_LIMIT_KB = 200;
 const STATS_SESSIONS_PAYLOAD_LIMIT_BYTES = STATS_SESSIONS_PAYLOAD_LIMIT_KB * 1024;
@@ -97,13 +118,77 @@ export const SettingsPage: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
+
+  // 知识库 AI 服务状态（凭据存 settings，随 useAppStore persist 落 localStorage）
+  const [aiModels, setAiModels] = useState<string[]>([]);
+  const [isFetchingAiModels, setIsFetchingAiModels] = useState(false);
+  const [aiStatus, setAiStatus] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const fetchAiModels = useCallback(async () => {
+    setIsFetchingAiModels(true);
+    try {
+      const models = await listModels({
+        baseUrl: settings.knowledgeAiUrl,
+        apiKey: settings.knowledgeAiKey,
+        model: settings.knowledgeAiModel,
+      });
+      setAiModels(models);
+      // 模型列表拉回后若尚未选过模型，自动落第一个——否则受控 select 的 value=""
+      // 会以首项示人，而 store 仍为空，知识库守卫会误判“未配置”
+      if (models.length > 0 && !settings.knowledgeAiModel) {
+        updateSettings({ knowledgeAiModel: models[0] });
+      }
+      setAiStatus({
+        ok: true,
+        text: models.length > 0
+          ? `已连接，拉回 ${models.length} 个模型——可用模型与用量额度以服务商返回为准`
+          : '连接成功，但服务商没有返回任何模型',
+      });
+    } catch (e) {
+      setAiStatus({ ok: false, text: (e as Error).message || '连接失败' });
+    } finally {
+      setIsFetchingAiModels(false);
+    }
+  }, [settings.knowledgeAiUrl, settings.knowledgeAiKey, settings.knowledgeAiModel, updateSettings]);
+
+  // 地址/密钥就绪后自动测试连接并拉取模型列表（输完 Key 即触发；本机服务免 Key）
+  useEffect(() => {
+    const base = normalizeAiBaseUrl(settings.knowledgeAiUrl);
+    const key = settings.knowledgeAiKey.trim();
+    const preset = matchProviderByBaseUrl(base);
+    if (!base) return;
+    // 预设服务商需等密钥；Ollama 等本机服务（needsKey=false）地址就绪即试
+    if (preset ? preset.needsKey && !key : !key) return;
+    const timer = window.setTimeout(() => void fetchAiModels(), AI_AUTO_TEST_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [settings.knowledgeAiUrl, settings.knowledgeAiKey, fetchAiModels]);
+
+  // 当前服务商：按地址反查预设，反查不到即自定义
+  const aiProvider = matchProviderByBaseUrl(settings.knowledgeAiUrl);
+  const aiProviderId = aiProvider?.id ?? CUSTOM_PROVIDER_ID;
+  const aiNeedsKey = aiProvider?.needsKey ?? true;
+
+  /** 选服务商：预设一键带入地址；切到自定义时清空地址供手填（已是自定义则保留原输入） */
+  const handleSelectProvider = (id: string) => {
+    if (id !== CUSTOM_PROVIDER_ID) {
+      const preset = findKnowledgeAiProvider(id);
+      if (preset) updateSettings({ knowledgeAiUrl: preset.baseUrl });
+    } else if (aiProviderId !== CUSTOM_PROVIDER_ID) {
+      updateSettings({ knowledgeAiUrl: '' });
+    }
+  };
+
+  // 纸张类型预览（与 TextReader 渲染同源）：底色恒纸型色，文字用纸型墨色或缺省暖墨
+  const paperConfig = getPaperConfig(settings.paperType);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { books, tags, subLibraries, readingProgress } = useLibraryStore();
 
   const handleExportData = async () => {
-    const [bookmarks, annotations] = await Promise.all([
+    const [bookmarks, annotations, knowledgeArtifacts] = await Promise.all([
       bookmarkRepo.getAll(),
       annotationRepo.getAll(),
+      knowledgeRepo.getAll(),
     ]);
     const statsState = useStatsStore.getState();
     const data = {
@@ -121,6 +206,8 @@ export const SettingsPage: React.FC = () => {
         readingSessions: statsState.readingSessions,
         dailyGoalMinutes: statsState.dailyGoalMinutes,
       },
+      // v4 起：知识库产物（人物图谱/思维导图）
+      knowledgeArtifacts,
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -157,6 +244,20 @@ export const SettingsPage: React.FC = () => {
       await Promise.all(
         (data.annotations as Annotation[]).map((a) =>
           annotationRepo.add({
+            ...a,
+            createdAt: new Date(a.createdAt),
+            updatedAt: new Date(a.updatedAt),
+          })
+        )
+      );
+    }
+
+    // 知识库产物（v4 备份起包含；旧备份无此字段则保留本地）
+    if (Array.isArray(data.knowledgeArtifacts)) {
+      await knowledgeRepo.deleteAll();
+      await Promise.all(
+        (data.knowledgeArtifacts as KnowledgeArtifact[]).map((a) =>
+          knowledgeRepo.save({
             ...a,
             createdAt: new Date(a.createdAt),
             updatedAt: new Date(a.updatedAt),
@@ -248,24 +349,27 @@ export const SettingsPage: React.FC = () => {
         username: syncUsername || undefined,
         password: syncPassword || undefined,
       };
-      const [progressList, bookmarks, annotations, tombstones] = await Promise.all([
+      const [progressList, bookmarks, annotations, tombstones, knowledgeArtifacts] = await Promise.all([
         progressRepo.getAll(),
         bookmarkRepo.getAll(),
         annotationRepo.getAll(),
         tombstoneRepo.getAll(),
+        knowledgeRepo.getAll(),
       ]);
       const readingProgress: Record<string, ReadingProgress> = {};
       for (const p of progressList) readingProgress[p.bookId] = p;
 
       const statsState = useStatsStore.getState();
       const localPayload: SyncPayload = {
-        version: 3,
+        version: 4,
         exportedAt: new Date().toISOString(),
         readingProgress,
         bookmarks,
         annotations,
         // v3 起：删除墓碑随载荷同步，阻止远端副本复活本地已删的记录
         tombstones: tombstones.map(({ kind, key, deletedAt }) => ({ kind, key, deletedAt })),
+        // v4 起：知识库产物随载荷同步（多端知识库不丢）
+        knowledgeArtifacts,
         // v2 起：阅读时长簿随载荷同步（连击/热力图不再换机失忆）；
         // 明细超阈值时降级为按日聚合（牺牲按书维度，保住载荷体积）
         stats: {
@@ -286,8 +390,8 @@ export const SettingsPage: React.FC = () => {
         ok: true,
         text:
           result.direction === 'merged'
-            ? `已合并同步：进度 ${result.counts.progress} 本 · 批注 ${result.counts.annotations} 条 · 书签 ${result.counts.bookmarks} 条`
-            : `已上传：进度 ${result.counts.progress} 本 · 批注 ${result.counts.annotations} 条 · 书签 ${result.counts.bookmarks} 条`,
+            ? `已合并同步：进度 ${result.counts.progress} 本 · 批注 ${result.counts.annotations} 条 · 书签 ${result.counts.bookmarks} 条 · 知识件 ${result.counts.knowledge} 件`
+            : `已上传：进度 ${result.counts.progress} 本 · 批注 ${result.counts.annotations} 条 · 书签 ${result.counts.bookmarks} 条 · 知识件 ${result.counts.knowledge} 件`,
       });
     } catch (e) {
       setSyncMessage({ ok: false, text: (e as Error).message || '同步失败' });
@@ -377,7 +481,7 @@ export const SettingsPage: React.FC = () => {
             <div className="w-12 h-12 flex items-center justify-center rounded-full border border-outline-variant text-primary mb-2">
               <span className="material-symbols-outlined text-[24px]">question_mark</span>
             </div>
-            <h1 className="font-display text-headline-md text-primary">设置安全问题</h1>
+            <h1 className="font-display text-headline-sm text-primary">设置安全问题</h1>
             <p className="font-body text-body-sm text-on-surface-variant">
               忘记密码时可通过安全问题重置，请至少设置 1 个
             </p>
@@ -387,24 +491,27 @@ export const SettingsPage: React.FC = () => {
             {securityQuestions.map((q, idx) => (
               <div key={idx} className="space-y-2">
                 <label className="font-label text-label-sm text-on-surface-variant">安全问题 {idx + 1}</label>
-                <select
-                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-3 font-body text-body-md text-on-surface focus:border-primary focus:ring-0 outline-none transition-colors"
+                <DropdownSelect
+                  ariaLabel={`安全问题 ${idx + 1}`}
+                  variant="filled"
                   value={q.question}
-                  onChange={(e) => {
+                  onChange={(question) => {
                     const next = [...securityQuestions];
-                    next[idx] = { ...next[idx], question: e.target.value };
+                    next[idx] = { ...next[idx], question };
                     setSecurityQuestions(next);
                   }}
-                >
-                  <option value="">-- 请选择问题 --</option>
-                  {SECURITY_QUESTIONS.map((sq) => (
-                    <option key={sq} value={sq} disabled={securityQuestions.some((o, i) => i !== idx && o.question === sq)}>
-                      {sq}
-                    </option>
-                  ))}
-                </select>
+                  options={[
+                    { value: '', label: '-- 请选择问题 --' },
+                    ...SECURITY_QUESTIONS.map((sq) => ({
+                      value: sq,
+                      label: sq,
+                      // 已被其他问题占用的选项置灰，防止重复
+                      disabled: securityQuestions.some((o, i) => i !== idx && o.question === sq),
+                    })),
+                  ]}
+                />
                 <input
-                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-3 font-body text-body-md text-on-surface placeholder:text-on-surface-variant/50 focus:border-primary focus:ring-0 outline-none transition-colors"
+                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-3 font-body text-body-sm text-on-surface placeholder:text-on-surface-variant/50 focus:border-primary focus:ring-0 outline-none transition-colors"
                   placeholder="输入答案"
                   value={q.answer}
                   onChange={(e) => {
@@ -448,13 +555,13 @@ export const SettingsPage: React.FC = () => {
   return (
     <div className="relative z-10 w-full max-w-max-width-content mx-auto px-margin-mobile md:px-0 pt-8 pb-16">
       <header className="mb-12">
-        <h1 className="font-display text-display-lg-mobile md:text-display-lg text-primary mb-2">设置</h1>
-        <p className="font-body text-body-md text-on-surface-variant">个性化您的阅读体验。</p>
+          <h1 className="font-display text-headline-md md:text-display-lg-mobile text-primary mb-2">设置</h1>
+          <p className="font-body text-body-sm text-on-surface-variant">个性化您的阅读体验。</p>
       </header>
 
       <div className="space-y-12">
         <section>
-          <h2 className="font-label text-label-md text-secondary uppercase tracking-widest mb-4 ml-2">隐私与安全</h2>
+          <h2 className="font-label text-label-sm text-secondary uppercase tracking-widest mb-4 ml-2">隐私与安全</h2>
           <div className="bg-surface rounded-lg border border-outline-variant overflow-hidden">
             <div className="p-6 border-b border-outline-variant flex justify-between items-center bg-surface-container-lowest">
               <div className="flex items-center gap-4">
@@ -462,8 +569,8 @@ export const SettingsPage: React.FC = () => {
                   <span className="material-symbols-outlined">lock</span>
                 </div>
                 <div>
-                  <h3 className="font-display text-headline-sm text-on-surface">应用锁</h3>
-                  <p className="font-body text-body-md text-on-surface-variant text-sm leading-tight mt-1">
+                  <h3 className="font-display text-headline-xs text-on-surface">应用锁</h3>
+                  <p className="font-body text-body-xs text-on-surface-variant mt-1">
                     {auth.isEnabled ? '已启用手势密码保护' : '未启用，任何人均可访问'}
                   </p>
                 </div>
@@ -499,8 +606,8 @@ export const SettingsPage: React.FC = () => {
                       <span className="material-symbols-outlined">gesture</span>
                     </div>
                     <div>
-                      <h3 className="font-display text-headline-sm text-on-surface">修改手势密码</h3>
-                      <p className="font-body text-body-md text-on-surface-variant text-sm leading-tight mt-1">
+                      <h3 className="font-display text-headline-xs text-on-surface">修改手势密码</h3>
+                      <p className="font-body text-body-xs text-on-surface-variant mt-1">
                         更换当前的手势密码
                       </p>
                     </div>
@@ -517,8 +624,8 @@ export const SettingsPage: React.FC = () => {
                       <span className="material-symbols-outlined">timer</span>
                     </div>
                     <div>
-                      <h3 className="font-display text-headline-sm text-on-surface">自动锁定</h3>
-                      <p className="font-body text-body-md text-on-surface-variant text-sm leading-tight mt-1">
+                      <h3 className="font-display text-headline-xs text-on-surface">自动锁定</h3>
+                      <p className="font-body text-body-xs text-on-surface-variant mt-1">
                         离开应用后 {lockTimeoutLabel} 需重新验证
                       </p>
                     </div>
@@ -559,8 +666,8 @@ export const SettingsPage: React.FC = () => {
                       <span className="material-symbols-outlined">pin</span>
                     </div>
                     <div>
-                      <h3 className="font-display text-headline-sm text-on-surface">最大尝试次数</h3>
-                      <p className="font-body text-body-md text-on-surface-variant text-sm leading-tight mt-1">
+                      <h3 className="font-display text-headline-xs text-on-surface">最大尝试次数</h3>
+                      <p className="font-body text-body-xs text-on-surface-variant mt-1">
                         连续错误 {maxAttemptsLabel} 后临时锁定
                       </p>
                     </div>
@@ -596,7 +703,7 @@ export const SettingsPage: React.FC = () => {
 
             {!auth.isEnabled && (
               <div className="p-6 bg-surface-container-lowest">
-                <p className="font-body text-body-md text-on-surface-variant">
+                <p className="font-body text-body-xs text-on-surface-variant">
                   启用应用锁后，每次打开应用或从后台返回时需要验证手势密码，保护您的阅读隐私。
                 </p>
               </div>
@@ -605,7 +712,7 @@ export const SettingsPage: React.FC = () => {
         </section>
 
         <section>
-          <h2 className="font-label text-label-md text-secondary uppercase tracking-widest mb-4 ml-2">外观</h2>
+          <h2 className="font-label text-label-sm text-secondary uppercase tracking-widest mb-4 ml-2">外观</h2>
           <div className="bg-surface rounded-lg border border-outline-variant overflow-hidden">
             <button
               className="w-full p-6 border-b border-outline-variant flex justify-between items-center bg-surface-container-lowest cursor-pointer hover:bg-surface-container-low transition-colors group text-left"
@@ -621,8 +728,8 @@ export const SettingsPage: React.FC = () => {
                   <span className="material-symbols-outlined">brightness_medium</span>
                 </div>
                 <div>
-                  <h3 className="font-display text-headline-sm text-on-surface">主题</h3>
-                  <p className="font-body text-body-md text-on-surface-variant text-sm leading-tight mt-1">{themeLabel}</p>
+                  <h3 className="font-display text-headline-xs text-on-surface">主题</h3>
+                  <p className="font-body text-body-xs text-on-surface-variant mt-1">{themeLabel}</p>
                 </div>
               </div>
               <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">chevron_right</span>
@@ -634,8 +741,8 @@ export const SettingsPage: React.FC = () => {
                   <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>note</span>
                 </div>
                 <div>
-                  <h3 className="font-display text-headline-sm text-on-surface">纸张模式</h3>
-                  <p className="font-body text-body-md text-on-surface-variant text-sm leading-tight mt-1">
+                  <h3 className="font-display text-headline-xs text-on-surface">纸张模式</h3>
+                  <p className="font-body text-body-xs text-on-surface-variant mt-1">
                     模拟真实纸张的纹理与色调，减少视觉疲劳。
                   </p>
                 </div>
@@ -660,26 +767,37 @@ export const SettingsPage: React.FC = () => {
                   <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant">
                     <span className="material-symbols-outlined">category</span>
                   </div>
-                  <h3 className="font-display text-headline-sm text-on-surface">纸张类型</h3>
+                  <h3 className="font-display text-headline-xs text-on-surface">纸张类型</h3>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  {getAllPaperTypes().map(({ type, config }) => (
-                    <button
-                      key={type}
-                      className={`flex flex-col items-start gap-1 p-3 rounded-xl border transition-all ${
-                        settings.paperType === type
-                          ? 'bg-primary/10 border-primary ring-1 ring-primary'
-                          : 'bg-surface-container-high border-outline-variant hover:border-primary/50'
-                      }`}
-                      onClick={() => updateSettings({ paperType: type as PaperType })}
+                <div className="flex flex-col gap-3">
+                  {/* 效果预览：与阅读器渲染同源——纸型底色 + 同强度纹理层 + 纸型墨色文字 */}
+                  <div className="relative h-28 rounded-lg border border-outline-variant overflow-hidden isolate">
+                    <div className="absolute inset-0" style={{ backgroundColor: paperConfig.bgColor }} />
+                    <div
+                      aria-hidden="true"
+                      className="absolute inset-0"
+                      style={{
+                        backgroundImage: paperConfig.svgFilter(
+                          computePaperOpacity(settings.textureIntensity, getPaperBaseOpacity(settings.paperType), false)
+                        ),
+                        mixBlendMode: paperConfig.blendMode as 'multiply' | 'screen',
+                      }}
+                    />
+                    <div
+                      className="relative h-full flex flex-col justify-center gap-1.5 px-5"
+                      style={{ color: paperConfig.inkColor ?? PAPER_INK_COLOR }}
                     >
-                      <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-[18px] text-on-surface-variant">{config.icon}</span>
-                        <span className="font-label text-label-md text-on-surface">{config.label}</span>
-                      </div>
-                      <p className="font-body text-body-sm text-on-surface-variant text-left leading-snug">{config.description}</p>
-                    </button>
-                  ))}
+                      <p className="font-body text-body-md leading-snug">纸上得来终觉浅，绝知此事要躬行。</p>
+                      <p className="font-body text-body-sm leading-snug opacity-80">旧书不厌百回读，熟读深思子自知。</p>
+                    </div>
+                  </div>
+                  <DropdownSelect
+                    ariaLabel="纸张类型"
+                    options={getAllPaperTypes().map(({ type, config }) => ({ value: type, label: config.label }))}
+                    value={settings.paperType}
+                    onChange={(type) => updateSettings({ paperType: type as PaperType })}
+                  />
+                  <p className="font-body text-body-sm text-on-surface-variant">{paperConfig.description}</p>
                 </div>
               </div>
             </Collapsible>
@@ -690,7 +808,7 @@ export const SettingsPage: React.FC = () => {
                   <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant">
                     <span className="material-symbols-outlined">texture</span>
                   </div>
-                  <h3 className="font-display text-headline-sm text-on-surface">纹理强度</h3>
+                  <h3 className="font-display text-headline-xs text-on-surface">纹理强度</h3>
                 </div>
                 <span className="font-label text-label-sm text-on-surface-variant">
                   {settings.textureIntensity <= TEXTURE_INTENSITY_WEAK_MAX ? '弱' : settings.textureIntensity <= TEXTURE_INTENSITY_MEDIUM_MAX ? '中等' : '强'}
@@ -715,7 +833,7 @@ export const SettingsPage: React.FC = () => {
         </section>
 
         <section>
-          <h2 className="font-label text-label-md text-secondary uppercase tracking-widest mb-4 ml-2">阅读偏好</h2>
+          <h2 className="font-label text-label-sm text-secondary uppercase tracking-widest mb-4 ml-2">阅读偏好</h2>
           <div className="bg-surface rounded-lg border border-outline-variant overflow-hidden">
             <button
               className="w-full p-6 border-b border-outline-variant flex justify-between items-center bg-surface-container-lowest cursor-pointer hover:bg-surface-container-low transition-colors group text-left"
@@ -726,8 +844,8 @@ export const SettingsPage: React.FC = () => {
                   <span className="material-symbols-outlined">swap_horiz</span>
                 </div>
                 <div>
-                  <h3 className="font-display text-headline-sm text-on-surface">阅读方向</h3>
-                  <p className="font-body text-body-md text-on-surface-variant text-sm leading-tight mt-1">
+                  <h3 className="font-display text-headline-xs text-on-surface">阅读方向</h3>
+                  <p className="font-body text-body-xs text-on-surface-variant mt-1">
                     {directionLabel}
                   </p>
                 </div>
@@ -776,8 +894,8 @@ export const SettingsPage: React.FC = () => {
                   <span className="material-symbols-outlined">swipe</span>
                 </div>
                 <div>
-                  <h3 className="font-display text-headline-sm text-on-surface">滑动翻页</h3>
-                  <p className="font-body text-body-md text-on-surface-variant text-sm leading-tight mt-1">
+                  <h3 className="font-display text-headline-xs text-on-surface">滑动翻页</h3>
+                  <p className="font-body text-body-xs text-on-surface-variant mt-1">
                     {settings.pageTurnGestures ? '已启用，左右滑动翻页' : '已关闭，仅点击翻页'}
                   </p>
                 </div>
@@ -805,8 +923,8 @@ export const SettingsPage: React.FC = () => {
                   <span className="material-symbols-outlined">text_format</span>
                 </div>
                 <div>
-                  <h3 className="font-display text-headline-sm text-on-surface">排版与字体</h3>
-                  <p className="font-body text-body-md text-on-surface-variant text-sm leading-tight mt-1">{fontLabel}</p>
+                  <h3 className="font-display text-headline-xs text-on-surface">排版与字体</h3>
+                  <p className="font-body text-body-xs text-on-surface-variant mt-1">{fontLabel}</p>
                 </div>
               </div>
               <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">
@@ -869,7 +987,102 @@ export const SettingsPage: React.FC = () => {
         </section>
 
         <section>
-          <h2 className="font-label text-label-md text-secondary uppercase tracking-widest mb-4 ml-2">系统管理</h2>
+          <h2 className="font-label text-label-sm text-secondary uppercase tracking-widest mb-4 ml-2">知识库</h2>
+          <div className="bg-surface rounded-lg border border-outline-variant overflow-hidden">
+            <div className="p-6 bg-surface-container-lowest">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant">
+                  <span className="material-symbols-outlined">psychology</span>
+                </div>
+                <div>
+                  <h3 className="font-display text-headline-xs text-on-surface">AI 分析服务</h3>
+                  <p className="font-body text-body-xs text-on-surface-variant mt-1">
+                    人物图谱与思维导图由它通读全书生成。选好服务商、贴上 Key 即自动连接并列出可选模型；凭据只存在本机，仅在你点「生成」时调用
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-3 mb-4">
+                <label className="font-label text-label-sm text-on-surface-variant" htmlFor="knowledge-ai-provider">
+                  服务商
+                </label>
+                {/* 弹层自绘：原生 select 展开列表由系统渲染（白底+系统蓝高亮），与主题不符；副标说明展示在框下 */}
+                <DropdownSelect
+                  id="knowledge-ai-provider"
+                  ariaLabel="服务商"
+                  options={KNOWLEDGE_AI_PROVIDERS.map((preset) => ({ value: preset.id, label: preset.label }))}
+                  value={aiProviderId}
+                  onChange={handleSelectProvider}
+                />
+                <p className="font-body text-body-sm text-on-surface-faint">
+                  {findKnowledgeAiProvider(aiProviderId)?.hint}
+                </p>
+                <input
+                  className="w-full bg-transparent border border-outline-variant/50 rounded-lg px-3 py-2 font-body text-body-sm text-primary focus:outline-none focus:border-primary transition-colors disabled:opacity-60"
+                  placeholder={
+                    isNativePlatform()
+                      ? '服务地址，如 https://api.example.com'
+                      : '服务地址，如 https://api.example.com 或 http://127.0.0.1:11434/v1'
+                  }
+                  aria-label="AI 服务地址"
+                  value={settings.knowledgeAiUrl}
+                  disabled={aiProviderId !== CUSTOM_PROVIDER_ID}
+                  onChange={(e) => updateSettings({ knowledgeAiUrl: e.target.value })}
+                />
+                <input
+                  className="w-full bg-transparent border border-outline-variant/50 rounded-lg px-3 py-2 font-body text-body-sm text-primary focus:outline-none focus:border-primary transition-colors"
+                  placeholder={aiNeedsKey ? 'API Key（输入后自动测试连接）' : 'API Key（本机服务可留空）'}
+                  aria-label="AI 服务 API Key"
+                  type="password"
+                  value={settings.knowledgeAiKey}
+                  onChange={(e) => updateSettings({ knowledgeAiKey: e.target.value })}
+                />
+                {aiModels.length > 0 ? (
+                  <DropdownSelect
+                    ariaLabel="AI 模型"
+                    value={settings.knowledgeAiModel}
+                    onChange={(model) => updateSettings({ knowledgeAiModel: model })}
+                    options={[
+                      // 现配置的模型不在服务商列表中时保留为额外选项（自定义模型名不丢失）
+                      ...(!aiModels.includes(settings.knowledgeAiModel) && settings.knowledgeAiModel.trim()
+                        ? [{ value: settings.knowledgeAiModel, label: `${settings.knowledgeAiModel}（当前配置）` }]
+                        : []),
+                      ...aiModels.map((model) => ({ value: model, label: model })),
+                    ]}
+                  />
+                ) : (
+                  <input
+                    className="w-full bg-transparent border border-outline-variant/50 rounded-lg px-3 py-2 font-body text-body-sm text-primary focus:outline-none focus:border-primary transition-colors"
+                    placeholder="模型名（连接成功后自动列出可选模型）"
+                    aria-label="AI 模型名"
+                    value={settings.knowledgeAiModel}
+                    onChange={(e) => updateSettings({ knowledgeAiModel: e.target.value })}
+                  />
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  className="flex-1 bg-primary text-on-primary font-label text-label-md py-3 px-4 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+                  onClick={() => void fetchAiModels()}
+                  disabled={isFetchingAiModels || !settings.knowledgeAiUrl.trim()}
+                >
+                  {isFetchingAiModels && <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>}
+                  {isFetchingAiModels ? '正在连接…' : '拉取模型'}
+                </button>
+              </div>
+              {aiStatus && (
+                <p className={`font-body text-body-sm mt-3 ${aiStatus.ok ? 'text-primary' : 'text-error'}`}>
+                  {aiStatus.text}
+                </p>
+              )}
+              <p className="font-label text-label-sm text-on-surface-faint mt-3">
+                可用模型与用量额度以服务商返回为准，应用不做本地限制。
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <h2 className="font-label text-label-sm text-secondary uppercase tracking-widest mb-4 ml-2">系统管理</h2>
           <div className="bg-surface rounded-lg border border-outline-variant overflow-hidden">
             <button
               className="w-full p-6 flex justify-between items-center bg-surface-container-lowest text-left opacity-60 cursor-not-allowed"
@@ -881,8 +1094,8 @@ export const SettingsPage: React.FC = () => {
                   <span className="material-symbols-outlined">storage</span>
                 </div>
                 <div>
-                  <h3 className="font-display text-headline-sm text-on-surface">馆容量（筹备中）</h3>
-                  <p className="font-body text-body-md text-on-surface-variant text-sm leading-tight mt-1">
+                  <h3 className="font-display text-headline-xs text-on-surface">馆容量（筹备中）</h3>
+                  <p className="font-body text-body-xs text-on-surface-variant mt-1">
                     已藏 {formatBytes(storageInfo.used)} / 馆舍 {formatBytes(storageInfo.quota)}
                   </p>
                 </div>
@@ -896,8 +1109,8 @@ export const SettingsPage: React.FC = () => {
                   <span className="material-symbols-outlined">cloud_sync</span>
                 </div>
                 <div>
-                  <h3 className="font-display text-headline-sm text-on-surface">云端同步</h3>
-                  <p className="font-body text-body-md text-on-surface-variant text-sm leading-tight mt-1">
+                  <h3 className="font-display text-headline-xs text-on-surface">云端同步</h3>
+                  <p className="font-body text-body-xs text-on-surface-variant mt-1">
                     通过 WebDAV 在多台设备间同步进度、批注与书签
                   </p>
                 </div>
@@ -953,8 +1166,8 @@ export const SettingsPage: React.FC = () => {
                   <span className="material-symbols-outlined">backup</span>
                 </div>
                 <div>
-                  <h3 className="font-display text-headline-sm text-on-surface">数据备份</h3>
-                  <p className="font-body text-body-md text-on-surface-variant text-sm leading-tight mt-1">
+                  <h3 className="font-display text-headline-xs text-on-surface">数据备份</h3>
+                  <p className="font-body text-body-xs text-on-surface-variant mt-1">
                     导出或导入应用数据
                   </p>
                 </div>

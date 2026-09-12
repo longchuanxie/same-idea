@@ -12,6 +12,8 @@ import { BookDetailPage } from '@/pages/BookDetail';
 import { CustomCloudPage } from '@/pages/CustomCloud';
 import { HomePage } from '@/pages/Home';
 import { ImportPage } from '@/pages/Import';
+import { KnowledgePage } from '@/pages/Knowledge';
+import { KnowledgeHubPage } from '@/pages/KnowledgeHub';
 import { LibraryPage } from '@/pages/Library';
 import { NotesPage } from '@/pages/Notes';
 import { ProfilePage } from '@/pages/Profile';
@@ -124,9 +126,11 @@ const App: React.FC = () => {
           <Route path={ROUTES.STATS} element={<StatsPage />} />
           <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
           <Route path={ROUTES.NOTES} element={<NotesPage />} />
+          <Route path={ROUTES.KNOWLEDGE_HUB} element={<KnowledgeHubPage />} />
           <Route path={ROUTES.TAGS} element={<TagsPage />} />
         </Route>
         <Route path={ROUTES.BOOK_DETAIL} element={<BookDetailPage />} />
+        <Route path={ROUTES.KNOWLEDGE} element={<KnowledgePage />} />
         <Route path={ROUTES.READER} element={<ReaderPage />} />
         <Route path={ROUTES.TEXT_READER} element={<TextReaderPage />} />
         <Route path={ROUTES.CUSTOM_CLOUD} element={<CustomCloudPage />} />

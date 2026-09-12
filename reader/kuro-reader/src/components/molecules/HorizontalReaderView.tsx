@@ -1,5 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
-import type { FC, MouseEvent, TouchEvent } from 'react';
+import { useEffect, useRef, type ReactNode , FC, MouseEvent, TouchEvent } from 'react';
 
 import { cn } from '@/utils/cn';
 import type { PaperTextureConfig } from '@/utils/paperTexture';

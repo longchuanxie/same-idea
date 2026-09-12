@@ -119,6 +119,9 @@ const PAPER_TEXTURES: Record<PaperType, PaperTextureConfig> = {
   },
 };
 
+/** 纸面默认正文字色（暖墨）；护眼纸/夜读纸等特殊纸型在各自 config.inkColor 覆写 */
+export const PAPER_INK_COLOR = '#3a352c';
+
 /** 强度滑杆(0-100) → 纹理层不透明度：幂曲线提亮中低档（默认 50% 即可感知纤维），
  *  暗色表面自动减半防纹理发灰。 */
 const TEXTURE_GAMMA = 0.6;

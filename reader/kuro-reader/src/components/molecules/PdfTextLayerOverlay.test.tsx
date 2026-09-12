@@ -10,8 +10,9 @@ vi.mock('@/services/pdfTextLayer', () => ({
   ]),
 }))
 
-import { PdfTextLayerOverlay } from './PdfTextLayerOverlay'
 import { getPdfTextItems } from '@/services/pdfTextLayer'
+
+import { PdfTextLayerOverlay } from './PdfTextLayerOverlay'
 
 const highlights = [
   { id: 'ann-1', rect: { page: 0, x: 0.1, y: 0.2, w: 0.3, h: 0.03 } },

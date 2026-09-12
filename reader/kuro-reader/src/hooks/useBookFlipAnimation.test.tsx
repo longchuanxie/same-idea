@@ -1,5 +1,6 @@
-import { act, render } from '@testing-library/react'
 import React, { useRef } from 'react'
+
+import { act, render } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useBookFlipAnimation, FLIP_COMMIT_PROGRESS_THRESHOLD } from './useBookFlipAnimation'

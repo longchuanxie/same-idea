@@ -71,9 +71,11 @@ export default {
         'display-lg-mobile': ['32px', { lineHeight: '40px', letterSpacing: '-0.01em', fontWeight: '700' }],
         'headline-md': ['24px', { lineHeight: '32px', fontWeight: '600' }],
         'headline-sm': ['20px', { lineHeight: '28px', fontWeight: '600' }],
+        'headline-xs': ['18px', { lineHeight: '26px', fontWeight: '600' }],
         'body-lg': ['18px', { lineHeight: '32px', fontWeight: '400' }],
         'body-md': ['16px', { lineHeight: '28px', fontWeight: '400' }],
         'body-sm': ['14px', { lineHeight: '20px', fontWeight: '400' }],
+        'body-xs': ['13px', { lineHeight: '18px', fontWeight: '400' }],
         'label-md': ['14px', { lineHeight: '20px', letterSpacing: '0.02em', fontWeight: '500' }],
         'label-sm': ['12px', { lineHeight: '16px', letterSpacing: '0.05em', fontWeight: '600' }],
         /* 图标三档：收编 text-[16px]/text-[20px]/text-[24px] 魔数 */
