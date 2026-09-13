@@ -82,11 +82,8 @@ export const KnowledgeHubPage: React.FC = () => {
   const total = artifacts?.length ?? 0;
 
   return (
-    <div className="mx-auto max-w-3xl px-4 pt-2">
-      {/* 页名由顶栏承载，页内只留一句引导，避免移动端标题重复 */}
-      <p className="font-label text-label-sm text-on-surface-faint mb-4">
-        AI 通读全书织成的图谱、导图与术语卡——跨书总目，点开即达
-      </p>
+    <div className="mx-auto max-w-3xl px-4 pt-3">
+      {/* 页名由顶栏承载；不放页内标题与引导文案，保持列表直达 */}
 
       {artifacts !== null && total === 0 && (
         <div className="rounded-card border border-outline-variant bg-surface-container-low p-8 text-center">
