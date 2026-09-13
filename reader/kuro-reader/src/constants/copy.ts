@@ -84,4 +84,12 @@ export const COPY = {
     dismissToday: '今日不再看',
     goBack: '回望',
   },
+  /** 漫画跨章续读：章末不落加载黑场，滚动自然接续下一章 */
+  comicChapter: {
+    chapterEnd: '本章完',
+    nextChapter: (title: string) => `下一章 · ${title}`,
+    preparingNext: '正在准备下一章…',
+    bookEnd: '已经到最后一页',
+    chapterStart: '已是本章第一页',
+  },
 } as const;

@@ -25,6 +25,9 @@ const pageRepoMock = vi.mocked(pageRepo, true)
 const createObjectURLMock = vi.fn()
 const revokeObjectURLMock = vi.fn()
 
+/** 冲刷微任务队列：等在途的 loadPage/预取 promise 全部落定 */
+const flushMicrotasks = () => new Promise<void>((resolve) => setTimeout(resolve, 0))
+
 const makeChapters = () => [
   { id: 'ch1', title: '第一章', pages: Array.from({ length: 10 }, (_, i) => `p${i}.jpg`) },
   { id: 'ch2', title: '第二章', pages: Array.from({ length: 5 }, (_, i) => `q${i}.jpg`) },
@@ -224,6 +227,23 @@ describe('openChapter & closeReader', () => {
     expect(state.pageUrls).toHaveLength(5)
   })
 
+  it('openChapter to the same chapter jumps instead of reloading', async () => {
+    stubLibrary({ book: { chapters: makeChapters() } })
+    await useReaderStore.getState().openBook('b1', 'ch1', 1)
+    await flushMicrotasks()
+
+    const urlsBefore = useReaderStore.getState().pageUrls
+    pageRepoMock.getPage.mockClear()
+
+    await useReaderStore.getState().openChapter('ch1', 4)
+
+    const state = useReaderStore.getState()
+    expect(state.currentChapterId).toBe('ch1')
+    expect(state.currentPage).toBe(4)
+    expect(state.pageUrls).toBe(urlsBefore)
+    expect(pageRepoMock.getPage).not.toHaveBeenCalled()
+  })
+
   it('closeReader revokes all URLs and resets state', () => {
     useReaderStore.setState({
       currentBookId: 'b1',
@@ -246,6 +266,107 @@ describe('openChapter & closeReader', () => {
     expect(state.totalPages).toBe(0)
     expect(state.pageUrls).toEqual([])
     expect(state.isUiVisible).toBe(false)
+  })
+})
+
+describe('cross-chapter continuity', () => {
+  it('prefetchAdjacentChapters prepares next chapter head pages idempotently', async () => {
+    stubLibrary({ book: { chapters: makeChapters() } })
+    await useReaderStore.getState().openBook('b1', 'ch1', 1)
+    await flushMicrotasks()
+
+    await useReaderStore.getState().prefetchAdjacentChapters()
+
+    const pf = useReaderStore.getState().nextChapterPrefetch
+    expect(pf?.chapterId).toBe('ch2')
+    expect(pf?.urls).toHaveLength(5)
+    expect(pf?.urls.every((url) => url !== null)).toBe(true)
+    // ch1 是第一章：没有上一章尾部预取
+    expect(useReaderStore.getState().prevChapterPrefetch).toBeNull()
+
+    // 重复请求不重复提取
+    await flushMicrotasks()
+    const callsBefore = pageRepoMock.getPage.mock.calls.length
+    await useReaderStore.getState().prefetchAdjacentChapters()
+    expect(pageRepoMock.getPage.mock.calls.length).toBe(callsBefore)
+  })
+
+  it('promoteToNextChapter swaps the prefetched chapter in and revokes old pages', async () => {
+    stubLibrary({ book: { chapters: makeChapters() } })
+    await useReaderStore.getState().openBook('b1', 'ch1', 1)
+    await useReaderStore.getState().prefetchAdjacentChapters()
+
+    const oldUrls = [...useReaderStore.getState().pageUrls].filter(Boolean)
+    const nextUrls = [...(useReaderStore.getState().nextChapterPrefetch?.urls ?? [])]
+
+    expect(useReaderStore.getState().promoteToNextChapter(1)).toBe(true)
+
+    const state = useReaderStore.getState()
+    expect(state.currentChapterId).toBe('ch2')
+    expect(state.chapterTitle).toBe('第二章')
+    expect(state.totalPages).toBe(5)
+    expect(state.currentPage).toBe(1)
+    // 预取 URL 原样转移，晋升零重提取
+    expect(state.pageUrls).toEqual(nextUrls)
+    expect(state.nextChapterPrefetch).toBeNull()
+    oldUrls.forEach((url) => expect(revokeObjectURLMock).toHaveBeenCalledWith(url))
+
+    // 预取已消费：再晋升直接拒绝
+    expect(useReaderStore.getState().promoteToNextChapter()).toBe(false)
+  })
+
+  it('openChapter consumes next-chapter prefetch without re-extracting head pages', async () => {
+    stubLibrary({ book: { chapters: makeChapters() } })
+    await useReaderStore.getState().openBook('b1', 'ch1', 1)
+    await useReaderStore.getState().prefetchAdjacentChapters()
+    await flushMicrotasks()
+    pageRepoMock.getPage.mockClear()
+
+    await useReaderStore.getState().openChapter('ch2')
+
+    const state = useReaderStore.getState()
+    expect(state.currentChapterId).toBe('ch2')
+    expect(state.currentPage).toBe(1)
+    // ch2 全部 5 页均来自预取，不再查询 IndexedDB
+    expect(pageRepoMock.getPage).not.toHaveBeenCalled()
+    expect(state.pageUrls.filter((url) => url !== null)).toHaveLength(5)
+  })
+
+  it('openChapter to the previous chapter reuses its tail prefetch', async () => {
+    stubLibrary({ book: { chapters: makeChapters() } })
+    await useReaderStore.getState().openBook('b1', 'ch2', 1)
+    await useReaderStore.getState().prefetchAdjacentChapters()
+    await flushMicrotasks()
+
+    expect(useReaderStore.getState().prevChapterPrefetch?.chapterId).toBe('ch1')
+    pageRepoMock.getPage.mockClear()
+
+    await useReaderStore.getState().openChapter('ch1', 10)
+
+    const state = useReaderStore.getState()
+    expect(state.currentChapterId).toBe('ch1')
+    expect(state.currentPage).toBe(10)
+    // 关键圈（索引 6..9）中，8、9 命中尾部预取，不再提取
+    const calledIndexes = pageRepoMock.getPage.mock.calls.map(([, chapterId, pageIndex]) => `${chapterId}:${pageIndex}`)
+    expect(calledIndexes).not.toContain('ch1:8')
+    expect(calledIndexes).not.toContain('ch1:9')
+    expect(state.pageUrls[8]).not.toBeNull()
+    expect(state.pageUrls[9]).not.toBeNull()
+  })
+
+  it('closeReader revokes unconsumed prefetch URLs', async () => {
+    stubLibrary({ book: { chapters: makeChapters() } })
+    await useReaderStore.getState().openBook('b1', 'ch1', 1)
+    await useReaderStore.getState().prefetchAdjacentChapters()
+
+    const prefetchUrls = (useReaderStore.getState().nextChapterPrefetch?.urls ?? []).filter(Boolean)
+    expect(prefetchUrls.length).toBeGreaterThan(0)
+
+    useReaderStore.getState().closeReader()
+
+    prefetchUrls.forEach((url) => expect(revokeObjectURLMock).toHaveBeenCalledWith(url))
+    expect(useReaderStore.getState().nextChapterPrefetch).toBeNull()
+    expect(useReaderStore.getState().prevChapterPrefetch).toBeNull()
   })
 })
 

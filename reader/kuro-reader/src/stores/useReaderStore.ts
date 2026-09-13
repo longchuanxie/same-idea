@@ -7,9 +7,21 @@ import { useLibraryStore } from '@/stores/useLibraryStore';
 
 const PRELOAD_RADIUS = 10;
 const INITIAL_LOAD_RADIUS = 3;
+/** 下一章头部预取页数：覆盖分割线露出 → 跨章晋升 → 晋升后首屏窗口 */
+const NEXT_CHAPTER_PREFETCH_COUNT = 6;
+/** 上一章尾部预取页数：水平模式回翻跨章即时换装 */
+const PREV_CHAPTER_PREFETCH_COUNT = 2;
 
 interface BookCacheEntry {
   chapters: { id: string; title: string; pages: string[] }[];
+}
+
+/** 相邻章节预取：urls 按该章页索引对齐（pageCount 长度），未就绪槽位为 null */
+interface AdjacentChapterPrefetch {
+  chapterId: string;
+  title: string;
+  pageCount: number;
+  urls: (string | null)[];
 }
 
 interface ReaderState {
@@ -29,9 +41,17 @@ interface ReaderState {
   isBottomBarVisible: boolean;
   paperModeEnabled: boolean;
   bookCache: Record<string, BookCacheEntry>;
+  /** 下一章头部预取（跨章续读分割线用）；null = 未预取/已消费 */
+  nextChapterPrefetch: AdjacentChapterPrefetch | null;
+  /** 上一章尾部预取（水平回翻跨章用） */
+  prevChapterPrefetch: AdjacentChapterPrefetch | null;
 
   openBook: (bookId: string, chapterId?: string, startPage?: number) => Promise<void>;
   openChapter: (chapterId: string, startPage?: number) => Promise<void>;
+  /** 幂等预取当前章的相邻章节头部/尾部页（不触碰当前 pageUrls） */
+  prefetchAdjacentChapters: () => Promise<void>;
+  /** 跨章晋升：把下一章预取 URL 原子转为当前 pageUrls；预取未就绪返回 false */
+  promoteToNextChapter: (startPage?: number) => boolean;
   loadPage: (pageIndex: number) => Promise<void>;
   loadPageSync: (pageIndex: number) => void;
   ensurePagesAround: (centerPage: number, radius: number) => void;
@@ -53,6 +73,45 @@ interface ReaderState {
 const loadingPages = new Set<number>();
 const failedPages = new Set<number>();
 let openBookCounter = 0;
+let openChapterCounter = 0;
+
+/** 回收并清空相邻章节预取（未消费的 URL 一并 revoke） */
+function clearAdjacentPrefetches(): void {
+  const { nextChapterPrefetch, prevChapterPrefetch } = useReaderStore.getState();
+  nextChapterPrefetch?.urls.forEach((url) => {
+    if (url) URL.revokeObjectURL(url);
+  });
+  prevChapterPrefetch?.urls.forEach((url) => {
+    if (url) URL.revokeObjectURL(url);
+  });
+  if (nextChapterPrefetch || prevChapterPrefetch) {
+    useReaderStore.setState({ nextChapterPrefetch: null, prevChapterPrefetch: null });
+  }
+}
+
+/** 把指定章节的预取 URL 移交出去（所有权转移给 pageUrls，不再回收）；无预取返回 null */
+function takePrefetchFor(chapterId: string): (string | null)[] | null {
+  const { nextChapterPrefetch, prevChapterPrefetch } = useReaderStore.getState();
+  const taken =
+    nextChapterPrefetch?.chapterId === chapterId
+      ? nextChapterPrefetch
+      : prevChapterPrefetch?.chapterId === chapterId
+        ? prevChapterPrefetch
+        : null;
+  if (!taken) return null;
+  if (nextChapterPrefetch && nextChapterPrefetch !== taken) {
+    nextChapterPrefetch.urls.forEach((url) => {
+      if (url) URL.revokeObjectURL(url);
+    });
+  }
+  if (prevChapterPrefetch && prevChapterPrefetch !== taken) {
+    prevChapterPrefetch.urls.forEach((url) => {
+      if (url) URL.revokeObjectURL(url);
+    });
+  }
+  useReaderStore.setState({ nextChapterPrefetch: null, prevChapterPrefetch: null });
+  return taken.urls;
+}
 
 export const useReaderStore = create<ReaderState>()((set, get) => ({
   currentBookId: null,
@@ -71,6 +130,8 @@ export const useReaderStore = create<ReaderState>()((set, get) => ({
   isBottomBarVisible: false,
   paperModeEnabled: useAppStore.getState().settings.paperMode,
   bookCache: {},
+  nextChapterPrefetch: null,
+  prevChapterPrefetch: null,
 
   openBook: async (bookId, chapterId, startPage) => {
     const currentCall = ++openBookCounter;
@@ -135,6 +196,7 @@ export const useReaderStore = create<ReaderState>()((set, get) => ({
       get().pageUrls.forEach((url) => {
         if (url) URL.revokeObjectURL(url);
       });
+      clearAdjacentPrefetches();
       loadingPages.clear();
       failedPages.clear();
 
@@ -267,7 +329,7 @@ export const useReaderStore = create<ReaderState>()((set, get) => ({
   setPageLayout: (layout) => set({ pageLayout: layout }),
 
   openChapter: async (chapterId, startPage) => {
-    const { currentBookId, chapters, bookCache } = get();
+    const { currentBookId, chapters, bookCache, currentChapterId: fromChapterId } = get();
     if (!currentBookId) return;
 
     const cached = bookCache[currentBookId];
@@ -276,33 +338,61 @@ export const useReaderStore = create<ReaderState>()((set, get) => ({
     if (!targetChapter) return;
 
     const pageCount = targetChapter.pages.length;
+
+    // 同章重选：不重载直接定位，避免无谓的整屏占位打断
+    if (chapterId === fromChapterId) {
+      get().goToPage(Math.max(1, Math.min(startPage ?? 1, pageCount)));
+      return;
+    }
+
+    const currentCall = ++openChapterCounter;
     const resolvedStartPage = startPage ? Math.max(1, Math.min(startPage, pageCount)) : 1;
-
-    get().pageUrls.forEach((url) => {
-      if (url) URL.revokeObjectURL(url);
-    });
-    loadingPages.clear();
-    failedPages.clear();
-
-    const initialUrls: (string | null)[] = new Array(pageCount).fill(null);
-    set({
-      currentChapterId: chapterId,
-      currentPage: resolvedStartPage,
-      totalPages: pageCount,
-      pageUrls: initialUrls,
-      chapterTitle: targetChapter.title,
-      isUiVisible: false,
-    });
-
     const center = resolvedStartPage - 1;
+
+    // 先备好关键页再换装：旧章画面保持可见，跨章瞬间不出现整屏加载占位
+    const prepared: (string | null)[] = takePrefetchFor(chapterId)
+      ?? new Array<string | null>(pageCount).fill(null);
+    const extractInto = async (pageIndex: number) => {
+      if (pageIndex < 0 || pageIndex >= pageCount || prepared[pageIndex] !== null) return;
+      try {
+        const blob = await pageRepo.getPage(currentBookId, chapterId, pageIndex);
+        if (!blob || currentCall !== openChapterCounter || prepared[pageIndex] !== null) {
+          if (blob) {
+            const stale = URL.createObjectURL(blob);
+            URL.revokeObjectURL(stale);
+          }
+          return;
+        }
+        prepared[pageIndex] = URL.createObjectURL(blob);
+      } catch {
+        // 单页提取失败不阻塞换装，留给常规 loadPage 兜底
+      }
+    };
     const criticalPages: Promise<void>[] = [];
     for (let offset = 0; offset <= INITIAL_LOAD_RADIUS; offset++) {
       const after = center + offset;
       const before = center - offset;
-      if (after < pageCount) criticalPages.push(get().loadPage(after));
-      if (before >= 0 && before !== after && offset > 0) criticalPages.push(get().loadPage(before));
+      if (after < pageCount) criticalPages.push(extractInto(after));
+      if (before >= 0 && before !== after && offset > 0) criticalPages.push(extractInto(before));
     }
     await Promise.all(criticalPages);
+    if (currentCall !== openChapterCounter) return;
+
+    // 原子换装
+    get().pageUrls.forEach((url) => {
+      if (url) URL.revokeObjectURL(url);
+    });
+    clearAdjacentPrefetches();
+    loadingPages.clear();
+    failedPages.clear();
+    set({
+      currentChapterId: chapterId,
+      currentPage: resolvedStartPage,
+      totalPages: pageCount,
+      pageUrls: prepared,
+      chapterTitle: targetChapter.title,
+      isUiVisible: false,
+    });
 
     for (let offset = INITIAL_LOAD_RADIUS + 1; offset <= PRELOAD_RADIUS; offset++) {
       const after = center + offset;
@@ -312,11 +402,108 @@ export const useReaderStore = create<ReaderState>()((set, get) => ({
     }
   },
 
+  prefetchAdjacentChapters: async () => {
+    const { currentBookId, currentChapterId, chapters } = get();
+    if (!currentBookId || !currentChapterId) return;
+    const index = chapters.findIndex((ch) => ch.id === currentChapterId);
+    if (index < 0) return;
+    const next = index < chapters.length - 1 ? chapters[index + 1] : null;
+    const prev = index > 0 ? chapters[index - 1] : null;
+
+    // 占位先行同步写入：并发调用由 chapterId 判重挡下
+    if (next && get().nextChapterPrefetch?.chapterId !== next.id) {
+      set({
+        nextChapterPrefetch: {
+          chapterId: next.id,
+          title: next.title,
+          pageCount: next.pages.length,
+          urls: new Array<string | null>(next.pages.length).fill(null),
+        },
+      });
+    }
+    if (prev && get().prevChapterPrefetch?.chapterId !== prev.id) {
+      set({
+        prevChapterPrefetch: {
+          chapterId: prev.id,
+          title: prev.title,
+          pageCount: prev.pages.length,
+          urls: new Array<string | null>(prev.pages.length).fill(null),
+        },
+      });
+    }
+
+    const fillPrefetch = async (
+      chapterId: string,
+      pageIndexes: number[],
+      slot: 'nextChapterPrefetch' | 'prevChapterPrefetch'
+    ) => {
+      for (const pageIndex of pageIndexes) {
+        // 已就绪/已消费/已换章的槽位直接跳过，不做多余提取
+        const before = get()[slot];
+        if (!before || before.chapterId !== chapterId || before.urls[pageIndex] !== null) continue;
+        let blob: Blob | undefined;
+        try {
+          blob = await pageRepo.getPage(currentBookId, chapterId, pageIndex);
+        } catch {
+          continue;
+        }
+        if (!blob) continue;
+        const pf = get()[slot];
+        if (!pf || pf.chapterId !== chapterId || pf.urls[pageIndex] !== null) continue;
+        const urls = [...pf.urls];
+        urls[pageIndex] = URL.createObjectURL(blob);
+        set({ [slot]: { ...pf, urls } } as Partial<ReaderState>);
+      }
+    };
+
+    if (next) {
+      const count = Math.min(NEXT_CHAPTER_PREFETCH_COUNT, next.pages.length);
+      await fillPrefetch(next.id, Array.from({ length: count }, (_, i) => i), 'nextChapterPrefetch');
+    }
+    if (prev) {
+      const count = Math.min(PREV_CHAPTER_PREFETCH_COUNT, prev.pages.length);
+      const pageCount = prev.pages.length;
+      await fillPrefetch(
+        prev.id,
+        Array.from({ length: count }, (_, i) => pageCount - 1 - i),
+        'prevChapterPrefetch'
+      );
+    }
+  },
+
+  promoteToNextChapter: (startPage = 1) => {
+    const pf = get().nextChapterPrefetch;
+    if (!pf || pf.pageCount <= 0 || pf.urls[0] === null) return false;
+
+    const oldUrls = get().pageUrls;
+    const prevUrls = get().prevChapterPrefetch?.urls ?? [];
+    set({
+      currentChapterId: pf.chapterId,
+      chapterTitle: pf.title,
+      totalPages: pf.pageCount,
+      currentPage: Math.max(1, Math.min(startPage, pf.pageCount)),
+      pageUrls: [...pf.urls],
+      nextChapterPrefetch: null,
+      prevChapterPrefetch: null,
+    });
+    oldUrls.forEach((url) => {
+      if (url) URL.revokeObjectURL(url);
+    });
+    prevUrls.forEach((url) => {
+      if (url) URL.revokeObjectURL(url);
+    });
+
+    // 新章就位后立刻预取它的下一章，连续追读不回头等
+    void get().prefetchAdjacentChapters();
+    return true;
+  },
+
   closeReader: () => {
     const { pageUrls } = get();
     pageUrls.forEach((url) => {
       if (url) URL.revokeObjectURL(url);
     });
+    clearAdjacentPrefetches();
     loadingPages.clear();
     failedPages.clear();
     set({

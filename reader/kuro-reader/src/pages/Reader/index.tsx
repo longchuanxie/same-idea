@@ -70,6 +70,8 @@ const PAGE_INDEX_TO_PAGE_OFFSET = 1;
 /** 页注弹窗纵向落点（视口高度的 1/3） */
 const PAGE_NOTE_POPUP_VIEWPORT_DIVISOR = 3;
 const READING_ANCHOR_RATIO = 0.2;
+/** 水平模式边界预取提前量：距本章末页/首页 N 页内开始预取相邻章 */
+const HORIZONTAL_BOUNDARY_PREFETCH_PAGES = 2;
 
 const clampPageScrollRatio = (ratio: number): number =>
   Math.max(DEFAULT_PAGE_SCROLL_RATIO, Math.min(MAX_PAGE_SCROLL_RATIO, ratio));
@@ -129,7 +131,9 @@ export const ReaderPage: React.FC = () => {
   // 页码徽标：翻页/换章时短暂浮现提示位置，随后淡出，不常驻打扰沉浸阅读
   const [pageBadgeVisible, setPageBadgeVisible] = useState(false);
   const pageBadgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [showChapterEnd, setShowChapterEnd] = useState(false);
+  // 章节徽标：跨章瞬间浮现新章名，给足方位感又不打断滚动
+  const [chapterBadgeTitle, setChapterBadgeTitle] = useState<string | null>(null);
+  const chapterBadgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showChapterList, setShowChapterList] = useState(false);
   const [zoomScale, setZoomScale] = useState(1);
   const [zoomOrigin, setZoomOrigin] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -165,8 +169,10 @@ export const ReaderPage: React.FC = () => {
     fullscreenImageUrl,
     fullscreenPageIndex,
     isBottomBarVisible,
+    nextChapterPrefetch,
     openBook,
     openChapter,
+    prefetchAdjacentChapters,
     setPageLayout,
     toggleUi,
     setDirection,
@@ -200,6 +206,16 @@ export const ReaderPage: React.FC = () => {
       if (pageBadgeTimerRef.current) clearTimeout(pageBadgeTimerRef.current);
     };
   }, [currentPage, currentChapterId, totalPages]);
+  // 章节徽标：换章（含跨章晋升/续读定位）时浮现新章名，超时淡出
+  useEffect(() => {
+    if (!currentChapterId || !chapterTitle) return;
+    setChapterBadgeTitle(chapterTitle);
+    if (chapterBadgeTimerRef.current) clearTimeout(chapterBadgeTimerRef.current);
+    chapterBadgeTimerRef.current = setTimeout(() => setChapterBadgeTitle(null), PAGE_BADGE_AUTOHIDE_MS);
+    return () => {
+      if (chapterBadgeTimerRef.current) clearTimeout(chapterBadgeTimerRef.current);
+    };
+  }, [currentChapterId, chapterTitle]);
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
   const isDarkSurface = theme === 'dark' || (theme === 'auto' && prefersDark);
   const readingDirection = settings.readingDirection;
@@ -224,6 +240,7 @@ export const ReaderPage: React.FC = () => {
   const nextChapter = currentChapterIndex >= 0 && currentChapterIndex < chapters.length - 1
     ? chapters[currentChapterIndex + 1]
     : null;
+  const prevChapter = currentChapterIndex > 0 ? chapters[currentChapterIndex - 1] : null;
 
   const book = bookId ? getBookById(bookId) : undefined;
   const totalImages = chapters.reduce((sum, ch) => sum + ch.pages.length, 0) || totalPages;
@@ -307,25 +324,57 @@ export const ReaderPage: React.FC = () => {
     }, FIRST_PAGE_NOTICE_DURATION);
   }, []);
 
-  const showFirstPageNotice = useCallback(() => {
+  const showBookFirstPageNotice = useCallback(() => {
     showReaderNotice(FIRST_PAGE_NOTICE_TEXT);
+  }, [showReaderNotice]);
+
+  const showChapterFirstPageNotice = useCallback(() => {
+    showReaderNotice(COPY.comicChapter.chapterStart);
   }, [showReaderNotice]);
 
   const showLastPageNotice = useCallback(() => {
     showReaderNotice(LAST_PAGE_NOTICE_TEXT);
   }, [showReaderNotice]);
 
+  // 章界顶提示：本书第一章说「已经到第一页」，中间章说「已是本章第一页」
+  const showFirstPageNotice = prevChapter ? showChapterFirstPageNotice : showBookFirstPageNotice;
+
+  /** 跨章晋升：把预取的下一章头部页原子转为当前章（滚动补偿由虚拟窗口 hook 负责） */
+  const promoteToNextChapter = useCallback((startPage: number) => {
+    return useReaderStore.getState().promoteToNextChapter(startPage);
+  }, []);
+
+  /** 渲染窗口触底时请求预取相邻章（store 内幂等） */
+  const requestChapterPrefetch = useCallback(() => {
+    void useReaderStore.getState().prefetchAdjacentChapters();
+  }, []);
+
+  const continuation = useMemo(() => {
+    if (!nextChapter) return null;
+    return {
+      chapterId: nextChapter.id,
+      title: nextChapter.title,
+      pageCount: nextChapter.pages.length,
+      prefetchUrls: nextChapterPrefetch?.chapterId === nextChapter.id ? nextChapterPrefetch.urls : null,
+      promote: promoteToNextChapter,
+      requestPrefetch: requestChapterPrefetch,
+    };
+  }, [nextChapter, nextChapterPrefetch, promoteToNextChapter, requestChapterPrefetch]);
+
   // 垂直（条漫）虚拟滚动窗口：渲染区间、进度恢复、跳页、边界扩窗
   const {
     isRestoringVerticalScroll,
     verticalProgressPercent,
     verticalPageIndices,
+    verticalAppendReady,
     revealPreviousVerticalPage,
     verticalRenderStartIndex,
     verticalTouchStartYRef,
     jumpToVerticalPage,
     initializeWindow,
     resetForVerticalEntry,
+    promoteNextChapterNow,
+    promotionActiveRef,
     initialScrollDoneRef,
   } = useVerticalVirtualWindow({
     direction,
@@ -345,15 +394,8 @@ export const ReaderPage: React.FC = () => {
     getCurrentVerticalReadingPosition,
     getCurrentChapterScrollRatio,
     showFirstPageNotice,
+    continuation,
   });
-
-  useEffect(() => {
-    if (direction === 'horizontal' && currentPage >= totalPages && totalPages > 0 && nextChapter) {
-      setShowChapterEnd(true);
-    } else {
-      setShowChapterEnd(false);
-    }
-  }, [currentPage, totalPages, direction, nextChapter]);
 
   useEffect(() => {
     if (isUiVisible) {
@@ -434,6 +476,8 @@ export const ReaderPage: React.FC = () => {
 
   useEffect(() => {
     if (bookId && currentPage > 0 && totalPages > 0 && currentChapterId) {
+      // 跨章晋升的滚动补偿尚未落位：此刻 DOM/scrollTop 错位，实测进度不可信
+      if (promotionActiveRef.current) return;
       const pageScrollRatio = direction === 'vertical' && !initialScrollDoneRef.current
         ? initialPageScrollRatioRef.current
         : getCurrentPageScrollRatio();
@@ -479,6 +523,7 @@ export const ReaderPage: React.FC = () => {
     direction,
     pageLayout,
     initialScrollDoneRef,
+    promotionActiveRef,
     getCurrentPageScrollRatio,
     getCurrentChapterScrollRatio,
     updateProgress,
@@ -687,9 +732,18 @@ export const ReaderPage: React.FC = () => {
       return;
     }
     if (direction === 'horizontal') {
+      // 章界翻页：无缝换装到相邻章（关键页备好才换屏），本书首末章回退原提示
       if (turn === 'prev') {
+        if (prevChapter) {
+          void openChapter(prevChapter.id, prevChapter.pages.length);
+          return;
+        }
         showFirstPageNotice();
       } else {
+        if (nextChapter) {
+          void openChapter(nextChapter.id);
+          return;
+        }
         showLastPageNotice();
       }
     }
@@ -700,8 +754,21 @@ export const ReaderPage: React.FC = () => {
     showFirstPageNotice,
     showLastPageNotice,
     totalPages,
+    nextChapter,
+    prevChapter,
+    openChapter,
     goToPage,
   ]);
+
+  // 边界预取：水平翻页临近章界时提前备好相邻章头部/尾部页（垂直续读由窗口触底驱动）
+  useEffect(() => {
+    if (direction !== 'horizontal' || isLoading || totalPages <= 0) return;
+    const nearEnd = Boolean(nextChapter) && currentPage >= totalPages - HORIZONTAL_BOUNDARY_PREFETCH_PAGES;
+    const nearStart = Boolean(prevChapter) && currentPage <= PAGE_PROGRESS_OFFSET + (HORIZONTAL_BOUNDARY_PREFETCH_PAGES - 1);
+    if (nearEnd || nearStart) {
+      void prefetchAdjacentChapters();
+    }
+  }, [direction, isLoading, totalPages, currentPage, nextChapter, prevChapter, prefetchAdjacentChapters]);
 
   const goNextPage = useCallback(() => {
     goReaderPageTurn('next');
@@ -1116,7 +1183,10 @@ export const ReaderPage: React.FC = () => {
         onTouchMoveCapture={handleVerticalTouchMoveCapture}
       >
         {direction === 'vertical' ? (
-          <div className="w-full max-w-max-width-content landscape:max-w-none mx-auto flex flex-col items-center">
+          <div
+            className="w-full max-w-max-width-content landscape:max-w-none mx-auto flex flex-col items-center"
+            data-strip-chapter={currentChapterId ?? undefined}
+          >
             {verticalPageIndices.map((idx) => {
               const url = pageUrls[idx];
               return (
@@ -1158,6 +1228,67 @@ export const ReaderPage: React.FC = () => {
                 </div>
               );
             })}
+            {verticalAppendReady && (continuation ? (
+              <>
+                {/*
+                  跨章续读分割线：本章完 → 下一章。点击立即晋升；否则滚过分割线
+                  时由虚拟窗口无缝并入下一章（旧章画面随滚动补偿原位换装）。
+                */}
+                <div
+                  data-chapter-divider
+                  className="w-full py-10 flex flex-col items-center gap-3 select-none cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    promoteNextChapterNow();
+                  }}
+                  data-ui-control
+                >
+                  <span className="font-label text-label-sm text-on-surface-variant">{COPY.comicChapter.chapterEnd}</span>
+                  <div className="flex items-center gap-2 rounded-full border border-outline-variant/50 bg-surface-container/60 px-5 py-2.5 backdrop-blur-sm">
+                    {continuation.prefetchUrls?.[0] != null ? (
+                      <>
+                        <span className="font-body text-body-md text-primary">
+                          {COPY.comicChapter.nextChapter(continuation.title)}
+                        </span>
+                        <span className="material-symbols-outlined text-primary text-body-lg">arrow_downward</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="material-symbols-outlined text-on-surface-variant text-body-lg animate-spin">progress_activity</span>
+                        <span className="font-label text-label-sm text-on-surface-variant">{COPY.comicChapter.preparingNext}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                {/* 下一章头部页：预取就绪的槽位原位渲染，晋升后原样成为新章画面 */}
+                {continuation.prefetchUrls?.map((url, appendedIndex) =>
+                  url ? (
+                    <div
+                      key={`appended-${appendedIndex}`}
+                      data-appended-index={appendedIndex}
+                      className="w-full flex justify-center"
+                      style={{ contain: 'layout style' }}
+                    >
+                      <div className="relative w-full landscape:max-w-none">
+                        <img
+                          src={url}
+                          alt=""
+                          className="w-full h-auto"
+                          style={paperModeEnabled && paperConfig ? { filter: paperConfig.imageFilter } : undefined}
+                          loading={appendedIndex < 2 ? 'eager' : 'lazy'}
+                          draggable={false}
+                        />
+                      </div>
+                    </div>
+                  ) : null
+                )}
+              </>
+            ) : (
+              <div className="w-full py-12 flex flex-col items-center gap-2 select-none">
+                <span className="material-symbols-outlined text-on-surface-variant text-3xl">done_all</span>
+                <span className="font-label text-label-sm text-on-surface-variant">{COPY.comicChapter.bookEnd}</span>
+              </div>
+            ))}
           </div>
         ) : (
           <HorizontalReaderView
@@ -1190,6 +1321,15 @@ export const ReaderPage: React.FC = () => {
           <span className="font-label text-label-sm text-surface">{currentPageLabel} / {totalPages}</span>
         </div>
       </div>
+
+      {/* 章节徽标：跨章瞬间浮现新章名（与提示条同位时让位提示条） */}
+      {chapterBadgeTitle && !readerNotice && (
+        <div className="fixed top-gutter left-1/2 -translate-x-1/2 z-40 pointer-events-none mt-safe animate-fade-in">
+          <div className="bg-on-surface/50 backdrop-blur-sm rounded-full px-4 py-1.5">
+            <span className="font-label text-label-sm text-surface">{chapterBadgeTitle}</span>
+          </div>
+        </div>
+      )}
 
       {readerNotice && (
         <div className="fixed top-gutter left-1/2 -translate-x-1/2 z-40 pointer-events-none mt-safe">
@@ -1333,24 +1473,6 @@ export const ReaderPage: React.FC = () => {
                 </div>
               )}
             </div>
-          </div>
-        </div>
-      )}
-
-      {showChapterEnd && nextChapter && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 animate-slide-up">
-          <div className="bg-surface/95 backdrop-blur-md border border-outline-variant/50 rounded-2xl px-6 py-4 shadow-paper-up flex flex-col items-center gap-3 max-w-[280px]">
-            <p className="font-body text-body-sm text-on-surface-variant">本章已读完</p>
-            <button
-              className="w-full bg-primary text-on-primary font-label text-label-md px-5 py-2.5 rounded-card-lg hover:opacity-90 transition-opacity"
-              onClick={() => {
-                setShowChapterEnd(false);
-                openChapter(nextChapter.id);
-              }}
-              data-ui-control
-            >
-              下一章: {nextChapter.title}
-            </button>
           </div>
         </div>
       )}

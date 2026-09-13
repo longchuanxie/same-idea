@@ -18,6 +18,10 @@ const VERTICAL_APPEND_BATCH_SIZE = 8;
 const VERTICAL_PREPEND_THRESHOLD = 120;
 const VERTICAL_APPEND_THRESHOLD = 600;
 const READING_ANCHOR_RATIO = 0.2;
+/** 晋升后等待新章 DOM 提交的最大帧数（约 1s，超时直接解冻） */
+const PROMOTION_SCROLL_MAX_ATTEMPTS = 60;
+/** 晋升提前量（px）：视口顶边距分割线 ≤ 该值时触发，保证补偿后像素级连续 */
+const PROMOTION_LEAD_PX = 2;
 
 const clampPageScrollRatio = (ratio: number): number =>
   Math.max(DEFAULT_PAGE_SCROLL_RATIO, Math.min(MAX_PAGE_SCROLL_RATIO, ratio));
@@ -52,6 +56,19 @@ export interface VerticalReadingPosition {
   pageScrollRatio: number;
 }
 
+/** 垂直模式跨章续读：本章末尾拼接的「分割线 + 下一章头部页」 */
+export interface NextChapterContinuation {
+  chapterId: string;
+  title: string;
+  pageCount: number;
+  /** 下一章头部预取 URL（按下一章页索引对齐）；首槽就绪才渲染续读页槽位 */
+  prefetchUrls: (string | null)[] | null;
+  /** 续读区进入视口时无缝晋升下一章；返回 false 表示预取未就绪 */
+  promote: (startPage: number) => boolean;
+  /** 渲染窗口触底时请求预取相邻章（幂等） */
+  requestPrefetch: () => void;
+}
+
 export interface VerticalVirtualWindowParams {
   direction: 'vertical' | 'horizontal';
   isLoading: boolean;
@@ -71,6 +88,8 @@ export interface VerticalVirtualWindowParams {
   getCurrentVerticalReadingPosition: () => VerticalReadingPosition | null;
   getCurrentChapterScrollRatio: () => number;
   showFirstPageNotice: () => void;
+  /** 跨章续读配置；null = 没有下一章（章末只出完结卡） */
+  continuation?: NextChapterContinuation | null;
 }
 
 /**
@@ -99,6 +118,7 @@ export function useVerticalVirtualWindow({
   getCurrentVerticalReadingPosition,
   getCurrentChapterScrollRatio,
   showFirstPageNotice,
+  continuation,
 }: VerticalVirtualWindowParams) {
   const [isRestoringVerticalScroll, setIsRestoringVerticalScroll] = useState(false);
   const [verticalProgressPercent, setVerticalProgressPercent] = useState<number | null>(null);
@@ -109,6 +129,10 @@ export function useVerticalVirtualWindow({
   const initialScrollDoneRef = useRef(false);
   const initialScrollRestoreKeyRef = useRef('');
   const isPrependingVerticalScrollRef = useRef(false);
+  const isPromotingNextChapterRef = useRef(false);
+  /** 跨章晋升自行接管窗口与滚动，换章复位 effect 需让位一次 */
+  const skipNextChapterResetRef = useRef(false);
+  const lastChapterKeyRef = useRef('');
   const progressSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const verticalTouchStartYRef = useRef(DEFAULT_PAGE_SCROLL_RATIO);
 
@@ -338,6 +362,141 @@ export function useVerticalVirtualWindow({
     verticalRenderStartIndex,
   ]);
 
+  // ── 跨章晋升：续读区（分割线 + 下一章头部页）进入视口时无缝并入下一章 ──
+
+  /** 测量晋升落点：移除高度（分割线以上全部内容）与锚点在下一章内的页内落点 */
+  const measurePromotion = useCallback(
+    (ignoreVisibility: boolean) => {
+      if (!continuation?.prefetchUrls || continuation.prefetchUrls[0] === null) return null;
+      const container = containerRef.current;
+      if (!container) return null;
+      const firstAppendedSlot = container.querySelector('[data-appended-index="0"]');
+      if (!firstAppendedSlot) return null;
+
+      const containerRect = container.getBoundingClientRect();
+      const firstAppendedTop =
+        (firstAppendedSlot as HTMLElement).getBoundingClientRect().top - containerRect.top + container.scrollTop;
+      // 视口顶边抵达分割线才晋升：此后「新 scrollTop = 旧 scrollTop - 移除高度」
+      // 恒成立，画面像素级连续；更早触发会把尚在视口里的上一章内容顶出屏幕
+      if (!ignoreVisibility && firstAppendedTop - container.scrollTop > PROMOTION_LEAD_PX) {
+        return null;
+      }
+
+      // 阅读锚点若已越过分割线，说明快速滚动越界：反解下一章内的起始页与页内比例
+      const readingAnchor = containerRect.top + containerRect.height * READING_ANCHOR_RATIO;
+      let startPage = 1;
+      let pageScrollRatio = DEFAULT_PAGE_SCROLL_RATIO;
+      container.querySelectorAll('[data-appended-index]').forEach((slot) => {
+        const el = slot as HTMLElement;
+        const rect = el.getBoundingClientRect();
+        if (rect.height === 0) return;
+        if (rect.top <= readingAnchor && rect.bottom > readingAnchor) {
+          startPage = Number(el.dataset.appendedIndex) + PAGE_PROGRESS_OFFSET;
+          pageScrollRatio = clampPageScrollRatio((readingAnchor - rect.top) / rect.height);
+        }
+      });
+      return { startPage, pageScrollRatio, removedHeight: firstAppendedTop };
+    },
+    [continuation, containerRef]
+  );
+
+  const tryPromoteNextChapter = useCallback(
+    (ignoreVisibility: boolean): boolean => {
+      if (direction !== 'vertical') return false;
+      if (isPromotingNextChapterRef.current || isPrependingVerticalScrollRef.current) return false;
+      if (isRestoringVerticalScroll || !initialScrollDoneRef.current) return false;
+      const measurement = measurePromotion(ignoreVisibility);
+      if (!measurement || !continuation) return false;
+      const { startPage, pageScrollRatio, removedHeight } = measurement;
+      if (!continuation.promote(startPage)) return false;
+
+      const startIndex = Math.max(0, startPage - PAGE_PROGRESS_OFFSET);
+      const oldScrollTop = containerRef.current?.scrollTop ?? DEFAULT_PAGE_SCROLL_RATIO;
+
+      isPromotingNextChapterRef.current = true;
+      // 冻结上拉扩窗与滚动进度写入，等新章挂载、进度 effect 重挂后自然接管
+      isPrependingVerticalScrollRef.current = true;
+      skipNextChapterResetRef.current = true;
+      setProgrammaticScroll(true);
+      setVerticalBufferStartIndex(Math.max(0, startIndex - VERTICAL_PREPEND_BATCH_SIZE));
+      setVerticalRenderStartIndex(startIndex);
+      setVerticalRenderEndIndex(startIndex + VERTICAL_RESTORE_PRELOAD_COUNT);
+      initialScrollDoneRef.current = true;
+      initialScrollRestoreKeyRef.current = `${bookId ?? ''}:${continuation.chapterId}:${continuation.pageCount}`;
+
+      const finishPromotion = () => {
+        setTimeout(() => {
+          isPrependingVerticalScrollRef.current = false;
+          isPromotingNextChapterRef.current = false;
+          setProgrammaticScroll(false);
+        }, LAYOUT_STABLE_DELAY);
+      };
+      // 等 React 提交新章 DOM（条带章标识切换、目标页槽位就位）后再落滚动位置。
+      // 不能用「续读槽位消失」判定：晋升后新章自己的续读区可能随即渲染同名槽位。
+      const applyPromotedScroll = (attempt: number) => {
+        const container = containerRef.current;
+        if (!container) {
+          finishPromotion();
+          return;
+        }
+        const stripChapter = container.querySelector('[data-strip-chapter]')?.getAttribute('data-strip-chapter');
+        const targetSlot = container.querySelector(`[data-page-index="${startIndex}"]`);
+        if (stripChapter !== continuation.chapterId || !targetSlot) {
+          if (attempt > PROMOTION_SCROLL_MAX_ATTEMPTS) {
+            finishPromotion();
+            return;
+          }
+          requestAnimationFrame(() => applyPromotedScroll(attempt + 1));
+          return;
+        }
+        if (startPage === PAGE_PROGRESS_OFFSET) {
+          // 常规路径：视口尚未越过分割线太深，减去被移除的上方高度即保持原画面
+          container.scrollTop = Math.max(DEFAULT_PAGE_SCROLL_RATIO, oldScrollTop - removedHeight);
+        } else {
+          // 快速滚动越界：按页内落点直接定位（窗口已重建到目标页）
+          const containerRect = container.getBoundingClientRect();
+          const slotRect = (targetSlot as HTMLElement).getBoundingClientRect();
+          const anchorOffset = containerRect.height * READING_ANCHOR_RATIO;
+          const target =
+            slotRect.top - containerRect.top + container.scrollTop + pageScrollRatio * slotRect.height - anchorOffset;
+          container.scrollTo({
+            top: Math.max(0, Math.min(target, container.scrollHeight - container.clientHeight)),
+            behavior: 'instant',
+          });
+        }
+        finishPromotion();
+      };
+      requestAnimationFrame(() => applyPromotedScroll(0));
+      return true;
+    },
+    [bookId, continuation, direction, isRestoringVerticalScroll, measurePromotion, containerRef, setProgrammaticScroll]
+  );
+
+  // ── 换章复位：抽屉选章等路径换章后，窗口与滚动归位到新章（跨章晋升自行接管时让位） ──
+  useEffect(() => {
+    const chapterKey = `${bookId ?? ''}:${currentChapterId ?? ''}`;
+    if (lastChapterKeyRef.current === chapterKey) return;
+    const isFirstObservation = lastChapterKeyRef.current === '';
+    lastChapterKeyRef.current = chapterKey;
+    if (isFirstObservation || direction !== 'vertical') return;
+    if (skipNextChapterResetRef.current) {
+      skipNextChapterResetRef.current = false;
+      return;
+    }
+
+    const startIndex = Math.max(0, currentPage - PAGE_PROGRESS_OFFSET);
+    setVerticalBufferStartIndex(Math.max(0, startIndex - VERTICAL_PREPEND_BATCH_SIZE));
+    setVerticalRenderStartIndex(startIndex);
+    setVerticalRenderEndIndex(startIndex + VERTICAL_RESTORE_PRELOAD_COUNT);
+    setVerticalProgressPercent(null);
+    if (currentPage <= PAGE_PROGRESS_OFFSET) {
+      const container = containerRef.current;
+      if (container) container.scrollTop = DEFAULT_PAGE_SCROLL_RATIO;
+      initialScrollDoneRef.current = true;
+      initialScrollRestoreKeyRef.current = `${chapterKey}:${totalPages}`;
+    }
+  }, [bookId, currentChapterId, currentPage, direction, totalPages, containerRef]);
+
   // ── 边界回滚：滚轮/触摸上拉到窗口顶端时向上扩窗 ──
   useEffect(() => {
     if (
@@ -408,14 +567,18 @@ export function useVerticalVirtualWindow({
     setProgrammaticScroll,
   ]);
 
-  // ── 向下扩窗：接近底部时 append 批量页 ──
+  // ── 向下扩窗：接近底部时 append 批量页；触底后转入跨章续读（预取 + 晋升检查） ──
   useEffect(() => {
     if (isLoading || direction !== 'vertical' || totalPages <= 0) return;
     const container = containerRef.current;
     if (!container) return;
 
     const appendNextPages = () => {
-      if (verticalRenderEndIndex >= totalPages) return;
+      if (verticalRenderEndIndex >= totalPages) {
+        continuation?.requestPrefetch();
+        tryPromoteNextChapter(false);
+        return;
+      }
       const distanceToBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
       if (distanceToBottom > VERTICAL_APPEND_THRESHOLD) return;
       setVerticalRenderEndIndex((endIndex) =>
@@ -430,13 +593,22 @@ export function useVerticalVirtualWindow({
       container.removeEventListener('scroll', appendNextPages);
     };
   }, [
+    continuation,
     direction,
     isLoading,
     containerRef,
     totalPages,
     verticalRenderEndIndex,
     verticalRenderStartIndex,
+    tryPromoteNextChapter,
   ]);
+
+  // ── 预取就绪而用户停在章末：补一次晋升检查（无新滚动事件也能接上） ──
+  useEffect(() => {
+    if (direction !== 'vertical' || isLoading || totalPages <= 0) return;
+    if (!continuation?.prefetchUrls || verticalRenderEndIndex < totalPages) return;
+    tryPromoteNextChapter(false);
+  }, [continuation, direction, isLoading, totalPages, verticalRenderEndIndex, tryPromoteNextChapter]);
 
   // ── 视口内页槽懒加载（IntersectionObserver） ──
   useEffect(() => {
@@ -700,6 +872,9 @@ export function useVerticalVirtualWindow({
     });
   }, [totalPages, currentPage, goToPage, setProgrammaticScroll, loadPage, containerRef]);
 
+  /** 手动跨章晋升（续读分割线点击）：无视视口位置直接并入下一章 */
+  const promoteNextChapterNow = useCallback(() => tryPromoteNextChapter(true), [tryPromoteNextChapter]);
+
   return {
     /** 是否正在恢复/跳转滚动（期间暂停用户手势驱动的窗口扩张与进度覆盖） */
     isRestoringVerticalScroll,
@@ -715,6 +890,9 @@ export function useVerticalVirtualWindow({
       },
       (_, idx) => Math.max(0, verticalRenderStartIndex) + idx
     ),
+    /** 渲染窗口已触达本章末页：渲染跨章续读区（分割线 + 下一章头部页）或完结卡 */
+    verticalAppendReady:
+      direction === 'vertical' && totalPages > 0 && verticalRenderEndIndex >= totalPages,
     /** 向上扩窗（触摸上拉捕获手势复用） */
     revealPreviousVerticalPage,
     /** 渲染窗口起始索引（图片 loading eager/lazy 判定用） */
@@ -731,5 +909,9 @@ export function useVerticalVirtualWindow({
     clearVerticalProgress,
     /** 初始滚动是否已完成（未完成期间进度恢复值优先于实测值） */
     initialScrollDoneRef,
+    /** 跨章晋升进行中（滚动补偿未落位，期间不要按 DOM 实测写进度） */
+    promotionActiveRef: isPromotingNextChapterRef,
+    /** 手动跨章晋升（续读分割线点击）：无视视口位置直接并入下一章 */
+    promoteNextChapterNow,
   };
 }
