@@ -30,7 +30,8 @@ function artifactMeta(artifact: KnowledgeArtifact): string {
     parts.push(`${brief.contributions?.length ?? 0} 贡献 · ${brief.limitations?.length ?? 0} 局限`)
   }
   if (artifact.meta?.chapterCount) parts.push(`覆盖 ${artifact.meta.chapterCount} 章`)
-  parts.push(new Date(artifact.updatedAt).toLocaleDateString('zh-CN'))
+  // 短日期（9/12）：移动端卡片元信息一行放得下，不再被截断
+  parts.push(new Date(artifact.updatedAt).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' }))
   return parts.join(' · ')
 }
 
@@ -81,13 +82,11 @@ export const KnowledgeHubPage: React.FC = () => {
   const total = artifacts?.length ?? 0;
 
   return (
-    <div className="mx-auto max-w-3xl px-4 pt-4">
-      <div className="mb-5">
-        <h1 className="font-display text-headline-md text-primary font-bold">知识库</h1>
-        <p className="font-label text-label-md text-on-surface-variant mt-1">
-          AI 通读全书织成的人物图谱、思维导图与术语卡——跨书总目，点开即达原文与可视化
-        </p>
-      </div>
+    <div className="mx-auto max-w-3xl px-4 pt-2">
+      {/* 页名由顶栏承载，页内只留一句引导，避免移动端标题重复 */}
+      <p className="font-label text-label-sm text-on-surface-faint mb-4">
+        AI 通读全书织成的图谱、导图与术语卡——跨书总目，点开即达
+      </p>
 
       {artifacts !== null && total === 0 && (
         <div className="rounded-card border border-outline-variant bg-surface-container-low p-8 text-center">
@@ -109,12 +108,12 @@ export const KnowledgeHubPage: React.FC = () => {
       )}
 
       {groups.map(({ bookId, book, artifacts: list }) => (
-        <section key={bookId} className="mb-6">
-          <div className="mb-2 flex items-baseline gap-2">
-            <h2 className="font-display text-title-md text-on-surface truncate">
+        <section key={bookId} className="mb-5">
+          <div className="mb-1.5 flex items-baseline gap-2">
+            <h2 className="font-display text-title-sm text-on-surface truncate">
               {book?.title ?? '已删书籍'}
             </h2>
-            <span className="font-mono text-label-sm text-on-surface-faint flex-shrink-0">
+            <span className="font-mono text-label-xs text-on-surface-faint flex-shrink-0">
               {list.length} 件
             </span>
           </div>
@@ -125,18 +124,18 @@ export const KnowledgeHubPage: React.FC = () => {
                 <button
                   key={artifact.id}
                   type="button"
-                  className="flex items-start gap-3 rounded-card border border-outline-variant bg-surface-container-low p-4 text-left transition-colors hover:bg-surface-container"
+                  className="flex items-start gap-2.5 rounded-card border border-outline-variant bg-surface-container-low p-3 text-left transition-colors hover:bg-surface-container active:bg-surface-container"
                   onClick={() => navigate(knowledgePath(bookId, artifact.id))}
                 >
-                  <span className="material-symbols-outlined text-[22px] text-primary mt-0.5">
+                  <span className="material-symbols-outlined text-[20px] text-primary mt-0.5">
                     {task.icon}
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-1.5">
-                      <span className="font-label text-label-lg text-on-surface truncate">
+                      <span className="min-w-0 flex-1 font-label text-label-md text-on-surface truncate">
                         {artifact.title}
                       </span>
-                      <span className="font-label text-label-xs text-on-surface-faint flex-shrink-0 rounded-full border border-outline-variant px-1.5">
+                      <span className="font-label text-label-xs text-on-surface-faint flex-shrink-0 rounded-full border border-outline-variant px-1.5 leading-4">
                         {KIND_LABELS[artifact.type]}
                       </span>
                     </span>
