@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 
 import { useNavigate } from 'react-router-dom';
 
+import BookCoverImage from '@/components/atoms/BookCoverImage';
 import { FormatBadge } from '@/components/atoms/FormatBadge';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
 import { CATALOG_COLORS } from '@/constants/catalogColors';
@@ -226,11 +227,10 @@ export const TagsPage: React.FC = () => {
                       >
                         <div className="w-full aspect-[3/4] rounded-lg overflow-hidden bg-surface-container border border-outline-variant group-hover:border-primary transition-colors">
                           {coverUrls[book.id] ? (
-                            <img
-                              src={coverUrls[book.id]}
-                              alt={book.title}
+                            <BookCoverImage
+                              url={coverUrls[book.id]}
+                              title={book.title}
                               className="w-full h-full object-cover"
-                              loading="lazy"
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">

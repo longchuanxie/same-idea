@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 
 import { useNavigate, useLocation } from 'react-router-dom';
 
+import BookCoverImage from '@/components/atoms/BookCoverImage';
 import { FormatBadge } from '@/components/atoms/FormatBadge';
 import { BookEditDialog } from '@/components/molecules/BookEditDialog';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
@@ -551,14 +552,14 @@ export const LibraryPage: React.FC = () => {
                   />
                 </div>
                 )}
-                <div className={`border bg-surface-container aspect-[2/3] overflow-hidden mb-3 relative ${
+                <div className={`w-full border bg-surface-container aspect-[2/3] overflow-hidden mb-3 relative ${
                   isSelectMode && isSubLibSelected ? 'border-primary' : 'border-outline-variant'
                 }`}>
                   {isSelectMode && isSubLibSelected && <div className="absolute inset-0 bg-primary/5 mix-blend-multiply z-0" />}
                   {subLib.bookIds.length > 0 && coverUrls[subLib.bookIds[0]] ? (
-                    <img
-                      src={coverUrls[subLib.bookIds[0]]}
-                      alt={subLib.name}
+                    <BookCoverImage
+                      url={coverUrls[subLib.bookIds[0]]}
+                      title={subLib.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
                     />
                   ) : (
@@ -582,7 +583,7 @@ export const LibraryPage: React.FC = () => {
                 setShowNewSubLibDialog(true);
               }}
             >
-              <div className="border border-dashed border-outline-variant bg-surface-container-low aspect-[2/3] overflow-hidden mb-3 flex flex-col items-center justify-center hover:bg-surface-container transition-colors">
+              <div className="w-full border border-dashed border-outline-variant bg-surface-container-low aspect-[2/3] overflow-hidden mb-3 flex flex-col items-center justify-center hover:bg-surface-container transition-colors">
                 <div className="w-12 h-12 rounded-full border border-outline-variant flex items-center justify-center mb-3 bg-background group-hover:scale-105 transition-transform">
                   <span className="material-symbols-outlined text-primary">add</span>
                 </div>
@@ -692,7 +693,7 @@ export const LibraryPage: React.FC = () => {
                   )}
                   <div className="w-10 h-14 flex-shrink-0 rounded-sm overflow-hidden bg-surface-container border border-outline-variant">
                     {coverUrls[book.id] ? (
-                      <img src={coverUrls[book.id]} alt={book.title} className="w-full h-full object-cover" />
+                      <BookCoverImage url={coverUrls[book.id]} title={book.title} className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <span className="material-symbols-outlined text-on-surface-faint text-icon-md">auto_stories</span>
@@ -773,14 +774,14 @@ export const LibraryPage: React.FC = () => {
               )}
 
 
-              <div className={`border bg-surface-container aspect-[2/3] overflow-hidden mb-3 relative ${
+              <div className={`w-full border bg-surface-container aspect-[2/3] overflow-hidden mb-3 relative ${
                 isSelectMode && isSelected ? 'border-primary' : 'border-outline-variant'
               }`}>
                 {isSelectMode && isSelected && <div className="absolute inset-0 bg-primary/5 mix-blend-multiply z-0" />}
                 {coverUrls[book.id] ? (
-                  <img
-                    src={coverUrls[book.id]}
-                    alt={book.title}
+                  <BookCoverImage
+                    url={coverUrls[book.id]}
+                    title={book.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
                   />
                 ) : (
@@ -1009,7 +1010,7 @@ export const LibraryPage: React.FC = () => {
             <div className="flex items-center gap-3 p-4 border-b border-outline-variant">
               <div className="w-10 h-14 flex-shrink-0 rounded-sm overflow-hidden bg-surface-container border border-outline-variant">
                 {coverUrls[menuBook.id] ? (
-                  <img src={coverUrls[menuBook.id]} alt={menuBook.title} className="w-full h-full object-cover" />
+                  <BookCoverImage url={coverUrls[menuBook.id]} title={menuBook.title} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <span className="material-symbols-outlined text-on-surface-faint text-icon-md">auto_stories</span>

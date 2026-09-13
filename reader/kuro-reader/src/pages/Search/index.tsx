@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 
 import { useNavigate } from 'react-router-dom';
 
+import BookCoverImage from '@/components/atoms/BookCoverImage';
 import { FormatBadge } from '@/components/atoms/FormatBadge';
 import { ROUTES, bookDetailPath } from '@/constants/routes';
 import { useLibraryStore } from '@/stores/useLibraryStore';
@@ -112,7 +113,7 @@ export const SearchPage: React.FC = () => {
               >
                 <div className="w-12 h-16 flex-shrink-0 border border-outline-variant bg-surface-container overflow-hidden">
                   {coverUrls[book.id] ? (
-                    <img src={coverUrls[book.id]} alt={book.title} className="w-full h-full object-cover" />
+                    <BookCoverImage url={coverUrls[book.id]} title={book.title} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full bg-surface-variant flex items-center justify-center">
                       <span className="material-symbols-outlined text-on-surface-variant text-sm">menu_book</span>
@@ -161,11 +162,11 @@ export const SearchPage: React.FC = () => {
                 className="group cursor-pointer flex flex-col"
                 onClick={() => navigate(bookDetailPath(book.id))}
               >
-                <div className="border border-outline-variant bg-surface-container aspect-[2/3] overflow-hidden mb-3">
+                <div className="w-full border border-outline-variant bg-surface-container aspect-[2/3] overflow-hidden mb-3">
                   {coverUrls[book.id] ? (
-                    <img
-                      src={coverUrls[book.id]}
-                      alt={book.title}
+                    <BookCoverImage
+                      url={coverUrls[book.id]}
+                      title={book.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
                     />
                   ) : (

@@ -238,7 +238,8 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
       const coverUrls: Record<string, string> = {};
       for (const book of booksWithTags) {
         const blob = await bookRepo.getCover(book.id);
-        if (blob) {
+        // 空 blob（生成失败的残留）会产出加载失败的 URL，浏览器转而渲染 alt 大字
+        if (blob && blob.size > 0) {
           coverUrls[book.id] = URL.createObjectURL(blob);
         }
       }

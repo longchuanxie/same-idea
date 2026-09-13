@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 
 import { useNavigate, useParams } from 'react-router-dom';
 
+import BookCoverImage from '@/components/atoms/BookCoverImage';
 import { BottomNavBar } from '@/components/atoms/BottomNavBar';
 import { Button } from '@/components/atoms/Button';
 import { FormatBadge } from '@/components/atoms/FormatBadge';
@@ -210,9 +211,9 @@ export const BookDetailPage: React.FC = () => {
         <section className="flex flex-col md:flex-row gap-8 py-8 md:py-12 border-b border-outline-variant animate-slide-down">
           <div className="w-48 md:w-64 flex-shrink-0 mx-auto md:mx-0 border border-outline-variant rounded bg-surface">
             {coverUrls[book.id] ? (
-              <img
-                src={coverUrls[book.id]}
-                alt={book.title}
+              <BookCoverImage
+                url={coverUrls[book.id]}
+                title={book.title}
                 className="w-full h-auto aspect-[2/3] object-cover rounded"
               />
             ) : (

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 
 import { useNavigate, useParams } from 'react-router-dom';
 
+import BookCoverImage from '@/components/atoms/BookCoverImage';
 import { FormatBadge } from '@/components/atoms/FormatBadge';
 import { ROUTES, bookDetailPath } from '@/constants/routes';
 import { useLibraryStore } from '@/stores/useLibraryStore';
@@ -286,9 +287,9 @@ export const SubLibraryPage: React.FC = () => {
                     isSelectMode && isSelected ? 'border-primary' : 'border-outline-variant'
                   }`}>
                     {coverUrls[book.id] ? (
-                      <img
-                        src={coverUrls[book.id]}
-                        alt={book.title}
+                      <BookCoverImage
+                        url={coverUrls[book.id]}
+                        title={book.title}
                         className="w-full h-full object-cover grayscale opacity-90 group-hover:opacity-100 transition-opacity"
                       />
                     ) : (

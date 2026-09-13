@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useNavigate } from 'react-router-dom';
 
+import BookCoverImage from '@/components/atoms/BookCoverImage';
 import { Button } from '@/components/atoms/Button';
 import { FormatBadge } from '@/components/atoms/FormatBadge';
 import { COPY } from '@/constants/copy';
@@ -193,7 +194,7 @@ export const HomePage: React.FC = () => {
 
   const renderCover = (book: Book, className: string) =>
     coverUrls[book.id] ? (
-      <img src={coverUrls[book.id]} alt={book.title} className={`w-full h-full object-cover ${className}`} />
+      <BookCoverImage url={coverUrls[book.id]} title={book.title} className={`w-full h-full object-cover ${className}`} />
     ) : (
       <div className="w-full h-full bg-surface-container flex items-center justify-center">
         <span className="material-symbols-outlined text-on-surface-faint text-4xl">auto_stories</span>
@@ -571,7 +572,7 @@ export const HomePage: React.FC = () => {
                 className="text-left group flex flex-col"
                 onClick={() => navigate(bookDetailPath(book.id))}
               >
-                <div className="border border-outline-variant bg-surface-container aspect-[2/3] overflow-hidden mb-2 rounded-sm">
+                <div className="w-full border border-outline-variant bg-surface-container aspect-[2/3] overflow-hidden mb-2 rounded-sm">
                   {renderCover(book, 'group-hover:scale-105 transition-transform duration-500 ease-out')}
                 </div>
                 <div className="flex items-center gap-1.5">
