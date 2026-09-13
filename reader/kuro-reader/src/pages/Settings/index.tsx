@@ -738,6 +738,33 @@ export const SettingsPage: React.FC = () => {
             <div className="p-6 border-b border-outline-variant flex justify-between items-center bg-surface-container-lowest">
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant">
+                  <span className="material-symbols-outlined">fullscreen</span>
+                </div>
+                <div>
+                  <h3 className="font-display text-headline-xs text-on-surface">隐藏状态栏</h3>
+                  <p className="font-body text-body-xs text-on-surface-variant mt-1">
+                    沉浸全屏阅读，隐藏系统状态栏（App 内生效）；顶部下滑可临时呼出。
+                  </p>
+                </div>
+              </div>
+              <button
+                aria-label="隐藏状态栏"
+                className={`relative inline-block w-11 h-6 rounded-full toggle-spring ${
+                  settings.hideStatusBar ? 'bg-primary' : 'bg-surface-variant'
+                }`}
+                onClick={() => updateSettings({ hideStatusBar: !settings.hideStatusBar })}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full toggle-thumb-spring border ${
+                    settings.hideStatusBar ? 'translate-x-5 border-primary' : 'border-outline-variant'
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div className="p-6 border-b border-outline-variant flex justify-between items-center bg-surface-container-lowest">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant">
                   <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>note</span>
                 </div>
                 <div>

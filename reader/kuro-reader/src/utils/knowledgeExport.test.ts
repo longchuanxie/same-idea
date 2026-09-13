@@ -81,6 +81,24 @@ describe('buildKnowledgeArtifactMarkdown', () => {
     expect(markdown).toContain('```mermaid')
   })
 
+  it('速览产物输出 TL;DR/贡献/局限/疑问结构', () => {
+    const markdown = buildKnowledgeArtifactMarkdown('测试论文', {
+      ...base,
+      type: 'paper-brief',
+      data: {
+        tldr: '一句话速览。',
+        contributions: [{ point: '贡献甲', strength: 'experiment', evidence: { quote: '依据句', chapterIndex: 0, offsetRatio: 0 } }],
+        limitations: [{ point: '局限乙' }],
+        questions: [{ question: '疑问丙' }],
+      },
+    } as KnowledgeArtifact)
+    expect(markdown).toContain('> 一句话速览。')
+    expect(markdown).toContain('**[实验支撑]** 贡献甲')
+    expect(markdown).toContain('「依据句」（第1章）')
+    expect(markdown).toContain('- 局限乙')
+    expect(markdown).toContain('1. 疑问丙')
+  })
+
   it('导图产物输出嵌套大纲', () => {
     const markdown = buildKnowledgeArtifactMarkdown('测试书', {
       ...base,

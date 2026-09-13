@@ -5,7 +5,8 @@ import { COPY } from '@/constants/copy';
 const VIEWPORT_EDGE_PX = 8;
 const BUTTON_OFFSET_X_PX = 48;
 const BUTTON_OFFSET_Y_PX = 52;
-const BUTTON_MAX_WIDTH_PX = 176;
+/** 三个动作（划线/复制/批注）的最长宽度 */
+const BUTTON_MAX_WIDTH_PX = 264;
 const BUTTON_MAX_HEIGHT_PX = 48;
 const BUTTON_DIVIDER_CLASS = 'w-px h-5 bg-on-primary/30 my-1';
 
@@ -13,15 +14,18 @@ interface SelectionFloatingButtonProps {
   position: { x: number; y: number };
   /** 一键划线：零输入直接保存纯高亮 */
   onHighlight: () => void;
+  /** 复制选中文本到剪贴板 */
+  onCopy: () => void;
   /** 打开批注弹窗（写笔记） */
   onOpen: () => void;
   onCancel: () => void;
 }
 
-/** 选中文本后的浮动动作条（划线 / 批注）+ 透明取消遮罩 */
+/** 选中文本后的浮动动作条（划线 / 复制 / 批注）+ 透明取消遮罩 */
 export const SelectionFloatingButton: React.FC<SelectionFloatingButtonProps> = ({
   position,
   onHighlight,
+  onCopy,
   onOpen,
   onCancel,
 }) => (
@@ -53,6 +57,19 @@ export const SelectionFloatingButton: React.FC<SelectionFloatingButtonProps> = (
       >
         <span className="material-symbols-outlined text-[18px]">highlight</span>
         <span className="font-label text-label-sm">{COPY.annotation.highlightAction}</span>
+      </button>
+      <span className={BUTTON_DIVIDER_CLASS} aria-hidden="true" />
+      <button
+        className="flex items-center gap-1.5 px-2.5 py-2"
+        onClick={(e) => {
+          e.stopPropagation();
+          onCopy();
+        }}
+        data-ui-control
+        aria-label={COPY.annotation.copyAction}
+      >
+        <span className="material-symbols-outlined text-[18px]">content_copy</span>
+        <span className="font-label text-label-sm">{COPY.annotation.copyAction}</span>
       </button>
       <span className={BUTTON_DIVIDER_CLASS} aria-hidden="true" />
       <button

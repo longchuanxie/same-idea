@@ -19,6 +19,7 @@ import { TextReaderBottomBar } from '@/components/molecules/TextReaderBottomBar'
 import { TextReaderFooter } from '@/components/molecules/TextReaderFooter';
 import { TextReaderHeader } from '@/components/molecules/TextReaderHeader';
 import { UndoToast } from '@/components/molecules/UndoToast';
+import { COPY } from '@/constants/copy';
 import { ANNOTATION_QUERY_PARAM, READER_GOTO_QUERY_PARAM, parseGotoParam } from '@/constants/routes';
 import { getTextReaderFontFamily } from '@/constants/textReaderFonts';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
@@ -55,6 +56,7 @@ import { useLibraryStore } from '@/stores/useLibraryStore';
 import type { Bookmark, Annotation, AnnotationStyle, TtsEngineOption } from '@/types';
 import { computeAnnotationAnchor, resolveAnnotationOffsets } from '@/utils/annotationAnchor';
 import { getAnnotationPresentation } from '@/utils/annotationHighlight';
+import { copyTextToClipboard } from '@/utils/clipboard';
 import { cn } from '@/utils/cn';
 import {
   PAPER_INK_COLOR,
@@ -2546,11 +2548,20 @@ export const TextReaderPage: React.FC = () => {
         />
       )}
 
-      {/* 浮动动作条：选中后一键划线或打开批注弹窗 */}
+      {/* 浮动动作条：选中后一键划线、复制或打开批注弹窗 */}
       {selectionInfo && !selectionPopup && (
         <SelectionFloatingButton
           position={selectionInfo.position}
           onHighlight={handleQuickHighlight}
+          onCopy={() => {
+            const text = selectionInfo.text;
+            setSelectionInfo(null);
+            window.getSelection()?.removeAllRanges();
+            isSelectingTextRef.current = false;
+            void copyTextToClipboard(text).then((copied) => {
+              showToast(copied ? COPY.annotation.copiedToast : COPY.annotation.copyFailedToast);
+            });
+          }}
           onOpen={() => {
             selectionPopupTimeRef.current = Date.now();
             setSelectionPopup({

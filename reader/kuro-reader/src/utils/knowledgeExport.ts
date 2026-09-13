@@ -8,6 +8,7 @@ import type {
   GlossaryData,
   KnowledgeArtifact,
   MindmapNodeData,
+  PaperBriefData,
 } from '@/types'
 import { downloadTextFile, sanitizeFileName } from '@/utils/annotationExport'
 import { hoistSingleBranchRoot } from '@/utils/mindmapLayout'
@@ -46,8 +47,20 @@ function sourcePositionLabel(chapterIndex: number): string {
   return `第${chapterIndex + 1}章`
 }
 
-/** 图谱人物与关系清单（含出现章节与依据原文——图谱与原文的书面联系） */
-export function buildGraphReferenceLists(graph: CharacterGraphData): string {
+/** 贡献点证据强度的展示标签（与 PaperBriefView 一致） */
+const STRENGTH_LABELS: Record<PaperBriefData['contributions'][number]['strength'], string> = {
+  experiment: '实验支撑',
+  theory: '理论证明',
+  partial: '部分支撑',
+  claim: '仅声称',
+}
+
+/** 图谱人物与关系清单（含出现章节与依据原文——图谱与原文的书面联系）。
+ *  entityLabel 随图谱种类变化（人物/概念）。 */
+export function buildGraphReferenceLists(
+  graph: CharacterGraphData,
+  entityLabel: '人物' | '概念' = '人物'
+): string {
   const nameById = new Map(graph.nodes.map((node) => [node.id, node.name]))
   const characters = graph.nodes
     .map((node) => {
@@ -72,13 +85,13 @@ export function buildGraphReferenceLists(graph: CharacterGraphData): string {
     })
     .join('\n')
   return [
-    '## 人物',
+    `## ${entityLabel}`,
     '',
     characters,
     '',
     '## 关系',
     '',
-    '| 人物 | 关系 | 人物 | 原文依据 |',
+    `| ${entityLabel} | 关系 | ${entityLabel} | 原文依据 |`,
     '|---|---|---|---|',
     relations,
   ].join('\n')
@@ -107,7 +120,7 @@ export function buildKnowledgeArtifactMarkdown(bookTitle: string, artifact: Know
     `> 来源：《${bookTitle}》 · ${new Date(artifact.updatedAt).toLocaleString('zh-CN')}`,
     '',
   ]
-  if (artifact.type === 'character-graph') {
+  if (artifact.type === 'character-graph' || artifact.type === 'concept-graph') {
     const graph = artifact.data as CharacterGraphData
     return [
       ...header,
@@ -115,12 +128,41 @@ export function buildKnowledgeArtifactMarkdown(bookTitle: string, artifact: Know
       buildCharacterGraphMermaid(graph),
       '```',
       '',
-      buildGraphReferenceLists(graph),
+      buildGraphReferenceLists(graph, artifact.type === 'concept-graph' ? '概念' : '人物'),
       '',
     ].join('\n')
   }
   if (artifact.type === 'glossary') {
     return [...header, '## 术语速查', '', buildGlossaryMarkdown(artifact.data as GlossaryData), ''].join('\n')
+  }
+  if (artifact.type === 'paper-brief') {
+    const brief = artifact.data as PaperBriefData
+    const lines: string[] = [...header]
+    if (brief.tldr) lines.push(`> ${brief.tldr}`, '')
+    if (brief.contributions.length > 0) {
+      lines.push('## 贡献点', '')
+      for (const entry of brief.contributions) {
+        const evidence = entry.evidence ? `「${entry.evidence.quote}」（第${entry.evidence.chapterIndex + 1}章）` : ''
+        lines.push(`- **[${STRENGTH_LABELS[entry.strength]}]** ${entry.point}${evidence}`)
+      }
+      lines.push('')
+    }
+    if (brief.limitations.length > 0) {
+      lines.push('## 局限与软肋', '')
+      for (const entry of brief.limitations) {
+        const evidence = entry.evidence ? `「${entry.evidence.quote}」（第${entry.evidence.chapterIndex + 1}章）` : ''
+        lines.push(`- ${entry.point}${evidence}`)
+      }
+      lines.push('')
+    }
+    if (brief.questions.length > 0) {
+      lines.push('## 审稿人视角的疑问', '')
+      for (const entry of brief.questions) {
+        lines.push(`1. ${entry.question}`)
+      }
+      lines.push('')
+    }
+    return lines.join('\n')
   }
   return [...header, buildMindmapMarkdown(artifact.data as MindmapNodeData), ''].join('\n')
 }

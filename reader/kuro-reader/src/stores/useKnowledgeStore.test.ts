@@ -223,6 +223,8 @@ describe('useKnowledgeStore.generateArtifact · 生成灵活性', () => {
       chapterCount: 10,
       coveredChapterCount: 1,
       coveredRange: { from: 0, to: 0 },
+      totalChunkCount: 1,
+      truncated: false,
       totalChars: 10,
       fingerprint: 'fp-scope',
       chapterTexts: ['张三与李四比剑。'],
@@ -240,6 +242,9 @@ describe('useKnowledgeStore.generateArtifact · 生成灵活性', () => {
     expect(meta?.detail).toBe('core')
     expect(meta?.chapterCount).toBe(1)
     expect(meta?.bookChapterCount).toBe(10)
+    // 块级对账：分析完整性凭据
+    expect(meta?.analyzedChunkCount).toBe(1)
+    expect(meta?.totalChunkCount).toBe(1)
   })
 
   it('增量补充：默认从上次章数起读，旧证据坐标原样保留、新边照常定位', async () => {
@@ -278,6 +283,8 @@ describe('useKnowledgeStore.generateArtifact · 生成灵活性', () => {
       chapterCount: 3,
       coveredChapterCount: 1,
       coveredRange: { from: 2, to: 2 },
+      totalChunkCount: 1,
+      truncated: false,
       totalChars: 9,
       fingerprint: 'fp-inc',
       chapterTexts: ['', '', '王五与赵六结盟。'],

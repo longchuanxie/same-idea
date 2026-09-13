@@ -116,6 +116,8 @@ export interface UserSettings {
   paperMode: boolean
   paperType: PaperType
   textureIntensity: number
+  /** 隐藏系统状态栏（沉浸阅读；仅原生端生效，顶部下滑可临时呼出） */
+  hideStatusBar: boolean
   readingDirection: 'rtl' | 'ltr'
   pageTurnGestures: boolean
   cloudSync: boolean
@@ -285,8 +287,34 @@ export type ContentKind = 'fiction' | 'academic'
 /** 书籍的知识库内容类型偏好（'auto' 按文本启发式检测；存于书档案，随书记忆） */
 export type ContentKindPreference = ContentKind | 'auto'
 
-/** 知识产物类型：人物关系图谱 / 思维导图 / 概念术语卡（注册表见 services/ai/knowledgeTasks） */
-export type KnowledgeArtifactType = 'character-graph' | 'mindmap' | 'glossary'
+/** 知识产物类型：人物关系图谱 / 概念关系图谱 / 思维导图 / 概念术语卡 / 论文速览（注册表见 services/ai/knowledgeTasks） */
+export type KnowledgeArtifactType = 'character-graph' | 'concept-graph' | 'mindmap' | 'glossary' | 'paper-brief'
+
+/** 贡献点的证据强度（论文速览卡）：实验支撑 / 理论证明 / 部分支撑 / 仅声称 */
+export type ContributionStrength = 'experiment' | 'theory' | 'partial' | 'claim'
+
+/** 论文速览：研究型读者的读前分流与批判性阅读卡（全部条目可回原文） */
+export interface PaperBriefData {
+  /** 一句话 TL;DR（解决什么问题、用什么方法、结果强在哪） */
+  tldr: string
+  contributions: {
+    point: string
+    strength: ContributionStrength
+    evidence?: KnowledgeEvidence
+    chapters?: number[]
+  }[]
+  limitations: {
+    point: string
+    evidence?: KnowledgeEvidence
+    chapters?: number[]
+  }[]
+  /** 审稿人视角的问题（组会/评审可直接用） */
+  questions: {
+    question: string
+    evidence?: KnowledgeEvidence
+    chapters?: number[]
+  }[]
+}
 
 /** 人物图谱节点 */
 export interface CharacterNode {
@@ -364,7 +392,7 @@ export interface KnowledgeArtifact {
   bookId: string
   type: KnowledgeArtifactType
   title: string
-  data: CharacterGraphData | MindmapNodeData | GlossaryData
+  data: CharacterGraphData | MindmapNodeData | GlossaryData | PaperBriefData
   /** 生成来源元信息：内容指纹用于书本内容变化后提示重新生成 */
   meta?: {
     /** 实际进入语料的章节数（范围生成时 < 原书总章数） */
@@ -378,6 +406,10 @@ export interface KnowledgeArtifact {
     scope?: KnowledgeScopeRange
     /** 图谱生成详细度（仅 character-graph） */
     detail?: GraphDetailLevel
+    /** 实际分析的分块数（与 totalChunkCount 对账：分析完整性的凭据） */
+    analyzedChunkCount?: number
+    /** 截断前的完整分块数（> analyzedChunkCount 即分析被体量护栏截断） */
+    totalChunkCount?: number
   }
   generator: 'ai' | 'manual'
   createdAt: Date

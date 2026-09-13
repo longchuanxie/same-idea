@@ -15,10 +15,13 @@ import type {
  */
 
 const DETAIL_OPTIONS: { value: GraphDetailLevel; label: string; hint: string }[] = [
-  { value: 'core', label: '聚焦核心', hint: '只留主要人物（≤8 人）' },
+  { value: 'core', label: '聚焦核心', hint: '只留主要条目（≤8 个）' },
   { value: 'standard', label: '标准', hint: '常速阅读的均衡取材' },
-  { value: 'rich', label: '尽量详尽', hint: '含重要配角（≤24 人）' },
+  { value: 'rich', label: '尽量详尽', hint: '含重要次要条目（≤24 个）' },
 ];
+
+/** 图谱类任务（实体+关系）：详细度选项适用 */
+const GRAPH_TASK_TYPES: KnowledgeArtifactType[] = ['character-graph', 'concept-graph'];
 
 export interface GenerationOptionsSheetProps {
   book: Book;
@@ -72,12 +75,12 @@ export const GenerationOptionsSheet: React.FC<GenerationOptionsSheetProps> = ({
   const handleStart = () => {
     if (!canStart) return;
     if (incremental) {
-      onStart({ incremental: true, ...(type === 'character-graph' ? { detail } : {}) });
+      onStart({ incremental: true, ...(GRAPH_TASK_TYPES.includes(type) ? { detail } : {}) });
       return;
     }
     onStart({
       ...(mode === 'range' && parsedRange ? { scope: parsedRange } : {}),
-      ...(type === 'character-graph' ? { detail } : {}),
+      ...(GRAPH_TASK_TYPES.includes(type) ? { detail } : {}),
     });
   };
 
@@ -172,7 +175,7 @@ export const GenerationOptionsSheet: React.FC<GenerationOptionsSheetProps> = ({
         )}
 
         {/* 图谱详细度 */}
-        {type === 'character-graph' && (
+        {GRAPH_TASK_TYPES.includes(type) && (
           <div className="mb-4">
             <p className="font-label text-label-xs text-on-surface-variant mb-1.5">详细度</p>
             <div className="grid grid-cols-3 gap-2">

@@ -14,10 +14,12 @@ import type {
   CharacterEdge,
   CharacterGraphData,
   CharacterNode,
+  ContributionStrength,
   GlossaryData,
   GlossaryTerm,
   KnowledgeEvidence,
   MindmapNodeData,
+  PaperBriefData,
 } from '@/types'
 
 /** 人物名归一化：去空白与常见标点，作为节点稳定 id（merge 去重键） */
@@ -377,14 +379,21 @@ export function stampGlossaryChapters(partial: GlossaryPartial, chapterIndexes: 
   }
 }
 
-/** 术语卡合并中间态：evidence 仍是 AI 摘句字符串，待 resolveGlossaryEvidence 校验定位 */
+/** 术语卡合并中间态：evidenceQuote 是待校验的 AI 摘句；evidence 是已定位坐标
+ *  （增量合并自基底直通，resolveGlossaryEvidence 不再重复校验） */
 export interface InterimGlossaryData {
-  terms: (GlossaryTerm & { evidenceQuote?: string })[]
+  terms: (GlossaryTerm & { evidenceQuote?: string; evidence?: KnowledgeEvidence })[]
 }
 
-/** 合并多块术语片段：同术语并集章节、首个非空定义/证据胜出；按首现章节排序并截断 */
-export function mergeGlossary(partials: GlossaryPartial[]): InterimGlossaryData {
+/**
+ * 合并多块术语片段：同术语并集章节、首个非空定义/证据胜出；按首现章节排序并截断。
+ * base 为增量合并的基底（现有术语卡）：旧术语先入列（含已定位证据直通），新片段只是并进来。
+ */
+export function mergeGlossary(partials: GlossaryPartial[], base?: InterimGlossaryData): InterimGlossaryData {
   const byId = new Map<string, InterimGlossaryData['terms'][number]>()
+  for (const term of base?.terms ?? []) {
+    byId.set(term.id, { ...term })
+  }
   for (const partial of partials) {
     for (const entry of partial.terms) {
       const id = normalizeTermName(entry.term)
@@ -414,12 +423,17 @@ export function mergeGlossary(partials: GlossaryPartial[]): InterimGlossaryData 
   return { terms }
 }
 
-/** 术语卡证据校验（与图谱同规则：逐字命中才落坐标，失败留章级回退） */
+/** 术语卡证据校验（与图谱同规则：逐字命中才落坐标，失败留章级回退）；
+ *  已携带 evidence 坐标的术语（增量基底直通）原样保留，不重复校验、坐标不漂移 */
 export function resolveGlossaryEvidence(
   glossary: InterimGlossaryData,
   chapterTexts: readonly string[] = []
 ): GlossaryData {
   const terms = glossary.terms.map((term) => {
+    if (term.evidence) {
+      const { evidenceQuote: _stale, ...located } = term
+      return located
+    }
     const quote = term.evidenceQuote?.trim()
     const { evidenceQuote: _dropped, ...rest } = term
     const evidence = quote ? resolveEvidenceQuote(quote, term.chapters, chapterTexts) : null
@@ -474,16 +488,20 @@ function normalizeMindmapNode(raw: unknown, depth: number): MindmapNodeData | nu
   return detail || children.length > 0 ? { title, detail, ...(children.length > 0 ? { children } : {}) } : { title }
 }
 
-/** 合并导图分支：根节点为书名，每块大纲成为一条主分支（label 即分支名，如「第1-3章」） */
+/**
+ * 合并导图分支：根节点为书名，每块大纲成为一条主分支（label 即分支名，如「第1-3章」）。
+ * base 为增量合并的基底（现有导图）：旧主分支前置保留，新分支接在后面（总量仍受上限约束）。
+ */
 export function mergeMindmapBranches(
   bookTitle: string,
-  branches: { label: string; tree: MindmapNodeData }[]
+  branches: { label: string; tree: MindmapNodeData }[],
+  base?: MindmapNodeData
 ): MindmapNodeData {
   const root: MindmapNodeData = {
     title: bookTitle.trim().slice(0, MINDMAP_TITLE_MAX_CHARS) || '全书大纲',
-    children: [],
+    children: [...(base?.children ?? [])],
   }
-  for (const branch of branches.slice(0, MAX_MINDMAP_BRANCHES)) {
+  for (const branch of branches.slice(0, Math.max(0, MAX_MINDMAP_BRANCHES - root.children!.length))) {
     const label = branch.label.trim().slice(0, MINDMAP_NODE_TITLE_MAX_CHARS) || branch.tree.title
     const hasChildren = (branch.tree.children?.length ?? 0) > 0
     root.children!.push(
@@ -503,4 +521,202 @@ export function isMindmapEmpty(node: MindmapNodeData): boolean {
 /** 统计导图总节点数（体积提示用） */
 export function countMindmapNodes(node: MindmapNodeData): number {
   return 1 + (node.children ?? []).reduce((sum, child) => sum + countMindmapNodes(child), 0)
+}
+
+// ---- 论文速览（学术研究型读者：读前分流 + 批判性阅读） ----
+
+/** 论文速览片段安全上限 */
+export const MAX_BRIEF_CONTRIBUTIONS = 6
+export const MAX_BRIEF_LIMITATIONS = 6
+export const MAX_BRIEF_QUESTIONS = 6
+
+const BRIEF_TLDR_MAX_CHARS = 160
+const BRIEF_POINT_MAX_CHARS = 120
+const BRIEF_QUESTION_MAX_CHARS = 160
+
+const BRIEF_STRENGTHS: ContributionStrength[] = ['experiment', 'theory', 'partial', 'claim']
+
+interface BriefEntryLike {
+  point?: unknown
+  question?: unknown
+  strength?: unknown
+  evidence?: unknown
+  chapters?: number[]
+  evidenceQuote?: string
+}
+
+/** 论文速览中间态：各条目 evidenceQuote 待校验，evidence 为增量基底直通的已定位坐标 */
+export interface InterimBriefData {
+  tldr: string
+  contributions: { point: string; strength: ContributionStrength; evidenceQuote?: string; evidence?: KnowledgeEvidence; chapters?: number[] }[]
+  limitations: { point: string; evidenceQuote?: string; evidence?: KnowledgeEvidence; chapters?: number[] }[]
+  questions: { question: string; evidenceQuote?: string; evidence?: KnowledgeEvidence; chapters?: number[] }[]
+}
+
+function normalizeBriefEntry(
+  entry: BriefEntryLike,
+  textField: 'point' | 'question',
+  textMax: number
+): { text: string; strength?: ContributionStrength; evidenceQuote?: string } | null {
+  const raw = entry[textField]
+  if (typeof raw !== 'string') return null
+  const text = raw.trim().slice(0, textMax)
+  if (!text) return null
+  const strength =
+    textField === 'point' && BRIEF_STRENGTHS.includes(entry.strength as ContributionStrength)
+      ? (entry.strength as ContributionStrength)
+      : undefined
+  const quote = typeof entry.evidence === 'string' ? clip(entry.evidence, EVIDENCE_MAX_CHARS) : undefined
+  return { text, ...(strength ? { strength } : {}), ...(quote ? { evidenceQuote: quote } : {}) }
+}
+
+/** 校验并规整 AI 返回的论文速览片段；TL;DR 与三类条目全空返回 null */
+export function parseBriefPartial(raw: unknown): InterimBriefData | null {
+  if (raw == null || typeof raw !== 'object') return null
+  const source = raw as { tldr?: unknown; contributions?: unknown; limitations?: unknown; questions?: unknown }
+  const tldr = typeof source.tldr === 'string' ? source.tldr.trim().slice(0, BRIEF_TLDR_MAX_CHARS) : ''
+
+  const collect = (list: unknown, textField: 'point' | 'question', textMax: number) => {
+    const out: NonNullable<ReturnType<typeof normalizeBriefEntry>>[] = []
+    if (Array.isArray(list)) {
+      for (const item of list) {
+        if (item == null || typeof item !== 'object') continue
+        const normalized = normalizeBriefEntry(item as BriefEntryLike, textField, textMax)
+        if (normalized) out.push(normalized)
+        if (out.length >= MAX_BRIEF_CONTRIBUTIONS) break
+      }
+    }
+    return out
+  }
+
+  const collectedContributions = collect(source.contributions, 'point', BRIEF_POINT_MAX_CHARS)
+  const collectedLimitations = collect(source.limitations, 'point', BRIEF_POINT_MAX_CHARS)
+  const collectedQuestions = collect(source.questions, 'question', BRIEF_QUESTION_MAX_CHARS)
+
+  if (!tldr && collectedContributions.length === 0 && collectedLimitations.length === 0 && collectedQuestions.length === 0) {
+    return null
+  }
+
+  const toContributions = (): InterimBriefData['contributions'] =>
+    collectedContributions.map((entry) => ({
+      point: entry.text,
+      strength: entry.strength ?? 'claim',
+      ...(entry.evidenceQuote ? { evidenceQuote: entry.evidenceQuote } : {}),
+    }))
+  const toLimitations = (): InterimBriefData['limitations'] =>
+    collectedLimitations.map((entry) => ({
+      point: entry.text,
+      ...(entry.evidenceQuote ? { evidenceQuote: entry.evidenceQuote } : {}),
+    }))
+  const toQuestions = (): InterimBriefData['questions'] =>
+    collectedQuestions.map((entry) => ({
+      question: entry.text,
+      ...(entry.evidenceQuote ? { evidenceQuote: entry.evidenceQuote } : {}),
+    }))
+
+  return {
+    tldr,
+    contributions: toContributions(),
+    limitations: toLimitations(),
+    questions: toQuestions(),
+  }
+}
+
+/** 把分块覆盖章节盖到速览条目上（章节级回退的来源） */
+export function stampBriefChapters(brief: InterimBriefData, chapterIndexes: number[]): InterimBriefData {
+  const stamp = <T extends { chapters?: number[] }>(entry: T): T => ({ ...entry, chapters: chapterIndexes })
+  return {
+    tldr: brief.tldr,
+    contributions: brief.contributions.map(stamp),
+    limitations: brief.limitations.map(stamp),
+    questions: brief.questions.map(stamp),
+  }
+}
+
+/** 条目文本归一化（增量合并的跨块去重键） */
+function briefEntryKey(text: string): string {
+  return text.replace(/\s+/g, '')
+}
+
+/**
+ * 合并多块论文速览：TL;DR 取首个非空；三类条目按文本去重、章节并集、首个非空证据胜出。
+ * base 为增量合并的基底（现有速览卡）：旧条目先入列（含已定位证据直通）。
+ */
+export function mergeBriefs(partials: InterimBriefData[], base?: InterimBriefData): InterimBriefData {
+  const tldr = base?.tldr ?? ''
+  const mergeSection = <T extends { chapters?: number[]; evidenceQuote?: string; evidence?: KnowledgeEvidence }>(
+    baseEntries: T[],
+    freshLists: T[][],
+    keyOf: (entry: T) => string,
+    max: number
+  ): T[] => {
+    const byKey = new Map<string, T>()
+    for (const entry of baseEntries) byKey.set(keyOf(entry), { ...entry })
+    for (const list of freshLists) {
+      for (const entry of list) {
+        const key = keyOf(entry)
+        const existing = byKey.get(key)
+        if (existing) {
+          existing.evidenceQuote = existing.evidenceQuote ?? entry.evidenceQuote
+          const merged = new Set([...(existing.chapters ?? []), ...(entry.chapters ?? [])])
+          if (merged.size > 0) existing.chapters = [...merged].sort((a, b) => a - b)
+        } else {
+          byKey.set(key, { ...entry })
+        }
+      }
+    }
+    return [...byKey.values()].slice(0, max)
+  }
+
+  return {
+    tldr,
+    contributions: mergeSection(
+      base?.contributions ?? [],
+      partials.map((p) => p.contributions),
+      (e) => briefEntryKey(e.point),
+      MAX_BRIEF_CONTRIBUTIONS
+    ),
+    limitations: mergeSection(
+      base?.limitations ?? [],
+      partials.map((p) => p.limitations),
+      (e) => briefEntryKey(e.point),
+      MAX_BRIEF_LIMITATIONS
+    ),
+    questions: mergeSection(
+      base?.questions ?? [],
+      partials.map((p) => p.questions),
+      (e) => briefEntryKey(e.question),
+      MAX_BRIEF_QUESTIONS
+    ),
+  }
+}
+
+/** 速览证据校验：已定位条目直通；AI 摘句逐字命中才落坐标，失败留章级回退 */
+export function resolveBriefEvidence(
+  brief: InterimBriefData,
+  chapterTexts: readonly string[] = []
+): PaperBriefData {
+  const resolveEntry = <T extends { chapters?: number[]; evidenceQuote?: string; evidence?: KnowledgeEvidence }>(
+    entry: T
+  ): Omit<T, 'evidenceQuote'> => {
+    if (entry.evidence) {
+      const { evidenceQuote: _stale, ...located } = entry
+      return located
+    }
+    const quote = entry.evidenceQuote?.trim()
+    const { evidenceQuote: _dropped, ...rest } = entry
+    const evidence = quote ? resolveEvidenceQuote(quote, entry.chapters, chapterTexts) : null
+    return evidence ? { ...rest, evidence } : rest
+  }
+  return {
+    tldr: brief.tldr,
+    contributions: brief.contributions.map((e) => resolveEntry(e)),
+    limitations: brief.limitations.map((e) => resolveEntry(e)),
+    questions: brief.questions.map((e) => resolveEntry(e)),
+  }
+}
+
+/** 论文速览是否为空 */
+export function isBriefEmpty(brief: PaperBriefData): boolean {
+  return !brief.tldr && brief.contributions.length === 0 && brief.limitations.length === 0 && brief.questions.length === 0
 }

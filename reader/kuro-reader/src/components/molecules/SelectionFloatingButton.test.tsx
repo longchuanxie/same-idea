@@ -7,6 +7,7 @@ import { COPY } from '@/constants/copy'
 const PROPS = {
   position: { x: 200, y: 200 },
   onHighlight: vi.fn(),
+  onCopy: vi.fn(),
   onOpen: vi.fn(),
   onCancel: vi.fn(),
 }
@@ -15,9 +16,10 @@ const setup = (overrides: Partial<typeof PROPS> = {}) =>
   render(<SelectionFloatingButton {...PROPS} {...overrides} />)
 
 describe('SelectionFloatingButton', () => {
-  it('渲染「划线 / 批注」双动作', () => {
+  it('渲染「划线 / 复制 / 批注」三个动作', () => {
     setup()
     expect(screen.getByRole('button', { name: COPY.annotation.highlightAction })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: COPY.annotation.copyAction })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: COPY.annotation.annotateAction })).toBeInTheDocument()
   })
 
@@ -28,6 +30,13 @@ describe('SelectionFloatingButton', () => {
     fireEvent.click(screen.getByRole('button', { name: COPY.annotation.highlightAction }))
     expect(onHighlight).toHaveBeenCalledTimes(1)
     expect(onOpen).not.toHaveBeenCalled()
+  })
+
+  it('点击「复制」触发 onCopy', () => {
+    const onCopy = vi.fn()
+    setup({ onCopy })
+    fireEvent.click(screen.getByRole('button', { name: COPY.annotation.copyAction }))
+    expect(onCopy).toHaveBeenCalledTimes(1)
   })
 
   it('点击「批注」触发 onOpen', () => {

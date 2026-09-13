@@ -51,6 +51,22 @@ export async function updateStatusBarTheme(isDark: boolean): Promise<void> {
   }
 }
 
+/** 沉浸阅读开关：隐藏/恢复系统状态栏（仅原生端生效）。
+ *  原生侧已设 BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE，隐藏后顶部下滑仅临时呼出并自动收回。 */
+export async function setStatusBarHidden(hidden: boolean): Promise<void> {
+  if (!isNativePlatform()) return;
+
+  try {
+    if (hidden) {
+      await StatusBar.hide();
+    } else {
+      await StatusBar.show();
+    }
+  } catch {
+    // StatusBar not available
+  }
+}
+
 export async function hideSplashScreen(): Promise<void> {
   if (!isNativePlatform()) return;
   try {

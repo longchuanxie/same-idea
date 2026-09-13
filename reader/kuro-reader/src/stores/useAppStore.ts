@@ -36,6 +36,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   paperMode: true,
   paperType: 'coated',
   textureIntensity: 50,
+  hideStatusBar: false,
   readingDirection: 'rtl',
   pageTurnGestures: true,
   cloudSync: false,

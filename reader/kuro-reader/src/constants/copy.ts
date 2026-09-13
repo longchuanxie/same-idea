@@ -24,6 +24,9 @@ export const COPY = {
   annotation: {
     highlightAction: '划线',
     annotateAction: '批注',
+    copyAction: '复制',
+    copiedToast: '已复制到剪贴板',
+    copyFailedToast: '复制失败，请重试',
     notePlaceholder: '写点什么…（留空则仅划线）',
     saveNote: '保存批注',
     saveHighlightOnly: '仅划线',

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -84,9 +84,17 @@ export const LibraryPage: React.FC = () => {
     }
   }, [location.state, location.pathname, navigate]);
 
+  // 已归入特藏室（子书库）的书籍与外层书架互斥展示：外层不再重复罗列，
+  // 仍可在特藏室、检索与首页阅读动线中找到
+  const subLibraryBookIds = useMemo(
+    () => new Set(subLibraries.flatMap((sl) => sl.bookIds)),
+    [subLibraries]
+  );
+
   const displayedBooks = (() => {
-    // 子书库是分组视图而非互斥分类：成员书籍仍保留在书架列表中
-    let result = activeTagId ? getBooksByTag(activeTagId) : books;
+    let result = (activeTagId ? getBooksByTag(activeTagId) : books).filter(
+      (b) => !subLibraryBookIds.has(b.id)
+    );
     if (showFavoritesOnly) {
       result = result.filter((b) => b.isFavorite);
     }
@@ -829,7 +837,9 @@ export const LibraryPage: React.FC = () => {
       ) : (
         <div className="text-center py-16">
           <span className="material-symbols-outlined text-on-surface-variant text-5xl mb-4 block">auto_stories</span>
-          <p className="font-body text-body-md text-on-surface-variant mb-6">主书架暂无书籍</p>
+          <p className="font-body text-body-md text-on-surface-variant mb-6">
+            {books.length > 0 ? '藏书已全部归入特藏室' : '主书架暂无书籍'}
+          </p>
           <button
             className="font-label text-label-md text-primary border border-outline-variant px-6 py-2 hover:bg-surface-variant transition-colors"
             onClick={() => navigate(ROUTES.IMPORT)}

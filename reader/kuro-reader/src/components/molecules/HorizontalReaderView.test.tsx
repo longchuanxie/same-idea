@@ -50,7 +50,7 @@ describe('HorizontalReaderView', () => {
     expect(screen.getByText('progress_activity')).toBeInTheDocument();
   });
 
-  it('should apply single-page zoom styles and emit image page index', () => {
+  it('should apply single-page zoom transform on the content wrapper and emit image page index', () => {
     const onImageClick = vi.fn();
     renderHorizontalReaderView({
       pageLayout: 'single',
@@ -64,13 +64,45 @@ describe('HorizontalReaderView', () => {
     });
 
     const image = screen.getByRole('img', { name: 'Page 2' });
-    expect(image).toHaveStyle({
-      transform: 'scale(2)',
-      transformOrigin: '20px 30px',
+    // 缩放作用于内容容器（中心锚定 + 平移钳制），img 本身不再带 transform
+    expect(image.parentElement).toHaveStyle({
+      transform: 'translate(0px, 0px) scale(2)',
     });
 
     fireEvent.click(image);
     expect(onImageClick).toHaveBeenCalledWith(1, expect.any(Object));
+  });
+
+  it('should pan the zoomed content by drag within clamped bounds', () => {
+    renderHorizontalReaderView({
+      pageLayout: 'single',
+      readingDirection: 'ltr',
+      currentPage: 2,
+      currentPageLabel: '2',
+      horizontalPageSpread: [2],
+      zoomScale: 2,
+      zoomOrigin: { x: 0, y: 0 },
+    });
+
+    const surface = screen.getByTestId('horizontal-reader-surface');
+    const content = screen.getByRole('img', { name: 'Page 2' }).parentElement as HTMLElement;
+    // jsdom 无布局：桩定内容与视口尺寸，得到 maxX=(600*2-400)/2=400、maxY=(300*2-300)/2=150
+    Object.defineProperty(content, 'offsetWidth', { value: 600 });
+    Object.defineProperty(content, 'offsetHeight', { value: 300 });
+    Object.defineProperty(surface, 'clientWidth', { value: 400 });
+    Object.defineProperty(surface, 'clientHeight', { value: 300 });
+
+    fireEvent.touchStart(surface, { touches: [{ clientX: 100, clientY: 100 }] });
+    fireEvent.touchMove(surface, { touches: [{ clientX: 340, clientY: 40 }] });
+
+    // 拖拽 (240, -60)，在范围内原样生效
+    expect(content).toHaveStyle({ transform: 'translate(240px, -60px) scale(2)' });
+
+    fireEvent.touchStart(surface, { touches: [{ clientX: 100, clientY: 100 }] });
+    fireEvent.touchMove(surface, { touches: [{ clientX: 600, clientY: 400 }] });
+
+    // 超出范围被钳制到 (400, 150)
+    expect(content).toHaveStyle({ transform: 'translate(400px, 150px) scale(2)' });
   });
 
   it('should capture gestures on the blank reading surface', () => {

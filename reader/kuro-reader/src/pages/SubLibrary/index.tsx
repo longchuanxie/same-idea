@@ -114,6 +114,14 @@ export const SubLibraryPage: React.FC = () => {
     }
   }, [isSelectMode, navigate]);
 
+  // 直达导入中心（目标模式）：导入完成后新书自动归入本特藏室
+  const goImport = useCallback(() => {
+    if (!subLibrary) return;
+    navigate(ROUTES.IMPORT, {
+      state: { targetSubLibraryId: subLibrary.id, targetSubLibraryName: subLibrary.name },
+    });
+  }, [navigate, subLibrary]);
+
   if (!subLibrary) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -184,6 +192,13 @@ export const SubLibraryPage: React.FC = () => {
             <div className="flex gap-2">
               <button
                 className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1"
+                onClick={goImport}
+              >
+                <span className="material-symbols-outlined text-lg">add</span>
+                导入
+              </button>
+              <button
+                className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1"
                 onClick={() => setIsSelectMode(true)}
               >
                 <span className="material-symbols-outlined text-lg">checklist</span>
@@ -223,12 +238,20 @@ export const SubLibraryPage: React.FC = () => {
           <div className="flex flex-col items-center justify-center py-20">
             <span className="material-symbols-outlined text-on-surface-variant text-6xl mb-4">folder_open</span>
             <p className="font-body text-body-md text-on-surface-variant mb-6">此子书库暂无书籍</p>
-            <button
-              className="font-label text-label-md text-primary border border-outline-variant px-6 py-2 hover:bg-surface-variant transition-colors"
-              onClick={() => navigate(ROUTES.LIBRARY)}
-            >
-              去书架添加
-            </button>
+            <div className="flex gap-3">
+              <button
+                className="font-label text-label-md text-on-primary bg-primary px-6 py-2 rounded hover:opacity-90 transition-opacity"
+                onClick={goImport}
+              >
+                导入书籍
+              </button>
+              <button
+                className="font-label text-label-md text-primary border border-outline-variant px-6 py-2 hover:bg-surface-variant transition-colors"
+                onClick={() => navigate(ROUTES.LIBRARY)}
+              >
+                去书架添加
+              </button>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-x-gutter gap-y-8">

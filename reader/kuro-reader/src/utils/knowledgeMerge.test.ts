@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
+import type { MindmapNodeData } from '@/types'
 import {
   MAX_GRAPH_NODES,
+  mergeBriefs,
+  parseBriefPartial,
+  resolveBriefEvidence,
   mergeCharacterGraphs,
   mergeMindmapBranches,
   parseGraphPartial,
@@ -376,5 +380,107 @@ describe('mergeCharacterGraphs · 增量基底合并', () => {
     const newEdge = resolved.edges.find((e) => e.chapters?.includes(2))
     expect(newEdge?.evidence?.chapterIndex).toBe(2)
     expect(newEdge?.evidence?.quote).toBe('王五与赵六结盟')
+  })
+})
+
+describe('mergeGlossary · 增量基底合并', () => {
+  it('基底术语先入列（含已定位证据直通），新片段术语并入不丢失', () => {
+    const base = {
+      terms: [
+        {
+          id: '注意力',
+          term: '注意力',
+          definition: '序列加权检索机制',
+          chapters: [0],
+          evidence: { quote: '注意力是指加权检索', chapterIndex: 0, offsetRatio: 0.5 },
+        },
+      ],
+    }
+    const fresh = [
+      { terms: [{ term: '缓存', definition: '推理加速结构', evidenceQuote: '缓存用于加速', chapters: [2] }] },
+    ]
+    const merged = mergeGlossary(fresh, base)
+    expect(merged.terms.map((t) => t.term)).toEqual(['注意力', '缓存'])
+    const resolved = resolveGlossaryEvidence(merged, ['注意力是指加权检索', '', '缓存用于加速'])
+    // 旧术语证据坐标原样直通，不被重新校验改写
+    expect(resolved.terms[0].evidence).toEqual({
+      quote: '注意力是指加权检索',
+      chapterIndex: 0,
+      offsetRatio: 0.5,
+    })
+    // 新术语照常逐字定位
+    expect(resolved.terms[1].evidence?.chapterIndex).toBe(2)
+  })
+})
+
+describe('mergeMindmapBranches · 增量基底合并', () => {
+  it('基底主分支前置保留，新分支接续且总量受上限约束', () => {
+    const base: MindmapNodeData = {
+      title: '测试书',
+      children: [{ title: '片段1', children: [{ title: '旧要点' }] }],
+    }
+    const fresh = [{ label: '第2章起', tree: { title: '新要点', children: [{ title: '细节' }] } }]
+    const merged = mergeMindmapBranches('测试书', fresh, base)
+    expect(merged.children?.map((b) => b.title)).toEqual(['片段1', '第2章起'])
+  })
+})
+
+describe('paper-brief · 论文速览解析/合并/证据校验', () => {
+  const briefFixture = {
+    tldr: '提出注意力机制，用加权检索替代池化，效果显著提升。',
+    contributions: [
+      { point: '加权检索优于池化', strength: 'experiment', evidence: '注意力是指对序列位置分配权重的检索机制' },
+    ],
+    limitations: [{ point: '只在长文本上验证' }],
+    questions: [{ question: '基线是否公平？', evidence: '与池化基线对比' }],
+  }
+
+  it('parse 规整条目并剔除全空片段；strength 非法回落 claim', () => {
+    const parsed = parseBriefPartial(briefFixture)
+    expect(parsed?.tldr).toContain('注意力机制')
+    expect(parsed?.contributions[0].strength).toBe('experiment')
+    const invalid = parseBriefPartial({ tldr: '', contributions: [{ point: '', strength: 'magic' }] })
+    expect(invalid).toBeNull()
+  })
+
+  it('merge 增量基底：旧条目保留、跨块按文本去重', () => {
+    const base = {
+      tldr: '旧速览。',
+      contributions: [{ point: '旧贡献', strength: 'theory' as const, chapters: [0] }],
+      limitations: [],
+      questions: [],
+    }
+    const merged = mergeBriefs(
+      [
+        {
+          tldr: '新速览。',
+          contributions: [{ point: '旧贡献', strength: 'theory', chapters: [1] }, { point: '新贡献', strength: 'experiment' }],
+          limitations: [],
+          questions: [],
+        },
+      ],
+      base
+    )
+    // TL;DR 首个非空胜出（基底在前）；同名贡献章节并集；新贡献并入
+    expect(merged.tldr).toBe('旧速览。')
+    expect(merged.contributions.map((c) => c.point)).toEqual(['旧贡献', '新贡献'])
+    expect(merged.contributions[0].chapters).toEqual([0, 1])
+  })
+
+  it('证据校验：逐字命中落坐标，未命中留章级回退', () => {
+    // 走真实管线：raw 片段先经 parse（evidence → evidenceQuote）再合并
+    const parsed = parseBriefPartial({
+      ...briefFixture,
+      limitations: [{ point: '只在长文本上验证', evidence: '文本里不存在的句子' }],
+    })
+    const merged = mergeBriefs([parsed!])
+    const resolved = resolveBriefEvidence(merged, [
+      '注意力是指对序列位置分配权重的检索机制',
+      '与池化基线对比实验',
+    ])
+    expect(resolved.contributions[0].evidence?.chapterIndex).toBe(0)
+    expect(resolved.questions[0].evidence?.chapterIndex).toBe(1)
+    // 未命中的摘句被丢弃，无证据字段（章级回退仍在 chapters）
+    expect(resolved.limitations[0].evidence).toBeUndefined()
   })
 })

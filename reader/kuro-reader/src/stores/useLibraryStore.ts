@@ -32,10 +32,10 @@ export interface LibraryState {
   batchImportCurrentFile: string;
 
   loadBooks: () => Promise<void>;
-  importFile: (file: File) => Promise<Book | null>;
-  importFolder: (files: File[], folderName: string) => Promise<Book | null>;
-  importArchivesAsSubLibrary: (files: File[], folderName: string) => Promise<SubLibrary | null>;
-  importArchivesAsBook: (files: File[], fallbackTitle: string) => Promise<Book | null>;
+  importFile: (file: File, opts?: ImportOptions) => Promise<Book | null>;
+  importFolder: (files: File[], folderName: string, opts?: ImportOptions) => Promise<Book | null>;
+  importArchivesAsSubLibrary: (files: File[], folderName: string, opts?: ImportOptions) => Promise<SubLibrary | null>;
+  importArchivesAsBook: (files: File[], fallbackTitle: string, opts?: ImportOptions) => Promise<Book | null>;
   removeBook: (id: string) => Promise<void>;
   updateProgress: (bookId: string, progress: ReadingProgress) => void;
   toggleFavorite: (id: string) => Promise<void>;
@@ -111,6 +111,11 @@ const IMPORT_PROGRESS_BATCH_BASE = 90;
 // 派生列表
 const RECENTLY_READ_LIMIT = 6;
 const PERCENT_MULTIPLIER = 100;
+
+/** 导入归属选项：从特藏室发起导入时指定 subLibraryId，新书直接归入该特藏室 */
+export interface ImportOptions {
+  subLibraryId?: string;
+}
 
 /** 将 ParsedBook 转换为 Book + Chapter 实体 */
 function buildBookFromParsed(parsed: ParsedBook, bookId: string): { book: Book; chapter: Chapter } {
@@ -253,7 +258,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     }
   },
 
-  importFile: async (file: File) => {
+  importFile: async (file: File, opts?: ImportOptions) => {
     set({ isImporting: true, importProgress: 0, error: null });
     try {
       set({ importProgress: 10 });
@@ -344,6 +349,10 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
         importProgress: 100,
       }));
 
+      if (opts?.subLibraryId) {
+        await get().addBooksToSubLibrary(opts.subLibraryId, [book.id]);
+      }
+
       return { ...book, tags: [] };
     } catch (e) {
       set({ error: (e as Error).message, isImporting: false, importProgress: 0 });
@@ -351,7 +360,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     }
   },
 
-  importFolder: async (files: File[], folderName: string) => {
+  importFolder: async (files: File[], folderName: string, opts?: ImportOptions) => {
     set({ isImporting: true, importProgress: 0, error: null });
     try {
       set({ importProgress: IMPORT_PROGRESS_PARSING_BASE });
@@ -401,6 +410,10 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
         importProgress: 100,
       }));
 
+      if (opts?.subLibraryId) {
+        await get().addBooksToSubLibrary(opts.subLibraryId, [book.id]);
+      }
+
       return { ...book, tags: [] };
     } catch (e) {
       set({ error: (e as Error).message, isImporting: false, importProgress: 0 });
@@ -408,7 +421,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     }
   },
 
-  importArchivesAsBook: async (files: File[], fallbackTitle: string) => {
+  importArchivesAsBook: async (files: File[], fallbackTitle: string, opts?: ImportOptions) => {
     set({ isImporting: true, importProgress: 0, error: null });
     try {
       // 按文件名中的章节序号排序（无序号的排最后）
@@ -504,6 +517,10 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
         importProgress: 100,
       }));
 
+      if (opts?.subLibraryId) {
+        await get().addBooksToSubLibrary(opts.subLibraryId, [book.id]);
+      }
+
       return { ...book, tags: [] };
     } catch (e) {
       set({ error: (e as Error).message, isImporting: false, importProgress: 0 });
@@ -511,7 +528,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     }
   },
 
-  importArchivesAsSubLibrary: async (files: File[], folderName: string) => {
+  importArchivesAsSubLibrary: async (files: File[], folderName: string, opts?: ImportOptions) => {
     set({
       isImporting: true,
       importProgress: 0,
@@ -527,9 +544,9 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     const skippedDuplicates: string[] = [];
 
     try {
-      // 检查是否已存在同名子书库（避免重复导入）
+      // 检查是否已存在同名子书库（避免重复导入）；指定特藏室目标时改为并入该特藏室，无需查重
       const existingSubLib = get().subLibraries.find(s => s.name === folderName);
-      if (existingSubLib) {
+      if (!opts?.subLibraryId && existingSubLib) {
         set({ 
           error: `子书库「${folderName}」已存在`, 
           isImporting: false, 
@@ -623,6 +640,25 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
       }
 
       set({ importProgress: 95 });
+
+      // 指定特藏室目标：并入既有特藏室，不新建
+      if (opts?.subLibraryId) {
+        await get().addBooksToSubLibrary(opts.subLibraryId, importedBookIds);
+        const target = get().subLibraries.find((s) => s.id === opts.subLibraryId);
+        set((state) => ({
+          books: [...state.books, ...importedBooks],
+          coverUrls: { ...state.coverUrls, ...importedCovers },
+          subLibraries: target
+            ? state.subLibraries.map((s) => (s.id === target.id ? target : s))
+            : state.subLibraries,
+          isImporting: false,
+          importProgress: 100,
+          batchImportTotal: 0,
+          batchImportCurrent: 0,
+          batchImportCurrentFile: '',
+        }));
+        return target ?? null;
+      }
 
       const now = new Date();
       const subLibrary: SubLibrary = {

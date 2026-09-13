@@ -1,7 +1,7 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useMemo, useRef, useState, useCallback } from 'react';
 
 import { Capacitor } from '@capacitor/core';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import { APP_CONFIG } from '@/constants/config';
 import { ROUTES, bookDetailPath, customCloudPath, subLibraryPath } from '@/constants/routes';
@@ -38,6 +38,7 @@ async function pathToFile(path: string, name: string, mimeType: string): Promise
 
 export const ImportPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const {
@@ -52,6 +53,15 @@ export const ImportPage: React.FC = () => {
     batchImportCurrent,
     batchImportCurrentFile,
   } = useLibraryStore();
+
+  // 特藏室目标模式：从特藏室页「导入」进入（路由 state 携带目标），新书直接归入该特藏室
+  const importTarget = (location.state ?? {}) as { targetSubLibraryId?: string; targetSubLibraryName?: string };
+  const targetSubLibraryId = importTarget.targetSubLibraryId;
+  const targetSubLibraryName = importTarget.targetSubLibraryName ?? '';
+  const importOpts = useMemo(
+    () => (targetSubLibraryId ? { subLibraryId: targetSubLibraryId } : undefined),
+    [targetSubLibraryId]
+  );
 
   const [importResult, setImportResult] = useState<{
     type: 'book' | 'sublibrary';
@@ -71,13 +81,13 @@ export const ImportPage: React.FC = () => {
       if (file.size > APP_CONFIG.maxFileSize) return;
       const ext = getFileExtension(file.name);
       if (!(SUPPORTED_EXTENSIONS as readonly string[]).includes(ext)) return;
-      const book = await importFile(file);
+      const book = await importFile(file, importOpts);
       if (book) setImportResult({ type: 'book', title: book.title, id: book.id });
     } else {
       const imageFiles = Array.from(files).filter((f) => isImageFile(f.name));
       if (imageFiles.length === 0) return;
       const folderName = imageFiles[0].webkitRelativePath?.split('/')[0] || '未命名文件夹';
-      const book = await importFolder(imageFiles, folderName);
+      const book = await importFolder(imageFiles, folderName, importOpts);
       if (book) setImportResult({ type: 'book', title: book.title, id: book.id });
     }
 
@@ -106,12 +116,12 @@ export const ImportPage: React.FC = () => {
         validArchives.every((f) => extractArchiveChapterInfo(f.name) !== null);
 
       if (mergeable) {
-        const book = await importArchivesAsBook(validArchives, folderName);
+        const book = await importArchivesAsBook(validArchives, folderName, importOpts);
         if (book) setImportResult({ type: 'book', title: book.title, id: book.id });
         return;
       }
 
-      const subLibrary = await importArchivesAsSubLibrary(validArchives, folderName);
+      const subLibrary = await importArchivesAsSubLibrary(validArchives, folderName, importOpts);
       if (subLibrary) {
         setImportResult({
           type: 'sublibrary',
@@ -122,7 +132,7 @@ export const ImportPage: React.FC = () => {
       }
     } else {
       if (imageFiles.length === 0) return;
-      const book = await importFolder(imageFiles, folderName);
+      const book = await importFolder(imageFiles, folderName, importOpts);
       if (book) setImportResult({ type: 'book', title: book.title, id: book.id });
     }
 
@@ -142,10 +152,13 @@ export const ImportPage: React.FC = () => {
         mimeTypes: [
           'application/zip',
           'application/x-zip-compressed',
+          // 现代 Android 为漫画包分配的标准 MIME，缺失会导致文件在选择器中被禁用
+          'application/vnd.comicbook+zip',
+          'application/x-cbz',
           'application/x-rar-compressed',
           'application/vnd.rar',
+          'application/vnd.comicbook-rar',
           'application/x-cbr',
-          'application/x-cbz',
           'application/pdf',
           'text/plain',
           'text/markdown',
@@ -163,12 +176,12 @@ export const ImportPage: React.FC = () => {
         return;
       }
 
-      const book = await importFile(file);
+      const book = await importFile(file, importOpts);
       if (book) setImportResult({ type: 'book', title: book.title, id: book.id });
     } catch {
       // User cancelled or error
     }
-  }, [importFile]);
+  }, [importFile, importOpts]);
 
   const handleNativeFolderPick = useCallback(async () => {
     if (!isNativePlatform()) {
@@ -199,7 +212,7 @@ export const ImportPage: React.FC = () => {
       const validArchives = bookFiles.filter((f) => f.size <= APP_CONFIG.maxFileSize);
 
       if (validArchives.length > 0) {
-        const subLibrary = await importArchivesAsSubLibrary(validArchives, result.name);
+        const subLibrary = await importArchivesAsSubLibrary(validArchives, result.name, importOpts);
         if (subLibrary) {
           setImportResult({
             type: 'sublibrary',
@@ -211,7 +224,7 @@ export const ImportPage: React.FC = () => {
       }
 
       if (imageFiles.length > 0) {
-        const book = await importFolder(imageFiles, validArchives.length > 0 ? `${result.name} - 图片` : result.name);
+        const book = await importFolder(imageFiles, validArchives.length > 0 ? `${result.name} - 图片` : result.name, importOpts);
         if (book && !importResult) {
           setImportResult({ type: 'book', title: book.title, id: book.id });
         }
@@ -219,7 +232,7 @@ export const ImportPage: React.FC = () => {
     } catch {
       // User cancelled or error
     }
-  }, [importFolder, importArchivesAsSubLibrary, importResult]);
+  }, [importFolder, importArchivesAsSubLibrary, importResult, importOpts]);
 
   const formatList = APP_CONFIG.supportedFormats.join(', ').toUpperCase();
 
@@ -245,6 +258,25 @@ export const ImportPage: React.FC = () => {
         <h2 className="font-display text-display-lg-mobile md:text-display-lg text-primary tracking-tight">导入中心</h2>
         <p className="font-body text-body-md text-on-surface-variant">从本地或 NAS 添加您的书籍资源。</p>
       </section>
+
+      {targetSubLibraryId && (
+        <section className="flex items-center justify-between gap-3 border border-primary/40 bg-primary/5 rounded-lg px-4 py-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="material-symbols-outlined text-primary">bookmarks</span>
+            <p className="font-label text-label-md text-primary truncate">
+              导入至特藏室「{targetSubLibraryName}」，新书将直接归入
+            </p>
+          </div>
+          <button
+            aria-label="退出特藏室导入"
+            data-ui-control
+            className="w-8 h-8 flex-shrink-0 flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors"
+            onClick={() => navigate(ROUTES.IMPORT, { replace: true, state: {} })}
+          >
+            <span className="material-symbols-outlined">close</span>
+          </button>
+        </section>
+      )}
 
       {isImporting && (
         <section className="border border-outline-variant rounded-card-lg p-6 bg-surface-bright shadow-paper">
@@ -284,7 +316,27 @@ export const ImportPage: React.FC = () => {
             <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
             <h3 className="font-display text-headline-md text-primary">导入成功</h3>
           </div>
-          {importResult.type === 'sublibrary' ? (
+          {targetSubLibraryId ? (
+            <>
+              <p className="font-body text-body-md text-on-surface-variant mb-4">
+                已导入至特藏室「{targetSubLibraryName}」
+              </p>
+              <div className="flex gap-4">
+                <button
+                  className="bg-seal text-on-primary font-label text-label-md px-6 py-2 rounded-card hover:bg-seal-deep transition-colors"
+                  onClick={() => navigate(subLibraryPath(targetSubLibraryId))}
+                >
+                  返回特藏室
+                </button>
+                <button
+                  className="border border-outline-variant text-primary font-label text-label-md px-6 py-2 rounded hover:bg-surface-variant transition-colors"
+                  onClick={() => setImportResult(null)}
+                >
+                  继续导入
+                </button>
+              </div>
+            </>
+          ) : importResult.type === 'sublibrary' ? (
             <>
               <p className="font-body text-body-md text-on-surface-variant mb-1">
                 子书库「{importResult.title}」
@@ -353,7 +405,9 @@ export const ImportPage: React.FC = () => {
               从文件夹导入
             </button>
             <p className="font-label text-label-sm text-on-surface-variant mt-2 text-center normal-case tracking-normal">
-              支持 {formatList} 格式，最大 {Math.round(APP_CONFIG.maxFileSize / (1024 * 1024))}MB；文件夹导入将自动识别支持的文件并创建子书库
+              {targetSubLibraryId
+                ? `支持 ${formatList} 格式，最大 ${Math.round(APP_CONFIG.maxFileSize / (1024 * 1024))}MB；本次导入的书籍将归入特藏室「${targetSubLibraryName}」`
+                : `支持 ${formatList} 格式，最大 ${Math.round(APP_CONFIG.maxFileSize / (1024 * 1024))}MB；文件夹导入将自动识别支持的文件并创建子书库`}
             </p>
           </div>
         </section>

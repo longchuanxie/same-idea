@@ -5,6 +5,9 @@ import android.view.ActionMode;
 import android.view.Menu;
 import android.view.MenuItem;
 
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
+
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
@@ -12,6 +15,11 @@ public class MainActivity extends BridgeActivity {
     protected void onCreate(Bundle savedInstanceState) {
         registerPlugin(FilePickerPlugin.class);
         super.onCreate(savedInstanceState);
+        // 沉浸阅读：JS 侧（StatusBar.hide）隐藏状态栏后，顶部下滑只临时呼出（浮层展示、自动收回，不挤压布局）
+        WindowInsetsControllerCompat insetsController =
+                WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        insetsController.setSystemBarsBehavior(
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
     }
 
     /**

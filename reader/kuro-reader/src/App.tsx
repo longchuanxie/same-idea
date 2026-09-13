@@ -26,7 +26,7 @@ import { TagsPage } from '@/pages/Tags';
 import { TextReaderPage } from '@/pages/TextReader';
 import { consumeBackPress } from '@/services/backHandler';
 import { useAppStore } from '@/stores/useAppStore';
-import { isNativePlatform } from '@/utils/capacitor';
+import { isNativePlatform, setStatusBarHidden } from '@/utils/capacitor';
 
 const SYSTEM_DARK_QUERY = '(prefers-color-scheme: dark)';
 const FONT_SCALE_BASE = 16;
@@ -104,6 +104,11 @@ const App: React.FC = () => {
     root.style.setProperty('--app-body-lg-font-size', `${Math.round(bodyFontSize * BODY_LARGE_SCALE)}px`);
     root.style.setProperty('--app-font-scale', `${bodyFontSize / FONT_SCALE_BASE}`);
   }, [settings.fontFamily, settings.fontSize]);
+
+  // 沉浸阅读：隐藏系统状态栏。挂在 App 根而非 MainLayout——阅读器路由不经 MainLayout，也要生效
+  useEffect(() => {
+    void setStatusBarHidden(settings.hideStatusBar);
+  }, [settings.hideStatusBar]);
 
   return (
     <BrowserRouter>

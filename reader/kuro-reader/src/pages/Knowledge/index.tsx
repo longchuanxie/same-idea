@@ -8,13 +8,14 @@ import { ConfirmDialog } from '@/components/molecules/ConfirmDialog'
 import { CharacterGraphView } from '@/components/molecules/knowledge/CharacterGraphView'
 import { GlossaryView } from '@/components/molecules/knowledge/GlossaryView'
 import { MindmapView } from '@/components/molecules/knowledge/MindmapView'
+import { PaperBriefView } from '@/components/molecules/knowledge/PaperBriefView'
 import { ROUTES, bookDetailPath, knowledgeSourcePath } from '@/constants/routes'
 import { isProviderConfigured } from '@/services/ai/aiClient'
 import { getKnowledgeTask } from '@/services/ai/knowledgeTasks'
 import { useAppStore } from '@/stores/useAppStore'
 import { useKnowledgeStore } from '@/stores/useKnowledgeStore'
 import { useLibraryStore } from '@/stores/useLibraryStore'
-import type { Book, CharacterGraphData, CharacterNode, GlossaryData, MindmapNodeData } from '@/types'
+import type { Book, CharacterGraphData, CharacterNode, GlossaryData, MindmapNodeData, PaperBriefData } from '@/types'
 import { exportKnowledgeArtifactMarkdown } from '@/utils/knowledgeExport'
 import { toast } from '@/utils/toast'
 
@@ -65,7 +66,10 @@ export const KnowledgePage: React.FC = () => {
     [artifactsByBook, bookId, artifactId]
   )
   const graph = useMemo(
-    () => (artifact?.type === 'character-graph' ? (artifact.data as CharacterGraphData) : null),
+    () =>
+      artifact?.type === 'character-graph' || artifact?.type === 'concept-graph'
+        ? (artifact.data as CharacterGraphData)
+        : null,
     [artifact]
   )
   const mindmap = useMemo(
@@ -74,6 +78,10 @@ export const KnowledgePage: React.FC = () => {
   )
   const glossary = useMemo(
     () => (artifact?.type === 'glossary' ? (artifact.data as GlossaryData) : null),
+    [artifact]
+  )
+  const paperBrief = useMemo(
+    () => (artifact?.type === 'paper-brief' ? (artifact.data as PaperBriefData) : null),
     [artifact]
   )
   const relationsOfSelected = useMemo(() => {
@@ -179,16 +187,37 @@ export const KnowledgePage: React.FC = () => {
       )}
 
       <main className="relative z-10 max-w-max-width-content mx-auto px-margin-mobile py-4 pb-16">
-        {/* 元信息条 */}
+        {/* 元信息条：覆盖率对账（已分析 N/M 章）——分析完整性一眼可判 */}
         <div className="flex items-center justify-between mb-3 font-label text-label-sm text-on-surface-variant">
           <span className="flex items-center gap-1.5">
             <span className="material-symbols-outlined text-icon-sm" style={{ fontVariationSettings: "'FILL' 1" }}>
               {task.icon}
             </span>
-            {task.label} · 覆盖 {artifact.meta?.chapterCount ?? '—'} 章
+            {task.label} ·{' '}
+            {artifact.meta?.bookChapterCount != null && artifact.meta.chapterCount < artifact.meta.bookChapterCount
+              ? `已分析 ${artifact.meta.chapterCount}/${artifact.meta.bookChapterCount} 章`
+              : `覆盖 ${artifact.meta?.chapterCount ?? '—'} 章`}
+            {artifact.meta?.scope && (
+              <span>
+                （第 {(artifact.meta.scope.from ?? 0) + 1}-{(artifact.meta.scope.to ?? 0) + 1} 章）
+              </span>
+            )}
+            {artifact.meta?.detail === 'core' && <span>· 核心版</span>}
+            {artifact.meta?.detail === 'rich' && <span>· 详尽版</span>}
           </span>
           <span>{formatTimestamp(artifact.updatedAt)} 生成</span>
         </div>
+
+        {/* 完整性告警：块被体量护栏截断时，分析不覆盖全书，必须显性提示 */}
+        {artifact.meta?.totalChunkCount != null &&
+          artifact.meta.totalChunkCount > (artifact.meta.analyzedChunkCount ?? 0) && (
+            <div className="mb-3 rounded-card border border-seal/40 bg-seal-soft/40 p-3">
+              <p className="font-label text-label-sm text-seal-deep">
+                ⚠ 本次分析触达体量护栏：仅覆盖 {artifact.meta.analyzedChunkCount}/{artifact.meta.totalChunkCount} 块
+                （约 {artifact.meta.chapterCount} 章），不是完整分析。可回到档案卡用「起止章」分批生成其余部分。
+              </p>
+            </div>
+          )}
 
         {/* 生成进度 / 错误 */}
         {isRunning && (
@@ -235,11 +264,14 @@ export const KnowledgePage: React.FC = () => {
               data={graph}
               selectedNodeId={selectedNode?.id ?? null}
               onSelectNode={setSelectedNode}
+              entityLabel={artifact.type === 'concept-graph' ? '概念' : '人物'}
             />
           ) : mindmap ? (
             <MindmapView data={mindmap} />
           ) : glossary ? (
             <GlossaryView data={glossary} book={book} />
+          ) : paperBrief ? (
+            <PaperBriefView data={paperBrief} book={book} />
           ) : null}
         </div>
 
@@ -254,7 +286,7 @@ export const KnowledgePage: React.FC = () => {
                 )}
               </div>
               <button
-                aria-label="收起人物卡"
+                aria-label="收起卡片"
                 className="w-8 h-8 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container transition-colors"
                 onClick={() => setSelectedNode(null)}
               >

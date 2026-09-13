@@ -2,7 +2,7 @@ import React, { useMemo, useRef, useState } from 'react'
 
 import { PanZoom } from '@/components/molecules/knowledge/PanZoom'
 import type { CharacterGraphData, CharacterNode } from '@/types'
-import { computeForceLayout } from '@/utils/graphLayout'
+import { computeForceLayout, graphNodeRadius } from '@/utils/graphLayout'
 
 /**
  * 人物关系图谱视图：力导向布局 + 节点拖拽 + 点选人物。
@@ -11,8 +11,6 @@ import { computeForceLayout } from '@/utils/graphLayout'
 
 const CANVAS_WIDTH = 960
 const CANVAS_HEIGHT = 680
-const NODE_MIN_RADIUS = 16
-const NODE_RADIUS_SPAN = 16
 const NODE_STROKE_WIDTH = 2
 const NODE_STROKE_WIDTH_SELECTED = 3
 const LABEL_FONT_SIZE = 13
@@ -28,6 +26,8 @@ interface CharacterGraphViewProps {
   data: CharacterGraphData
   selectedNodeId?: string | null
   onSelectNode?: (node: CharacterNode | null) => void
+  /** 实体称谓（aria 文案用）：人物图谱=人物 / 概念图谱=概念 */
+  entityLabel?: '人物' | '概念'
 }
 
 interface PositionedNode extends CharacterNode {
@@ -35,9 +35,7 @@ interface PositionedNode extends CharacterNode {
   y: number
 }
 
-function nodeRadius(weight: number | undefined): number {
-  return NODE_MIN_RADIUS + (weight ?? 0) * NODE_RADIUS_SPAN
-}
+const NODE_HIT_PADDING = 8
 
 /** CJK 主导的文本宽度估算（字符数 × 字号，够画背景条用） */
 function estimateTextWidth(text: string, fontSize: number): number {
@@ -48,6 +46,7 @@ export const CharacterGraphView: React.FC<CharacterGraphViewProps> = ({
   data,
   selectedNodeId,
   onSelectNode,
+  entityLabel = '人物',
 }) => {
   const baseLayout = useMemo(
     () => computeForceLayout(data.nodes, data.edges, CANVAS_WIDTH, CANVAS_HEIGHT),
@@ -71,7 +70,12 @@ export const CharacterGraphView: React.FC<CharacterGraphViewProps> = ({
 
   const handleNodePointerDown = (e: React.PointerEvent, node: PositionedNode) => {
     e.stopPropagation()
-    ;(e.target as Element).setPointerCapture?.(e.pointerId)
+    // 捕获在节点 g 自身（而非命中子元素）：指针移出节点后拖拽/释放仍可靠送达
+    try {
+      ;(e.currentTarget as Element).setPointerCapture?.(e.pointerId)
+    } catch {
+      // 合成事件/无活动指针的环境（测试）没有可捕获的 pointerId，忽略
+    }
     dragStateRef.current = { id: node.id, startX: e.clientX, startY: e.clientY, moved: false }
   }
 
@@ -107,14 +111,14 @@ export const CharacterGraphView: React.FC<CharacterGraphViewProps> = ({
   }
 
   return (
-    <PanZoom ariaLabel="人物关系图谱，可拖拽与缩放" className="h-[68vh]" fitWidth={CANVAS_WIDTH} fitHeight={CANVAS_HEIGHT}>
+    <PanZoom ariaLabel={`${entityLabel}关系图谱，可拖拽与缩放`} className="h-[68vh]" fitWidth={CANVAS_WIDTH} fitHeight={CANVAS_HEIGHT}>
       <svg
         width={CANVAS_WIDTH}
         height={CANVAS_HEIGHT}
         viewBox={`0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`}
         className="touch-none"
         role="img"
-        aria-label={`${data.nodes.length} 个人物的关系图`}
+                aria-label={`${data.nodes.length} 个${entityLabel}的关系图`}
       >
         {/* 关系边（压在节点下方） */}
         {data.edges.map((edge, index) => {
@@ -160,7 +164,7 @@ export const CharacterGraphView: React.FC<CharacterGraphViewProps> = ({
 
         {/* 人物节点 */}
         {nodes.map((node) => {
-          const radius = nodeRadius(node.weight)
+          const radius = graphNodeRadius(node.weight)
           const selected = node.id === selectedNodeId
           return (
             <g
@@ -168,6 +172,7 @@ export const CharacterGraphView: React.FC<CharacterGraphViewProps> = ({
               role="button"
               tabIndex={0}
               aria-label={`${node.name}${node.role ? `，${node.role}` : ''}`}
+              data-panzoom-interactive
               style={{ cursor: 'grab' }}
               onPointerDown={(e) => handleNodePointerDown(e, node)}
               onPointerMove={handleNodePointerMove}
@@ -179,6 +184,14 @@ export const CharacterGraphView: React.FC<CharacterGraphViewProps> = ({
                 }
               }}
             >
+              {/* 透明命中区：比可见圆大一圈，重叠/缩小时依然好点 */}
+              <circle
+                cx={node.x}
+                cy={node.y}
+                r={radius + NODE_HIT_PADDING}
+                fill="transparent"
+                stroke="none"
+              />
               <circle
                 cx={node.x}
                 cy={node.y}

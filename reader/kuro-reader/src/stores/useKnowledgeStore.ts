@@ -18,12 +18,15 @@ import type {
 } from '@/types'
 import { detectContentKindFromChapters } from '@/utils/contentKind'
 import {
+  resolveBriefEvidence,
   resolveGlossaryEvidence,
   resolveGraphEvidence,
+  stampBriefChapters,
   stampGlossaryChapters,
   stampPartialChapters,
   type GlossaryPartial,
   type GraphPartial,
+  type InterimBriefData,
   type InterimGlossaryData,
   type InterimGraphData,
 } from '@/utils/knowledgeMerge'
@@ -167,7 +170,7 @@ export const useKnowledgeStore = create<KnowledgeState>()((set, get) => ({
         chunkIndex: index,
         chunkTotal: corpusSnapshot.chunks.length,
         contentKind,
-        detail: type === 'character-graph' ? options?.detail : undefined,
+        detail: type === 'character-graph' || type === 'concept-graph' ? options?.detail : undefined,
         incremental: Boolean(baseArtifact),
       })
 
@@ -195,14 +198,21 @@ export const useKnowledgeStore = create<KnowledgeState>()((set, get) => ({
         return fail((lastError as Error).message || 'AI 请求失败')
       }
       if (parsed != null) {
-        // 图谱/术语片段盖上分块覆盖章节（回原文链路：条目的章节并集来源）
+        // 图谱/术语/速览片段盖上分块覆盖章节（回原文链路：条目的章节并集来源）
         const stamped =
-          type === 'character-graph'
+          type === 'character-graph' || type === 'concept-graph'
             ? stampPartialChapters(parsed as GraphPartial, chunk.chapterIndexes)
             : type === 'glossary'
               ? stampGlossaryChapters(parsed as GlossaryPartial, chunk.chapterIndexes)
-              : parsed
-        partials.push({ label: chunk.label, data: stamped })
+              : type === 'paper-brief'
+                ? stampBriefChapters(parsed as InterimBriefData, chunk.chapterIndexes)
+                : parsed
+        // 增量的导图分支加前缀，避免与基底里的「片段N」撞名
+        const label =
+          baseArtifact && type === 'mindmap' && corpusSnapshot.coveredRange
+            ? `第${chunk.chapterIndexes[0] + 1}章起`
+            : chunk.label
+        partials.push({ label, data: stamped })
       }
 
       const current = get().generation[key]
@@ -219,17 +229,21 @@ export const useKnowledgeStore = create<KnowledgeState>()((set, get) => ({
     }
 
     let data = task.merge(book.title, partials, baseData)
-    if (type === 'character-graph') {
+    if (type === 'character-graph' || type === 'concept-graph') {
       // 证据摘句在真实章节文本中校验定位（防幻觉引文），换成可跳转的章内坐标
       data = resolveGraphEvidence(data as InterimGraphData, corpusSnapshot.chapterTexts)
     } else if (type === 'glossary') {
       data = resolveGlossaryEvidence(data as InterimGlossaryData, corpusSnapshot.chapterTexts)
+    } else if (type === 'paper-brief') {
+      data = resolveBriefEvidence(data as InterimBriefData, corpusSnapshot.chapterTexts)
     }
     if (task.isEmpty(data)) {
       const emptyHint: Record<KnowledgeArtifactType, string> = {
         'character-graph': '这本书提不出足够的人物关系（文本里可能没有明确的人物互动）',
+        'concept-graph': '这本书提不出足够的概念关系（学术性文本才有清晰的概念网络，可试试切换内容类型）',
         mindmap: '这本书提不出可用的结构大纲',
         glossary: '这本书提不出明确的概念术语（可能不是学术性文本，可试试切换内容类型）',
+        'paper-brief': '这篇文本提不出速览卡（贡献、局限与疑问都需要明确的论述文本）',
       }
       return fail(emptyHint[type])
     }
@@ -252,8 +266,12 @@ export const useKnowledgeStore = create<KnowledgeState>()((set, get) => ({
         contentFingerprint: corpusSnapshot.fingerprint,
         contentKind,
         bookChapterCount: corpusSnapshot.chapterCount,
+        analyzedChunkCount: corpusSnapshot.chunks.length,
+        totalChunkCount: corpusSnapshot.totalChunkCount,
         ...(corpusSnapshot.coveredRange ? { scope: corpusSnapshot.coveredRange } : {}),
-        ...(type === 'character-graph' && options?.detail ? { detail: options.detail } : {}),
+        ...(type === 'character-graph' || type === 'concept-graph') && options?.detail
+          ? { detail: options.detail }
+          : {},
       },
       generator: 'ai',
       createdAt: existing[0]?.createdAt ?? now,

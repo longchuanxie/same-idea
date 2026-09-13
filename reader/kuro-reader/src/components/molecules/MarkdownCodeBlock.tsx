@@ -2,6 +2,8 @@ import { useEffect, useId, useRef, useState, type FC, type ReactNode } from 'rea
 
 import type { HLJSApi, LanguageFn } from 'highlight.js'
 
+import { copyTextToClipboard } from '@/utils/clipboard'
+
 export interface MarkdownCodeBlockProps {
   code: string
   language?: string
@@ -144,32 +146,6 @@ interface CodeToolbarProps {
 
 type CopyStatus = 'idle' | 'copied' | 'failed'
 
-async function copyCodeText(code: string): Promise<boolean> {
-  try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(code)
-      return true
-    }
-  } catch {
-    // Fall back to the selection-based copy path below.
-  }
-
-  const textarea = document.createElement('textarea')
-  textarea.value = code
-  textarea.setAttribute('readonly', '')
-  textarea.style.position = 'fixed'
-  textarea.style.opacity = '0'
-  document.body.appendChild(textarea)
-  textarea.select()
-  try {
-    return document.execCommand('copy')
-  } catch {
-    return false
-  } finally {
-    textarea.remove()
-  }
-}
-
 const CodeToolbar: FC<CodeToolbarProps> = ({
   code,
   label,
@@ -187,7 +163,7 @@ const CodeToolbar: FC<CodeToolbarProps> = ({
   }, [])
 
   const handleCopy = async () => {
-    const copied = await copyCodeText(code)
+    const copied = await copyTextToClipboard(code)
     setCopyStatus(copied ? 'copied' : 'failed')
     if (feedbackTimerRef.current !== null) window.clearTimeout(feedbackTimerRef.current)
     feedbackTimerRef.current = window.setTimeout(

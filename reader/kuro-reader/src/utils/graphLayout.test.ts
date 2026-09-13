@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { computeForceLayout } from '@/utils/graphLayout'
+import { computeForceLayout, graphNodeRadius } from '@/utils/graphLayout'
 
 const WIDTH = 900
 const HEIGHT = 600
@@ -60,5 +60,45 @@ describe('computeForceLayout', () => {
     const layout = computeForceLayout([{ id: 'a' }, { id: 'b' }], [{ source: 'a', target: 'ghost' }], WIDTH, HEIGHT)
     expect(layout.ghost).toBeUndefined()
     expect(layout.a).toBeTruthy()
+  })
+})
+
+describe('computeForceLayout · 碰撞松弛', () => {
+  it('任意两节点不重叠：间距 ≥ 半径和 + 安全间隙', () => {
+    const nodes = Array.from({ length: 16 }, (_, i) => ({
+      id: `n${i}`,
+      weight: (i % 4) / 4,
+    }))
+    const edges = [
+      { source: 'n0', target: 'n1' },
+      { source: 'n0', target: 'n2' },
+      { source: 'n1', target: 'n3' },
+      { source: 'n2', target: 'n4' },
+      { source: 'n3', target: 'n4' },
+      { source: 'n5', target: 'n6' },
+    ]
+    const layout = computeForceLayout(nodes, edges, 960, 680)
+    const gap = 8
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const a = layout[nodes[i].id]
+        const b = layout[nodes[j].id]
+        const dist = Math.hypot(a.x - b.x, a.y - b.y)
+        const minDist =
+          graphNodeRadius(nodes[i].weight) + graphNodeRadius(nodes[j].weight) + gap
+        expect(dist).toBeGreaterThanOrEqual(minDist - 0.5)
+      }
+    }
+  })
+
+  it('完全重合的初始化也能被拆开（确定性方向）', () => {
+    const nodes = [
+      { id: 'a', weight: 0 },
+      { id: 'b', weight: 0 },
+    ]
+    const layout = computeForceLayout(nodes, [], 400, 400)
+    const dist = Math.hypot(layout.a.x - layout.b.x, layout.a.y - layout.b.y)
+    const minDist = graphNodeRadius(0) * 2 + 8
+    expect(dist).toBeGreaterThanOrEqual(minDist - 0.5)
   })
 })

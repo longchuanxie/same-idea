@@ -36,6 +36,17 @@ const INIT_JITTER_RATIO = 0.3
 const UNIT_INTERVAL_MID = 0.5
 /** 向心重力基线（权重 0 的节点也保底受半份重力） */
 const GRAVITY_WEIGHT_BASE = 0.5
+/** 节点渲染半径（与 CharacterGraphView 一致，供碰撞松弛与命中区共用） */
+export const NODE_RADIUS_BASE = 16
+export const NODE_RADIUS_SPAN = 16
+/** 碰撞松弛的最小间隙与迭代上限 */
+const COLLISION_GAP = 8
+const COLLISION_ITERATIONS = 160
+
+/** 节点渲染半径：布局碰撞检测与视图绘制必须用同一把尺子 */
+export function graphNodeRadius(weight: number | undefined): number {
+  return NODE_RADIUS_BASE + (weight ?? 0) * NODE_RADIUS_SPAN
+}
 
 /** 伪随机数生成器（mulberry32）：同一种子产出同一序列，保证布局确定性。
  *  函数体内的常量是算法规定的位混淆参数，非业务阈值（手法同 revisit.ts）。 */
@@ -180,5 +191,51 @@ export function computeForceLayout(
       y: paddingY + ((p.y - minY) / spanY) * innerH,
     }
   }
+
+  // 碰撞松弛：FR 收敛不保证圆不重叠（枢纽周围的叶尤其容易叠），
+  // 在最终画布坐标上按「半径和 + 间隙」推开重叠对，直到无重叠或到达迭代上限。
+  // 确定性：逐对按 id 序处理，不用随机数。
+  const weightById = new Map(nodes.map((n) => [n.id, n.weight]))
+  const clampToCanvas = (p: Point): Point => ({
+    x: Math.min(width - paddingX, Math.max(paddingX, p.x)),
+    y: Math.min(height - paddingY, Math.max(paddingY, p.y)),
+  })
+  for (let step = 0; step < COLLISION_ITERATIONS; step++) {
+    let anyOverlap = false
+    for (let i = 0; i < count; i++) {
+      for (let j = i + 1; j < count; j++) {
+        const idA = ids[i]
+        const idB = ids[j]
+        const a = normalized[idA]
+        const b = normalized[idB]
+        const minDist =
+          graphNodeRadius(weightById.get(idA)) + graphNodeRadius(weightById.get(idB)) + COLLISION_GAP
+        const dx = a.x - b.x
+        const dy = a.y - b.y
+        const dist = Math.hypot(dx, dy)
+        if (dist >= minDist) continue
+        anyOverlap = true
+        if (dist < MIN_DISTANCE) {
+          // 完全重合：沿 id 序的确定性方向拆开
+          const angle = ((i * count + j) / (count * count)) * Math.PI * 2
+          a.x += Math.cos(angle) * minDist * 0.5
+          a.y += Math.sin(angle) * minDist * 0.5
+          b.x -= Math.cos(angle) * minDist * 0.5
+          b.y -= Math.sin(angle) * minDist * 0.5
+          continue
+        }
+        const push = (minDist - dist) / 2
+        const ux = dx / dist
+        const uy = dy / dist
+        a.x += ux * push
+        a.y += uy * push
+        b.x -= ux * push
+        b.y -= uy * push
+      }
+    }
+    if (!anyOverlap) break
+    for (const id of ids) normalized[id] = clampToCanvas(normalized[id])
+  }
+
   return normalized
 }

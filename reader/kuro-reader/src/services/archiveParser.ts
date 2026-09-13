@@ -2,6 +2,7 @@ import { Archive } from 'libarchive.js';
 
 import { APP_CONFIG } from '@/constants/config';
 import { isNativePlatform } from '@/utils/capacitor';
+import { extractTitleFromFileName } from '@/utils/extractTitle';
 
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.img']);
 const BYTES_PER_KB = 1024;
@@ -51,19 +52,6 @@ function naturalCompare(a: string, b: string): number {
 }
 
 
-const BRACKET_PATTERN = /[【[](.+?)[】\]]/;
-const LEADING_CHARS_PATTERN = /^[[\]【】\s]+/u;
-
-function extractTitleFromFileName(fileName: string): string {
-  let title = fileName.replace(/\.[^.]+$/, '');
-  const bracketMatch = title.match(BRACKET_PATTERN);
-  if (bracketMatch) {
-    title = bracketMatch[1].trim();
-  } else {
-    title = title.replace(LEADING_CHARS_PATTERN, '').trim();
-  }
-  return title || fileName;
-}
 
 export interface ParsedArchive {
   title: string;

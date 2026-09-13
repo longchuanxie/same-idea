@@ -10,22 +10,28 @@ import type { KnowledgeArtifact } from '@/types';
 
 const KIND_LABELS: Record<KnowledgeArtifact['type'], string> = {
   'character-graph': '人物图谱',
+  'concept-graph': '概念图谱',
   mindmap: '思维导图',
   glossary: '术语卡',
+  'paper-brief': '速览卡',
 };
 
 function artifactMeta(artifact: KnowledgeArtifact): string {
-  const parts: string[] = [];
-  if (artifact.type === 'character-graph') {
-    const graph = artifact.data as { nodes?: unknown[]; edges?: unknown[] };
-    parts.push(`${graph.nodes?.length ?? 0} 人物 · ${graph.edges?.length ?? 0} 关系`);
+  const parts: string[] = []
+  if (artifact.type === 'character-graph' || artifact.type === 'concept-graph') {
+    const graph = artifact.data as { nodes?: unknown[]; edges?: unknown[] }
+    const entity = artifact.type === 'concept-graph' ? '概念' : '人物'
+    parts.push(`${graph.nodes?.length ?? 0} ${entity} · ${graph.edges?.length ?? 0} 关系`)
   } else if (artifact.type === 'glossary') {
-    const glossary = artifact.data as { terms?: unknown[] };
-    parts.push(`${glossary.terms?.length ?? 0} 术语`);
+    const glossary = artifact.data as { terms?: unknown[] }
+    parts.push(`${glossary.terms?.length ?? 0} 术语`)
+  } else if (artifact.type === 'paper-brief') {
+    const brief = artifact.data as { contributions?: unknown[]; limitations?: unknown[] }
+    parts.push(`${brief.contributions?.length ?? 0} 贡献 · ${brief.limitations?.length ?? 0} 局限`)
   }
-  if (artifact.meta?.chapterCount) parts.push(`覆盖 ${artifact.meta.chapterCount} 章`);
-  parts.push(new Date(artifact.updatedAt).toLocaleDateString('zh-CN'));
-  return parts.join(' · ');
+  if (artifact.meta?.chapterCount) parts.push(`覆盖 ${artifact.meta.chapterCount} 章`)
+  parts.push(new Date(artifact.updatedAt).toLocaleDateString('zh-CN'))
+  return parts.join(' · ')
 }
 
 /** 全局知识库（主菜单直达）：跨书聚合全部 AI 知识产物——

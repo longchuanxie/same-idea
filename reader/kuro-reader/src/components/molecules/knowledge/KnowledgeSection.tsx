@@ -6,6 +6,8 @@ import { GenerationOptionsSheet } from '@/components/molecules/knowledge/Generat
 import { ROUTES, knowledgePath } from '@/constants/routes'
 import { isProviderConfigured } from '@/services/ai/aiClient'
 import { KNOWLEDGE_TASKS, getKnowledgeTasksForKind } from '@/services/ai/knowledgeTasks'
+import { getPdfPageTexts } from '@/services/pdfText'
+import { loadTextContent } from '@/services/textContent'
 import { useAppStore } from '@/stores/useAppStore'
 import { useKnowledgeStore } from '@/stores/useKnowledgeStore'
 import { useLibraryStore } from '@/stores/useLibraryStore'
@@ -153,7 +155,16 @@ const TaskCard: React.FC<TaskCardProps> = ({
           {artifact.meta.detail === 'core' ? ' · 核心版' : artifact.meta.detail === 'rich' ? ' · 详尽版' : ''}
         </p>
       )}
-      {artifact && !running && !artifact.meta?.scope && hasNewChaptersHint(book, artifact) && (
+      {/* 分析完整性对账：块被体量护栏截断时必须显性告警，不能静默丢章节 */}
+      {artifact && !running &&
+        artifact.meta?.totalChunkCount != null &&
+        artifact.meta.totalChunkCount > (artifact.meta.analyzedChunkCount ?? 0) && (
+          <p className="font-label text-label-xs text-seal mt-1">
+            ⚠ 体量护栏：仅分析 {artifact.meta.analyzedChunkCount}/{artifact.meta.totalChunkCount} 块——
+            可用 tune 按起止章分批生成完整分析
+          </p>
+        )}
+      {artifact && !running && !artifact.meta?.scope && hasNewChaptersHint(totalChapters, artifact) && (
         <p className="font-label text-label-xs text-seal mt-1">
           书有更新——点 tune 图标可只补新章节
         </p>
@@ -205,11 +216,10 @@ const TaskCard: React.FC<TaskCardProps> = ({
   )
 }
 
-/** 书在产物生成之后又长出了新章节（连载场景：增量补充的时机提示） */
-function hasNewChaptersHint(book: Book, artifact: KnowledgeArtifact): boolean {
-  const total = book.chapters?.length
+/** 书在产物生成之后又长出了新章节（连载场景：增量补充的时机提示；章数来自正文实况） */
+function hasNewChaptersHint(totalChapters: number | null, artifact: KnowledgeArtifact): boolean {
   const base = artifact.meta?.bookChapterCount ?? artifact.meta?.chapterCount
-  return total != null && base != null && total > base
+  return totalChapters != null && base != null && totalChapters > base
 }
 
 export const KnowledgeSection: React.FC<{ book: Book }> = ({ book }) => {
@@ -219,10 +229,29 @@ export const KnowledgeSection: React.FC<{ book: Book }> = ({ book }) => {
   const [effectiveKind, setEffectiveKind] = useState<ContentKind>(
     preference === 'auto' ? 'fiction' : preference
   )
+  // 真实章数：book.chapters 对文本书不可靠（可能是整书单章），
+  // 完整性提示（增量时机/起止章上限）必须基于正文实际章数
+  const [totalChapters, setTotalChapters] = useState<number | null>(null)
 
   useEffect(() => {
     void loadArtifacts(book.id)
   }, [book.id, loadArtifacts])
+
+  useEffect(() => {
+    let cancelled = false
+    if (book.format === 'text') {
+      void loadTextContent(book.id).then((result) => {
+        if (!cancelled) setTotalChapters(result.chapters.length)
+      })
+    } else if (book.format === 'pdf') {
+      void getPdfPageTexts(book.id).then((pages) => {
+        if (!cancelled) setTotalChapters(pages.length)
+      })
+    }
+    return () => {
+      cancelled = true
+    }
+  }, [book])
 
   // 自动模式：后台读正文采样检测内容类型（显式指定则直接采用）
   useEffect(() => {
@@ -301,7 +330,7 @@ export const KnowledgeSection: React.FC<{ book: Book }> = ({ book }) => {
                 done={state?.done ?? 0}
                 total={state?.total ?? 0}
                 error={state?.status === 'error' ? state.error : undefined}
-                totalChapters={book.chapters?.length ?? null}
+                totalChapters={totalChapters}
               />
             )
           })}

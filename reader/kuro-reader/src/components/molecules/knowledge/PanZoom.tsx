@@ -89,6 +89,8 @@ export const PanZoom: React.FC<PanZoomProps> = ({ children, ariaLabel, className
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0 && e.pointerType === 'mouse') return
+    // 交互子树（图谱节点等）自带手势：不启平移/捏合，避免两套指针逻辑互相打架
+    if ((e.target as Element | null)?.closest?.('[data-panzoom-interactive]')) return
     ;(e.target as Element).setPointerCapture?.(e.pointerId)
     pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
     if (pointersRef.current.size === 1) {
