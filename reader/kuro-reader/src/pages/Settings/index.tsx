@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState, useRef } from 'react';
 
 import { Collapsible } from '@/components/atoms/Collapsible';
 import { DropdownSelect } from '@/components/atoms/DropdownSelect';
+import { PasteButton } from '@/components/atoms/PasteButton';
 import { ToggleSwitch } from '@/components/atoms/ToggleSwitch';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
 import { GestureLock } from '@/components/organisms/GestureLock';
@@ -1056,26 +1057,34 @@ export const SettingsPage: React.FC = () => {
                 <p className="font-body text-body-sm text-on-surface-faint">
                   {findKnowledgeAiProvider(aiProviderId)?.hint}
                 </p>
-                <input
-                  className="input-field"
-                  placeholder={
-                    isNativePlatform()
-                      ? '服务地址，如 https://api.example.com'
-                      : '服务地址，如 https://api.example.com 或 http://127.0.0.1:11434/v1'
-                  }
-                  aria-label="AI 服务地址"
-                  value={settings.knowledgeAiUrl}
-                  disabled={aiProviderId !== CUSTOM_PROVIDER_ID}
-                  onChange={(e) => updateSettings({ knowledgeAiUrl: e.target.value })}
-                />
-                <input
-                  className="input-field"
-                  placeholder={aiNeedsKey ? 'API Key（输入后自动测试连接）' : 'API Key（本机服务可留空）'}
-                  aria-label="AI 服务 API Key"
-                  type="password"
-                  value={settings.knowledgeAiKey}
-                  onChange={(e) => updateSettings({ knowledgeAiKey: e.target.value })}
-                />
+                <div className="relative">
+                  <input
+                    className="input-field pr-11"
+                    placeholder={
+                      isNativePlatform()
+                        ? '服务地址，如 https://api.example.com'
+                        : '服务地址，如 https://api.example.com 或 http://127.0.0.1:11434/v1'
+                    }
+                    aria-label="AI 服务地址"
+                    value={settings.knowledgeAiUrl}
+                    disabled={aiProviderId !== CUSTOM_PROVIDER_ID}
+                    onChange={(e) => updateSettings({ knowledgeAiUrl: e.target.value })}
+                  />
+                  {aiProviderId === CUSTOM_PROVIDER_ID && (
+                    <PasteButton onPaste={(text) => updateSettings({ knowledgeAiUrl: text.trim() })} />
+                  )}
+                </div>
+                <div className="relative">
+                  <input
+                    className="input-field pr-11"
+                    placeholder={aiNeedsKey ? 'API Key（输入后自动测试连接）' : 'API Key（本机服务可留空）'}
+                    aria-label="AI 服务 API Key"
+                    type="password"
+                    value={settings.knowledgeAiKey}
+                    onChange={(e) => updateSettings({ knowledgeAiKey: e.target.value })}
+                  />
+                  <PasteButton onPaste={(text) => updateSettings({ knowledgeAiKey: text.trim() })} />
+                </div>
                 {aiModels.length > 0 ? (
                   <DropdownSelect
                     ariaLabel="AI 模型"
@@ -1156,26 +1165,35 @@ export const SettingsPage: React.FC = () => {
                 </div>
               </div>
               <div className="flex flex-col gap-3 mb-4">
-                <input
-                  className="input-field"
-                  placeholder="WebDAV 地址，如 http://nas:5005/dav"
-                  value={syncServer}
-                  onChange={(e) => { setSyncServer(e.target.value); persistSyncConfig(e.target.value, syncUsername, syncPassword); }}
-                />
+                <div className="relative">
+                  <input
+                    className="input-field pr-11"
+                    placeholder="WebDAV 地址，如 http://nas:5005/dav"
+                    value={syncServer}
+                    onChange={(e) => { setSyncServer(e.target.value); persistSyncConfig(e.target.value, syncUsername, syncPassword); }}
+                  />
+                  <PasteButton onPaste={(text) => { const v = text.trim(); setSyncServer(v); persistSyncConfig(v, syncUsername, syncPassword); }} />
+                </div>
                 <div className="flex gap-3">
-                  <input
-                    className="input-field flex-1"
-                    placeholder="用户名"
-                    value={syncUsername}
-                    onChange={(e) => { setSyncUsername(e.target.value); persistSyncConfig(syncServer, e.target.value, syncPassword); }}
-                  />
-                  <input
-                    className="input-field flex-1"
-                    placeholder="密码"
-                    type="password"
-                    value={syncPassword}
-                    onChange={(e) => { setSyncPassword(e.target.value); persistSyncConfig(syncServer, syncUsername, e.target.value); }}
-                  />
+                  <div className="relative flex-1 min-w-0">
+                    <input
+                      className="input-field pr-11"
+                      placeholder="用户名"
+                      value={syncUsername}
+                      onChange={(e) => { setSyncUsername(e.target.value); persistSyncConfig(syncServer, e.target.value, syncPassword); }}
+                    />
+                    <PasteButton onPaste={(text) => { const v = text.trim(); setSyncUsername(v); persistSyncConfig(syncServer, v, syncPassword); }} />
+                  </div>
+                  <div className="relative flex-1 min-w-0">
+                    <input
+                      className="input-field pr-11"
+                      placeholder="密码"
+                      type="password"
+                      value={syncPassword}
+                      onChange={(e) => { setSyncPassword(e.target.value); persistSyncConfig(syncServer, syncUsername, e.target.value); }}
+                    />
+                    <PasteButton onPaste={(text) => { const v = text; setSyncPassword(v); persistSyncConfig(syncServer, syncUsername, v); }} />
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-3">

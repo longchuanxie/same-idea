@@ -1,6 +1,8 @@
 package com.kuro.reader;
 
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.ActionMode;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -11,6 +13,9 @@ import androidx.core.view.WindowInsetsControllerCompat;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
+    /** Chromium 浮动选择工具栏在 onActionModeStarted 之后才异步填充菜单项，延后再过滤一次 */
+    private static final long MENU_POPULATE_DELAY_MS = 100;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         registerPlugin(FilePickerPlugin.class);
@@ -29,17 +34,22 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onActionModeStarted(ActionMode mode) {
         Menu menu = mode.getMenu();
-        // Remove all non-essential items (Google Lens, Search, Share, etc.)
+        stripToTextActions(menu);
+        new Handler(Looper.getMainLooper()).postDelayed(() -> stripToTextActions(menu), MENU_POPULATE_DELAY_MS);
+        super.onActionModeStarted(mode);
+    }
+
+    private static void stripToTextActions(Menu menu) {
         for (int i = menu.size() - 1; i >= 0; i--) {
             MenuItem item = menu.getItem(i);
             int id = item.getItemId();
             if (id != android.R.id.copy &&
                 id != android.R.id.selectAll &&
                 id != android.R.id.paste &&
+                id != android.R.id.pasteAsPlainText &&
                 id != android.R.id.cut) {
                 menu.removeItem(id);
             }
         }
-        super.onActionModeStarted(mode);
     }
 }

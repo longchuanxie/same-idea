@@ -43,3 +43,28 @@ export async function copyTextToClipboard(text: string): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * 统一读取剪贴板出口，返回文本（可能为空串）。
+ *
+ * 设置页凭据输入框的「粘贴」按钮走这里：Android 各家 WebView/ROM 的长按
+ * 选择菜单表现参差（浮动工具栏自绘、菜单项常不可控），应用级按钮不依赖它。
+ * 原生端走 Clipboard 插件（前台用户手势内读取不受 Android 10 后台限制）；
+ * Web 端 navigator.clipboard.readText 需要授权，失败按空串兜底。
+ */
+export async function readTextFromClipboard(): Promise<string> {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const { value } = await Clipboard.read();
+      if (value) return value;
+    } catch {
+      // 原生失败时继续尝试 Web 通道
+    }
+  }
+
+  try {
+    return (await navigator.clipboard?.readText()) ?? '';
+  } catch {
+    return '';
+  }
+}

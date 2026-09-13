@@ -12,6 +12,8 @@ export const COPY = {
     noAnnotations: '这本书还没有手记。读的时候，长按一句话就能把它贴上墙',
     /** 馆务 */
     storageComingSoon: '馆容量的整理还在筹备中',
+    /** 粘贴按钮：剪贴板无文本可落 */
+    clipboardEmpty: '剪贴板是空的，先复制一段内容再来粘贴',
   },
   dialog: {
     /** 恢复备份确认（破坏性：覆盖） */
