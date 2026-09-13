@@ -175,15 +175,29 @@ export const SettingsPage: React.FC = () => {
   const aiProviderId = aiProvider?.id ?? CUSTOM_PROVIDER_ID;
   const aiNeedsKey = aiProvider?.needsKey ?? true;
 
-  /** 选服务商：预设一键带入地址；切到自定义时清空地址供手填（已是自定义则保留原输入） */
+  /** 选服务商：预设一键带入地址与默认模型；切到自定义时清空地址供手填（已是自定义则保留原输入） */
   const handleSelectProvider = (id: string) => {
+    if (id === aiProviderId) return;
     if (id !== CUSTOM_PROVIDER_ID) {
       const preset = findKnowledgeAiProvider(id);
-      if (preset) updateSettings({ knowledgeAiUrl: preset.baseUrl });
+      if (preset) {
+        updateSettings({ knowledgeAiUrl: preset.baseUrl, knowledgeAiModel: preset.models[0] ?? '' });
+        setAiModels([]); // 上一家的实拉模型列表不再适用
+      }
     } else if (aiProviderId !== CUSTOM_PROVIDER_ID) {
       updateSettings({ knowledgeAiUrl: '' });
+      setAiModels([]);
     }
   };
+
+  // 模型列表以服务商实拉结果为准：拉取成功前用预设官方模型保底（配置阶段就有得选），
+  // 拉取成功后只认实拉列表；已配置但不在列表里的值保留为一项，不静默丢失
+  const aiModelSource = aiModels.length > 0 ? aiModels : (aiProvider?.models ?? []);
+  const currentAiModel = settings.knowledgeAiModel.trim();
+  const aiModelOptions =
+    currentAiModel && !aiModelSource.includes(currentAiModel)
+      ? [...aiModelSource, currentAiModel]
+      : [...aiModelSource];
 
   // 纸张类型预览（与 TextReader 渲染同源）：底色恒纸型色，文字用纸型墨色或缺省暖墨
   const paperConfig = getPaperConfig(settings.paperType);
@@ -1085,18 +1099,23 @@ export const SettingsPage: React.FC = () => {
                   />
                   <PasteButton onPaste={(text) => updateSettings({ knowledgeAiKey: text.trim() })} />
                 </div>
-                {aiModels.length > 0 ? (
+                <label className="font-label text-label-sm text-on-surface-variant" htmlFor="knowledge-ai-model">
+                  模型
+                </label>
+                {aiModelOptions.length > 0 ? (
                   <DropdownSelect
+                    id="knowledge-ai-model"
                     ariaLabel="AI 模型"
                     value={settings.knowledgeAiModel}
                     onChange={(model) => updateSettings({ knowledgeAiModel: model })}
-                    options={[
-                      // 现配置的模型不在服务商列表中时保留为额外选项（自定义模型名不丢失）
-                      ...(!aiModels.includes(settings.knowledgeAiModel) && settings.knowledgeAiModel.trim()
-                        ? [{ value: settings.knowledgeAiModel, label: `${settings.knowledgeAiModel}（当前配置）` }]
-                        : []),
-                      ...aiModels.map((model) => ({ value: model, label: model })),
-                    ]}
+                    options={aiModelOptions.map((model) => ({
+                      value: model,
+                      // 已配置但不在权威列表（实拉或预设）里的值保留为一项，避免受控下拉静默改值
+                      label:
+                        model === settings.knowledgeAiModel.trim() && !aiModelSource.includes(model)
+                          ? `${model}（当前配置）`
+                          : model,
+                    }))}
                   />
                 ) : (
                   <input

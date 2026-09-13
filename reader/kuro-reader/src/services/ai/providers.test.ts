@@ -26,6 +26,14 @@ describe('KNOWLEDGE_AI_PROVIDERS', () => {
       expect(provider.baseUrl.endsWith('/')).toBe(false)
     }
   })
+
+  it('模型预设：头部服务商带官方模型作配置期保底；聚合/本机/自定义不预置（以实拉为准）', () => {
+    expect(findKnowledgeAiProvider('deepseek')?.models).toContain('deepseek-chat')
+    expect(findKnowledgeAiProvider('glm')?.models.every((m) => m.startsWith('glm-'))).toBe(true)
+    for (const id of ['siliconflow', 'ollama', CUSTOM_PROVIDER_ID]) {
+      expect(findKnowledgeAiProvider(id)?.models).toEqual([])
+    }
+  })
 })
 
 describe('findKnowledgeAiProvider', () => {

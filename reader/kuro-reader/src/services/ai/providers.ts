@@ -17,6 +17,12 @@ export interface KnowledgeAiProvider {
   needsKey: boolean
   /** 选择器里的副标说明 */
   hint: string
+  /**
+   * 配置期保底的官方模型（设置页「拉取模型」前就有得选）。
+   * 只收长期稳定的官方模型名；聚合平台（硅基流动）与本机 Ollama
+   * 模型面因人而异，不预置，靠实拉列表。实拉列表始终优先展示。
+   */
+  models: string[]
 }
 
 export const CUSTOM_PROVIDER_ID = 'custom'
@@ -28,6 +34,7 @@ const ALL_PRESETS: KnowledgeAiProvider[] = [
     baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
     needsKey: true,
     hint: 'glm-4 系列',
+    models: ['glm-4-flash', 'glm-4-air', 'glm-4-plus', 'glm-4.5', 'glm-4.6'],
   },
   {
     id: 'deepseek',
@@ -35,6 +42,7 @@ const ALL_PRESETS: KnowledgeAiProvider[] = [
     baseUrl: 'https://api.deepseek.com',
     needsKey: true,
     hint: 'deepseek-chat 系列',
+    models: ['deepseek-chat', 'deepseek-reasoner'],
   },
   {
     id: 'openai',
@@ -42,6 +50,7 @@ const ALL_PRESETS: KnowledgeAiProvider[] = [
     baseUrl: 'https://api.openai.com',
     needsKey: true,
     hint: 'gpt 系列',
+    models: ['gpt-4o-mini', 'gpt-4o', 'gpt-4.1'],
   },
   {
     id: 'siliconflow',
@@ -49,6 +58,7 @@ const ALL_PRESETS: KnowledgeAiProvider[] = [
     baseUrl: 'https://api.siliconflow.cn',
     needsKey: true,
     hint: '多模型聚合',
+    models: [],
   },
   {
     id: 'ollama',
@@ -56,6 +66,7 @@ const ALL_PRESETS: KnowledgeAiProvider[] = [
     baseUrl: 'http://127.0.0.1:11434/v1',
     needsKey: false,
     hint: '本机运行，无需密钥',
+    models: [],
   },
   {
     id: CUSTOM_PROVIDER_ID,
@@ -63,6 +74,7 @@ const ALL_PRESETS: KnowledgeAiProvider[] = [
     baseUrl: '',
     needsKey: true,
     hint: '任意 OpenAI 兼容服务',
+    models: [],
   },
 ]
 
