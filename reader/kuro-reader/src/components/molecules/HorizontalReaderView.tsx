@@ -28,7 +28,8 @@ interface HorizontalReaderViewProps {
 }
 
 const HORIZONTAL_VIEW_CLASSES = 'w-full h-full flex items-center justify-center overflow-hidden touch-none px-1 sm:px-2';
-const DOUBLE_SPREAD_CLASSES = 'flex items-center justify-center h-full w-full gap-1';
+// 双页无 gap：两页在中缝贴合（书本式拼合），收纳留白由槽位对齐让到外侧
+const DOUBLE_SPREAD_CLASSES = 'flex items-center justify-center h-full w-full';
 const DOUBLE_PAGE_SLOT_CLASSES = 'h-full min-w-0 flex-1 flex items-center justify-center';
 const DOUBLE_IMAGE_CLASSES = 'max-w-full max-h-full object-contain cursor-pointer';
 const SINGLE_IMAGE_CLASSES = 'max-w-full max-h-full object-contain cursor-pointer';
@@ -217,14 +218,20 @@ export const HorizontalReaderView: FC<HorizontalReaderViewProps> = ({
     >
       {pageLayout === 'double' && horizontalPageSpread.length > 1 ? (
         <div ref={contentRef} style={zoomedStyle} className={cn(DOUBLE_SPREAD_CLASSES, turnAnimClass)}>
-          {horizontalPageSpread.map((pageNumber) => {
+          {horizontalPageSpread.map((pageNumber, slotIndex) => {
             const url = pageUrls[pageNumber - 1];
             return (
               <div key={`${readingDirection}-${pageNumber}`} className={DOUBLE_PAGE_SLOT_CLASSES}>
                 {url ? (
                   // h-full w-full 定高定宽：否则 max-h-full 百分比链在自动高度父级上失效，
-                  // 横屏双页时图片按原始尺寸撑出视口、上下被裁（与单页分支同一根因）
-                  <div className="relative flex h-full w-full items-center justify-center">
+                  // 横屏双页时图片按原始尺寸撑出视口、上下被裁（与单页分支同一根因）。
+                  // 中缝对齐：左槽贴右、右槽贴左——书本式拼合，收纳留白全让到外侧
+                  <div
+                    className={cn(
+                      'relative flex h-full w-full items-center',
+                      slotIndex === 0 ? 'justify-end' : 'justify-start'
+                    )}
+                  >
                     <img
                       src={url}
                       alt={`Page ${pageNumber}`}
