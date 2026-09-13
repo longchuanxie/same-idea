@@ -222,7 +222,9 @@ export const HorizontalReaderView: FC<HorizontalReaderViewProps> = ({
             return (
               <div key={`${readingDirection}-${pageNumber}`} className={DOUBLE_PAGE_SLOT_CLASSES}>
                 {url ? (
-                  <div className="relative">
+                  // h-full w-full 定高定宽：否则 max-h-full 百分比链在自动高度父级上失效，
+                  // 横屏双页时图片按原始尺寸撑出视口、上下被裁（与单页分支同一根因）
+                  <div className="relative flex h-full w-full items-center justify-center">
                     <img
                       src={url}
                       alt={`Page ${pageNumber}`}
