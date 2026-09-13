@@ -1,6 +1,6 @@
 import React, { useEffect, useCallback, useRef, useState, useMemo } from 'react';
 
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 
 import { AnnotationDetailModal } from '@/components/molecules/AnnotationDetailModal';
 import { AnnotationList } from '@/components/molecules/AnnotationList';
@@ -22,7 +22,7 @@ import { TranslatePopup, type TranslateState } from '@/components/molecules/Tran
 import { UndoToast } from '@/components/molecules/UndoToast';
 import { VocabLookupPopup, type VocabLookupState } from '@/components/molecules/VocabLookupPopup';
 import { COPY } from '@/constants/copy';
-import { ANNOTATION_QUERY_PARAM, READER_GOTO_QUERY_PARAM, parseGotoParam } from '@/constants/routes';
+import { ANNOTATION_QUERY_PARAM, READER_GOTO_QUERY_PARAM, ROUTES, bookDetailPath, parseGotoParam } from '@/constants/routes';
 import { getTextReaderFontFamily } from '@/constants/textReaderFonts';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { useBackHandler } from '@/hooks/useBackHandler';
@@ -36,6 +36,7 @@ import {
   FLIP_SPINE_OPACITY,
 } from '@/hooks/useBookFlipAnimation';
 import { useEstimatedTimeLeft } from '@/hooks/useEstimatedTimeLeft';
+import { useHistoryBack } from '@/hooks/useHistoryBack';
 import { useLandscapeViewport } from '@/hooks/useLandscapeViewport';
 import { useReadingStats } from '@/hooks/useReadingStats';
 import { useSeamlessScrollTracking } from '@/hooks/useSeamlessScrollTracking';
@@ -155,7 +156,7 @@ const getCurrentTextPageLayout = (isColumnsLayoutActive: boolean) => getTextPage
 });
 
 export const TextReaderPage: React.FC = () => {
-  const navigate = useNavigate();
+  const historyBack = useHistoryBack();
   const { bookId, chapterId } = useParams<{ bookId: string; chapterId?: string }>();
   const [searchParams] = useSearchParams();
   /** 外部批注直达目标（?ann=<id>）；一次导航只消费一次 */
@@ -745,8 +746,9 @@ export const TextReaderPage: React.FC = () => {
   });
 
   const handleClose = useCallback(() => {
-    navigate(-1);
-  }, [navigate]);
+    // 统一返回：能退则退回來路；深链直进栈底时落回档案卡（返回动作不压栈）
+    historyBack(bookId ? bookDetailPath(bookId) : ROUTES.HOME);
+  }, [historyBack, bookId]);
 
   // 章节切换（显式导航：目录/书签/检索/上下章按钮，保留硬切语义）
   const goToChapter = useCallback((index: number) => {
@@ -1377,7 +1379,7 @@ export const TextReaderPage: React.FC = () => {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [navigate, textReadingMode, goToNextPage, goToPrevPage]);
+  }, [textReadingMode, goToNextPage, goToPrevPage]);
 
   // 点击区域处理（分页模式）
   const handlePaginateClick = useCallback((e: React.MouseEvent) => {

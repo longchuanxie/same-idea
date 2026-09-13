@@ -12,6 +12,7 @@ import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
 import { KnowledgeSection } from '@/components/molecules/knowledge/KnowledgeSection';
 import { COPY } from '@/constants/copy';
 import { ROUTES, readerPathForBook } from '@/constants/routes';
+import { useHistoryBack } from '@/hooks/useHistoryBack';
 import { annotationRepo } from '@/services/storage/annotationRepo';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import type { Annotation, Book } from '@/types';
@@ -37,6 +38,7 @@ const STATUS_OPTIONS: { value: BookStatus; label: string }[] = [
 
 export const BookDetailPage: React.FC = () => {
   const navigate = useNavigate();
+  const historyBack = useHistoryBack();
   const { id } = useParams<{ id: string }>();
   const {
     books, coverUrls, readingProgress, tags, loadBooks,
@@ -132,7 +134,7 @@ export const BookDetailPage: React.FC = () => {
           <p className="font-body text-body-md text-on-surface-variant">未找到该书籍</p>
           <button
             className="btn-secondary px-6 py-2"
-            onClick={() => navigate(ROUTES.LIBRARY)}
+            onClick={() => historyBack(ROUTES.LIBRARY)}
           >
             返回书架
           </button>
@@ -598,7 +600,7 @@ export const BookDetailPage: React.FC = () => {
         onConfirm={() => {
           setConfirmDelete(false);
           if (id) void removeBook(id);
-          navigate(ROUTES.LIBRARY);
+          historyBack(ROUTES.LIBRARY);
         }}
         onCancel={() => setConfirmDelete(false)}
       />

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { OpdsBrowser } from '@/components/molecules/OpdsBrowser';
 import { ROUTES, bookDetailPath, readerPathForBook } from '@/constants/routes';
+import { useHistoryBack } from '@/hooks/useHistoryBack';
 import { createCloudClient, type CloudFile, type CloudStorageClient } from '@/services/cloudStorage';
 import { fetchOpdsFeed } from '@/services/opds';
 import { useLibraryStore } from '@/stores/useLibraryStore';
@@ -54,6 +55,7 @@ const getFileIcon = (name: string): string => {
 
 export const CustomCloudPage: React.FC = () => {
   const navigate = useNavigate();
+  const historyBack = useHistoryBack();
   const { importFile } = useLibraryStore();
 
   const [protocol, setProtocol] = useState<ProtocolOption['id']>('webdav');
@@ -557,7 +559,7 @@ export const CustomCloudPage: React.FC = () => {
         <div className="flex items-center gap-4">
           <button
             className="text-primary hover:opacity-80 transition-opacity p-2 -ml-2"
-            onClick={() => (client || isOpdsConnected ? handleDisconnect() : navigate(ROUTES.IMPORT))}
+            onClick={() => (client || isOpdsConnected ? handleDisconnect() : historyBack(ROUTES.IMPORT))}
             aria-label={client || isOpdsConnected ? '返回连接页' : '返回'}
           >
             <span className="material-symbols-outlined">arrow_back</span>

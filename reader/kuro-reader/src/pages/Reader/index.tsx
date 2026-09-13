@@ -1,6 +1,6 @@
 import React, { useEffect, useCallback, useRef, useState, useMemo } from 'react';
 
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 
 import { AnnotationDetailModal, type AnnotationEditPatch } from '@/components/molecules/AnnotationDetailModal';
 import { AnnotationList } from '@/components/molecules/AnnotationList';
@@ -14,8 +14,9 @@ import { PdfTextLayerOverlay, type PdfTextSelection } from '@/components/molecul
 import { ReaderBottomBar } from '@/components/molecules/ReaderBottomBar';
 import { ReaderProgressTrack } from '@/components/molecules/ReaderProgressTrack';
 import { COPY } from '@/constants/copy';
-import { READER_PAGE_QUERY_PARAM } from '@/constants/routes';
+import { ROUTES, READER_PAGE_QUERY_PARAM, bookDetailPath } from '@/constants/routes';
 import { useBackHandler } from '@/hooks/useBackHandler';
+import { useHistoryBack } from '@/hooks/useHistoryBack';
 import { useReadingStats } from '@/hooks/useReadingStats';
 import { useSmoothScroll } from '@/hooks/useSmoothScroll';
 import { useVerticalVirtualWindow, type ReaderProgressSnapshot } from '@/hooks/useVerticalVirtualWindow';
@@ -90,8 +91,13 @@ const getReadingPercentage = (
 };
 
 export const ReaderPage: React.FC = () => {
-  const navigate = useNavigate();
+  const historyBack = useHistoryBack();
   const { bookId, chapterId } = useParams<{ bookId: string; chapterId?: string }>();
+  /** 统一返回：能退则退回來路；深链直进栈底时落回档案卡（返回动作不压栈） */
+  const handleClose = useCallback(
+    () => historyBack(bookId ? bookDetailPath(bookId) : ROUTES.HOME),
+    [historyBack, bookId]
+  );
   const [searchParams] = useSearchParams();
   /** 页码直达（?page=，1 起；页级手记跳转）：挂载消费一次，不随重渲染触发重开书 */
   const initialPageRef = useRef<number | undefined>((() => {
@@ -1122,7 +1128,7 @@ export const ReaderPage: React.FC = () => {
           <p className="font-body text-body-md text-on-surface-variant">无法加载页面</p>
           <button
             className="btn-secondary px-6 py-2"
-            onClick={() => navigate(-1)}
+            onClick={handleClose}
           >
             返回
           </button>
@@ -1353,7 +1359,7 @@ export const ReaderPage: React.FC = () => {
             <div className="max-w-max-width-content mx-auto flex justify-between items-center">
               <button
                 className="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center w-11 h-11 rounded-full hover:bg-surface-variant/50"
-                onClick={() => navigate(-1)}
+                onClick={handleClose}
                 data-ui-control
               >
                 <span className="material-symbols-outlined text-headline-md">arrow_back</span>

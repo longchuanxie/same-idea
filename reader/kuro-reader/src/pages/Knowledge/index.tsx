@@ -13,6 +13,7 @@ import { PaperBriefView } from '@/components/molecules/knowledge/PaperBriefView'
 import { EntryReviseActions, VerifiedBadge } from '@/components/molecules/knowledge/ReviseControls'
 import { COPY } from '@/constants/copy'
 import { ROUTES, bookDetailPath, knowledgeSourcePath } from '@/constants/routes'
+import { useHistoryBack } from '@/hooks/useHistoryBack'
 import { isProviderConfigured } from '@/services/ai/aiClient'
 import { getKnowledgeTask } from '@/services/ai/knowledgeTasks'
 import { useAppStore } from '@/stores/useAppStore'
@@ -106,6 +107,7 @@ function editDialogInfo(
 
 export const KnowledgePage: React.FC = () => {
   const navigate = useNavigate()
+  const historyBack = useHistoryBack()
   const { bookId, artifactId } = useParams<{ bookId: string; artifactId: string }>()
   const { books, loadBooks } = useLibraryStore()
   const { settings } = useAppStore()
@@ -194,7 +196,7 @@ export const KnowledgePage: React.FC = () => {
         <div className="flex flex-col items-center gap-4">
           <span className="material-symbols-outlined text-on-surface-variant text-6xl">search_off</span>
           <p className="font-body text-body-md text-on-surface-variant">这个知识件不存在，或已随书本移出馆藏</p>
-          <Button variant="secondary" onClick={() => navigate(bookId && book ? bookDetailPath(book.id) : ROUTES.LIBRARY)}>
+          <Button variant="secondary" onClick={() => historyBack(bookId && book ? bookDetailPath(book.id) : ROUTES.LIBRARY)}>
             返回
           </Button>
         </div>
@@ -392,7 +394,7 @@ export const KnowledgePage: React.FC = () => {
       <div className="fixed inset-0 noise-overlay z-0" />
       <TopAppBar
         variant="detail"
-        onBack={() => navigate(bookDetailPath(book.id))}
+        onBack={() => historyBack(bookDetailPath(book.id))}
         onMore={() => setShowMoreMenu((v) => !v)}
       />
       {showMoreMenu && (
@@ -802,7 +804,7 @@ export const KnowledgePage: React.FC = () => {
         variant="danger"
         onConfirm={() => {
           setConfirmDelete(false)
-          void removeArtifact(book.id, artifact.id).then(() => navigate(bookDetailPath(book.id)))
+          void removeArtifact(book.id, artifact.id).then(() => historyBack(bookDetailPath(book.id)))
         }}
         onCancel={() => setConfirmDelete(false)}
       />
