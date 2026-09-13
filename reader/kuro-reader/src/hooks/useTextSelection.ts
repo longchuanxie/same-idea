@@ -9,6 +9,16 @@ export interface TextSelectionInfo {
 }
 
 const MIN_SELECTION_TEXT_LENGTH = 2;
+
+/** CJK 字符判定（汉字/假名/谚文/CJK 标点） */
+const CJK_CHAR_RE = /[\u4e00-\u9fff\u3400-\u4dbf\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/;
+
+/** 选区最短有效性：西文至少 2 字符；含 CJK 时单字即放行——
+ * 中文长按天然只选中一个字，而原生菜单已被屏蔽，浮动动作条是唯一出口，
+ * 若按西文 2 字符门槛拦下单字，表现为"复制/划线整个不可用" */
+function isSelectionLongEnough(text: string): boolean {
+  return text.length >= MIN_SELECTION_TEXT_LENGTH || (text.length === 1 && CJK_CHAR_RE.test(text));
+}
 const LONG_PRESS_DURATION = 500;
 const LONG_PRESS_THRESHOLD = 15;
 const SELECTION_CHANGE_DEBOUNCE_MS = 100;
@@ -65,7 +75,7 @@ export function useTextSelection({
           return;
         }
         const text = sel.toString().trim();
-        if (text.length < MIN_SELECTION_TEXT_LENGTH) {
+        if (!isSelectionLongEnough(text)) {
           isSelectingTextRef.current = false;
           return;
         }
@@ -127,7 +137,7 @@ export function useTextSelection({
       const sel = window.getSelection();
       if (!sel || sel.isCollapsed || !sel.toString().trim()) return;
       const text = sel.toString().trim();
-      if (text.length < MIN_SELECTION_TEXT_LENGTH) return;
+      if (!isSelectionLongEnough(text)) return;
       if (!isSelectionInArticle()) return;
 
       isSelectingTextRef.current = true;
@@ -165,7 +175,7 @@ export function useTextSelection({
 
     // 在文本节点中选中从 pos 开始的词/字
     const selectFromPos = (node: Text, text: string, pos: number): boolean => {
-      const isCJK = (ch: string) => /[\u4e00-\u9fff\u3400-\u4dbf\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/.test(ch);
+      const isCJK = (ch: string) => CJK_CHAR_RE.test(ch);
       const isWordChar = (ch: string) => !/\s/.test(ch);
       let start = pos, end = pos + 1;
       if (isCJK(text[start])) {
@@ -239,7 +249,7 @@ export function useTextSelection({
       // 如果已有文本选区，用户很可能在拖拽原生选区手柄进行扩选，
       // 不干扰浏览器原生行为，让 selectionchange 统一处理
       const existingSel = window.getSelection();
-      if (existingSel && !existingSel.isCollapsed && existingSel.toString().trim().length >= MIN_SELECTION_TEXT_LENGTH) {
+      if (existingSel && !existingSel.isCollapsed && isSelectionLongEnough(existingSel.toString().trim())) {
         isSelectingTextRef.current = true;
         clearLongPress();
         return;
@@ -292,7 +302,7 @@ export function useTextSelection({
 
         // 1. 先检查是否已有选区（真机原生长按选词）
         const sel = window.getSelection();
-        if (sel && !sel.isCollapsed && sel.toString().trim().length >= MIN_SELECTION_TEXT_LENGTH) {
+        if (sel && !sel.isCollapsed && isSelectionLongEnough(sel.toString().trim())) {
           showFloatingButton();
           return;
         }
@@ -319,7 +329,7 @@ export function useTextSelection({
         // 批注编辑弹窗已打开时不干扰
         if (selectionPopupRef.current) return;
         const sel = window.getSelection();
-        const hasSelection = sel && !sel.isCollapsed && sel.toString().trim().length >= MIN_SELECTION_TEXT_LENGTH;
+        const hasSelection = sel && !sel.isCollapsed && isSelectionLongEnough(sel.toString().trim());
         if (hasSelection) {
           // 有效选区 → 等选区稳定后显示浮动批注按钮
           showFloatingButton();

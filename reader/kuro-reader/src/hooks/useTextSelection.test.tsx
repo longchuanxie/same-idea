@@ -142,6 +142,33 @@ describe('useTextSelection', () => {
     expect(result.current.isSelectingTextRef.current).toBe(false)
   })
 
+  it('mouseup：单字 CJK 选区放行（中文长按天然单字），单字西文仍拦下', async () => {
+    const { textNode } = setupArticle('这是一段可选择的正文文字')
+    const { result } = renderHookWithRefs()
+
+    const singleCJK = makeSelection(textNode, 5, 6) // 「选」
+    mockRect(singleCJK.getRangeAt(0))
+    vi.spyOn(window, 'getSelection').mockReturnValue(singleCJK)
+
+    fireDocEvent('mouseup')
+    await nextFrame()
+    expect(result.current.selectionInfo?.text).toBe('选')
+    expect(result.current.isSelectingTextRef.current).toBe(true)
+
+    // 单字西文（如拖选残留的单个字母）不点亮浮动按钮
+    act(() => {
+      result.current.setSelectionInfo(null)
+      result.current.isSelectingTextRef.current = false
+    })
+    const singleLatin = makeSelection(textNode, 0, 1) // 「这」→ 用西文语义模拟：替换 toString
+    singleLatin.toString = () => 'x'
+    vi.spyOn(window, 'getSelection').mockReturnValue(singleLatin)
+    fireDocEvent('mouseup')
+    await nextFrame()
+    expect(result.current.selectionInfo).toBeNull()
+    expect(result.current.isSelectingTextRef.current).toBe(false)
+  })
+
   it('selectionchange：选区收起后防抖清除浮动按钮；弹窗打开时不干扰', () => {
     vi.useFakeTimers()
     const { result } = renderHookWithRefs()
