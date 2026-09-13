@@ -575,7 +575,8 @@ export const HomePage: React.FC = () => {
                 <div className="w-full border border-outline-variant bg-surface-container aspect-[2/3] overflow-hidden mb-2 rounded-sm">
                   {renderCover(book, 'group-hover:scale-105 transition-transform duration-500 ease-out')}
                 </div>
-                <div className="flex items-center gap-1.5">
+                {/* min-w-0 w-full：无徽标时行仍可能被不换行书名的 min-content 撑破格子 */}
+                <div className="flex items-center gap-1.5 min-w-0 w-full">
                   <FormatBadge format={book.format} />
                   <span className="font-body text-body-sm text-primary truncate min-w-0">{book.title}</span>
                 </div>

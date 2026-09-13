@@ -121,9 +121,9 @@ export const SearchPage: React.FC = () => {
                   )}
                 </div>
                 <div className="flex flex-col flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 min-w-0">
                     <FormatBadge format={book.format} />
-                    <span className="font-body text-body-lg text-primary group-hover:underline decoration-1 underline-offset-4 truncate">
+                    <span className="min-w-0 font-body text-body-lg text-primary group-hover:underline decoration-1 underline-offset-4 truncate">
                       {book.title}
                     </span>
                   </div>
@@ -175,9 +175,9 @@ export const SearchPage: React.FC = () => {
                     </div>
                   )}
                 </div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 min-w-0 w-full">
                   <FormatBadge format={book.format} />
-                  <h4 className="font-body text-body-lg text-primary leading-tight truncate">{book.title}</h4>
+                  <h4 className="min-w-0 font-body text-body-lg text-primary leading-tight truncate">{book.title}</h4>
                 </div>
                 <p className="font-label text-label-md text-on-surface-variant mt-1">
                   {book.author || (book.status === 'completed' ? '已完结' : `${book.totalChapters} 话`)}
