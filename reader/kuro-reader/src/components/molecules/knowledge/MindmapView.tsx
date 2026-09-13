@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from 'react'
 
+import { MindmapOutlineEditor } from '@/components/molecules/knowledge/MindmapOutlineEditor'
 import { PanZoom } from '@/components/molecules/knowledge/PanZoom'
 import type { MindmapNodeData } from '@/types'
+import type { MindmapNodePath } from '@/utils/knowledgeEdit'
 import {
   CANVAS_PADDING,
   computeMindmapLayout,
@@ -59,9 +61,20 @@ function branchPath(parent: LaidOutNode, child: LaidOutNode): string {
 
 interface MindmapViewProps {
   data: MindmapNodeData
+  /** 修订模式：画布换大纲列表，逐节点改/删/校章 */
+  revising?: boolean
+  onEditNode?: (path: MindmapNodePath) => void
+  onRemoveNode?: (path: MindmapNodePath) => void
+  onToggleNodeVerified?: (path: MindmapNodePath) => void
 }
 
-export const MindmapView: React.FC<MindmapViewProps> = ({ data }) => {
+export const MindmapView: React.FC<MindmapViewProps> = ({
+  data,
+  revising = false,
+  onEditNode,
+  onRemoveNode,
+  onToggleNodeVerified,
+}) => {
   const [collapsedKeys, setCollapsedKeys] = useState<Set<string>>(new Set())
   // 布局前上提单片语料的「片段N」中转层，让真实主题成为一级分支
   const layout = useMemo(
@@ -69,6 +82,18 @@ export const MindmapView: React.FC<MindmapViewProps> = ({ data }) => {
     [data, collapsedKeys]
   )
   const nodeByKey = useMemo(() => new Map(layout.nodes.map((n) => [n.key, n])), [layout.nodes])
+
+  // 修订模式不画画布：大纲列表逐节点修订（改字/删枝在列表上才好点）
+  if (revising && onEditNode && onRemoveNode && onToggleNodeVerified) {
+    return (
+      <MindmapOutlineEditor
+        data={data}
+        onEditNode={onEditNode}
+        onRemoveNode={onRemoveNode}
+        onToggleNodeVerified={onToggleNodeVerified}
+      />
+    )
+  }
 
   const toggleNode = (key: string, hasChildren: boolean) => {
     if (!hasChildren) return

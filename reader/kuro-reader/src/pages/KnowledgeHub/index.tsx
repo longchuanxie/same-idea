@@ -2,11 +2,13 @@ import React, { useEffect, useMemo, useState } from 'react';
 
 import { useNavigate } from 'react-router-dom';
 
-import { ROUTES, knowledgePath } from '@/constants/routes';
+import { COPY } from '@/constants/copy';
+import { ROUTES, askPath, atlasPath, knowledgePath } from '@/constants/routes';
 import { getKnowledgeTask } from '@/services/ai/knowledgeTasks';
 import { knowledgeRepo } from '@/services/storage/knowledgeRepo';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import type { KnowledgeArtifact } from '@/types';
+import { booksHavingKind } from '@/utils/crossBookGraph';
 
 const KIND_LABELS: Record<KnowledgeArtifact['type'], string> = {
   'character-graph': '人物图谱',
@@ -81,9 +83,65 @@ export const KnowledgeHubPage: React.FC = () => {
 
   const total = artifacts?.length ?? 0;
 
+  // 跨书图谱入口：至少两本书有同类知识件才亮（否则是死路）
+  const atlasAvailable = useMemo(() => {
+    if (!artifacts) return false
+    const live = artifacts.filter((a) => bookById.has(a.bookId))
+    return (
+      booksHavingKind(live, 'character-graph').length >= 2 ||
+      booksHavingKind(live, 'concept-graph').length >= 2 ||
+      booksHavingKind(live, 'glossary').length >= 2
+    )
+  }, [artifacts, bookById])
+
   return (
     <div className="mx-auto max-w-3xl px-4 pt-3">
       {/* 页名由顶栏承载；不放页内标题与引导文案，保持列表直达 */}
+
+      {/* 知识库的两张活口：问藏书（活问活答）+ 跨书图谱（同名实体并网） */}
+      <div className={`mb-5 grid gap-2 ${atlasAvailable ? 'sm:grid-cols-2' : ''}`}>
+        <button
+          type="button"
+          className="flex w-full items-center gap-3 rounded-card border border-primary/40 bg-primary/5 p-3 text-left transition-colors hover:bg-primary/10"
+          onClick={() => navigate(askPath())}
+        >
+          <span
+            className="material-symbols-outlined text-[22px] text-primary"
+            style={{ fontVariationSettings: "'FILL' 1" }}
+          >
+            psychology_alt
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-label text-label-md text-primary">{COPY.askLibrary.pageName}</span>
+          <span className="mt-0.5 block font-label text-label-sm text-on-surface-variant truncate">
+            {COPY.askLibrary.pageHint}
+          </span>
+        </span>
+        <span className="material-symbols-outlined text-icon-md text-on-surface-variant">chevron_right</span>
+        </button>
+
+        {atlasAvailable && (
+          <button
+            type="button"
+            className="card-link flex w-full items-center gap-3 p-3"
+            onClick={() => navigate(atlasPath())}
+          >
+            <span
+              className="material-symbols-outlined text-[22px] text-primary"
+              style={{ fontVariationSettings: "'FILL' 1" }}
+            >
+              hub
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-label text-label-md text-primary">{COPY.atlas.pageName}</span>
+              <span className="mt-0.5 block font-label text-label-sm text-on-surface-variant truncate">
+                {COPY.atlas.pageHint}
+              </span>
+            </span>
+            <span className="material-symbols-outlined text-icon-md text-on-surface-variant">chevron_right</span>
+          </button>
+        )}
+      </div>
 
       {artifacts !== null && total === 0 && (
         <div className="rounded-card border border-outline-variant bg-surface-container-low p-8 text-center">
@@ -96,7 +154,7 @@ export const KnowledgeHubPage: React.FC = () => {
           </p>
           <button
             type="button"
-            className="mt-4 rounded-full bg-primary px-5 py-2 font-label text-label-md text-on-primary"
+            className="btn-seal mt-4 px-5 py-2"
             onClick={() => navigate(ROUTES.LIBRARY)}
           >
             去书库挑一本书
@@ -121,10 +179,10 @@ export const KnowledgeHubPage: React.FC = () => {
                 <button
                   key={artifact.id}
                   type="button"
-                  className="flex items-start gap-2.5 rounded-card border border-outline-variant bg-surface-container-low p-3 text-left transition-colors hover:bg-surface-container active:bg-surface-container"
+                  className="card-link flex items-start gap-2.5 p-3 active:bg-surface-container"
                   onClick={() => navigate(knowledgePath(bookId, artifact.id))}
                 >
-                  <span className="material-symbols-outlined text-[20px] text-primary mt-0.5">
+                  <span className="material-symbols-outlined text-icon-md text-primary mt-0.5">
                     {task.icon}
                   </span>
                   <span className="min-w-0 flex-1">

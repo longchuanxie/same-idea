@@ -12,7 +12,7 @@ export const UndoToast: React.FC<UndoToastProps> = ({ message, onUndo }) => (
     role="status"
     aria-live="polite"
   >
-    <div className="bg-on-surface/80 backdrop-blur-sm rounded-full pl-4 pr-2 py-2 flex items-center gap-2 shadow-lg">
+    <div className="bg-on-surface/80 backdrop-blur-sm rounded-full pl-4 pr-2 py-2 flex items-center gap-2 shadow-paper-up">
       <span className="font-label text-label-sm text-surface">{message}</span>
       {onUndo && (
         <button

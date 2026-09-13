@@ -4,11 +4,14 @@ import { Capacitor } from '@capacitor/core';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { APP_CONFIG } from '@/constants/config';
+import { COPY } from '@/constants/copy';
 import { ROUTES, bookDetailPath, customCloudPath, subLibraryPath } from '@/constants/routes';
 import { FilePicker } from '@/plugins/FilePickerPlugin';
 import { useLibraryStore } from '@/stores/useLibraryStore';
+import { sanitizeFileName } from '@/utils/annotationExport';
 import { isNativePlatform } from '@/utils/capacitor';
 import { extractArchiveChapterInfo } from '@/utils/comicChapterSplit';
+import { toast } from '@/utils/toast';
 
 const SUPPORTED_EXTENSIONS = APP_CONFIG.supportedFormats;
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.img'];
@@ -69,6 +72,41 @@ export const ImportPage: React.FC = () => {
     id: string;
     count?: number;
   } | null>(null);
+
+  // 剪报台：粘贴的文章（标题 + 正文）包装成 Markdown 文件走文本书管线
+  const [clipTitle, setClipTitle] = useState('');
+  const [clipContent, setClipContent] = useState('');
+  const [isClipping, setIsClipping] = useState(false);
+
+  const handleClipImport = async () => {
+    const title = clipTitle.trim();
+    const content = clipContent.trim();
+    if (!title || !content) {
+      toast(COPY.clip.emptyToast);
+      return;
+    }
+    setIsClipping(true);
+    setImportResult(null);
+    try {
+      // 正文前置一级标题：textParser 的标题提取按内容走，标题兜底由它处理
+      const file = new File([`# ${title}\n\n${content}`], `${sanitizeFileName(title)}.md`, {
+        type: 'text/markdown',
+      });
+      const book = await importFile(file, importOpts);
+      if (book) {
+        setImportResult({ type: 'book', title: book.title, id: book.id });
+        setClipTitle('');
+        setClipContent('');
+        toast(`《${book.title}》已入藏`);
+      } else {
+        toast(COPY.clip.failedToast);
+      }
+    } catch {
+      toast(COPY.clip.failedToast);
+    } finally {
+      setIsClipping(false);
+    }
+  };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -323,7 +361,7 @@ export const ImportPage: React.FC = () => {
               </p>
               <div className="flex gap-4">
                 <button
-                  className="bg-seal text-on-primary font-label text-label-md px-6 py-2 rounded-card hover:bg-seal-deep transition-colors"
+                  className="btn-seal px-6 py-2"
                   onClick={() => navigate(subLibraryPath(targetSubLibraryId))}
                 >
                   返回特藏室
@@ -346,7 +384,7 @@ export const ImportPage: React.FC = () => {
               </p>
               <div className="flex gap-4">
                 <button
-                  className="bg-seal text-on-primary font-label text-label-md px-6 py-2 rounded-card hover:bg-seal-deep transition-colors"
+                  className="btn-seal px-6 py-2"
                   onClick={() => navigate(subLibraryPath(importResult.id))}
                 >
                   查看子书库
@@ -364,7 +402,7 @@ export const ImportPage: React.FC = () => {
               <p className="font-body text-body-md text-on-surface-variant mb-4">{importResult.title}</p>
               <div className="flex gap-4">
                 <button
-                  className="bg-seal text-on-primary font-label text-label-md px-6 py-2 rounded-card hover:bg-seal-deep transition-colors"
+                  className="btn-seal px-6 py-2"
                   onClick={() => navigate(bookDetailPath(importResult.id))}
                 >
                   查看详情
@@ -389,7 +427,7 @@ export const ImportPage: React.FC = () => {
           </div>
           <div className="flex flex-col gap-4">
             <button
-              className="w-full bg-seal text-on-primary py-3 px-4 rounded-card font-label text-label-md flex items-center justify-center gap-2 hover:bg-seal-deep transition-colors"
+              className="btn-seal w-full py-3 px-4"
               onClick={handleNativeFilePick}
               disabled={isImporting}
             >
@@ -404,11 +442,49 @@ export const ImportPage: React.FC = () => {
               <span className="material-symbols-outlined">snippet_folder</span>
               从文件夹导入
             </button>
-            <p className="font-label text-label-sm text-on-surface-variant mt-2 text-center normal-case tracking-normal">
+          <p className="font-label text-label-sm text-on-surface-variant mt-2 text-center normal-case tracking-normal">
               {targetSubLibraryId
                 ? `支持 ${formatList} 格式，最大 ${Math.round(APP_CONFIG.maxFileSize / (1024 * 1024))}MB；本次导入的书籍将归入特藏室「${targetSubLibraryName}」`
                 : `支持 ${formatList} 格式，最大 ${Math.round(APP_CONFIG.maxFileSize / (1024 * 1024))}MB；文件夹导入将自动识别支持的文件并创建子书库`}
-            </p>
+          </p>
+          </div>
+        </section>
+
+        {/* 剪报台：粘贴文章按文本书入藏（划线/批注/知识库/复习全套服务） */}
+        <section className="col-span-1 md:col-span-2 border border-outline-variant rounded-lg p-6 flex flex-col gap-4 bg-surface-bright">
+          <div className="flex items-center gap-3 border-b border-outline-variant pb-4">
+            <span className="material-symbols-outlined text-primary">content_cut</span>
+            <h3 className="font-display text-headline-md text-primary">{COPY.clip.sectionTitle}</h3>
+          </div>
+          <p className="font-label text-label-sm text-on-surface-variant">{COPY.clip.hint}</p>
+          <div className="flex flex-col gap-3">
+            <div>
+              <label className="font-label text-label-sm text-on-surface-variant mb-1 block">{COPY.clip.titleLabel}</label>
+              <input
+                type="text"
+                value={clipTitle}
+                onChange={(e) => setClipTitle(e.target.value)}
+                placeholder={COPY.clip.titlePlaceholder}
+                className="w-full border border-outline-variant rounded px-3 py-2 font-body text-body-md text-on-surface bg-surface focus:outline-none focus:border-primary"
+              />
+            </div>
+            <div>
+              <label className="font-label text-label-sm text-on-surface-variant mb-1 block">{COPY.clip.contentLabel}</label>
+              <textarea
+                value={clipContent}
+                onChange={(e) => setClipContent(e.target.value)}
+                placeholder={COPY.clip.contentPlaceholder}
+                rows={6}
+                className="input-field resize-y"
+              />
+            </div>
+            <button
+              className="self-start bg-transparent text-primary py-2 px-5 rounded border border-primary font-label text-label-md hover:bg-surface-variant transition-colors disabled:opacity-40"
+              onClick={() => void handleClipImport()}
+              disabled={isImporting || isClipping}
+            >
+              {COPY.clip.submit}
+            </button>
           </div>
         </section>
 

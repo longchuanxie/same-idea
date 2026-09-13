@@ -2,14 +2,21 @@ import React, { useEffect, useMemo, useState } from 'react';
 
 import { useNavigate } from 'react-router-dom';
 
+import { NotesOutlineDialog, type NotesOutlineDialogState } from '@/components/molecules/NotesOutlineDialog';
 import { COPY } from '@/constants/copy';
-import { ROUTES, readerPathForBook } from '@/constants/routes';
+import { ROUTES, readerPathForBook, vocabularyPath } from '@/constants/routes';
+import { isProviderConfigured } from '@/services/ai/aiClient';
+import { buildOutlineSources, generateNotesOutline } from '@/services/ai/notesOutline';
 import { annotationRepo } from '@/services/storage/annotationRepo';
+import { useAppStore } from '@/stores/useAppStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import type { Annotation, Book } from '@/types';
 import {
+  buildThemedMarkdown,
+  downloadTextFile,
   exportMultiBookMarkdown,
   type MultiBookEntry,
+  type ThemedEntry,
 } from '@/utils/annotationExport';
 import {
   EMPTY_ANNOTATION_FILTER,
@@ -21,6 +28,8 @@ import { toast } from '@/utils/toast';
 
 /** 引文预览长度（字符） */
 const EXCERPT_CHARS = 80;
+/** 生成提纲的最少手记数——太少的原料提不出结构 */
+const OUTLINE_MIN_ENTRIES = 3;
 
 const KIND_OPTIONS: AnnotationKind[] = ['all', 'highlight', 'note'];
 const KIND_LABELS: Record<AnnotationKind, string> = {
@@ -35,6 +44,8 @@ export const NotesPage: React.FC = () => {
   const { books, tags, loadBooks } = useLibraryStore();
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [filter, setFilter] = useState<AnnotationFilter>(EMPTY_ANNOTATION_FILTER);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [outline, setOutline] = useState<NotesOutlineDialogState | null>(null);
 
   useEffect(() => {
     loadBooks();
@@ -90,21 +101,143 @@ export const NotesPage: React.FC = () => {
     exportMultiBookMarkdown(entries, tagNames);
   };
 
+  /** 按主题导出：同一标签下跨书的句子并排成列（写作取材视角）；未分类殿后 */
+  const handleExportByTheme = () => {
+    setExportMenuOpen(false);
+    if (sorted.length === 0) {
+      toast(COPY.toast.noAnnotations);
+      return;
+    }
+    const themed: ThemedEntry[] = tags
+      .map((tag) => ({
+        tagName: tag.name,
+        annotations: sorted.filter((ann) => (ann.tagIds ?? []).includes(tag.id)),
+      }))
+      .filter((entry) => entry.annotations.length > 0)
+      .sort((a, b) => b.annotations.length - a.annotations.length);
+    const untagged = sorted.filter((ann) => (ann.tagIds ?? []).length === 0);
+    if (untagged.length > 0) {
+      themed.push({ tagName: COPY.notesTheme.untagged, annotations: untagged });
+    }
+    const markdown = buildThemedMarkdown(
+      themed,
+      (bookId) => bookById.get(bookId)?.title ?? COPY.globalSearch.orphanBook,
+      new Date(),
+      new Map(tags.map((t) => [t.id, t.name])),
+      COPY.notesTheme.untagged
+    );
+    const stamp = new Date().toISOString().slice(0, 10).replaceAll('-', '');
+    downloadTextFile(`摘抄墙-按主题-${stamp}.md`, markdown);
+  };
+
+  /** 生成提纲：以当前筛选结果为原料（按标签筛一组 → 提一份可动笔的骨架） */
+  const runOutline = async () => {
+    const sources = buildOutlineSources(visible, (bookId) =>
+      bookById.get(bookId)?.title ?? COPY.globalSearch.orphanBook
+    );
+    if (sources.length === 0) {
+      setOutline(null);
+      return;
+    }
+    const { settings } = useAppStore.getState();
+    const config = {
+      baseUrl: settings.knowledgeAiUrl,
+      apiKey: settings.knowledgeAiKey,
+      model: settings.knowledgeAiModel,
+    };
+    if (!isProviderConfigured(config)) {
+      toast(COPY.notesTheme.aiNotConfigured);
+      return;
+    }
+    const focusLabel = filter.tagId
+      ? `#${tagById.get(filter.tagId)?.name ?? ''}`
+      : filter.query.trim()
+        ? `关键词「${filter.query.trim()}」`
+        : undefined;
+    setOutline({ status: 'loading', sourceCount: sources.length });
+    try {
+      const result = await generateNotesOutline(config, sources, focusLabel);
+      setOutline({ status: 'done', result, sourceCount: sources.length });
+    } catch (e) {
+      setOutline({
+        status: 'error',
+        error: e instanceof Error ? e.message : COPY.notesTheme.outlineFailed,
+        sourceCount: sources.length,
+      });
+    }
+  };
+
+  const handleGenerateOutline = () => {
+    if (visible.length < OUTLINE_MIN_ENTRIES) {
+      toast(COPY.notesTheme.outlineEmpty);
+      return;
+    }
+    void runOutline();
+  };
+
   return (
     <div className="max-w-max-width-content mx-auto px-margin-mobile md:px-0 pt-8 pb-8">
       <section className="flex flex-col gap-2 border-b border-outline-variant pb-6 mb-8">
         <div className="flex items-start justify-between gap-4">
           <h2 className="font-display text-display-lg-mobile md:text-display-lg text-primary">摘抄墙</h2>
-          {sorted.length > 0 && (
+          <div className="flex items-center gap-3 flex-shrink-0">
             <button
-              className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1 flex-shrink-0"
-              onClick={handleExportAll}
-              title={COPY.notesWall.exportAll}
+              className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1"
+              onClick={() => navigate(vocabularyPath())}
+              title={COPY.vocab.notesEntry}
             >
-              <span className="material-symbols-outlined text-icon-md">ios_share</span>
-              导出
+              <span className="material-symbols-outlined text-icon-md">translate</span>
+              {COPY.vocab.notesEntry}
             </button>
-          )}
+            {visible.length >= OUTLINE_MIN_ENTRIES && (
+              <button
+                className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1"
+                onClick={handleGenerateOutline}
+                title={COPY.notesTheme.outlineAction}
+              >
+                <span className="material-symbols-outlined text-icon-md">edit_note</span>
+                {COPY.notesTheme.outlineAction}
+              </button>
+            )}
+            {sorted.length > 0 && (
+              <div className="relative">
+                <button
+                  className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1"
+                  onClick={() => setExportMenuOpen((v) => !v)}
+                  title={COPY.notesWall.exportAll}
+                >
+                  <span className="material-symbols-outlined text-icon-md">ios_share</span>
+                  导出
+                </button>
+                {exportMenuOpen && (
+                  <>
+                    <button
+                      aria-label="收起导出菜单"
+                      className="fixed inset-0 z-menu cursor-default"
+                      onClick={() => setExportMenuOpen(false)}
+                    />
+                    <div className="absolute right-0 top-8 z-menu w-48 bg-surface-bright border border-outline-variant rounded-card shadow-paper-up py-1 animate-scale-in origin-top-right">
+                      <button
+                        className="w-full text-left px-4 py-2.5 hover:bg-surface-container transition-colors font-label text-label-md text-on-surface-variant hover:text-primary"
+                        onClick={() => {
+                          setExportMenuOpen(false);
+                          handleExportAll();
+                        }}
+                      >
+                        {COPY.notesTheme.exportByBook}
+                      </button>
+                      <button
+                        className="w-full text-left px-4 py-2.5 hover:bg-surface-container transition-colors font-label text-label-md text-on-surface-variant hover:text-primary"
+                        onClick={handleExportByTheme}
+                      >
+                        {COPY.notesTheme.exportByTheme}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </div>
         <p className="font-body text-body-md text-on-surface-variant">
           读过的句子都贴在这里——{sorted.length > 0 ? `共 ${sorted.length} 条手记` : '等你贴上第一张'}。
@@ -119,7 +252,7 @@ export const NotesPage: React.FC = () => {
             阅读时长按一句话，就能把它贴上墙
           </p>
           <button
-            className="font-label text-label-md text-primary border border-outline-variant rounded-card px-6 py-2 hover:bg-surface-container transition-colors"
+            className="btn-secondary px-6 py-2"
             onClick={() => navigate(ROUTES.LIBRARY)}
           >
             去书库挑一本
@@ -143,7 +276,7 @@ export const NotesPage: React.FC = () => {
                   onClick={() => setFilterPart({ query: '' })}
                   aria-label="清空"
                 >
-                  <span className="material-symbols-outlined text-on-surface-variant text-[16px]">close</span>
+                  <span className="material-symbols-outlined text-on-surface-variant text-icon-sm">close</span>
                 </button>
               )}
             </div>
@@ -152,7 +285,7 @@ export const NotesPage: React.FC = () => {
                 <button
                   key={kind}
                   onClick={() => setFilterPart({ kind })}
-                  className={`px-2.5 py-1 rounded-full font-label text-label-xs border transition-colors ${
+                  className={`chip px-2.5 py-1 text-label-xs ${
                     filter.kind === kind
                       ? 'bg-primary/20 text-primary border-primary/50'
                       : 'text-on-surface-variant border-outline-variant hover:bg-surface-variant'
@@ -202,7 +335,7 @@ export const NotesPage: React.FC = () => {
                 return (
                   <button
                     key={ann.id}
-                    className="text-left p-4 md:p-5 rounded-card-lg bg-surface-container-low border border-outline-variant hover:bg-surface-container transition-colors"
+                    className="card-link rounded-card-lg p-4 md:p-5"
                     onClick={() => book && openInReader(ann, book)}
                     disabled={!book}
                   >
@@ -221,7 +354,7 @@ export const NotesPage: React.FC = () => {
                         {annTags.map((t) => (
                           <span
                             key={t.id}
-                            className="px-2 py-0.5 rounded-full font-label text-label-xs border border-outline-variant text-on-surface-variant"
+                            className="chip px-2 py-0.5 text-label-xs"
                           >
                             #{t.name}
                           </span>
@@ -237,6 +370,15 @@ export const NotesPage: React.FC = () => {
             </div>
           )}
         </>
+      )}
+
+      {/* 从划线生成的写作提纲 */}
+      {outline && (
+        <NotesOutlineDialog
+          state={outline}
+          onClose={() => setOutline(null)}
+          onRetry={() => void runOutline()}
+        />
       )}
     </div>
   );

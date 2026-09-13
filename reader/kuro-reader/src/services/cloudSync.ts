@@ -5,11 +5,13 @@ import { annotationRepo } from '@/services/storage/annotationRepo';
 import { bookmarkRepo } from '@/services/storage/bookmarkRepo';
 import { knowledgeRepo } from '@/services/storage/knowledgeRepo';
 import { progressRepo } from '@/services/storage/progressRepo';
+import { reviewCardRepo } from '@/services/storage/reviewCardRepo';
 import { tombstoneRepo, type TombstoneKind } from '@/services/storage/tombstoneRepo';
-import type { Annotation, Bookmark, KnowledgeArtifact, ReadingProgress } from '@/types';
+import { vocabRepo } from '@/services/storage/vocabRepo';
+import type { Annotation, Bookmark, KnowledgeArtifact, ReadingProgress, ReviewCard, VocabEntry } from '@/types';
 
-/** 同步载荷版本：v2 起携带可选 stats；v3 起携带可选 tombstones（删除墓碑）；v4 起携带可选 knowledgeArtifacts */
-const SYNC_VERSION = 4;
+/** 同步载荷版本：v2 起 stats；v3 起 tombstones；v4 起 knowledgeArtifacts；v5 起携带可选 vocabEntries/reviewCards */
+export const SYNC_VERSION = 5;
 /** 墓碑保留期：超过后随合并清理，防止载荷无限膨胀 */
 const TOMBSTONE_TTL_DAYS = 90;
 /** 同步文件在 WebDAV 根下的固定路径 */
@@ -49,6 +51,9 @@ export interface SyncPayload {
   tombstones?: SyncTombstone[];
   /** v4 起：可选。知识库产物（人物图谱/思维导图），按 id LWW 合并 */
   knowledgeArtifacts?: KnowledgeArtifact[];
+  /** v5 起：可选。生词本与复习卡（排期是劳动成果），按 id LWW 合并 */
+  vocabEntries?: VocabEntry[];
+  reviewCards?: ReviewCard[];
 }
 
 export type SyncDirection = 'pushed' | 'merged';
@@ -63,6 +68,8 @@ export interface SyncResult {
     bookmarks: number;
     annotations: number;
     knowledge: number;
+    vocab: number;
+    review: number;
   };
 }
 
@@ -148,9 +155,9 @@ function mergeTombstones(local: SyncPayload, remote: SyncPayload): Map<string, S
  */
 export function mergeSyncPayloads(local: SyncPayload, remote: SyncPayload): SyncPayload {
   const tombstones = mergeTombstones(local, remote);
-  /** 命中即判死：kind 匹配且删除时间晚于记录时间。'book' 墓碑按 bookId 级联命中三种记录。 */
+  /** 命中即判死：kind 匹配且删除时间晚于记录时间。'book' 墓碑按 bookId 级联命中各书级记录。 */
   const killedBy = (
-    recordKind: 'progress' | 'bookmark' | 'annotation' | 'knowledge',
+    recordKind: 'progress' | 'bookmark' | 'annotation' | 'knowledge' | 'vocab' | 'review',
     recordKey: string,
     bookId: string,
     recordTime: number
@@ -230,6 +237,43 @@ export function mergeSyncPayloads(local: SyncPayload, remote: SyncPayload): Sync
     }
   }
 
+  // 生词与复习卡（v5，可选）：同构按 id LWW——排期是读者劳动成果，多端不丢
+  const mergeById = <T extends { id: string; updatedAt: Date | string; bookId: string }>(
+    localList: T[] | undefined,
+    remoteList: T[] | undefined
+  ): Map<string, T> => {
+    const byId = new Map((localList ?? []).map((item) => [item.id, item]));
+    for (const remoteItem of remoteList ?? []) {
+      if (!remoteItem || typeof remoteItem !== 'object' || !remoteItem.id) continue;
+      const localItem = byId.get(remoteItem.id);
+      byId.set(
+        remoteItem.id,
+        localItem
+          ? newerOf(localItem, remoteItem, toTime(localItem.updatedAt), toTime(remoteItem.updatedAt))
+          : remoteItem
+      );
+    }
+    return byId
+  }
+
+  const vocabById = mergeById(local.vocabEntries, remote.vocabEntries)
+  for (const [id, entry] of vocabById) {
+    if (killedBy('vocab', id, entry.bookId, toTime(entry.updatedAt))) {
+      vocabById.delete(id)
+    } else {
+      liveBookIds.add(entry.bookId)
+    }
+  }
+
+  const reviewById = mergeById(local.reviewCards, remote.reviewCards)
+  for (const [id, card] of reviewById) {
+    if (killedBy('review', id, card.bookId, toTime(card.updatedAt))) {
+      reviewById.delete(id)
+    } else {
+      liveBookIds.add(card.bookId)
+    }
+  }
+
   // 失效墓碑清理：墓碑对应的记录在删除后又被重新创建/编辑而存活时，移除墓碑，
   // 避免它继续误杀后续合并中的新记录
   const liveTombstoneKeys = new Set<string>([
@@ -237,6 +281,8 @@ export function mergeSyncPayloads(local: SyncPayload, remote: SyncPayload): Sync
     ...[...bookmarkById.keys()].map((id) => `bookmark:${id}`),
     ...[...annotationById.keys()].map((id) => `annotation:${id}`),
     ...[...knowledgeById.keys()].map((id) => `knowledge:${id}`),
+    ...[...vocabById.keys()].map((id) => `vocab:${id}`),
+    ...[...reviewById.keys()].map((id) => `review:${id}`),
     ...[...liveBookIds].map((bookId) => `book:${bookId}`),
   ]);
   for (const [id] of [...tombstones]) {
@@ -252,6 +298,8 @@ export function mergeSyncPayloads(local: SyncPayload, remote: SyncPayload): Sync
     stats: mergeSyncedStats(local.stats, remote.stats, local.exportedAt, remote.exportedAt),
     tombstones: [...tombstones.values()],
     knowledgeArtifacts: [...knowledgeById.values()],
+    vocabEntries: [...vocabById.values()],
+    reviewCards: [...reviewById.values()],
   };
 }
 
@@ -299,6 +347,8 @@ export async function runCloudSync(
       bookmarks: payload.bookmarks.length,
       annotations: payload.annotations.length,
       knowledge: payload.knowledgeArtifacts?.length ?? 0,
+      vocab: payload.vocabEntries?.length ?? 0,
+      review: payload.reviewCards?.length ?? 0,
     },
   };
 }
@@ -323,6 +373,12 @@ export async function applyMergedPayloadToLocal(merged: SyncPayload): Promise<vo
   for (const artifact of merged.knowledgeArtifacts ?? []) {
     await knowledgeRepo.save(artifact);
   }
+  for (const entry of merged.vocabEntries ?? []) {
+    await vocabRepo.save(entry);
+  }
+  for (const card of merged.reviewCards ?? []) {
+    await reviewCardRepo.save(card);
+  }
   if (merged.stats) {
     applyStatsToLocal(merged.stats);
   }
@@ -334,6 +390,8 @@ export async function applyMergedPayloadToLocal(merged: SyncPayload): Promise<vo
       else if (t.kind === 'bookmark') await bookmarkRepo.remove(t.key);
       else if (t.kind === 'annotation') await annotationRepo.remove(t.key);
       else if (t.kind === 'knowledge') await knowledgeRepo.remove(t.key);
+      else if (t.kind === 'vocab') await vocabRepo.remove(t.key);
+      else if (t.kind === 'review') await reviewCardRepo.remove(t.key);
       else if (t.kind === 'book') await deleteBookRecords(t.key);
     }
     // 以合并结果整体覆盖本地墓碑表（remove 期间的临时写入被统一收敛）
@@ -341,7 +399,7 @@ export async function applyMergedPayloadToLocal(merged: SyncPayload): Promise<vo
   }
 }
 
-/** 整书墓碑落地：删除该书名下全部进度/书签/批注/知识产物 */
+/** 整书墓碑落地：删除该书名下全部进度/书签/批注/知识产物/生词/复习卡 */
 async function deleteBookRecords(bookId: string): Promise<void> {
   for (const annotation of await annotationRepo.getByBookId(bookId)) {
     await annotationRepo.remove(annotation.id);
@@ -350,6 +408,8 @@ async function deleteBookRecords(bookId: string): Promise<void> {
     await bookmarkRepo.remove(bookmark.id);
   }
   await knowledgeRepo.deleteByBookId(bookId);
+  await vocabRepo.deleteByBookId(bookId);
+  await reviewCardRepo.deleteByBookId(bookId);
   await progressRepo.remove(bookId);
 }
 

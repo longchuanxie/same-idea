@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0 && node scripts/check-tokens.mjs",
+    "lint:tokens": "node scripts/check-tokens.mjs",
     "fixtures:generate": "node scripts/generate-test-fixtures.mjs",
     "preview": "vite preview",
     "test": "vitest run",

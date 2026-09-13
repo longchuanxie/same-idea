@@ -145,9 +145,9 @@ export const StatsPage: React.FC = () => {
               <button
                 key={preset}
                 className={cn(
-                  'px-3 py-1 rounded-full font-label text-label-sm border transition-colors',
+                  'chip px-3 py-1',
                   dailyGoalMinutes === preset
-                    ? 'bg-primary text-on-primary border-primary'
+                    ? 'chip-active'
                     : 'border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary'
                 )}
                 onClick={() => setDailyGoalMinutes(preset)}

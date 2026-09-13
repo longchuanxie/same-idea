@@ -55,18 +55,18 @@ export const SubLibraryMenu: React.FC<SubLibraryMenuProps> = ({
         }}
         aria-label="子书库菜单"
       >
-        <span className="material-symbols-outlined text-[20px]">more_vert</span>
+        <span className="material-symbols-outlined text-icon-md">more_vert</span>
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-1 w-48 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-lg py-1 z-50 animate-fade-in">
+        <div className="absolute right-0 top-full mt-1 w-48 menu-surface py-1 z-50 animate-fade-in">
           {isEditing ? (
             <div className="px-3 py-2">
               <input
                 type="text"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                className="w-full border border-outline-variant rounded px-2 py-1 font-body text-body-sm text-on-background bg-surface focus:outline-none focus:border-primary mb-2"
+                className="input-field mb-2"
                 autoFocus
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleRename();
@@ -78,13 +78,13 @@ export const SubLibraryMenu: React.FC<SubLibraryMenuProps> = ({
               />
               <div className="flex gap-2">
                 <button
-                  className="flex-1 bg-primary text-on-primary font-label text-label-sm py-1 rounded hover:opacity-90 transition-colors"
+                  className="btn-primary btn-sm flex-1 py-1"
                   onClick={handleRename}
                 >
                   保存
                 </button>
                 <button
-                  className="flex-1 border border-outline-variant text-on-surface-variant font-label text-label-sm py-1 rounded hover:bg-surface-variant transition-colors"
+                  className="btn-secondary btn-sm flex-1 py-1"
                   onClick={() => {
                     setIsEditing(false);
                     setEditName(subLibraryName);
@@ -103,7 +103,7 @@ export const SubLibraryMenu: React.FC<SubLibraryMenuProps> = ({
                   setIsEditing(true);
                 }}
               >
-                <span className="material-symbols-outlined text-[20px]">edit</span>
+                <span className="material-symbols-outlined text-icon-md">edit</span>
                 <span className="font-label text-label-md">重命名</span>
               </button>
               <div className="border-t border-outline-variant my-1" />
@@ -114,7 +114,7 @@ export const SubLibraryMenu: React.FC<SubLibraryMenuProps> = ({
                   handleDelete();
                 }}
               >
-                <span className="material-symbols-outlined text-[20px]">delete</span>
+                <span className="material-symbols-outlined text-icon-md">delete</span>
                 <span className="font-label text-label-md">删除</span>
               </button>
             </>

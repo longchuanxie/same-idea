@@ -92,7 +92,7 @@ export const GenerationOptionsSheet: React.FC<GenerationOptionsSheetProps> = ({
       <div
         role="dialog"
         aria-label={`自定义生成${label}`}
-        className="bg-surface-bright border border-outline-variant rounded-t-2xl sm:rounded-2xl p-5 w-full sm:max-w-md max-h-[85vh] overflow-y-auto animate-scale-in"
+        className="bg-surface-bright border border-outline-variant rounded-t-card-lg sm:rounded-card-lg p-5 w-full sm:max-w-md max-h-[85vh] overflow-y-auto animate-scale-in"
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="font-display text-headline-sm text-primary mb-1">自定义生成{label}</h3>
@@ -135,8 +135,8 @@ export const GenerationOptionsSheet: React.FC<GenerationOptionsSheetProps> = ({
                   key={value}
                   type="button"
                   aria-pressed={mode === value}
-                  className={`px-3 py-1.5 rounded-full font-label text-label-sm transition-colors ${
-                    mode === value ? 'bg-primary text-on-primary' : 'border border-outline-variant text-on-surface-variant'
+                  className={`chip px-3 py-1.5 ${
+                    mode === value ? 'chip-active' : ''
                   }`}
                   onClick={() => setMode(value)}
                 >
@@ -155,7 +155,7 @@ export const GenerationOptionsSheet: React.FC<GenerationOptionsSheetProps> = ({
                   onChange={(e) => setFromText(e.target.value)}
                   placeholder="1"
                   aria-label="起始章"
-                  className="w-20 border border-outline-variant rounded px-2 py-1.5 font-mono text-label-sm bg-surface focus:outline-none focus:border-primary"
+                  className="input-field w-20 font-mono text-label-sm"
                 />
                 <span className="font-label text-label-sm text-on-surface-variant whitespace-nowrap">章 至 第</span>
                 <input
@@ -166,7 +166,7 @@ export const GenerationOptionsSheet: React.FC<GenerationOptionsSheetProps> = ({
                   onChange={(e) => setToText(e.target.value)}
                   placeholder={totalChapters != null ? String(totalChapters) : '末章'}
                   aria-label="结束章（留空到末尾）"
-                  className="w-20 border border-outline-variant rounded px-2 py-1.5 font-mono text-label-sm bg-surface focus:outline-none focus:border-primary"
+                  className="input-field w-20 font-mono text-label-sm"
                 />
                 <span className="font-label text-label-sm text-on-surface-variant whitespace-nowrap">章</span>
               </div>
@@ -200,7 +200,7 @@ export const GenerationOptionsSheet: React.FC<GenerationOptionsSheetProps> = ({
         <div className="flex justify-end gap-2">
           <button
             type="button"
-            className="px-4 py-2 rounded-full font-label text-label-md text-on-surface-variant hover:text-primary transition-colors"
+            className="btn-ghost px-4 py-2"
             onClick={onClose}
           >
             取消
@@ -208,7 +208,7 @@ export const GenerationOptionsSheet: React.FC<GenerationOptionsSheetProps> = ({
           <button
             type="button"
             disabled={!canStart}
-            className="px-5 py-2 rounded-full bg-primary text-on-primary font-label text-label-md disabled:opacity-40"
+            className="btn-primary px-5 py-2"
             onClick={handleStart}
           >
             开始生成

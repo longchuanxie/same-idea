@@ -28,7 +28,7 @@ export const ToastHost: React.FC = () => {
     <div
       role="status"
       aria-live="polite"
-      className="fixed bottom-24 left-1/2 -translate-x-1/2 z-toast bg-primary text-on-primary font-label text-label-md pl-4 pr-3 py-2.5 rounded-card shadow-raised animate-slide-up max-w-[calc(100%-48px)] flex items-center gap-3"
+      className="fixed bottom-24 left-1/2 -translate-x-1/2 z-toast option-active font-label text-label-md pl-4 pr-3 py-2.5 rounded-card shadow-raised animate-slide-up max-w-[calc(100%-48px)] flex items-center gap-3"
     >
       <span className="text-center flex-1">{current.message}</span>
       {current.action && (

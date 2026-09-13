@@ -69,6 +69,8 @@
     --color-seal: 188 69 41;                    /* 藏书印 朱砂 —— 唯一强调色 */
     --color-seal-deep: 154 52 32;
     --color-seal-soft: 243 222 212;
+    --color-seal-strong: 188 69 41;             /* 印底按钮用：暗色加深保白字对比 */
+    --color-on-seal: 252 250 246;               /* 朱砂底上的字：恒为纸白（不随模式反转） */
     --color-lamp: 200 150 62;                   /* 琥珀光 —— 仅生命力元素 */
     --color-wood: 140 111 78;                   /* 木质 —— 仅结构性元素 */
     --color-wood-deep: 107 84 56;
@@ -105,6 +107,8 @@
     --color-seal: 208 96 74;                    /* 朱砂提亮保对比度 */
     --color-seal-deep: 224 122 100;
     --color-seal-soft: 58 36 30;
+    --color-seal-strong: 178 60 36;             /* 印底按钮：暗色加深，白字对比 5.6:1 */
+    --color-on-seal: 252 250 246;
     --color-lamp: 217 174 95;                   /* 夜里灯更亮一档 */
     --color-wood: 58 49 41;
     --color-wood-deep: 44 37 31;
@@ -123,8 +127,8 @@
 
   body {
     @apply bg-background text-on-background;
-    background-color: var(--color-background);
-    color: var(--color-on-background);
+    /* 背景与文字色由上面的 @apply 提供：底色变量是 RGB 三元组，
+       裸 var() 引用不是合法颜色值（会整句失效回落透明/纯黑），禁再显式赋值 */
     font-family: var(--app-body-font-family, 'Literata', serif);
     font-size: var(--app-body-font-size, 16px);
     line-height: var(--app-body-line-height, 28px);
@@ -377,6 +381,81 @@
 
   .toggle-thumb-spring {
     transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.25s ease;
+  }
+
+  /* 设置/列表行首的图标「印格」：方形小圆角 + 纸灰底。
+     禁止再手写圆形 icon 容器（rounded-full 底块是 iOS 模板语言） */
+  .icon-tile {
+    @apply w-10 h-10 rounded-card bg-surface-variant flex items-center justify-center text-on-surface-variant shrink-0;
+  }
+
+  /* 浮层菜单面：浮纸底 + 细边 + 纸影。层级 z-* 由使用处按浮层协议自标 */
+  .menu-surface {
+    @apply bg-surface-bright border border-outline-variant rounded-lg shadow-paper-up;
+  }
+
+  /* ===== 按钮配方：色 / 形 / 字收敛于此 =====
+     字号默认 label-md；小/大字密度用 .btn-sm/.btn-lg 覆盖（必须写在基础配方之后，同特异性后者胜）。
+     主操作 .btn-primary ｜ 描边 .btn-secondary ｜ 幽灵 .btn-ghost ｜ 朱砂强调 .btn-seal
+     朱砂描边 .btn-outline-seal ｜ 裸图标圆靶 .btn-icon（尺寸自定，推荐 w-9/h-9 起） */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-card bg-seal-strong text-on-seal font-label text-label-md transition-colors hover:bg-seal-deep disabled:opacity-50;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-card border border-outline-variant bg-transparent text-primary font-label text-label-md transition-colors hover:bg-surface-container disabled:opacity-50;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-card bg-transparent text-primary font-label text-label-md transition-colors hover:bg-surface-variant disabled:opacity-50;
+  }
+  .btn-seal {
+    @apply inline-flex items-center justify-center gap-2 rounded-card bg-seal-strong text-on-seal font-label text-label-md transition-colors hover:bg-seal-deep disabled:opacity-50;
+  }
+  .btn-outline-seal {
+    @apply inline-flex items-center justify-center gap-2 rounded-card border border-seal/60 bg-transparent text-seal font-label text-label-md transition-colors hover:bg-seal-soft/50 disabled:opacity-50;
+  }
+  .btn-icon {
+    @apply inline-flex items-center justify-center rounded-full text-on-surface-variant transition-colors hover:text-primary hover:bg-surface-variant;
+  }
+  .btn-sm {
+    @apply text-label-sm;
+  }
+  .btn-lg {
+    @apply text-label-lg;
+  }
+
+  /* 选择块：可选中选项（方向/字号/对齐/视图切换），形状与内边距随使用处；
+     选中 = 墨底，且 hover 不再变底（同特异性，源序后者胜） */
+  .option {
+    @apply border border-outline-variant text-on-surface-variant transition-colors hover:bg-surface-variant hover:text-primary;
+  }
+  .option-active {
+    @apply border-seal-strong bg-seal-strong text-on-seal hover:bg-seal-strong hover:text-on-seal;
+  }
+
+  /* 可点卡片：内容卡 + 点击动线（导航卡/行卡），形状内边距随使用处 */
+  .card-link {
+    @apply block rounded-card border border-outline-variant bg-surface-container-low cursor-pointer text-left transition-colors hover:bg-surface-container;
+  }
+
+  /* 标签 chip：胶囊形（仅 chip / 开关 / 进度条 / 徽标允许 full 圆角）；内边距随使用处 */
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full border border-outline-variant bg-surface-container text-on-surface-variant font-label text-label-sm whitespace-nowrap transition-colors hover:border-primary;
+  }
+  .chip-active {
+    @apply border-seal-strong bg-seal-strong text-on-seal hover:border-seal-strong hover:bg-seal-strong hover:text-on-seal;
+  }
+
+  /* 表单输入：浮纸描边框 */
+  .input-field {
+    @apply w-full rounded-lg border border-outline-variant/50 bg-transparent px-3 py-2 font-body text-body-sm text-primary placeholder:text-on-surface-faint focus:outline-none focus:border-primary transition-colors disabled:opacity-60;
+  }
+
+  /* 外层分组面板 / 组内卡片：两种「纸」的叠放 */
+  .panel {
+    @apply rounded-lg border border-outline-variant bg-surface overflow-hidden;
+  }
+  .card-inner {
+    @apply rounded-card border border-outline-variant bg-surface-container-low;
   }
 
   .stagger-1 { animation-delay: 0.05s; }
@@ -1023,4 +1102,13 @@
 
 .annotation-marker-v2 {
   border-radius: 1.66em 1.2em 1.5em 1.08em / 0.6em 0.56em 0.64em 0.5em;
+}
+
+/* ===== 数值滑杆：原生控件 + accent 染墨（跨 WebView 最稳健），墨钮灰轨 ===== */
+
+.ink-slider {
+  accent-color: rgb(var(--color-seal));
+  height: 1.25rem;
+  cursor: pointer;
+  outline: none;
 }

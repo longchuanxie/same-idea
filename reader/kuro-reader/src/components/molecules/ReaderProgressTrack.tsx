@@ -172,7 +172,7 @@ export const ReaderProgressTrack: React.FC<ReaderProgressTrackProps> = ({
           style={{ width: `${dragPage !== null ? ((dragPage / totalPages) * PERCENT_MULTIPLIER) : progressPercent}%` }}
         />
         <div
-          className="absolute top-1/2 w-4 h-4 bg-primary rounded-full shadow-md ring-2 ring-surface"
+          className="absolute top-1/2 w-4 h-4 bg-primary rounded-full shadow-paper ring-2 ring-surface"
           style={{ left: `${dragPage !== null ? ((dragPage / totalPages) * PERCENT_MULTIPLIER) : progressPercent}%`, transform: 'translate(-50%, -50%)' }}
         />
       </div>

@@ -204,12 +204,11 @@ export const GestureLock: React.FC<GestureLockProps> = ({
     return '请输入手势密码';
   };
 
-  const lineColor = feedback === 'error' ? 'stroke-error' : feedback === 'success' ? 'stroke-primary' : 'stroke-on-surface-variant';
+  // 状态色走「印」语义：错误=朱红警示，成功=钤印朱砂（seal 为激活/完成唯一强调色），绘制中=墨
+  const lineColor = feedback === 'error' ? 'stroke-error' : feedback === 'success' ? 'stroke-seal' : 'stroke-on-surface-variant';
   const dotSelectedClass = feedback === 'error'
     ? 'bg-error ring-error'
-    : feedback === 'success'
-      ? 'bg-primary ring-primary'
-      : 'bg-primary ring-primary';
+    : 'bg-seal ring-seal';
 
   return (
     <div className="flex flex-col items-center gap-8 w-full">

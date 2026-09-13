@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 
 import { useNavigate } from 'react-router-dom';
 
-import BookCoverImage from '@/components/atoms/BookCoverImage';
+import { BookCoverImage } from '@/components/atoms/BookCoverImage';
 import { FormatBadge } from '@/components/atoms/FormatBadge';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
 import { CATALOG_COLORS } from '@/constants/catalogColors';
@@ -76,7 +76,7 @@ export const TagsPage: React.FC = () => {
 
       <div className="mb-6">
         <button
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-card font-label text-label-md hover:opacity-90 transition-opacity"
+          className="btn-primary px-4 py-2"
           onClick={() => {
             setIsCreating(true);
             setEditingTagId(null);
@@ -85,13 +85,13 @@ export const TagsPage: React.FC = () => {
             setTimeout(() => inputRef.current?.focus(), TAG_INPUT_FOCUS_DELAY_MS);
           }}
         >
-          <span className="material-symbols-outlined text-[20px]">add</span>
+          <span className="material-symbols-outlined text-icon-md">add</span>
           新建标签
         </button>
       </div>
 
       {(isCreating || editingTagId) && (
-        <div className="bg-surface rounded-xl border border-outline-variant p-5 mb-6">
+        <div className="bg-surface rounded-card border border-outline-variant p-5 mb-6">
           <h3 className="font-label text-label-md text-on-surface mb-4">
             {editingTagId ? '编辑标签' : '新建标签'}
           </h3>
@@ -140,7 +140,7 @@ export const TagsPage: React.FC = () => {
                 取消
               </button>
               <button
-                className="px-4 py-2 rounded-lg font-label text-label-md bg-primary text-on-primary hover:opacity-90 transition-opacity disabled:opacity-40"
+                className="btn-primary px-4 py-2"
                 onClick={() => {
                   editingTagId ? handleUpdateTag(editingTagId) : handleCreateTag();
                 }}
@@ -166,7 +166,7 @@ export const TagsPage: React.FC = () => {
           <div
             key={tag.id}
             className={cn(
-              'bg-surface rounded-xl border border-outline-variant overflow-hidden transition-colors',
+              'bg-surface rounded-card border border-outline-variant overflow-hidden transition-colors',
               selectedTagId === tag.id && 'border-primary bg-surface-container-lowest'
             )}
           >

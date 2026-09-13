@@ -36,6 +36,10 @@ interface PositionedNode extends CharacterNode {
 }
 
 const NODE_HIT_PADDING = 8
+/** 已校验节点角标：朱砂小圆 + 白勾（印章意象） */
+const VERIFIED_BADGE_OFFSET_RATIO = 0.75
+const VERIFIED_BADGE_RADIUS = 7
+const VERIFIED_BADGE_FONT_SIZE = 9
 
 /** CJK 主导的文本宽度估算（字符数 × 字号，够画背景条用） */
 function estimateTextWidth(text: string, fontSize: number): number {
@@ -72,7 +76,8 @@ export const CharacterGraphView: React.FC<CharacterGraphViewProps> = ({
     e.stopPropagation()
     // 捕获在节点 g 自身（而非命中子元素）：指针移出节点后拖拽/释放仍可靠送达
     try {
-      ;(e.currentTarget as Element).setPointerCapture?.(e.pointerId)
+      const target = e.currentTarget as Element
+      target.setPointerCapture?.(e.pointerId)
     } catch {
       // 合成事件/无活动指针的环境（测试）没有可捕获的 pointerId，忽略
     }
@@ -223,6 +228,26 @@ export const CharacterGraphView: React.FC<CharacterGraphViewProps> = ({
                 >
                   {node.role}
                 </text>
+              )}
+              {node.verified && (
+                <g style={{ pointerEvents: 'none' }}>
+                  <circle
+                    cx={node.x + radius * VERIFIED_BADGE_OFFSET_RATIO}
+                    cy={node.y - radius * VERIFIED_BADGE_OFFSET_RATIO}
+                    r={VERIFIED_BADGE_RADIUS}
+                    fill="rgb(var(--color-seal))"
+                  />
+                  <text
+                    x={node.x + radius * VERIFIED_BADGE_OFFSET_RATIO}
+                    y={node.y - radius * VERIFIED_BADGE_OFFSET_RATIO + 1}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fontSize={VERIFIED_BADGE_FONT_SIZE}
+                    fill="#FFFFFF"
+                  >
+                    ✓
+                  </text>
+                </g>
               )}
             </g>
           )

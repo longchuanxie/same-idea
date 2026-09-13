@@ -1,6 +1,6 @@
 # Kuro Reader 项目现状梳理
 
-> 更新日期：2026-09-12，与 `comics` 分支提交基线对齐（阶段 6「知识库形态」交付后）。
+> 更新日期：2026-09-13，与 `comics` 分支工作区对齐（知识库地基「全库统一检索 + 知识件手工修订」交付后）。
 
 ## 一、项目概述
 
@@ -312,6 +312,82 @@ IndexedDB（`kuro-reader-db`，**v8**），11 个 Object Store，由 [db.ts](src
 - **动线**: 主菜单直达全局知识库聚合页（[KnowledgeHubPage](src/pages/KnowledgeHub/index.tsx)：`/knowledge-hub` 跨书总目，桌面侧边栏/移动底栏/顶栏菜单三入口，点卡直达查看器）；档案卡知识库区块（[KnowledgeSection](src/components/molecules/knowledge/KnowledgeSection.tsx)：内容类型切换 + 生成入口/进度/已生成直达）→ `/knowledge/:bookId/:artifactId` 查看器（重生成/导出/删除）；未配置 AI 引导直达设置；漫画书提示 OCR 路径
 - **随行**: 导出 Mermaid 图谱源码 / Markdown 嵌套大纲（嫁接 Obsidian）；备份 v4 与云同步 SYNC_VERSION 4（按 id LWW + 墓碑剔除 + 整书级联）均携带知识产物
 
+### 4.13 知识库地基：全库统一检索 + 知识件手工修订（2026-09-13）
+
+知识库工具的两块地基：「搜得到」与「可信」。此前全局搜索只覆盖馆藏元数据、知识件只读——现在三路聚合检索一次搜全馆藏，AI 写错的条目读者可改可删可盖校章。
+
+- **全库统一检索**: [globalSearch](src/utils/globalSearch.ts) 纯函数三路聚合——馆藏（书名/作者/题材/标签，沿用旧逻辑）+ 手记（划线与批注全文；孤儿手记置灰展示）+ 知识件（条目级内容：图谱实体/关系、术语、导图节点、速览要点，一件多命中计 N 处）；[Search 页](src/pages/Search/index.tsx) 分组呈现并全部深链回原处——手记经 `readerPathForBook` 回阅读器原句（`?ann=`/`?page=`），知识件进查看器（再回原文），馆藏进档案卡；标签筛选同时作用于馆藏与手记；空关键词且未选标签落回「最近添加」默认视图
+- **知识件手工修订（修订模式）**: [knowledgeEdit](src/utils/knowledgeEdit.ts) 纯函数操作集——图谱节点（改名/身份/小传、删除级联清边）、关系边（改关系名/说明、删）、术语（改术语/定义、删）、速览卡（TL;DR 与三类要点改/删）、导图（标题/补充改、删分支连子树、根只可改）；条目级 `verified`「已校验」章（朱砂印章意象：侧卡/卡片/大纲列表徽标 + 图谱画布节点角标）；查看器「修订」开关进入——四视图统一改/删/校章控件（[ReviseControls](src/components/molecules/knowledge/ReviseControls.tsx)）、[KnowledgeEntryEditDialog](src/components/molecules/knowledge/KnowledgeEntryEditDialog.tsx) 通用字段弹窗、导图修订时画布换 [MindmapOutlineEditor](src/components/molecules/knowledge/MindmapOutlineEditor.tsx) 大纲列表；编辑只动表述性字段，evidence/chapters 原样保留——回原文链路不受修订影响
+- **修订入库与重生成保护**: [useKnowledgeStore](src/stores/useKnowledgeStore.ts) 新增 `updateArtifactData`（纯函数变换 + manualEditCount 计数 + updatedAt 刷新，云同步 LWW 随行正确胜出）；查看器与档案卡两处重生成入口在覆盖式生成前弹「盖掉手工修订」确认（增量补充以旧件为合并基底、修订保留，不拦）
+- **知识件类型扩展**: [KnowledgeArtifact](src/types/index.ts) 增 `manualEditCount`；CharacterNode/CharacterEdge/GlossaryTerm/PaperBrief 条目/MindmapNodeData 增可选 `verified`
+
+### 4.14 复习席：间隔重复复习队列（2026-09-13）
+
+「把读过变长在身上」——术语卡与批注手记自动排成复习卡，SM-2 简化版排期，翻卡三档评分。
+
+- **卡面派生（收集与对账）**: [reviewCatalog](src/utils/reviewCatalog.ts)——术语卡条目（正面=术语、背面=书内定义；无定义不成卡）+ 批注手记（正面=划线原文、背面=批注；纯划线不成卡，那是摘抄墙的领地）；每次进复习席/门厅对账：新术语/新手记自动成卡、修订过的刷新卡面（排期原样保留）、来源消失（术语删/手记删/书删）的卡清出、读者明确移出的不复活（dismissed 标记）
+- **排期（SM-2 简化版）**: [spacedRepetition](src/utils/spacedRepetition.ts) 三档评分——忘了（repetitions 清零、易度 -0.2、10 分钟学习步同场回来）/ 记得（1 → 6 → 间隔×易度 台阶）/ 熟了（易度 +0.15、间隔再乘 1.3）；易度钳制 [1.3, 2.8]；纯函数可注入时钟
+- **复习动线**: `/review` [ReviewPage](src/pages/Review/index.tsx)——进门对账后组队列（到期卡按先后在前、新卡殿后限 10 张/场防淹没），翻卡（点卡或按钮看答案）→ 三档评分，「忘了」的卡排队尾同场再见；空态三档（无卡指路/今日无到期含下张到期日/收工总结）；可「不再复习这张」永久移出；一键导出 Anki TSV（`kuro::书名::来源` 层级标签）；Home 门厅摘抄墙与回望席之间「今日待复习 N 张」入口卡（到期才亮灯）
+- **存储**: IndexedDB v9 `reviewCards` store + [reviewCardRepo](src/services/storage/reviewCardRepo.ts)（[ReviewCard](src/types/index.ts)：排期状态 + 卡面快照 + dismissed）；**排期是本机劳动成果但不进云同步/备份**——卡面可从馆藏来源重建，换设备重新收集、排期从头来过（可接受代价，观察项）
+- **store**: [useReviewStore](src/stores/useReviewStore.ts)（sync 对账 / grade 评分 / dismiss 移出）
+
+### 4.15 划词查词与生词本（2026-09-13）
+
+外语学习闭环：读外文书选中一个词 → 查词（用户自配 AI 服务当词典）→ 释义收进生词本 → 自动进复习席排 SM-2 队列。
+
+- **查词服务**: [vocabLookup](src/services/ai/vocabLookup.ts)——复用知识库 AI 凭据（knowledgeAi*），仅用户点「查词」时调用；提示词/解析纯函数化（buildVocabMessages / parseVocabResult）：结合语境句选义、释义中文、短语整体不拆词、发音（拼音/音标）没把握省略；与知识库生成同门（chatCompletionJson 容错 JSON）
+- **选区入口**: TextReader 选区动作条第四个动作「查词」（[SelectionFloatingButton](src/components/molecules/SelectionFloatingButton.tsx)）——选区 ≤30 字符才出现（长了该走批注）；[VocabLookupPopup](src/components/molecules/VocabLookupPopup.tsx) 锚定弹层：翻词典 loading → 词头/发音/释义/用法/语境句 → 「收进生词本」；语境句取选区前后各 60 字原文（折叠空白）；返回键逐层关闭链已接入；AI 未配置 toast 指路设置
+- **生词本**: IndexedDB v10 `vocabEntries` store + [vocabRepo](src/services/storage/vocabRepo.ts)（[VocabEntry](src/types/index.ts)）；**按词去重**——id 由词归一化生成（小写/空白折叠），重查是更新不是新增（lookupCount 留痕、释义与语境刷新），复习排期经稳定 id 得以保留；`/vocabulary` [VocabularyPage](src/pages/Vocabulary/index.tsx)：词卡列表（发音/释义/用法/语境/出处书章）、删词、按书分组导出 Markdown、「去复习」直达；摘抄墙头部「生词本」入口
+- **复习席接入**: [reviewCatalog](src/utils/reviewCatalog.ts) 第三来源——生词成卡（正面=词、背面=发音+释义），进同一套 SM-2 排期与 Anki 导出；删词即清卡（对账孤儿清理）
+
+### 4.16 问藏书：跨书 RAG 问答（2026-09-13）
+
+「问你的藏书」——整座馆当一个脑子来问：本地关键词检索相关选段 → 用户自配 AI 基于选段作答 → 引文逐字校验、出处可跳回原文。
+
+- **检索层（本地，零外部依赖）**: [qaRetrieval](src/utils/qaRetrieval.ts)——查询分词（CJK 双字组滤疑问虚词 + 拉丁整词小写）、词频封顶×词长加权打分、书名命中整体加成（问书名时该书段落提权）、按分选段（共 6 段、每书限 3 段保多书多样性）、**命中开窗**（每段取首个命中词周边 1600 字——缩提示词体积且居中相关性）
+- **问答服务**: [libraryQA](src/services/ai/libraryQA.ts)——语料复用 [bookCorpus](src/services/knowledge/bookCorpus.ts) 全量分块并按书缓存（重复提问不重读全书）；提示词带段落标签（【段落N｜《书》｜片段M】），要求回答标注段落号、支撑句逐字摘录；**引文防幻觉**：AI 支撑句在章全文里逐字 indexOf 校验（先搜选段覆盖章、再全书扫），命中换算章内占比坐标、未命中标「未定位到原文」不给链接——与知识库证据同一条铁律
+- **动线**: `/ask` [AskLibraryPage](src/pages/Ask/index.tsx)——范围选择（全馆 N 本 / 单本书）、问答回合流（问右答左）、两段式进度（翻书/读选段）、出处列表（段落号 + 原书 + 「回到原文」经 knowledgeSourcePath 深链 `?goto=`/`?page=`）、空态示例问题起手；无检索命中不硬答（提示换说法或缩范围）；知识库聚合页顶部「问藏书」入口卡
+- **边界**: 超长书受 bookCorpus 60 块成本护栏截断（尾部内容检索不到，与知识库生成同护栏）；漫画无文本层不参与；回合会话内保存（刷新即散，问藏书的答案是过程不是藏品——存档见 ROADMAP 观察项）
+
+### 4.17 输出侧：引文格式导出 + 手记主题重组与 AI 提纲（2026-09-13）
+
+写给两类产出者：科研工作者的引用，写作者的取材。
+
+- **引文格式导出**: [citationExport](src/utils/citationExport.ts) 纯函数三格式——BibTeX（author= and 连接、key=首作者+入藏年、note 记私人馆藏）/ GB/T 7714（`作者. 书名[M]. 年.`，超 3 作者列 3 位+等）/ APA（一作/二作/&/省略式）；作者域支持中英分隔符切分，缺作者省略作者域；年份取入藏年（馆藏无出版年字段，尽力生成）；档案卡 more 菜单「引用格式」→ [CitationDialog](src/components/molecules/CitationDialog.tsx) 三格式预览 + 一键复制（缺作者时提示补全）
+- **手记按主题导出**: [buildThemedMarkdown](src/utils/annotationExport.ts)——同一标签下跨书的句子并排成列（`## #标签（N 条）` → `### 《书名》` → 章节分组），未分类殿后；摘抄墙导出菜单二选一：整墙导出（按书，原有）/ 按主题导出（按标签）
+- **从划线生成提纲**: [notesOutline](src/services/ai/notesOutline.ts)——以摘抄墙**当前筛选结果**为原料（按标签/书/关键词筛出的那组手记，即「主题取材」；上限 40 条、引文截 120 字），提纲/解析纯函数化；AI 按论点小节 → 支撑要点组织（3-6 节，条目编号 [n] 回指、不虚构）；[NotesOutlineDialog](src/components/molecules/NotesOutlineDialog.tsx) 展示标题+Markdown+原料计数，可复制可下载；AI 与知识库同一套凭据，仅点「生成提纲」时调用
+
+### 4.18 前情提要：欢迎回来卡（2026-09-13）
+
+久别续读的定向仪——隔几个月回来，先想起读到哪、发生过什么。
+
+- **本地层**: [readingRecap](src/utils/readingRecap.ts) 纯函数——离开天数（≥7 天算「回来的人」）、当前章定位（进度章优先、占比折算兜底）、痕迹手记（离当前章最近的 ≤3 条）、AI 取材窗口（当前章之前：文本书 3 章 / PDF 10 页；从开头读起无前情）
+- **AI 层**: [readingRecap](src/services/ai/readingRecap.ts)——取材正文累计 ≤2.4 万字（超限从最旧段丢起，离续读点越近越重要），产出 ≤5 条前情回顾（按时间序、只挑影响续读理解的转折与人物动向）+ 一句「此刻」处境（不剧透未来）；提示词/解析纯函数化
+- **动线**: 门厅座位卡在离开 ≥7 天时亮出「离开 N 天 · 回想想」chip → [ReadingRecapSheet](src/components/molecules/ReadingRecapSheet.tsx)：欢迎回来头（离开天数 + 停点进度）→ 痕迹手记（点击回跳原句）→ 人物图谱入口（有图谱产物才有）→ AI 前情提要（文本书/PDF；漫画无文本层给本地提示；从开头读起明说没有前情）→ 直接继续读（与座位卡同源停点）
+- **边界**: 漫画无文本层只有本地部分（进度/痕迹/图谱）；AI 与知识库同一套凭据，仅点「生成前情提要」时调用
+
+### 4.19 跨书图谱：同名实体并网（2026-09-13）
+
+打破书的边界——同一人物/概念/术语在不同书里的样子，并排看。
+
+- **合并层**: [crossBookGraph](src/utils/crossBookGraph.ts) 纯函数——图谱节点按稳定 id 归一（生成端同名同 id 的约定在此兑现：跨书合并、权重求和、任一书盖过校验章即亮）；边按端点对排序+关系去重（语义无向，跨书同关系并一边、`edgeBooks` 记录哪几本书都这么写）；节点上限 48 按跨书总权重取前排（防失控，与知识库合并截断同量级）；术语对照按 term.id 跨书归并（跨书在前、按书数降序）；`booksHavingKind` 判视图可用性（≥2 本书才成网）
+- **动线**: `/atlas` [AtlasPage](src/pages/Atlas/index.tsx)——视图切换（人物网/概念网/术语对照，仅有跨书数据的类型出现）；图谱网复用 [CharacterGraphView](src/components/molecules/knowledge/CharacterGraphView.tsx)（合并图同构直喂），节点侧卡**按书展开**：每本书里的身份/小传/关系 chips/出现章节（`knowledgeSourcePath` 回原文）；术语对照卡跨书并排，**定义有分歧时显性标注「分歧本身就是信息」**，单书术语计尾注；书已移出的知识件不进网
+- **入口**: 知识库聚合页顶部双入口卡（问藏书 + 跨书图谱，后者仅在 ≥2 本书有同类知识件时出现——不做死路）
+
+### 4.20 输入面扩展：划句翻译 + 剪报台（2026-09-13）
+
+- **划句翻译**: [translation](src/services/ai/translation.ts)——与「查词」互斥分流：选区 ≤30 字走查词（词/短语），>30 字走翻译（句/段），动作条恒为四键；译向自动判定（原文中文→英文，其他→中文，对照阅读双向都通）；选区送译上限 2000 字；[TranslatePopup](src/components/molecules/TranslatePopup.tsx) 原文收起、译文为主，可**复制译文**、可**译文存为批注**（原文划线 + 笔记即译文——自动进摘抄墙与复习队列，写作者的对照素材直接落袋）；AI 与知识库同一套凭据，仅点「翻译」时调用
+- **剪报台**: 导入中心新增粘贴入藏——标题 + 正文（Markdown/纯文本）包装成 .md File 走 `importFile` 文本书管线：章节拆分、划线批注、知识库生成、问藏书检索、复习队列全套服务即开即用（网页文章/公众号帖子作为第三类内容落地，粘贴方式零依赖可靠）
+
+### 4.21 备份 v5 与云同步 v5：生词本与复习排期随行（2026-09-13）
+
+关闭两轮前立下的观察项——排期是劳动成果，不该换设备/恢复备份就清零。
+
+- **云同步 v5**（SYNC_VERSION 4 → 5，[cloudSync](src/services/cloudSync.ts)）——载荷新增可选 `vocabEntries`/`reviewCards`，与知识件同构合并：按 id 取 updatedAt 较新者（LWW）、`vocab`/`review` 墓碑剔除双方已删（删除后重新编辑的记录胜出）、整书墓碑级联命中；落地写库 + 墓碑逐 kind 删除 + `deleteBookRecords` 级联清生词/复习卡；同步计数与提示语加生词/复习卡
+- **备份 v5**（BACKUP_VERSION 4 → 5，兼容导入 v1-v4）——导出携带 `vocabEntries`/`reviewCards`；恢复按字段存在性覆盖写入（旧备份无字段保留本地），日期字段还原
+- **仓库层**——vocab/review 的 remove（含对账批删 removeMany）记墓碑；两 repo 新增 `deleteByBookId`；**bookRepo.deleteFully 补级联**（此前删书不清生词/复习卡——生词本是主数据不是派生，会留孤儿，本轮修复）
+- **墓碑类型**：TombstoneKind 增 `vocab` | `review`
+
 ---
 
 ## 五、路由结构
@@ -322,6 +398,10 @@ IndexedDB（`kuro-reader-db`，**v8**），11 个 Object Store，由 [db.ts](src
 | `/library` | Library | AuthGuard | MainLayout |
 | `/library/:subLibraryId` | SubLibrary | AuthGuard | MainLayout |
 | `/search` | Search | AuthGuard | MainLayout |
+| `/review` | Review（复习席） | AuthGuard | MainLayout |
+| `/vocabulary` | Vocabulary（生词本） | AuthGuard | MainLayout |
+| `/ask` | Ask（问藏书） | AuthGuard | MainLayout |
+| `/atlas` | Atlas（跨书图谱） | AuthGuard | MainLayout |
 | `/import` | Import | AuthGuard | MainLayout |
 | `/settings` | Settings | AuthGuard | MainLayout |
 | `/stats` | Stats | AuthGuard | MainLayout |
@@ -367,7 +447,73 @@ IndexedDB（`kuro-reader-db`，**v8**），11 个 Object Store，由 [db.ts](src
 
 ## 七、测试现状
 
-**86 个测试文件、660 个用例，全部通过**（`npm run test`，fake-indexeddb + jsdom 环境；阶段 6 交付后）。
+**108 个测试文件、801 个用例，全部通过**（`npm run test`，fake-indexeddb + jsdom 环境；备份/同步 v5 交付后）。
+
+备份/同步 v5（2026-09-13）新增覆盖：
+
+| 测试文件 | 覆盖范围 |
+|----------|----------|
+| `services/cloudSync.test.ts`（增补） | 生词/复习卡按 id LWW / 旧载荷（无 v5 字段）不吞本地 / vocab·review 墓碑剔除与复活优先 / 整书墓碑级联 / 合并结果写库与墓碑落地删除 |
+
+输入面扩展（2026-09-13）新增覆盖：
+
+| 测试文件 | 覆盖范围 |
+|----------|----------|
+| `services/ai/translation.test.ts` | 提示词（译向判定/书名/JSON 指令）/ 超长截断 / 解析（trim、缺译文判废） |
+
+跨书图谱（2026-09-13）新增覆盖：
+
+| 测试文件 | 覆盖范围 |
+|----------|----------|
+| `utils/crossBookGraph.test.ts` | 图谱归并（同名跨书合并/权重求和/校验章任一即有）/ 无向边去重（端点对排序同关系跨书并一边、书归并记两本）/ 节点上限按权重取前排且断边同步裁 / 术语对照（同 id 跨书并排、跨书在前）/ 类型书数统计 |
+| `pages/Atlas/index.test.tsx` | 冒烟：无跨书数据渲染指路空态 |
+
+前情提要（2026-09-13）新增覆盖：
+
+| 测试文件 | 覆盖范围 |
+|----------|----------|
+| `utils/readingRecap.test.ts` | 离开天数/回来阈值 / 当前章定位（进度章优先、占比折算）/ 痕迹手记（近者优先、同距取新）/ 取材窗口（文本书 3 章、PDF 10 页、开头无前情） |
+| `services/ai/readingRecap.test.ts` | 取材正文（标签拼接、超限从最旧段丢起）/ 提示词（书名、即将进入单元、不剧透）/ 解析（条目截 5、坏条目滤除、空判废）/ 单位称呼 |
+| `components/molecules/ReadingRecapSheet.test.tsx` | 冒烟：回来者视图（天数/停点/前情入口/继续读）/ 漫画本地提示 / 关闭回调 |
+
+输出侧（2026-09-13）新增覆盖：
+
+| 测试文件 | 覆盖范围 |
+|----------|----------|
+| `utils/citationExport.test.ts` | 三格式生成（多作者 and 连接/GB-T 3 位截断加等/APA 分式）/ 作者分隔符切分 / 无作者省略域 / 键回退 |
+| `services/ai/notesOutline.test.ts` | 原料构建（新者在前/编号/截断/空引文滤除/上限）/ 提示词（条目编号/主题行/JSON 指令）/ 解析（缺标题回退、缺正文判废） |
+
+问藏书（2026-09-13）新增覆盖：
+
+| 测试文件 | 覆盖范围 |
+|----------|----------|
+| `utils/qaRetrieval.test.ts` | 分词（CJK 双字组/虚词过滤/拉丁整词/单字保底）/ 打分（命中、词长、书名加成）/ 选段（零分排除、每书限流、总量上限）/ 命中开窗（居中、省略号） |
+| `services/ai/libraryQA.test.ts` | 提示词（段落标签/JSON 指令/逐字摘录要求）/ 解析（完整形态、引文截 4 条、坏条目跳过、缺回答判废）/ 引文定位（提示章优先、全书回退、幻觉判 null） |
+| `pages/Ask/index.test.tsx` | 冒烟：页名/占位/空态示例问题 |
+
+生词本（2026-09-13）新增覆盖：
+
+| 测试文件 | 覆盖范围 |
+|----------|----------|
+| `services/ai/vocabLookup.test.ts` | 查词提示词携带词/语境/书名；解析完整形态 / 缺词兜底 / 空字段省略 / 缺释义判废 |
+| `utils/reviewCatalog.test.ts`（增补） | 生词成卡：正面=词、背面=发音+释义；无释义排除 |
+| `pages/Vocabulary/index.test.tsx` | 冒烟：空生词本指路空态 |
+
+复习席（2026-09-13）新增覆盖：
+
+| 测试文件 | 覆盖范围 |
+|----------|----------|
+| `utils/spacedRepetition.test.ts` | SM-2 排期：三档评分台阶 / 忘了清零与 10 分钟学习步 / 易度钳制 / 到期与 dismissed / 新卡判定 |
+| `utils/reviewCatalog.test.ts` | 收集：术语成卡与无定义排除 / 批注成卡与纯划线排除 / 非术语产物排除；对账：空库新建 / 卡面刷新排期保留 / 孤儿清出 / 移出不复活；队列：到期先后 + 新卡上限 |
+| `pages/Review/index.test.tsx` | 冒烟：空馆藏指路空态 |
+
+知识库地基（2026-09-13）新增覆盖：
+
+| 测试文件 | 覆盖范围 |
+|----------|----------|
+| `utils/globalSearch.test.ts` | 三路聚合：馆藏元数据 / 手记全文与孤儿 / 知识件条目级命中（图谱/术语/导图/速览）/ 标签筛选 / 大小写 / 空条件契约 |
+| `utils/knowledgeEdit.test.ts` | 修订纯函数：图谱节点改删级联清边 / 边按下标改删 / 术语改删 / 速览 point-question 分流 / 导图按路径改删（根保护、越界原样、子树连删）/ 校验章 true-false 语义 |
+| `pages/Search/index.test.tsx`（更新） | 冒烟：新占位文案 + 馆藏分组标题 |
 
 阶段 6 新增覆盖：
 
@@ -468,6 +614,43 @@ IndexedDB（`kuro-reader-db`，**v8**），11 个 Object Store，由 [db.ts](src
 - ~~云同步 LWW 无删除墓碑：本地删除的条目可能被远端副本复活~~ → SYNC_VERSION 3 墓碑（tombstones store + 合并剔除 + 多端接力传播 + 90 天过期清理）（2026-09-02）
 
 ### 8.3 已解决（历史问题存档）
+
+**备份/同步 v5「劳动成果随行」（2026-09-13）**：
+- ~~复习排期与生词不进云同步/备份——复习 100 张卡后换设备全部清零~~ → 备份 v5 + 云同步 v5 携带（按 id LWW + vocab/review 墓碑 + 整书级联）
+- ~~删书不清生词与复习卡（孤儿数据 bug）~~ → bookRepo.deleteFully 补级联 + 云端整书墓碑同步级联
+
+**输入面扩展「对照阅读 + 第三类内容」（2026-09-13）**：
+- ~~只有查词没有翻译，读原版书的句子级对照要切出去~~ → 划句翻译（>30 字选区，双向译向，译文可存为批注直接落袋）
+- ~~知识库只收书，网上读到的文章进不来~~ → 剪报台：粘贴入藏为文本书，全套图书馆服务即开即用（URL 抓取受浏览器 CORS 限制，粘贴方式最可靠——见 ROADMAP 观察项）
+
+**跨书图谱「打破书的边界」（2026-09-13）**：
+- ~~知识件严格按书割裂：同一概念/人物在不同书里从不相见，「这 5 篇的术语合并去重」「同一概念的分歧对比」做不到~~ → 跨书图谱：节点按稳定 id 归并（人物网/概念网复用力导向视图、侧卡按书展开回原文）+ 术语对照（跨书并排、分歧显性标注）
+- 至此知识件生成端的「同名同 id」约定在消费端兑现
+
+**前情提要「久别续读」（2026-09-13）**：
+- ~~隔几个月回来续读，停在哪个角色哪条线全忘了，只能往前翻~~ → 欢迎回来卡：本地（离开天数/停点/痕迹手记/图谱入口）+ AI 前情提要（当前章之前 ≤3 章回顾 + 此刻处境，不剧透未来）
+- 追更读者的知识库价值兑现：图谱/手记/进度三处既有投入在续读时刻汇合
+
+**输出侧「写给产出者」（2026-09-13）**：
+- ~~论文引用要手抄~~ → 档案卡一键三格式（BibTeX/GB-T 7714/APA）预览复制
+- ~~手记是平的、按书归档，写作要的是按主题重组~~ → 按主题导出（同标签跨书并排）+ 从当前筛选结果 AI 生成写作提纲（论点→证据骨架，条目编号回指）
+
+**问藏书「馆藏即语料」（2026-09-13）**：
+- ~~书里的内容只能按本翻、按章搜，跨书问一句「哪本书讲过 X」做不到~~ → 问藏书：跨书关键词检索选段 + AI 基于选段作答，引文逐字校验、`?goto=`/`?page=` 回原文；无命中不硬答
+- ~~分块/证据校验/回原文三件套只服务于知识件生成~~ → 复用为问答管线（bookCorpus 分块缓存 + 证据定位同源），一次投入两处产出
+
+**生词本「外语学习闭环」（2026-09-13）**：
+- ~~读原版书无词典：查词要切出去，查完就散~~ → 选区「查词」（用户自配 AI 当词典，语境句消歧）→ 生词本（按词去重、语境留痕）→ 复习席 SM-2 队列 + Anki 导出
+- ~~TTS 之外输入侧空白~~ → 查词是外语读者的第一输入侧能力（翻译对照见 ROADMAP 观察项）
+
+**复习席「从收藏到记住」（2026-09-13）**：
+- ~~AI 术语卡生成了却没有卡片队列——没有间隔重复、没有挖空自测，「读过」止步于收藏~~ → 复习席：术语卡 + 批注手记自动成卡（SM-2 简化版排期、每场新卡上限 10、忘了同场回来），Home 到期亮灯入口 + Anki TSV 导出
+- ~~生词好句没有内化闭环~~ → 批注手记入列（第一部分；词典/生词本见 ROADMAP 观察项）
+
+**知识库地基「搜得到 + 可信」（2026-09-13）**：
+- ~~全局搜索只覆盖馆藏元数据，手记与知识件内容搜不到~~ → 全库统一检索（三路聚合 + 分组深链回原处）
+- ~~知识件 AI 单向输出只读，重生成即覆盖，错误条目不可修正（专业读者不可信即不可用）~~ → 修订模式（条目改/删/已校验章）+ 覆盖式重生成前确认（增量补充不拦）
+- ~~修订后云同步可能被旧件覆盖~~ → updateArtifactData 刷新 updatedAt，LWW 合并正确胜出
 
 **阶段 6「知识库形态」（2026-09-12，详见 ROADMAP.md）**：
 - ~~知识组织只能外流到 Obsidian/Notion~~ → 应用内生成并可视化人物关系图谱与全书思维导图（AI 通读 + 力导向/水平树自研视图），导出 Mermaid/Markdown 继续嫁接外部知识库

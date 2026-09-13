@@ -62,7 +62,7 @@ export const MarkdownMath: FC<MarkdownMathProps> = ({ formula, displayMode, sour
     return <code data-source-start={sourceStart} className="font-mono opacity-70">{formula}</code>
   }
   if (rendered.failed) {
-    return <code data-source-start={sourceStart} className="font-mono text-red-500/80">{formula}</code>
+    return <code data-source-start={sourceStart} className="font-mono text-error/80">{formula}</code>
   }
 
   const Element = displayMode ? 'div' : 'span'

@@ -7,26 +7,69 @@ import { TopAppBar } from '@/components/atoms/TopAppBar'
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog'
 import { CharacterGraphView } from '@/components/molecules/knowledge/CharacterGraphView'
 import { GlossaryView } from '@/components/molecules/knowledge/GlossaryView'
+import { KnowledgeEntryEditDialog, type EditFieldDef } from '@/components/molecules/knowledge/KnowledgeEntryEditDialog'
 import { MindmapView } from '@/components/molecules/knowledge/MindmapView'
 import { PaperBriefView } from '@/components/molecules/knowledge/PaperBriefView'
+import { EntryReviseActions, VerifiedBadge } from '@/components/molecules/knowledge/ReviseControls'
+import { COPY } from '@/constants/copy'
 import { ROUTES, bookDetailPath, knowledgeSourcePath } from '@/constants/routes'
 import { isProviderConfigured } from '@/services/ai/aiClient'
 import { getKnowledgeTask } from '@/services/ai/knowledgeTasks'
 import { useAppStore } from '@/stores/useAppStore'
 import { useKnowledgeStore } from '@/stores/useKnowledgeStore'
 import { useLibraryStore } from '@/stores/useLibraryStore'
-import type { Book, CharacterGraphData, CharacterNode, GlossaryData, MindmapNodeData, PaperBriefData } from '@/types'
+import type {
+  Book,
+  CharacterEdge,
+  CharacterGraphData,
+  CharacterNode,
+  GlossaryData,
+  GlossaryTerm,
+  KnowledgeArtifact,
+  MindmapNodeData,
+  PaperBriefData,
+} from '@/types'
+import {
+  patchBriefEntryText,
+  patchBriefTldr,
+  patchGraphNode,
+  patchGraphEdge,
+  patchGlossaryTerm,
+  patchMindmapNode,
+  removeBriefEntry,
+  removeGraphEdge,
+  removeGraphNode,
+  removeGlossaryTerm,
+  removeMindmapNode,
+  setBriefEntryVerified,
+  setGraphEdgeVerified,
+  setGraphNodeVerified,
+  setGlossaryTermVerified,
+  setMindmapNodeVerified,
+  type BriefSection,
+  type MindmapNodePath,
+} from '@/utils/knowledgeEdit'
 import { exportKnowledgeArtifactMarkdown } from '@/utils/knowledgeExport'
 import { toast } from '@/utils/toast'
 
 /**
  * 知识产物查看器：人物图谱 / 思维导图的全屏舞台。
- * 生成进度、重生成、导出 Markdown 与删除都从这里发起。
+ * 生成进度、重生成、导出 Markdown 与删除都从这里发起；
+ * 修订模式下 AI 写错的条目可改可删，核对过的盖「已校验」章。
  */
 
 const PERCENT_BASE = 100
 /** 人物出现章节 chips 的展示上限（多余折叠为「等 N 处」） */
 const CHAPTER_CHIPS_MAX = 6
+
+/** 修订弹窗的目标（判别联合：一种条目一个分支） */
+type EditState =
+  | { kind: 'node'; node: CharacterNode }
+  | { kind: 'edge'; index: number; edge: CharacterEdge }
+  | { kind: 'term'; term: GlossaryTerm }
+  | { kind: 'briefTldr' }
+  | { kind: 'briefEntry'; section: BriefSection; index: number }
+  | { kind: 'mindmap'; path: MindmapNodePath; node: MindmapNodeData }
 
 function formatTimestamp(value: Date | string): string {
   const date = new Date(value)
@@ -40,17 +83,49 @@ function chapterLabelOf(book: Book, chapterIndex: number): string {
   return chapter ? `第${chapter.number}章` : `第${chapterIndex + 1}章`
 }
 
+/** 按路径取导图节点（修订弹窗初值用；路径失效返回 null） */
+function mindmapNodeAt(root: MindmapNodeData, path: MindmapNodePath): MindmapNodeData | null {
+  let node = root
+  for (const index of path) {
+    const child = node.children?.[index]
+    if (!child) return null
+    node = child
+  }
+  return node
+}
+
+/** 修订弹窗的表单形状（构造器：参数显式定型，分支字面量不漂成互斥联合） */
+function editDialogInfo(
+  title: string,
+  fields: EditFieldDef[],
+  values: Record<string, string>,
+  removable: boolean
+) {
+  return { title, fields, values, removable }
+}
+
 export const KnowledgePage: React.FC = () => {
   const navigate = useNavigate()
   const { bookId, artifactId } = useParams<{ bookId: string; artifactId: string }>()
   const { books, loadBooks } = useLibraryStore()
   const { settings } = useAppStore()
-  const { artifactsByBook, generation, loadArtifacts, generateArtifact, cancelGeneration, removeArtifact } =
-    useKnowledgeStore()
+  const {
+    artifactsByBook,
+    generation,
+    loadArtifacts,
+    generateArtifact,
+    cancelGeneration,
+    removeArtifact,
+    updateArtifactData,
+  } = useKnowledgeStore()
 
-  const [selectedNode, setSelectedNode] = useState<CharacterNode | null>(null)
+  // 选中节点只记 id：修订后数据整件换新，按 id 找回节点不致展示旧快照
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [showMoreMenu, setShowMoreMenu] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [confirmRegenerate, setConfirmRegenerate] = useState(false)
+  const [revising, setRevising] = useState(false)
+  const [editState, setEditState] = useState<EditState | null>(null)
 
   useEffect(() => {
     if (books.length === 0) loadBooks()
@@ -84,18 +159,25 @@ export const KnowledgePage: React.FC = () => {
     () => (artifact?.type === 'paper-brief' ? (artifact.data as PaperBriefData) : null),
     [artifact]
   )
+  const selectedNode = useMemo(
+    () => graph?.nodes.find((node) => node.id === selectedNodeId) ?? null,
+    [graph, selectedNodeId]
+  )
   const relationsOfSelected = useMemo(() => {
     if (!graph || !selectedNode) return []
     return graph.edges
-      .filter((edge) => edge.source === selectedNode.id || edge.target === selectedNode.id)
-      .map((edge) => {
+      .map((edge, index) => ({ edge, index }))
+      .filter(({ edge }) => edge.source === selectedNode.id || edge.target === selectedNode.id)
+      .map(({ edge, index }) => {
         const counterpartId = edge.source === selectedNode.id ? edge.target : edge.source
         const counterpart = graph.nodes.find((node) => node.id === counterpartId)
         return {
-          key: `${edge.source}-${edge.target}-${edge.relation}`,
+          key: `${edge.source}-${edge.target}-${edge.relation}-${index}`,
+          index,
           relation: edge.relation,
-          counterpart: counterpart?.name ?? '？',
           description: edge.description,
+          verified: edge.verified,
+          counterpart: counterpart?.name ?? '？',
           // 回原文：证据定位成功走章内坐标，否则章级回退（边的第一个出现章节）
           evidence: edge.evidence,
           fallbackChapterIndex: edge.chapters?.[0] ?? edge.evidence?.chapterIndex,
@@ -128,6 +210,19 @@ export const KnowledgePage: React.FC = () => {
     apiKey: settings.knowledgeAiKey,
     model: settings.knowledgeAiModel,
   })
+  const manualEdits = artifact.manualEditCount ?? 0
+
+  /** 手工修订统一入口：纯函数变换 + 落库（store 负责计数与刷新） */
+  const revise = (apply: (data: KnowledgeArtifact['data']) => KnowledgeArtifact['data']) => {
+    void updateArtifactData(book.id, artifact.id, apply)
+  }
+
+  const doRegenerate = async () => {
+    setSelectedNodeId(null)
+    setRevising(false)
+    const ok = await generateArtifact(book, artifact.type)
+    if (ok) toast(`${task.label}已重新生成`)
+  }
 
   const handleRegenerate = async () => {
     if (!aiReady) {
@@ -135,13 +230,165 @@ export const KnowledgePage: React.FC = () => {
       navigate(ROUTES.SETTINGS)
       return
     }
-    setSelectedNode(null)
-    const ok = await generateArtifact(book, artifact.type)
-    if (ok) toast(`${task.label}已重新生成`)
+    // 手工修订过 → 先确认再覆盖（修订是读者的劳动成果，不该被一键冲掉）
+    if (manualEdits > 0) {
+      setConfirmRegenerate(true)
+      return
+    }
+    await doRegenerate()
   }
 
+  const handleEditSave = (values: Record<string, string>) => {
+    const target = editState
+    setEditState(null)
+    if (!target) return
+    switch (target.kind) {
+      case 'node':
+        revise((data) =>
+          patchGraphNode(data as CharacterGraphData, target.node.id, {
+            name: values.name,
+            role: values.role || undefined,
+            description: values.description || undefined,
+          })
+        )
+        break
+      case 'edge':
+        revise((data) =>
+          patchGraphEdge(data as CharacterGraphData, target.index, {
+            relation: values.relation,
+            description: values.description || undefined,
+          })
+        )
+        break
+      case 'term':
+        revise((data) =>
+          patchGlossaryTerm(data as GlossaryData, target.term.id, {
+            term: values.term,
+            definition: values.definition || undefined,
+          })
+        )
+        break
+      case 'briefTldr':
+        revise((data) => patchBriefTldr(data as PaperBriefData, values.tldr))
+        break
+      case 'briefEntry':
+        revise((data) => patchBriefEntryText(data as PaperBriefData, target.section, target.index, values.text))
+        break
+      case 'mindmap':
+        revise((data) =>
+          patchMindmapNode(data as MindmapNodeData, target.path, {
+            title: values.title,
+            detail: values.detail || undefined,
+          })
+        )
+        break
+    }
+    toast(COPY.knowledgeEdit.revisedToast)
+  }
+
+  const handleEditRemove = () => {
+    const target = editState
+    setEditState(null)
+    if (!target) return
+    switch (target.kind) {
+      case 'node':
+        setSelectedNodeId(null)
+        revise((data) => removeGraphNode(data as CharacterGraphData, target.node.id))
+        break
+      case 'edge':
+        revise((data) => removeGraphEdge(data as CharacterGraphData, target.index))
+        break
+      case 'term':
+        revise((data) => removeGlossaryTerm(data as GlossaryData, target.term.id))
+        break
+      case 'briefEntry':
+        revise((data) => removeBriefEntry(data as PaperBriefData, target.section, target.index))
+        break
+      case 'mindmap':
+        revise((data) => removeMindmapNode(data as MindmapNodeData, target.path))
+        break
+      case 'briefTldr':
+        break
+    }
+    toast(COPY.knowledgeEdit.removedToast)
+  }
+
+  // 修订弹窗的表单形状与初值（一种条目一套字段）
+  const editDialog = (() => {
+    if (!editState) return null
+    switch (editState.kind) {
+      case 'node':
+        return editDialogInfo(
+          `修订「${editState.node.name}」`,
+          [
+            { key: 'name', label: '名字', required: true },
+            { key: 'role', label: '身份' },
+            { key: 'description', label: '小传', multiline: true },
+          ],
+          {
+            name: editState.node.name,
+            role: editState.node.role ?? '',
+            description: editState.node.description ?? '',
+          },
+          true
+        )
+      case 'edge':
+        return editDialogInfo(
+          `修订「${editState.edge.relation}」关系`,
+          [
+            { key: 'relation', label: COPY.knowledgeEdit.relationName, required: true },
+            { key: 'description', label: COPY.knowledgeEdit.relationNote, multiline: true },
+          ],
+          {
+            relation: editState.edge.relation,
+            description: editState.edge.description ?? '',
+          },
+          true
+        )
+      case 'term':
+        return editDialogInfo(
+          `修订术语「${editState.term.term}」`,
+          [
+            { key: 'term', label: '术语', required: true },
+            { key: 'definition', label: '书中定义', multiline: true },
+          ],
+          { term: editState.term.term, definition: editState.term.definition ?? '' },
+          true
+        )
+      case 'briefTldr':
+        return editDialogInfo(
+          '修订一句话速览',
+          [{ key: 'tldr', label: '速览', multiline: true, required: true }],
+          { tldr: paperBrief?.tldr ?? '' },
+          false
+        )
+      case 'briefEntry': {
+        const entryText =
+          paperBrief && editState.section !== 'questions'
+            ? paperBrief[editState.section][editState.index]?.point
+            : paperBrief?.questions[editState.index]?.question
+        return editDialogInfo(
+          '修订要点',
+          [{ key: 'text', label: '内容', multiline: true, required: true }],
+          { text: entryText ?? '' },
+          true
+        )
+      }
+      case 'mindmap':
+        return editDialogInfo(
+          `修订「${editState.node.title}」`,
+          [
+            { key: 'title', label: '标题', required: true },
+            { key: 'detail', label: '补充', multiline: true },
+          ],
+          { title: editState.node.title, detail: editState.node.detail ?? '' },
+          true
+        )
+    }
+  })()
+
   return (
-    <div className="paper-texture min-h-screen pb-0">
+    <div className="paper-texture h-[100dvh] overflow-y-auto overscroll-contain">
       <div className="fixed inset-0 noise-overlay z-0" />
       <TopAppBar
         variant="detail"
@@ -219,6 +466,33 @@ export const KnowledgePage: React.FC = () => {
             </div>
           )}
 
+        {/* 修订模式开关：AI 写错的地方自己修 */}
+        {!isRunning && (
+          <div className="mb-3 flex items-center justify-between gap-3">
+            {revising ? (
+              <p className="font-label text-label-sm text-seal-deep">{COPY.knowledgeEdit.reviseHint}</p>
+            ) : (
+              manualEdits > 0 && (
+                <p className="font-label text-label-sm text-on-surface-faint">含 {manualEdits} 处手工修订</p>
+              )
+            )}
+            <button
+              aria-pressed={revising}
+              className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full border font-label text-label-sm transition-colors ${
+                revising
+                  ? 'bg-seal-strong text-on-seal border-seal-strong'
+                  : 'text-on-surface-variant border-outline-variant hover:text-primary hover:border-primary'
+              }`}
+              onClick={() => setRevising((v) => !v)}
+            >
+              <span className="material-symbols-outlined text-icon-sm">
+                {revising ? 'task_alt' : 'edit_note'}
+              </span>
+              {revising ? '完成修订' : COPY.knowledgeEdit.revise}
+            </button>
+          </div>
+        )}
+
         {/* 生成进度 / 错误 */}
         {isRunning && (
           <div className="mb-3 rounded-card border border-outline-variant bg-surface-container-low p-4">
@@ -262,16 +536,64 @@ export const KnowledgePage: React.FC = () => {
           {graph ? (
             <CharacterGraphView
               data={graph}
-              selectedNodeId={selectedNode?.id ?? null}
-              onSelectNode={setSelectedNode}
+              selectedNodeId={selectedNodeId}
+              onSelectNode={(node) => setSelectedNodeId(node?.id ?? null)}
               entityLabel={artifact.type === 'concept-graph' ? '概念' : '人物'}
             />
           ) : mindmap ? (
-            <MindmapView data={mindmap} />
+            <MindmapView
+              data={mindmap}
+              revising={revising}
+              onEditNode={(path) => {
+                const node = mindmapNodeAt(mindmap, path)
+                if (node) setEditState({ kind: 'mindmap', path, node })
+              }}
+              onRemoveNode={(path) => {
+                revise((data) => removeMindmapNode(data as MindmapNodeData, path))
+                toast(COPY.knowledgeEdit.removedToast)
+              }}
+              onToggleNodeVerified={(path) =>
+                revise((data) => {
+                  const current = mindmapNodeAt(data as MindmapNodeData, path)
+                  return setMindmapNodeVerified(data as MindmapNodeData, path, !current?.verified)
+                })
+              }
+            />
           ) : glossary ? (
-            <GlossaryView data={glossary} book={book} />
+            <GlossaryView
+              data={glossary}
+              book={book}
+              revising={revising}
+              onEditTerm={(term) => setEditState({ kind: 'term', term })}
+              onRemoveTerm={(termId) => {
+                revise((data) => removeGlossaryTerm(data as GlossaryData, termId))
+                toast(COPY.knowledgeEdit.removedToast)
+              }}
+              onToggleTermVerified={(termId) =>
+                revise((data) => {
+                  const current = (data as GlossaryData).terms.find((t) => t.id === termId)
+                  return setGlossaryTermVerified(data as GlossaryData, termId, !current?.verified)
+                })
+              }
+            />
           ) : paperBrief ? (
-            <PaperBriefView data={paperBrief} book={book} />
+            <PaperBriefView
+              data={paperBrief}
+              book={book}
+              revising={revising}
+              onEditTldr={() => setEditState({ kind: 'briefTldr' })}
+              onEditEntry={(section, index) => setEditState({ kind: 'briefEntry', section, index })}
+              onRemoveEntry={(section, index) => {
+                revise((data) => removeBriefEntry(data as PaperBriefData, section, index))
+                toast(COPY.knowledgeEdit.removedToast)
+              }}
+              onToggleEntryVerified={(section, index) =>
+                revise((data) => {
+                  const list = (data as PaperBriefData)[section]
+                  return setBriefEntryVerified(data as PaperBriefData, section, index, !list[index]?.verified)
+                })
+              }
+            />
           ) : null}
         </div>
 
@@ -279,19 +601,41 @@ export const KnowledgePage: React.FC = () => {
         {selectedNode && (
           <section className="mt-4 rounded-card border border-outline-variant bg-surface-container-low p-4 animate-slide-up">
             <div className="flex items-start justify-between gap-2 mb-1">
-              <div>
-                <h2 className="font-display text-headline-sm text-primary">{selectedNode.name}</h2>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="font-display text-headline-sm text-primary">{selectedNode.name}</h2>
+                  {selectedNode.verified && <VerifiedBadge />}
+                </div>
                 {selectedNode.role && (
                   <p className="font-label text-label-sm text-on-surface-variant">{selectedNode.role}</p>
                 )}
               </div>
-              <button
-                aria-label="收起卡片"
-                className="w-8 h-8 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container transition-colors"
-                onClick={() => setSelectedNode(null)}
-              >
-                <span className="material-symbols-outlined text-icon-sm">close</span>
-              </button>
+              <div className="flex items-center gap-1 shrink-0">
+                {revising && (
+                  <EntryReviseActions
+                    verified={selectedNode.verified}
+                    entryLabel={selectedNode.name}
+                    onEdit={() => setEditState({ kind: 'node', node: selectedNode })}
+                    onRemove={() => {
+                      setSelectedNodeId(null)
+                      revise((data) => removeGraphNode(data as CharacterGraphData, selectedNode.id))
+                      toast(COPY.knowledgeEdit.removedToast)
+                    }}
+                    onToggleVerified={() =>
+                      revise((data) =>
+                        setGraphNodeVerified(data as CharacterGraphData, selectedNode.id, !selectedNode.verified)
+                      )
+                    }
+                  />
+                )}
+                <button
+                  aria-label="收起卡片"
+                  className="w-8 h-8 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container transition-colors"
+                  onClick={() => setSelectedNodeId(null)}
+                >
+                  <span className="material-symbols-outlined text-icon-sm">close</span>
+                </button>
+              </div>
             </div>
             {selectedNode.description && (
               <p className="font-body text-body-md text-on-surface leading-relaxed mb-3">
@@ -340,7 +684,52 @@ export const KnowledgePage: React.FC = () => {
                             {relation.description}
                           </span>
                         )}
-                        {target && (
+                        {relation.verified && <VerifiedBadge />}
+                        {revising && (
+                          <span className="shrink-0 self-center">
+                            <button
+                              aria-label={`改与${relation.counterpart}的关系`}
+                              className="w-7 h-7 inline-flex items-center justify-center rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors align-middle"
+                              onClick={() => {
+                                const edge = graph?.edges[relation.index]
+                                if (edge) setEditState({ kind: 'edge', index: relation.index, edge })
+                              }}
+                            >
+                              <span className="material-symbols-outlined text-icon-sm">edit</span>
+                            </button>
+                            <button
+                              aria-label={`删与${relation.counterpart}的关系`}
+                              className="w-7 h-7 inline-flex items-center justify-center rounded-full text-on-surface-variant hover:text-seal hover:bg-seal-soft/50 transition-colors align-middle"
+                              onClick={() => {
+                                revise((data) => removeGraphEdge(data as CharacterGraphData, relation.index))
+                                toast(COPY.knowledgeEdit.removedToast)
+                              }}
+                            >
+                              <span className="material-symbols-outlined text-icon-sm">delete</span>
+                            </button>
+                            <button
+                              aria-label={relation.verified ? COPY.knowledgeEdit.unverify : COPY.knowledgeEdit.verify}
+                              className={`w-7 h-7 inline-flex items-center justify-center rounded-full transition-colors align-middle ${
+                                relation.verified
+                                  ? 'text-seal hover:bg-seal-soft/50'
+                                  : 'text-on-surface-variant hover:text-seal hover:bg-seal-soft/50'
+                              }`}
+                              style={relation.verified ? { fontVariationSettings: "'FILL' 1" } : undefined}
+                              onClick={() =>
+                                revise((data) =>
+                                  setGraphEdgeVerified(
+                                    data as CharacterGraphData,
+                                    relation.index,
+                                    !relation.verified
+                                  )
+                                )
+                              }
+                            >
+                              <span className="material-symbols-outlined text-icon-sm">verified</span>
+                            </button>
+                          </span>
+                        )}
+                        {target && !revising && (
                           <button
                             aria-label={`回到${relation.counterpart}相关原文`}
                             title="回到原文"
@@ -368,6 +757,41 @@ export const KnowledgePage: React.FC = () => {
           </section>
         )}
       </main>
+
+      {/* 条目修订弹窗（改字/删除二合一：删走确认语义但不二次弹窗——修订模式里删是轻操作，重生成才会复活） */}
+      {editDialog && (
+        <KnowledgeEntryEditDialog
+          isOpen={editState != null}
+          title={editDialog.title}
+          fields={editDialog.fields}
+          values={editDialog.values}
+          onSave={handleEditSave}
+          onCancel={() => setEditState(null)}
+        />
+      )}
+      {editState && editDialog?.removable && (
+        <button
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-dialog flex items-center gap-2 px-5 py-2.5 rounded-full border border-seal/60 bg-surface-bright text-seal font-label text-label-md shadow-raised hover:bg-seal-soft/60 transition-colors"
+          onClick={handleEditRemove}
+        >
+          <span className="material-symbols-outlined text-icon-sm">delete</span>
+          删除这条
+        </button>
+      )}
+
+      <ConfirmDialog
+        isOpen={confirmRegenerate}
+        title={COPY.knowledgeEdit.regenerateOverwriteTitle}
+        message={COPY.knowledgeEdit.regenerateOverwriteMessage(manualEdits)}
+        confirmLabel={COPY.knowledgeEdit.regenerateConfirm}
+        cancelLabel={COPY.knowledgeEdit.regenerateCancel}
+        variant="danger"
+        onConfirm={() => {
+          setConfirmRegenerate(false)
+          void doRegenerate()
+        }}
+        onCancel={() => setConfirmRegenerate(false)}
+      />
 
       <ConfirmDialog
         isOpen={confirmDelete}

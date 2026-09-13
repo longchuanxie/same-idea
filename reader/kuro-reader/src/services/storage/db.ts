@@ -16,8 +16,10 @@ const DB_NAME = 'kuro-reader-db'
  * - v6: 新增 readingProgress store（阅读进度从 localStorage 迁入）
  * - v7: 新增 tombstones store（云同步删除墓碑，防止本地删除被远端复活）
  * - v8: 新增 knowledgeArtifacts store（知识库：人物图谱/思维导图等知识产物）
+ * - v9: 新增 reviewCards store（复习席：术语卡/批注派生复习卡的排期状态）
+ * - v10: 新增 vocabEntries store（生词本：划词查过的词，进复习队列）
  */
-const DB_VERSION = 8
+const DB_VERSION = 10
 
 /**
  * v3 版本号常量（用于 upgrade 回调中的 oldVersion 比较）
@@ -56,6 +58,20 @@ const V7_TOMBSTONES = 7
 const V8_KNOWLEDGE_ARTIFACTS = 8
 
 /**
+ * v9 版本常量
+ *
+ * 当 oldVersion < V9_REVIEW_CARDS 时表示数据库尚未包含 reviewCards store，需要创建。
+ */
+const V9_REVIEW_CARDS = 9
+
+/**
+ * v10 版本常量
+ *
+ * 当 oldVersion < V10_VOCAB_ENTRIES 时表示数据库尚未包含 vocabEntries store，需要创建。
+ */
+const V10_VOCAB_ENTRIES = 10
+
+/**
  * 对象存储（object store）名称常量
  *
  * 所有 storage 子模块应通过此对象引用 store 名称，
@@ -76,6 +92,8 @@ export const STORE_NAMES = {
   readingProgress: 'readingProgress',
   tombstones: 'tombstones',
   knowledgeArtifacts: 'knowledgeArtifacts',
+  reviewCards: 'reviewCards',
+  vocabEntries: 'vocabEntries',
 } as const
 
 /**
@@ -131,6 +149,12 @@ export function getDB(): Promise<IDBPDatabase> {
         if (oldVersion < V8_KNOWLEDGE_ARTIFACTS && !db.objectStoreNames.contains(STORE_NAMES.knowledgeArtifacts)) {
           const knowledgeStore = db.createObjectStore(STORE_NAMES.knowledgeArtifacts, { keyPath: 'id' })
           knowledgeStore.createIndex('bookId', 'bookId', { unique: false })
+        }
+        if (oldVersion < V9_REVIEW_CARDS && !db.objectStoreNames.contains(STORE_NAMES.reviewCards)) {
+          db.createObjectStore(STORE_NAMES.reviewCards, { keyPath: 'id' })
+        }
+        if (oldVersion < V10_VOCAB_ENTRIES && !db.objectStoreNames.contains(STORE_NAMES.vocabEntries)) {
+          db.createObjectStore(STORE_NAMES.vocabEntries, { keyPath: 'id' })
         }
       },
     })

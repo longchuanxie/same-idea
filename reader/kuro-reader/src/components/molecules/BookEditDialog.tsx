@@ -60,7 +60,7 @@ export const BookEditDialog: React.FC<BookEditDialogProps> = ({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="书籍标题"
-              className="w-full border border-outline-variant rounded px-3 py-2 font-body text-body-md text-on-background bg-surface focus:outline-none focus:border-primary"
+              className="input-field"
               autoFocus
             />
           </div>
@@ -72,7 +72,7 @@ export const BookEditDialog: React.FC<BookEditDialogProps> = ({
               value={author}
               onChange={(e) => setAuthor(e.target.value)}
               placeholder="作者名称"
-              className="w-full border border-outline-variant rounded px-3 py-2 font-body text-body-md text-on-background bg-surface focus:outline-none focus:border-primary"
+              className="input-field"
             />
           </div>
 
@@ -83,7 +83,7 @@ export const BookEditDialog: React.FC<BookEditDialogProps> = ({
               onChange={(e) => setDescription(e.target.value)}
               placeholder="书籍描述"
               rows={3}
-              className="w-full border border-outline-variant rounded px-3 py-2 font-body text-body-md text-on-background bg-surface focus:outline-none focus:border-primary resize-none"
+              className="input-field resize-none"
             />
           </div>
 
@@ -93,8 +93,8 @@ export const BookEditDialog: React.FC<BookEditDialogProps> = ({
               <button
                 className={`flex-1 py-2 px-4 rounded border font-label text-label-md transition-colors ${
                   status === 'ongoing'
-                    ? 'bg-primary text-on-primary border-primary'
-                    : 'bg-surface-container-lowest text-on-surface-variant border-outline-variant hover:bg-surface-variant'
+                    ? 'option-active'
+                    : 'option'
                 }`}
                 onClick={() => setStatus('ongoing')}
               >
@@ -103,8 +103,8 @@ export const BookEditDialog: React.FC<BookEditDialogProps> = ({
               <button
                 className={`flex-1 py-2 px-4 rounded border font-label text-label-md transition-colors ${
                   status === 'completed'
-                    ? 'bg-primary text-on-primary border-primary'
-                    : 'bg-surface-container-lowest text-on-surface-variant border-outline-variant hover:bg-surface-variant'
+                    ? 'option-active'
+                    : 'option'
                 }`}
                 onClick={() => setStatus('completed')}
               >
@@ -116,13 +116,13 @@ export const BookEditDialog: React.FC<BookEditDialogProps> = ({
 
         <div className="flex gap-3 justify-end">
           <button
-            className="border border-outline-variant text-on-surface-variant font-label text-label-md px-6 py-2 rounded hover:bg-surface-variant transition-colors"
+            className="btn-secondary px-6 py-2"
             onClick={onCancel}
           >
             取消
           </button>
           <button
-            className="bg-primary text-on-primary font-label text-label-md px-6 py-2 rounded hover:opacity-90 transition-colors"
+            className="btn-primary px-6 py-2"
             onClick={handleSave}
             disabled={!title.trim()}
           >

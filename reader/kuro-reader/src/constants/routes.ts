@@ -13,6 +13,10 @@ export const ROUTES = {
   SEARCH: '/search',
   TAGS: '/tags',
   NOTES: '/notes',
+  REVIEW: '/review',
+  VOCABULARY: '/vocabulary',
+  ASK: '/ask',
+  ATLAS: '/atlas',
   KNOWLEDGE_HUB: '/knowledge-hub',
   KNOWLEDGE: '/knowledge/:bookId/:artifactId',
   AUTH: '/auth',
@@ -100,6 +104,26 @@ export function readerPathForBook(
 
 export function subLibraryPath(subLibraryId: string): string {
   return `/library/${subLibraryId}`;
+}
+
+/** 复习席路径（Home 今日待复习入口跳转用） */
+export function reviewPath(): string {
+  return '/review';
+}
+
+/** 生词本路径（摘抄墙入口跳转用） */
+export function vocabularyPath(): string {
+  return '/vocabulary';
+}
+
+/** 问藏书的路径（知识库聚合页入口跳转用） */
+export function askPath(): string {
+  return '/ask';
+}
+
+/** 跨书图谱路径（知识库聚合页入口跳转用） */
+export function atlasPath(): string {
+  return '/atlas';
 }
 
 /** 知识产物查看器路径（档案卡知识库区块跳转用） */

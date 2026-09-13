@@ -48,7 +48,9 @@ export default {
           DEFAULT: 'rgb(var(--color-seal) / <alpha-value>)',
           deep: 'rgb(var(--color-seal-deep) / <alpha-value>)',
           soft: 'rgb(var(--color-seal-soft) / <alpha-value>)',
+          strong: 'rgb(var(--color-seal-strong) / <alpha-value>)',
         },
+        'on-seal': 'rgb(var(--color-on-seal) / <alpha-value>)',
         /* 光：琥珀 —— 仅生命力元素（今日之灯/炉火），禁作交互色 */
         lamp: 'rgb(var(--color-lamp) / <alpha-value>)',
         /* 木：仅结构性元素（侧边栏/书架线），禁用于按钮与文字 */
@@ -77,6 +79,7 @@ export default {
         'body-sm': ['14px', { lineHeight: '20px', fontWeight: '400' }],
         'body-xs': ['13px', { lineHeight: '18px', fontWeight: '400' }],
         'label-md': ['14px', { lineHeight: '20px', letterSpacing: '0.02em', fontWeight: '500' }],
+        'label-lg': ['16px', { lineHeight: '24px', letterSpacing: '0.02em', fontWeight: '500' }],
         'label-sm': ['12px', { lineHeight: '16px', letterSpacing: '0.05em', fontWeight: '600' }],
         /* 图标三档：收编 text-[16px]/text-[20px]/text-[24px] 魔数 */
         'icon-sm': ['16px', { lineHeight: '1' }],

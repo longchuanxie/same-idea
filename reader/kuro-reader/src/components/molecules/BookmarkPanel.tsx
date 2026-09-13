@@ -48,7 +48,7 @@ export const BookmarkPanel: React.FC<BookmarkPanelProps> = ({
             className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-variant transition-colors"
             onClick={onClose}
           >
-            <span className="material-symbols-outlined text-on-surface-variant text-[20px]">close</span>
+            <span className="material-symbols-outlined text-on-surface-variant text-icon-md">close</span>
           </button>
         </div>
 
@@ -77,7 +77,7 @@ export const BookmarkPanel: React.FC<BookmarkPanelProps> = ({
                         setSwipedId(null);
                       }}
                     >
-                      <span className="material-symbols-outlined text-on-error text-[20px]">delete</span>
+                      <span className="material-symbols-outlined text-on-error text-icon-md">delete</span>
                     </button>
                   </div>
 
@@ -98,7 +98,7 @@ export const BookmarkPanel: React.FC<BookmarkPanelProps> = ({
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="material-symbols-outlined text-primary text-[16px]">bookmark</span>
+                          <span className="material-symbols-outlined text-primary text-icon-sm">bookmark</span>
                           <span className="font-label text-label-md text-primary truncate">
                             {bm.chapterTitle}
                           </span>

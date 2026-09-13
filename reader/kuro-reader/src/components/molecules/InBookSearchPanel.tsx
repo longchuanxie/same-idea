@@ -48,7 +48,7 @@ export const InBookSearchPanel: React.FC<InBookSearchPanelProps> = ({
               onClick={onClose}
               aria-label={COPY.annotation.close}
             >
-              <span className="material-symbols-outlined text-on-surface-variant text-[20px]">close</span>
+              <span className="material-symbols-outlined text-on-surface-variant text-icon-md">close</span>
             </button>
           </div>
           <div className="flex items-center gap-2 bg-surface-container-low rounded-lg px-3 py-2">
@@ -66,7 +66,7 @@ export const InBookSearchPanel: React.FC<InBookSearchPanelProps> = ({
                 onClick={() => setInput('')}
                 aria-label="清空"
               >
-                <span className="material-symbols-outlined text-on-surface-variant text-[16px]">close</span>
+                <span className="material-symbols-outlined text-on-surface-variant text-icon-sm">close</span>
               </button>
             )}
           </div>

@@ -18,7 +18,9 @@ import { TextProgressHint } from '@/components/molecules/TextProgressHint';
 import { TextReaderBottomBar } from '@/components/molecules/TextReaderBottomBar';
 import { TextReaderFooter } from '@/components/molecules/TextReaderFooter';
 import { TextReaderHeader } from '@/components/molecules/TextReaderHeader';
+import { TranslatePopup, type TranslateState } from '@/components/molecules/TranslatePopup';
 import { UndoToast } from '@/components/molecules/UndoToast';
+import { VocabLookupPopup, type VocabLookupState } from '@/components/molecules/VocabLookupPopup';
 import { COPY } from '@/constants/copy';
 import { ANNOTATION_QUERY_PARAM, READER_GOTO_QUERY_PARAM, parseGotoParam } from '@/constants/routes';
 import { getTextReaderFontFamily } from '@/constants/textReaderFonts';
@@ -41,6 +43,9 @@ import { useSpeech } from '@/hooks/useSpeech';
 import { useTextProgressSaving } from '@/hooks/useTextProgressSaving';
 import { useTextSelection, type TextSelectionInfo } from '@/hooks/useTextSelection';
 import { useWakeLock } from '@/hooks/useWakeLock';
+import { isProviderConfigured } from '@/services/ai/aiClient';
+import { translateSelection } from '@/services/ai/translation';
+import { lookupWord, type VocabLookupResult } from '@/services/ai/vocabLookup';
 import { revokeEpubObjectUrls } from '@/services/epubContent';
 import {
   findPreferredBreak,
@@ -49,11 +54,12 @@ import {
 } from '@/services/pagination/textPagination';
 import { annotationRepo } from '@/services/storage/annotationRepo';
 import { bookmarkRepo } from '@/services/storage/bookmarkRepo';
+import { vocabRepo, vocabEntryId } from '@/services/storage/vocabRepo';
 import { loadTextContent, resolveTextChapterIndex, type TextChapter } from '@/services/textContent';
 import { piperModelStored, preloadPiperModel } from '@/services/tts/piperEngine';
 import { useAppStore } from '@/stores/useAppStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
-import type { Bookmark, Annotation, AnnotationStyle, TtsEngineOption } from '@/types';
+import type { Bookmark, Annotation, AnnotationStyle, TtsEngineOption, VocabEntry } from '@/types';
 import { computeAnnotationAnchor, resolveAnnotationOffsets } from '@/utils/annotationAnchor';
 import { getAnnotationPresentation } from '@/utils/annotationHighlight';
 import { copyTextToClipboard } from '@/utils/clipboard';
@@ -91,6 +97,11 @@ const UNDO_TOAST_AUTO_HIDE_MS = 5000;
 const HINT_TOAST_AUTO_HIDE_MS = 2500;
 const SELECTION_POPUP_OFFSET_X = 160;
 const SELECTION_POPUP_OFFSET_Y = 40;
+// 划词查词：选区最长这么多个字符还算是「词或短语」（长了该走批注）
+const VOCAB_LOOKUP_MAX_CHARS = 30;
+// 语境句窗口：选区前后各取的原文长度
+const VOCAB_CONTEXT_BEFORE_CHARS = 60;
+const VOCAB_CONTEXT_AFTER_CHARS = 60;
 // 百分比与比例换算
 const PERCENT_MULTIPLIER = 100;
 
@@ -193,6 +204,24 @@ export const TextReaderPage: React.FC = () => {
   const [selectionPopup, setSelectionPopup] = useState<TextSelectionInfo | null>(null);
   const selectionPopupRef = useRef(selectionPopup);
   selectionPopupRef.current = selectionPopup;
+  // 划词查词弹层（词/语境/结果 + 落库所需的书与章定位）
+  const [vocabLookup, setVocabLookup] = useState<
+    | (VocabLookupState & {
+        position: { x: number; y: number };
+        bookId: string;
+        chapterIndex: number;
+        chapterTitle: string;
+      })
+    | null
+  >(null);
+  // 划句翻译弹层（译文 + 原选区快照——存为批注要用）
+  const [translateState, setTranslateState] = useState<
+    | (TranslateState & {
+        position: { x: number; y: number };
+        selection: TextSelectionInfo;
+      })
+    | null
+  >(null);
   const [highlightedAnnotation, setHighlightedAnnotation] = useState<Annotation | null>(null);
   const selectionPopupTimeRef = useRef<number>(0);
   // 文本选区检测（鼠标拖选/触摸长按/selectionchange 兜底）整体收敛于 hook
@@ -702,6 +731,8 @@ export const TextReaderPage: React.FC = () => {
 
   // Android 返回键：从最上层浮层开始逐层关闭
   useBackHandler(() => {
+    if (translateState) { setTranslateState(null); return true; }
+    if (vocabLookup) { setVocabLookup(null); return true; }
     if (selectionPopup) { setSelectionPopup(null); return true; }
     if (highlightedAnnotation) { setHighlightedAnnotation(null); return true; }
     if (isBottomBarVisible) { setIsBottomBarVisible(false); return true; }
@@ -1624,6 +1655,134 @@ export const TextReaderPage: React.FC = () => {
     setSelectionPopup(null);
     window.getSelection()?.removeAllRanges();
   }, [selectionPopup, buildAnnotationFromSelection]);
+
+  // 划词查词：短选区走词典（用户自配的 AI 服务），释义可收进生词本
+  const handleVocabLookup = useCallback(async () => {
+    const sel = selectionInfoRef.current;
+    if (!sel) return;
+    const word = sel.text.trim();
+    if (!word || !bookId) return;
+    const { settings: s } = useAppStore.getState();
+    const config = { baseUrl: s.knowledgeAiUrl, apiKey: s.knowledgeAiKey, model: s.knowledgeAiModel };
+    if (!isProviderConfigured(config)) {
+      showToast(COPY.vocab.aiNotConfigured);
+      return;
+    }
+    const chapter = chapters[currentChapterIndex];
+    if (!chapter) return;
+    const offset = sel.contentOffset != null && sel.contentOffset >= 0
+      ? sel.contentOffset
+      : chapter.content.indexOf(sel.text);
+    const anchor = offset >= 0 ? offset : 0;
+    const context = chapter.content
+      .slice(
+        Math.max(0, anchor - VOCAB_CONTEXT_BEFORE_CHARS),
+        Math.min(chapter.content.length, anchor + word.length + VOCAB_CONTEXT_AFTER_CHARS)
+      )
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    setSelectionInfo(null);
+    window.getSelection()?.removeAllRanges();
+    isSelectingTextRef.current = false;
+    setVocabLookup({
+      word,
+      context,
+      status: 'loading',
+      position: {
+        x: sel.position.x - SELECTION_POPUP_OFFSET_X,
+        y: sel.position.y + SELECTION_POPUP_OFFSET_Y,
+      },
+      bookId,
+      chapterIndex: currentChapterIndex,
+      chapterTitle: chapter.title,
+    });
+
+    try {
+      const result = await lookupWord(config, { word, context, bookTitle: title });
+      setVocabLookup((prev) => (prev ? { ...prev, status: 'done', result } : null));
+    } catch (e) {
+      setVocabLookup((prev) =>
+        prev
+          ? { ...prev, status: 'error', errorMessage: e instanceof Error ? e.message : COPY.vocab.lookupFailed }
+          : null
+      );
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- 选区/手势 ref 跨渲染稳定，列为依赖无意义
+  }, [bookId, chapters, currentChapterIndex, showToast, title]);
+
+  // 收进生词本：按词去重（重查是更新不是新增），复习排期经稳定 id 得以保留
+  const handleVocabSave = useCallback(async (result: VocabLookupResult) => {
+    if (!vocabLookup) return;
+    const id = vocabEntryId(vocabLookup.word);
+    const existing = await vocabRepo.get(id);
+    const now = new Date();
+    const entry: VocabEntry = {
+      id,
+      word: vocabLookup.word,
+      pronunciation: result.pronunciation,
+      definition: result.definition,
+      note: result.note,
+      context: vocabLookup.context,
+      bookId: vocabLookup.bookId,
+      chapterIndex: vocabLookup.chapterIndex,
+      chapterTitle: vocabLookup.chapterTitle,
+      lookupCount: (existing?.lookupCount ?? 0) + 1,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    };
+    await vocabRepo.save(entry);
+    setVocabLookup(null);
+    showToast(COPY.vocab.savedToast);
+  }, [vocabLookup, showToast]);
+
+  // 划句翻译：长选区走译文（与查词互斥分流），存为批注走批注管线（原文+译文）
+  const handleTranslate = useCallback(async () => {
+    const sel = selectionInfoRef.current;
+    if (!sel) return;
+    const text = sel.text.trim();
+    if (!text) return;
+    const { settings: s } = useAppStore.getState();
+    const config = { baseUrl: s.knowledgeAiUrl, apiKey: s.knowledgeAiKey, model: s.knowledgeAiModel };
+    if (!isProviderConfigured(config)) {
+      showToast(COPY.translate.aiNotConfigured);
+      return;
+    }
+    const position = {
+      x: sel.position.x - SELECTION_POPUP_OFFSET_X,
+      y: sel.position.y + SELECTION_POPUP_OFFSET_Y,
+    };
+    setSelectionInfo(null);
+    window.getSelection()?.removeAllRanges();
+    isSelectingTextRef.current = false;
+    setTranslateState({ text, status: 'loading', position, selection: sel });
+    try {
+      const translation = await translateSelection(config, { text, bookTitle: title });
+      setTranslateState((prev) => (prev ? { ...prev, status: 'done', translation } : null));
+    } catch (e) {
+      setTranslateState((prev) =>
+        prev
+          ? { ...prev, status: 'error', errorMessage: e instanceof Error ? e.message : COPY.translate.failed }
+          : null
+      );
+    }
+  }, [showToast, title, selectionInfoRef, isSelectingTextRef, setSelectionInfo]);
+
+  // 译文存为批注：原文划线 + 笔记即译文（进摘抄墙与复习队列）
+  const handleTranslateSave = useCallback(
+    (translation: string) => {
+      if (!translateState) return;
+      const annotation = buildAnnotationFromSelection(translateState.selection, translation, 'highlight', []);
+      if (annotation) {
+        void annotationRepo.add(annotation).then(() => {
+          setAnnotations((prev) => [annotation, ...prev]);
+        });
+      }
+      setTranslateState(null);
+      showToast(COPY.translate.savedToast);
+    },
+    [translateState, buildAnnotationFromSelection, showToast]
+  );
 
   // 纯划线：一键保存当前选区为无笔记高亮（划线/批注分离，零输入）
   const handleQuickHighlight = useCallback(async () => {
@@ -2548,11 +2707,21 @@ export const TextReaderPage: React.FC = () => {
         />
       )}
 
-      {/* 浮动动作条：选中后一键划线、复制或打开批注弹窗 */}
-      {selectionInfo && !selectionPopup && (
+      {/* 浮动动作条：选中后一键划线、复制、查词/翻译或打开批注弹窗 */}
+      {selectionInfo && !selectionPopup && !vocabLookup && !translateState && (
         <SelectionFloatingButton
           position={selectionInfo.position}
           onHighlight={handleQuickHighlight}
+          onLookup={
+            selectionInfo.text.trim().length <= VOCAB_LOOKUP_MAX_CHARS
+              ? () => void handleVocabLookup()
+              : undefined
+          }
+          onTranslate={
+            selectionInfo.text.trim().length > VOCAB_LOOKUP_MAX_CHARS
+              ? () => void handleTranslate()
+              : undefined
+          }
           onCopy={() => {
             const text = selectionInfo.text;
             setSelectionInfo(null);
@@ -2608,6 +2777,26 @@ export const TextReaderPage: React.FC = () => {
           onDelete={handleAnnotationDelete}
           onNavigate={handleAnnotationNavigate}
           onClose={() => setHighlightedAnnotation(null)}
+        />
+      )}
+
+      {/* 划词查词弹层：翻词典 → 收进生词本 */}
+      {vocabLookup && (
+        <VocabLookupPopup
+          state={vocabLookup}
+          position={vocabLookup.position}
+          onSave={(result) => void handleVocabSave(result)}
+          onClose={() => setVocabLookup(null)}
+        />
+      )}
+
+      {/* 划句翻译弹层：译文 → 复制 / 存为批注 */}
+      {translateState && (
+        <TranslatePopup
+          state={translateState}
+          position={translateState.position}
+          onSaveAsNote={handleTranslateSave}
+          onClose={() => setTranslateState(null)}
         />
       )}
     </div>

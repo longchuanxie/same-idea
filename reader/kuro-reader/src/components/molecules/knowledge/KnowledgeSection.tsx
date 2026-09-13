@@ -2,7 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react'
 
 import { useNavigate } from 'react-router-dom'
 
+import { ConfirmDialog } from '@/components/molecules/ConfirmDialog'
 import { GenerationOptionsSheet } from '@/components/molecules/knowledge/GenerationOptionsSheet'
+import { COPY } from '@/constants/copy'
 import { ROUTES, knowledgePath } from '@/constants/routes'
 import { isProviderConfigured } from '@/services/ai/aiClient'
 import { KNOWLEDGE_TASKS, getKnowledgeTasksForKind } from '@/services/ai/knowledgeTasks'
@@ -85,6 +87,9 @@ const TaskCard: React.FC<TaskCardProps> = ({
   const generateArtifact = useKnowledgeStore((s) => s.generateArtifact)
   const cancelGeneration = useKnowledgeStore((s) => s.cancelGeneration)
   const [optionsOpen, setOptionsOpen] = useState(false)
+  /** 覆盖式生成前的「盖掉手工修订」确认（增量补充不需要——旧件数据是合并基底） */
+  const [pendingOptions, setPendingOptions] = useState<KnowledgeGenerationOptions | null>(null)
+  const manualEdits = artifact?.manualEditCount ?? 0
 
   const handleCardClick = () => {
     if (running) return
@@ -96,10 +101,22 @@ const TaskCard: React.FC<TaskCardProps> = ({
     void generateArtifact(book, type)
   }
 
-  const startWithOptions = (options: KnowledgeGenerationOptions) => {
-    setOptionsOpen(false)
+  const runGenerate = (options?: KnowledgeGenerationOptions) => {
     if (!ensureAiConfiguredOrHint(navigate)) return
     void generateArtifact(book, type, options)
+  }
+
+  const requestGenerate = (options?: KnowledgeGenerationOptions) => {
+    if (!options?.incremental && manualEdits > 0) {
+      setPendingOptions(options ?? {})
+      return
+    }
+    runGenerate(options)
+  }
+
+  const startWithOptions = (options: KnowledgeGenerationOptions) => {
+    setOptionsOpen(false)
+    requestGenerate(options)
   }
 
   return (
@@ -125,8 +142,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
             className="w-8 h-8 flex items-center justify-center rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-variant transition-colors"
             onClick={(e) => {
               e.stopPropagation()
-              if (!ensureAiConfiguredOrHint(navigate)) return
-              void generateArtifact(book, type)
+              requestGenerate()
             }}
           >
             <span className="material-symbols-outlined text-icon-sm">refresh</span>
@@ -211,6 +227,21 @@ const TaskCard: React.FC<TaskCardProps> = ({
         open={optionsOpen}
         onClose={() => setOptionsOpen(false)}
         onStart={startWithOptions}
+      />
+
+      <ConfirmDialog
+        isOpen={pendingOptions != null}
+        title={COPY.knowledgeEdit.regenerateOverwriteTitle}
+        message={COPY.knowledgeEdit.regenerateOverwriteMessage(manualEdits)}
+        confirmLabel={COPY.knowledgeEdit.regenerateConfirm}
+        cancelLabel={COPY.knowledgeEdit.regenerateCancel}
+        variant="danger"
+        onConfirm={() => {
+          const options = pendingOptions
+          setPendingOptions(null)
+          runGenerate(options ?? undefined)
+        }}
+        onCancel={() => setPendingOptions(null)}
       />
     </div>
   )
@@ -300,10 +331,10 @@ export const KnowledgeSection: React.FC<{ book: Book }> = ({ book }) => {
               <button
                 key={option.value}
                 aria-pressed={preference === option.value}
-                className={`px-3 py-1 rounded-full font-label text-label-sm transition-colors ${
+                className={`chip px-3 py-1 ${
                   preference === option.value
-                    ? 'bg-primary text-on-primary'
-                    : 'text-on-surface-variant hover:text-primary'
+                    ? 'chip-active'
+                    : ''
                 }`}
                 onClick={() => void updateBook(book.id, { contentKind: option.value })}
               >

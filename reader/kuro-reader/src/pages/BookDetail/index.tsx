@@ -2,11 +2,12 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 
 import { useNavigate, useParams } from 'react-router-dom';
 
-import BookCoverImage from '@/components/atoms/BookCoverImage';
+import { BookCoverImage } from '@/components/atoms/BookCoverImage';
 import { BottomNavBar } from '@/components/atoms/BottomNavBar';
 import { Button } from '@/components/atoms/Button';
 import { FormatBadge } from '@/components/atoms/FormatBadge';
 import { TopAppBar } from '@/components/atoms/TopAppBar';
+import { CitationDialog } from '@/components/molecules/CitationDialog';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
 import { KnowledgeSection } from '@/components/molecules/knowledge/KnowledgeSection';
 import { COPY } from '@/constants/copy';
@@ -53,6 +54,7 @@ export const BookDetailPage: React.FC = () => {
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showCitation, setShowCitation] = useState(false);
   const moreMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -124,12 +126,12 @@ export const BookDetailPage: React.FC = () => {
 
   if (!book) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="paper-texture min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <span className="material-symbols-outlined text-on-surface-variant text-6xl">search_off</span>
           <p className="font-body text-body-md text-on-surface-variant">未找到该书籍</p>
           <button
-            className="font-label text-label-md text-primary border border-outline-variant px-6 py-2 hover:bg-surface-variant transition-colors"
+            className="btn-secondary px-6 py-2"
             onClick={() => navigate(ROUTES.LIBRARY)}
           >
             返回书架
@@ -166,7 +168,7 @@ export const BookDetailPage: React.FC = () => {
   };
 
   return (
-    <div className="paper-texture min-h-screen pb-0">
+    <div className="paper-texture h-[100dvh] overflow-y-auto overscroll-contain">
       <div className="fixed inset-0 noise-overlay z-0" />
       <TopAppBar variant="detail" onMore={() => setShowMoreMenu((v) => !v)} />
       {showMoreMenu && book && (
@@ -193,6 +195,16 @@ export const BookDetailPage: React.FC = () => {
           >
             <span className="material-symbols-outlined text-icon-md">ios_share</span>
             <span className="font-label text-label-md">导出手记</span>
+          </button>
+          <button
+            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-container transition-colors text-on-surface-variant hover:text-primary"
+            onClick={() => {
+              setShowMoreMenu(false);
+              setShowCitation(true);
+            }}
+          >
+            <span className="material-symbols-outlined text-icon-md">format_quote</span>
+            <span className="font-label text-label-md">{COPY.citation.menuLabel}</span>
           </button>
           <div className="border-t border-outline-variant my-1" />
           <button
@@ -231,7 +243,7 @@ export const BookDetailPage: React.FC = () => {
                     type="text"
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
-                    className="w-full border border-outline-variant rounded px-3 py-2 font-body text-body-md text-on-background bg-surface focus:outline-none focus:border-primary"
+                    className="input-field"
                   />
                 </div>
                 <div>
@@ -240,7 +252,7 @@ export const BookDetailPage: React.FC = () => {
                     type="text"
                     value={editAuthor}
                     onChange={(e) => setEditAuthor(e.target.value)}
-                    className="w-full border border-outline-variant rounded px-3 py-2 font-body text-body-md text-on-background bg-surface focus:outline-none focus:border-primary"
+                    className="input-field"
                   />
                 </div>
                 <div>
@@ -249,7 +261,7 @@ export const BookDetailPage: React.FC = () => {
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
                     rows={3}
-                    className="w-full border border-outline-variant rounded px-3 py-2 font-body text-body-md text-on-background bg-surface focus:outline-none focus:border-primary resize-none"
+                    className="input-field resize-none"
                   />
                 </div>
                 <div>
@@ -258,10 +270,10 @@ export const BookDetailPage: React.FC = () => {
                     {STATUS_OPTIONS.map((opt) => (
                       <button
                         key={opt.value}
-                        className={`px-3 py-1.5 rounded-full border font-label text-label-sm transition-colors ${
+                        className={`chip px-3 py-1.5 ${
                           editStatus === opt.value
-                            ? 'bg-primary text-on-primary border-primary'
-                            : 'border-outline-variant text-on-surface-variant hover:border-primary'
+                            ? 'chip-active'
+                            : ''
                         }`}
                         onClick={() => setEditStatus(opt.value)}
                       >
@@ -272,13 +284,13 @@ export const BookDetailPage: React.FC = () => {
                 </div>
                 <div className="flex gap-3 mt-2">
                   <button
-                    className="bg-primary text-on-primary font-label text-label-md px-6 py-2 rounded hover:opacity-90 transition-colors"
+                    className="btn-primary px-6 py-2"
                     onClick={handleSave}
                   >
                     保存
                   </button>
                   <button
-                    className="border border-outline-variant text-on-surface-variant font-label text-label-md px-6 py-2 rounded hover:bg-surface-variant transition-colors"
+                    className="btn-secondary px-6 py-2"
                     onClick={handleCancelEdit}
                   >
                     取消
@@ -304,11 +316,11 @@ export const BookDetailPage: React.FC = () => {
                 )}
                 <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-4">
                   {book.genres.map((genre) => (
-                    <span key={genre} className="px-2 py-1 border border-outline-variant rounded-full font-label text-label-sm text-on-surface-variant">
+                    <span key={genre} className="chip px-2 py-1">
                       {genre}
                     </span>
                   ))}
-                  <span className="px-2 py-1 border border-outline-variant rounded-full font-label text-label-sm text-on-surface-variant">
+                  <span className="chip px-2 py-1">
                     {getStatusLabel(book.status)}
                   </span>
                   <FormatBadge format={book.format} size="large" />
@@ -318,7 +330,7 @@ export const BookDetailPage: React.FC = () => {
                   {tags.filter((t) => t.bookIds.includes(book.id) && !book.genres.includes(t.name)).map((tag) => (
                     <span
                       key={tag.id}
-                      className="inline-flex items-center gap-1 px-3 py-1 rounded-full font-label text-label-sm text-white"
+                      className="chip px-3 py-1 text-on-primary"
                       style={{ backgroundColor: tag.color }}
                     >
                       {tag.name}
@@ -334,13 +346,13 @@ export const BookDetailPage: React.FC = () => {
                     </span>
                   ))}
                   <button
-                    className="px-3 py-1 border border-dashed border-outline-variant rounded-full font-label text-label-sm text-on-surface-variant hover:border-primary hover:text-primary transition-colors"
+                    className="chip border-dashed px-3 py-1 hover:text-primary"
                     onClick={() => {
                       setShowTagPanel(!showTagPanel);
                       setTimeout(() => tagInputRef.current?.focus(), TAG_INPUT_FOCUS_DELAY_MS);
                     }}
                   >
-                    <span className="material-symbols-outlined text-[16px] align-text-bottom">add</span>
+                    <span className="material-symbols-outlined text-icon-sm align-text-bottom">add</span>
                     标签
                   </button>
                 </div>
@@ -380,7 +392,7 @@ export const BookDetailPage: React.FC = () => {
                         className="flex-1 px-3 py-2 bg-surface-container-lowest border border-outline-variant rounded-lg text-on-surface font-body text-body-md focus:outline-none focus:border-primary"
                       />
                       <button
-                        className="px-3 py-2 bg-primary text-on-primary rounded-lg font-label text-label-md hover:opacity-90 transition-opacity"
+                        className="btn-primary px-3 py-2"
                         onClick={async () => {
                           if (!newTagName.trim() || !id) return;
                           const existing = tags.find((t) => t.name.toLowerCase() === newTagName.trim().toLowerCase());
@@ -487,11 +499,14 @@ export const BookDetailPage: React.FC = () => {
         </section>
 
         {book.chapters.length > 0 && (
-          <section className="py-8 animate-fade-in stagger-2">
+          <section className="py-8 border-t border-outline-variant animate-fade-in stagger-2">
             <div className="flex justify-between items-center mb-6">
               <h2 className="font-display text-headline-md text-primary">目录</h2>
-              <span className="font-label text-label-sm text-on-surface-variant">
-                共 {book.chapters.length} {book.format === 'text' ? '章' : '话'}
+              <span className="flex items-center gap-0.5">
+                <span className="font-label text-label-sm text-on-surface-variant">
+                  共 {book.chapters.length} {book.format === 'text' ? '章' : '话'}
+                </span>
+                <span className="material-symbols-outlined text-icon-md text-on-surface-faint">keyboard_arrow_down</span>
               </span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -500,7 +515,7 @@ export const BookDetailPage: React.FC = () => {
                 return (
                   <button
                     key={ch.id}
-                    className={`p-4 border border-outline-variant rounded hover:bg-surface-container transition-colors flex justify-between items-center group text-left ${
+                    className={`card-link p-4 flex justify-between items-center group ${
                       ch.status === 'reading' ? 'bg-surface-container-low' : ''
                     } ${ch.status === 'unread' ? 'opacity-70' : ''}`}
                     onClick={() => navigate(readerPathForBook(book, ch.id))}
@@ -546,7 +561,7 @@ export const BookDetailPage: React.FC = () => {
                 .map((ann) => (
                   <button
                     key={ann.id}
-                    className="text-left p-4 rounded-card bg-surface-container-low border border-outline-variant hover:bg-surface-container transition-colors"
+                    className="card-link p-4"
                     onClick={() => navigate(readerPathForBook(book, book.chapters[ann.chapterIndex]?.id, ann.id))}
                   >
                     <p className="font-body text-body-md text-on-surface leading-relaxed line-clamp-2">
@@ -587,6 +602,7 @@ export const BookDetailPage: React.FC = () => {
         }}
         onCancel={() => setConfirmDelete(false)}
       />
+      <CitationDialog book={book} isOpen={showCitation} onClose={() => setShowCitation(false)} />
       <BottomNavBar active="library" />
     </div>
   );

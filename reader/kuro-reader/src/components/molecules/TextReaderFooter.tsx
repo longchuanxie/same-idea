@@ -110,7 +110,7 @@ export const TextReaderFooter: React.FC<TextReaderFooterProps> = ({
                   className={cn(
                     'w-9 h-9 rounded-full flex items-center justify-center transition-colors',
                     ttsActive
-                      ? 'bg-primary text-on-primary'
+                      ? 'option-active'
                       : 'text-on-surface-variant hover:bg-surface-container-highest'
                   )}
                   onClick={onToggleTTS}
@@ -125,7 +125,7 @@ export const TextReaderFooter: React.FC<TextReaderFooterProps> = ({
                 className={cn(
                   'w-9 h-9 rounded-full flex items-center justify-center transition-colors',
                   isAutoScrolling
-                    ? 'bg-primary text-on-primary'
+                    ? 'option-active'
                     : 'text-on-surface-variant hover:bg-surface-container-highest'
                 )}
                 onClick={onToggleAutoScroll}

@@ -18,7 +18,7 @@ export const ChapterListDrawer: React.FC<ChapterListDrawerProps> = ({
 }) => (
   <div className="fixed inset-0 z-50 flex justify-end">
     <div className="absolute inset-0 bg-on-background/40 animate-fade-in" onClick={onClose} />
-    <div className="relative w-[280px] max-w-[80vw] h-full bg-surface-bright shadow-2xl animate-slide-left flex flex-col">
+    <div className="relative w-[280px] max-w-[80vw] h-full bg-surface-bright shadow-raised animate-slide-left flex flex-col">
       <div className="flex items-center justify-between px-4 py-3 border-b border-outline-variant">
         <h3 className="font-display text-headline-sm text-primary">章节目录</h3>
         <button

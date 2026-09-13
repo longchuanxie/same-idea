@@ -7,6 +7,8 @@ import { getDB, STORE_NAMES } from './db'
 import { knowledgeRepo } from './knowledgeRepo'
 import { pageRepo } from './pageRepo'
 import { progressRepo } from './progressRepo'
+import { reviewCardRepo } from './reviewCardRepo'
+import { vocabRepo } from './vocabRepo'
 
 export const bookRepo = {
   async save(book: Book): Promise<void> {
@@ -54,5 +56,7 @@ export const bookRepo = {
     await bookmarkRepo.deleteByBookId(id);
     await progressRepo.remove(id);
     await knowledgeRepo.deleteByBookId(id);
+    await vocabRepo.deleteByBookId(id);
+    await reviewCardRepo.deleteByBookId(id);
   },
 }

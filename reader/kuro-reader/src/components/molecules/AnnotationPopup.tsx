@@ -50,7 +50,7 @@ export const AnnotationPopup: React.FC<AnnotationPopupProps> = ({
   return (
     <div className="fixed inset-0 z-[70]" onClick={onCancel}>
       <div
-        className="absolute bg-surface rounded-card-lg shadow-2xl border border-outline-variant/50 overflow-hidden animate-fade-in"
+        className="absolute bg-surface rounded-card-lg shadow-raised border border-outline-variant/50 overflow-hidden animate-fade-in"
         style={{
           left: Math.max(VIEWPORT_EDGE_MARGIN_PX, left),
           top: Math.min(top, window.innerHeight - popupMaxHeight - POPUP_EDGE_MARGIN_PX),
@@ -82,7 +82,7 @@ export const AnnotationPopup: React.FC<AnnotationPopupProps> = ({
               }`}
             >
               <span className="annotation-marker annotation-marker-v1">
-                <span className="material-symbols-outlined text-[16px] align-middle mr-1">brush</span>
+                <span className="material-symbols-outlined text-icon-sm align-middle mr-1">brush</span>
                 水彩笔
               </span>
             </button>
@@ -94,7 +94,7 @@ export const AnnotationPopup: React.FC<AnnotationPopupProps> = ({
                   : 'text-on-surface-variant hover:bg-surface-variant'
               }`}
             >
-              <span className="material-symbols-outlined text-[16px] align-middle mr-1">format_underlined</span>
+              <span className="material-symbols-outlined text-icon-sm align-middle mr-1">format_underlined</span>
               下划线
             </button>
             <button
@@ -105,7 +105,7 @@ export const AnnotationPopup: React.FC<AnnotationPopupProps> = ({
                   : 'text-on-surface-variant hover:bg-surface-variant'
               }`}
             >
-              <span className="material-symbols-outlined text-[16px] align-middle mr-1">wave</span>
+              <span className="material-symbols-outlined text-icon-sm align-middle mr-1">wave</span>
               波浪线
             </button>
           </div>
@@ -119,7 +119,7 @@ export const AnnotationPopup: React.FC<AnnotationPopupProps> = ({
             onChange={(e) => setNote(e.target.value)}
             placeholder={COPY.annotation.notePlaceholder}
             rows={3}
-            className="w-full px-3 py-2 bg-surface-container-lowest border border-outline-variant/50 rounded-lg text-on-surface font-body text-body-sm resize-none focus:outline-none focus:border-primary placeholder:text-on-surface-variant/40"
+            className="input-field resize-none"
           />
           <div className="mt-2">
             <AnnotationTagPicker selected={tagIds} onChange={setTagIds} allowCreate />
@@ -135,7 +135,7 @@ export const AnnotationPopup: React.FC<AnnotationPopupProps> = ({
             取消
           </button>
           <button
-            className="px-4 py-1.5 rounded-lg font-label text-label-sm bg-primary text-on-primary hover:opacity-90 transition-opacity"
+            className="btn-primary btn-sm px-4 py-1.5"
             onClick={handleSave}
           >
             {note.trim() ? COPY.annotation.saveNote : COPY.annotation.saveHighlightOnly}

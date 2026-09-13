@@ -97,6 +97,53 @@ export interface MultiBookEntry {
   annotations: Annotation[];
 }
 
+/** 主题导出条目：一个标签下手记的跨书集合（untaggedName 由调用方传入，如「未分类」） */
+export interface ThemedEntry {
+  tagName: string;
+  annotations: Annotation[];
+}
+
+/**
+ * 按主题（标签）跨书重组导出：`# 摘抄墙 · 按主题` + 每主题 `## #标签名`，
+ * 主题内按书分组（`### 《书名》`），书内沿用章节分组结构。
+ * 写作取材的视角：同一主题在不同书里的句子并排成列。
+ */
+export function buildThemedMarkdown(
+  entries: ThemedEntry[],
+  bookTitleOf: (bookId: string) => string,
+  exportedAt: Date = new Date(),
+  tagNames?: ReadonlyMap<string, string>,
+  untaggedName = '未分类'
+): string {
+  const meaningful = entries.filter((e) => e.annotations.length > 0);
+  const totalCount = meaningful.reduce((sum, e) => sum + e.annotations.length, 0);
+  const lines: string[] = [
+    '# 摘抄墙 · 按主题',
+    '',
+    `> 导出时间：${formatDateTime(exportedAt)} · 主题 ${meaningful.length} · 手记 ${totalCount}`,
+    '',
+  ];
+
+  for (const entry of meaningful) {
+    const heading = entry.tagName === untaggedName ? untaggedName : `#${entry.tagName}`;
+    lines.push(`## ${heading}（${entry.annotations.length} 条）`, '');
+
+    const byBook = new Map<string, Annotation[]>();
+    for (const ann of entry.annotations) {
+      const list = byBook.get(ann.bookId) ?? [];
+      list.push(ann);
+      byBook.set(ann.bookId, list);
+    }
+    for (const [bookId, annotations] of byBook) {
+      lines.push(`### 《${bookTitleOf(bookId)}》`, '');
+      lines.push(...renderAnnotationSections(annotations, tagNames));
+      lines.push('');
+    }
+  }
+
+  return lines.join('\n').replace(/\n{4,}/g, '\n\n\n').trim() + '\n';
+}
+
 /**
  * 跨书整墙导出：`# 摘抄墙` 总标题 + 每书 `## 《书名》` + 现有章节分组结构。
  * 各书按手记更新时间倒序（最近动过的墙段在前）。

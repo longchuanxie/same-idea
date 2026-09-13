@@ -1,5 +1,6 @@
 import type { FC } from 'react';
 
+import { ToggleSwitch } from '@/components/atoms/ToggleSwitch';
 import type { PaperType } from '@/types';
 import { cn } from '@/utils/cn';
 import { getAllPaperTypes } from '@/utils/paperTexture';
@@ -68,7 +69,7 @@ export const ReaderBottomBar: FC<ReaderBottomBarProps> = ({
               onClick={onClose}
               aria-label="关闭"
             >
-              <span className="material-symbols-outlined text-[20px]">close</span>
+              <span className="material-symbols-outlined text-icon-md">close</span>
             </button>
           </div>
 
@@ -79,24 +80,24 @@ export const ReaderBottomBar: FC<ReaderBottomBarProps> = ({
               className={cn(
                 'flex-1 flex flex-col items-center gap-2 py-3 rounded-card-lg border transition-colors',
                 direction === 'vertical'
-                  ? 'bg-primary text-on-primary border-primary'
-                  : 'bg-surface-container-lowest text-on-surface-variant border-outline-variant hover:bg-surface-variant'
+                  ? 'option-active'
+                  : 'bg-surface-container-lowest text-on-surface-variant option'
               )}
               onClick={() => onDirectionChange('vertical')}
             >
-              <span className="material-symbols-outlined text-[24px]">swap_vert</span>
+              <span className="material-symbols-outlined text-icon-lg">swap_vert</span>
               <span className="font-label text-label-sm">条漫</span>
             </button>
             <button
               className={cn(
                 'flex-1 flex flex-col items-center gap-2 py-3 rounded-card-lg border transition-colors',
                 direction === 'horizontal'
-                  ? 'bg-primary text-on-primary border-primary'
-                  : 'bg-surface-container-lowest text-on-surface-variant border-outline-variant hover:bg-surface-variant'
+                  ? 'option-active'
+                  : 'bg-surface-container-lowest text-on-surface-variant option'
               )}
               onClick={() => onDirectionChange('horizontal')}
             >
-              <span className="material-symbols-outlined text-[24px]">swap_horiz</span>
+              <span className="material-symbols-outlined text-icon-lg">swap_horiz</span>
               <span className="font-label text-label-sm">水平翻页</span>
             </button>
           </div>
@@ -107,24 +108,24 @@ export const ReaderBottomBar: FC<ReaderBottomBarProps> = ({
                 className={cn(
                   'flex-1 flex flex-col items-center gap-2 py-3 rounded-card-lg border transition-colors',
                   pageLayout === 'single'
-                    ? 'bg-primary text-on-primary border-primary'
-                    : 'bg-surface-container-lowest text-on-surface-variant border-outline-variant hover:bg-surface-variant'
+                    ? 'option-active'
+                    : 'bg-surface-container-lowest text-on-surface-variant option'
                 )}
                 onClick={() => onPageLayoutChange('single')}
               >
-                <span className="material-symbols-outlined text-[24px]">crop_portrait</span>
+                <span className="material-symbols-outlined text-icon-lg">crop_portrait</span>
                 <span className="font-label text-label-sm">单页</span>
               </button>
               <button
                 className={cn(
                   'flex-1 flex flex-col items-center gap-2 py-3 rounded-card-lg border transition-colors',
                   pageLayout === 'double'
-                    ? 'bg-primary text-on-primary border-primary'
-                    : 'bg-surface-container-lowest text-on-surface-variant border-outline-variant hover:bg-surface-variant'
+                    ? 'option-active'
+                    : 'bg-surface-container-lowest text-on-surface-variant option'
                 )}
                 onClick={() => onPageLayoutChange('double')}
               >
-                <span className="material-symbols-outlined text-[24px]">auto_stories</span>
+                <span className="material-symbols-outlined text-icon-lg">auto_stories</span>
                 <span className="font-label text-label-sm">双页</span>
               </button>
             </div>
@@ -136,24 +137,24 @@ export const ReaderBottomBar: FC<ReaderBottomBarProps> = ({
                 className={cn(
                   'flex-1 flex flex-col items-center gap-2 py-3 rounded-card-lg border transition-colors',
                   readingDirection === 'rtl'
-                    ? 'bg-primary text-on-primary border-primary'
-                    : 'bg-surface-container-lowest text-on-surface-variant border-outline-variant hover:bg-surface-variant'
+                    ? 'option-active'
+                    : 'bg-surface-container-lowest text-on-surface-variant option'
                 )}
                 onClick={() => onReadingDirectionChange('rtl')}
               >
-                <span className="material-symbols-outlined text-[24px]">format_textdirection_r_to_l</span>
+                <span className="material-symbols-outlined text-icon-lg">format_textdirection_r_to_l</span>
                 <span className="font-label text-label-sm">{READING_DIRECTION_LABELS.rtl}</span>
               </button>
               <button
                 className={cn(
                   'flex-1 flex flex-col items-center gap-2 py-3 rounded-card-lg border transition-colors',
                   readingDirection === 'ltr'
-                    ? 'bg-primary text-on-primary border-primary'
-                    : 'bg-surface-container-lowest text-on-surface-variant border-outline-variant hover:bg-surface-variant'
+                    ? 'option-active'
+                    : 'bg-surface-container-lowest text-on-surface-variant option'
                 )}
                 onClick={() => onReadingDirectionChange('ltr')}
               >
-                <span className="material-symbols-outlined text-[24px]">format_textdirection_l_to_r</span>
+                <span className="material-symbols-outlined text-icon-lg">format_textdirection_l_to_r</span>
                 <span className="font-label text-label-sm">{READING_DIRECTION_LABELS.ltr}</span>
               </button>
             </div>
@@ -169,23 +170,11 @@ export const ReaderBottomBar: FC<ReaderBottomBarProps> = ({
                 </p>
               </div>
             </div>
-            <button
-              className={cn(
-                'relative inline-block w-11 h-6 rounded-full toggle-spring',
-                paperModeEnabled ? 'bg-primary' : 'bg-surface-variant'
-              )}
-              onClick={onPaperModeToggle}
-              aria-label={paperModeEnabled ? '关闭纸张模式' : '开启纸张模式'}
-            >
-              <span
-                className={cn(
-                  'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full toggle-thumb-spring border',
-                  paperModeEnabled
-                    ? 'translate-x-5 border-primary'
-                    : 'border-outline-variant'
-                )}
-              />
-            </button>
+            <ToggleSwitch
+              checked={paperModeEnabled}
+              ariaLabel="纸张模拟效果"
+              onChange={onPaperModeToggle}
+            />
           </div>
 
           {paperModeEnabled && (
@@ -198,12 +187,12 @@ export const ReaderBottomBar: FC<ReaderBottomBarProps> = ({
                     className={cn(
                       'flex items-center gap-1.5 px-3 py-2 rounded-lg border whitespace-nowrap transition-colors',
                       paperType === type
-                        ? 'bg-primary text-on-primary border-primary'
+                        ? 'option-active'
                         : 'bg-surface-container-high text-on-surface-variant border-outline-variant hover:border-primary/50'
                     )}
                     onClick={() => onPaperTypeChange(type)}
                   >
-                    <span className="material-symbols-outlined text-[16px]">{config.icon}</span>
+                    <span className="material-symbols-outlined text-icon-sm">{config.icon}</span>
                     <span className="font-label text-label-sm">{config.label}</span>
                   </button>
                 ))}
@@ -226,7 +215,7 @@ export const ReaderBottomBar: FC<ReaderBottomBarProps> = ({
               max={100}
               value={textureIntensity}
               onChange={(e) => onTextureIntensityChange(Number(e.target.value))}
-              className="w-full h-1.5 bg-surface-variant rounded-full appearance-none cursor-pointer accent-primary"
+              className="w-full ink-slider cursor-pointer"
             />
           </div>
           <div className="py-3 px-4 bg-surface-container-lowest rounded-card-lg border border-outline-variant mb-4">
@@ -243,7 +232,7 @@ export const ReaderBottomBar: FC<ReaderBottomBarProps> = ({
               max={100}
               value={brightness}
               onChange={(e) => onBrightnessChange(Number(e.target.value))}
-              className="w-full h-1.5 bg-surface-variant rounded-full appearance-none cursor-pointer accent-primary"
+              className="w-full ink-slider cursor-pointer"
             />
           </div>
 
@@ -261,7 +250,7 @@ export const ReaderBottomBar: FC<ReaderBottomBarProps> = ({
               max={100}
               value={colorTemperature}
               onChange={(e) => onColorTemperatureChange(Number(e.target.value))}
-              className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-primary"
+              className="w-full ink-slider cursor-pointer"
               style={{ background: `linear-gradient(to right, #ffffff, #ffcc80)` }}
             />
           </div>

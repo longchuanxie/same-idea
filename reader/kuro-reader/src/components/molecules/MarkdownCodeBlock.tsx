@@ -188,7 +188,7 @@ const CodeToolbar: FC<CodeToolbarProps> = ({
                 onToggleWrap()
               }}
             >
-              <span className="material-symbols-outlined text-[16px]">wrap_text</span>
+              <span className="material-symbols-outlined text-icon-sm">wrap_text</span>
             </button>
             <button
               type="button"
@@ -200,7 +200,7 @@ const CodeToolbar: FC<CodeToolbarProps> = ({
                 onToggleLineNumbers()
               }}
             >
-              <span className="material-symbols-outlined text-[16px]">format_list_numbered</span>
+              <span className="material-symbols-outlined text-icon-sm">format_list_numbered</span>
             </button>
           </>
         )}
@@ -213,7 +213,7 @@ const CodeToolbar: FC<CodeToolbarProps> = ({
           }}
           aria-label="复制代码"
         >
-          <span className="material-symbols-outlined text-[16px]">
+          <span className="material-symbols-outlined text-icon-sm">
             {copyStatus === 'copied' ? 'check' : copyStatus === 'failed' ? 'error' : 'content_copy'}
           </span>
           {copyStatus === 'copied' ? '已复制' : copyStatus === 'failed' ? '复制失败' : '复制'}

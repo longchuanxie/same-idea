@@ -21,8 +21,10 @@ describe('Search 页面冒烟', () => {
         <SearchPage />
       </MemoryRouter>
     )
-    const input = screen.getByPlaceholderText('搜索标题、作者或题材...')
+    const input = screen.getByPlaceholderText('搜书、手记或知识件…')
     fireEvent.change(input, { target: { value: '冒烟' } })
     expect(await screen.findByText('冒烟测试书')).toBeTruthy()
+    // 三路聚合视图：馆藏分组标题可见
+    expect(await screen.findByText(/馆藏 \(1\)/)).toBeTruthy()
   })
 })

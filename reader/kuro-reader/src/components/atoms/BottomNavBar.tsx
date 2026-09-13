@@ -25,8 +25,9 @@ export interface BottomNavBarProps {
   active?: NavItem;
 }
 
-/** 贴边实心底栏（建议书 5.1）——馆内楼层指示：纸底 + 顶部细线，
- *  激活项 = 图标填充 + 下方 2px 书脊线；不再悬浮、不再遮挡批量操作条。 */
+/** 贴边实心底栏（建议书 5.1）——馆内楼层指示：纸底 + 顶部木质层板线，
+ *  激活项 = 图标填充 + 下方 2px 书脊线；不再悬浮、不再遮挡批量操作条。
+ *  纸底半透明 + 毛玻璃：不遮纸纹层，与页面同一张纸，避免通用 tab bar 的塑料断层。 */
 export const BottomNavBar: React.FC<BottomNavBarProps> = ({ active = 'home' }) => {
   const navigate = useNavigate();
   const { setActiveNav } = useAppStore();
@@ -43,7 +44,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ active = 'home' }) =
       className={cn(
         'lg:hidden',
         'fixed bottom-0 inset-x-0 z-50',
-        'bg-surface border-t border-outline-variant',
+        'bg-background/85 backdrop-blur-md border-t border-surface-tint/60',
         'flex items-stretch px-2 pt-1',
         'pb-safe'
       )}

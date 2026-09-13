@@ -28,6 +28,8 @@ const GRAVITY = 0.06
 const PADDING_RATIO = 0.08
 const IDEAL_K_FACTOR = 0.85
 const MIN_DISTANCE = 0.01
+/** 碰撞修正对半拆给两个节点（完全重合时的分离位移比例） */
+const COLLISION_SPLIT_RATIO = 0.5
 /** 圆环初始化半径占短边比例 */
 const INIT_RADIUS_RATIO = 0.4
 /** 初始抖动占半径比例（打破正多边形对称） */
@@ -218,10 +220,10 @@ export function computeForceLayout(
         if (dist < MIN_DISTANCE) {
           // 完全重合：沿 id 序的确定性方向拆开
           const angle = ((i * count + j) / (count * count)) * Math.PI * 2
-          a.x += Math.cos(angle) * minDist * 0.5
-          a.y += Math.sin(angle) * minDist * 0.5
-          b.x -= Math.cos(angle) * minDist * 0.5
-          b.y -= Math.sin(angle) * minDist * 0.5
+          a.x += Math.cos(angle) * minDist * COLLISION_SPLIT_RATIO
+          a.y += Math.sin(angle) * minDist * COLLISION_SPLIT_RATIO
+          b.x -= Math.cos(angle) * minDist * COLLISION_SPLIT_RATIO
+          b.y -= Math.sin(angle) * minDist * COLLISION_SPLIT_RATIO
           continue
         }
         const push = (minDist - dist) / 2

@@ -16,8 +16,10 @@ import { bookmarkRepo } from '@/services/storage/bookmarkRepo'
 import { getDB, _resetDBForTesting } from '@/services/storage/db'
 import { knowledgeRepo } from '@/services/storage/knowledgeRepo'
 import { progressRepo } from '@/services/storage/progressRepo'
+import { reviewCardRepo } from '@/services/storage/reviewCardRepo'
 import { tombstoneRepo } from '@/services/storage/tombstoneRepo'
-import type { Annotation, Bookmark, KnowledgeArtifact } from '@/types'
+import { vocabRepo } from '@/services/storage/vocabRepo'
+import type { Annotation, Bookmark, KnowledgeArtifact, ReviewCard, VocabEntry } from '@/types'
 
 vi.mock('axios')
 
@@ -431,7 +433,8 @@ describe('mergeSyncPayloads · knowledgeArtifacts（v4）', () => {
 
     const merged = mergeSyncPayloads(local, remote)
     expect(merged.knowledgeArtifacts).toHaveLength(2)
-    expect(merged.version).toBe(4)
+    // 合并结果按当前载荷版本（v5 起携带生词/复习卡）落版
+    expect(merged.version).toBe(5)
     const kn1 = merged.knowledgeArtifacts!.find((a) => a.id === 'kn-1')!
     expect(+new Date(kn1.updatedAt)).toBe(+new Date('2026-09-02T10:00:00Z'))
   })
@@ -492,5 +495,126 @@ describe('applyMergedPayloadToLocal · knowledgeArtifacts（v4）', () => {
     })
     await applyMergedPayloadToLocal(payload)
     expect(await knowledgeRepo.getAll()).toEqual([])
+  })
+})
+
+// ---- v5：生词本与复习卡 ----
+
+const makeVocabEntry = (id: string, updatedAt: string, bookId = 'b1'): VocabEntry => ({
+  id,
+  word: id,
+  definition: '释义',
+  context: '语境',
+  bookId,
+  chapterIndex: 0,
+  lookupCount: 1,
+  createdAt: new Date(updatedAt),
+  updatedAt: new Date(updatedAt),
+})
+
+const makeReviewCard = (id: string, updatedAt: string, bookId = 'b1'): ReviewCard => ({
+  id,
+  bookId,
+  source: 'vocab',
+  front: '词',
+  back: '释义',
+  scheduling: { intervalDays: 1, ease: 2.5, repetitions: 1 },
+  dueAt: +new Date(updatedAt),
+  lastReviewedAt: +new Date(updatedAt),
+  createdAt: new Date(updatedAt),
+  updatedAt: new Date(updatedAt),
+})
+
+describe('mergeSyncPayloads · vocabEntries / reviewCards（v5）', () => {
+  it('按 id LWW：较新 updatedAt 胜出，单方存在时保留', () => {
+    const local = makePayload({
+      vocabEntries: [makeVocabEntry('vocab-a', '2026-09-01T10:00:00Z')],
+      reviewCards: [makeReviewCard('rc-a', '2026-09-01T10:00:00Z')],
+    })
+    const remote = makePayload({
+      vocabEntries: [
+        makeVocabEntry('vocab-a', '2026-09-02T10:00:00Z'),
+        makeVocabEntry('vocab-b', '2026-09-02T10:00:00Z'),
+      ],
+      reviewCards: [makeReviewCard('rc-b', '2026-09-02T10:00:00Z')],
+    })
+
+    const merged = mergeSyncPayloads(local, remote)
+    expect(merged.vocabEntries).toHaveLength(2)
+    expect(merged.reviewCards).toHaveLength(2)
+    const vocabA = merged.vocabEntries!.find((v) => v.id === 'vocab-a')!
+    expect(+new Date(vocabA.updatedAt)).toBe(+new Date('2026-09-02T10:00:00Z'))
+  })
+
+  it('旧载荷（无 v5 字段）不吞掉本地生词与复习卡', () => {
+    const local = makePayload({
+      vocabEntries: [makeVocabEntry('vocab-a', '2026-09-01T10:00:00Z')],
+      reviewCards: [makeReviewCard('rc-a', '2026-09-01T10:00:00Z')],
+    })
+    const merged = mergeSyncPayloads(local, makePayload())
+    expect(merged.vocabEntries).toHaveLength(1)
+    expect(merged.reviewCards).toHaveLength(1)
+  })
+
+  it('vocab/review 墓碑剔除双方已删的记录；删除后重新编辑的胜出', () => {
+    const local = makePayload({
+      vocabEntries: [makeVocabEntry('vocab-a', '2026-09-03T10:00:00Z')],
+      tombstones: [{ kind: 'vocab', key: 'vocab-a', deletedAt: '2026-09-02T10:00:00Z' }],
+    })
+    const remote = makePayload({
+      vocabEntries: [makeVocabEntry('vocab-a', '2026-09-01T10:00:00Z')],
+      reviewCards: [makeReviewCard('rc-a', '2026-09-01T10:00:00Z')],
+      tombstones: [{ kind: 'review', key: 'rc-a', deletedAt: '2026-09-05T10:00:00Z' }],
+    })
+
+    const merged = mergeSyncPayloads(local, remote)
+    // vocab-a：墓碑（09-02）后又被编辑（09-03）→ 记录复活
+    expect(merged.vocabEntries!.map((v) => v.id)).toEqual(['vocab-a'])
+    // rc-a：墓碑（09-05）晚于记录（09-01）→ 剔除
+    expect(merged.reviewCards).toEqual([])
+  })
+
+  it('整书墓碑级联剔除该书的生词与复习卡', () => {
+    const local = makePayload({
+      tombstones: [{ kind: 'book', key: 'b1', deletedAt: '2026-09-02T10:00:00Z' }],
+    })
+    const remote = makePayload({
+      vocabEntries: [
+        makeVocabEntry('vocab-1', '2026-09-01T10:00:00Z'),
+        makeVocabEntry('vocab-2', '2026-09-01T10:00:00Z', 'b2'),
+      ],
+      reviewCards: [makeReviewCard('rc-1', '2026-09-01T10:00:00Z')],
+    })
+
+    const merged = mergeSyncPayloads(local, remote)
+    expect(merged.vocabEntries!.map((v) => v.id)).toEqual(['vocab-2'])
+    expect(merged.reviewCards).toEqual([])
+  })
+})
+
+describe('applyMergedPayloadToLocal · vocabEntries / reviewCards（v5）', () => {
+  it('合并结果写入生词与复习卡仓库', async () => {
+    const payload = makePayload({
+      vocabEntries: [makeVocabEntry('vocab-a', '2026-09-01T10:00:00Z')],
+      reviewCards: [makeReviewCard('rc-a', '2026-09-01T10:00:00Z')],
+    })
+    await applyMergedPayloadToLocal(payload)
+
+    expect((await vocabRepo.getAll()).map((v) => v.id)).toEqual(['vocab-a'])
+    expect((await reviewCardRepo.getAll()).map((c) => c.id)).toEqual(['rc-a'])
+  })
+
+  it('vocab/review 墓碑落地：删除本地对应记录', async () => {
+    await vocabRepo.save(makeVocabEntry('vocab-a', '2026-08-20T10:00:00Z'))
+    await reviewCardRepo.save(makeReviewCard('rc-a', '2026-08-20T10:00:00Z'))
+    const payload = makePayload({
+      tombstones: [
+        { kind: 'vocab', key: 'vocab-a', deletedAt: '2026-09-02T10:00:00Z' },
+        { kind: 'review', key: 'rc-a', deletedAt: '2026-09-02T10:00:00Z' },
+      ],
+    })
+    await applyMergedPayloadToLocal(payload)
+    expect(await vocabRepo.getAll()).toEqual([])
+    expect(await reviewCardRepo.getAll()).toEqual([])
   })
 })

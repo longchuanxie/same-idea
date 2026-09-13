@@ -302,17 +302,21 @@ export interface PaperBriefData {
     strength: ContributionStrength
     evidence?: KnowledgeEvidence
     chapters?: number[]
+    /** 读者人工校验过（修订模式的「已校验」章） */
+    verified?: boolean
   }[]
   limitations: {
     point: string
     evidence?: KnowledgeEvidence
     chapters?: number[]
+    verified?: boolean
   }[]
   /** 审稿人视角的问题（组会/评审可直接用） */
   questions: {
     question: string
     evidence?: KnowledgeEvidence
     chapters?: number[]
+    verified?: boolean
   }[]
 }
 
@@ -329,6 +333,8 @@ export interface CharacterNode {
   weight?: number
   /** 出现章节（0 起章索引；PDF 为页索引；升序去重）——图谱回原文的跳转目标 */
   chapters?: number[]
+  /** 读者人工校验过（修订模式的「已校验」章） */
+  verified?: boolean
 }
 
 /** 原文依据坐标：AI 逐字摘句经本地校验后定位（offsetRatio = 章内偏移/章长）。
@@ -353,6 +359,8 @@ export interface CharacterEdge {
   evidence?: KnowledgeEvidence
   /** 关系出现的章节（0 起章索引；证据未定位时的跳转目标） */
   chapters?: number[]
+  /** 读者人工校验过（修订模式的「已校验」章） */
+  verified?: boolean
 }
 
 /** 术语卡条目：关键概念/术语 + 书内定义 + 定义原文坐标 */
@@ -366,6 +374,8 @@ export interface GlossaryTerm {
   evidence?: KnowledgeEvidence
   /** 术语出现/被定义的章节（0 起章索引） */
   chapters?: number[]
+  /** 读者人工校验过（修订模式的「已校验」章） */
+  verified?: boolean
 }
 
 /** 概念术语卡数据 */
@@ -384,6 +394,8 @@ export interface MindmapNodeData {
   title: string
   detail?: string
   children?: MindmapNodeData[]
+  /** 读者人工校验过（修订模式的「已校验」章） */
+  verified?: boolean
 }
 
 /** 知识产物：由书本内容生成（或手工构建）的结构化知识件，按书归档 */
@@ -412,6 +424,62 @@ export interface KnowledgeArtifact {
     totalChunkCount?: number
   }
   generator: 'ai' | 'manual'
+  /** 手工修订次数（修订模式里的编辑/删除/校验都计 1）——重新生成前的覆盖警告依据 */
+  manualEditCount?: number
+  createdAt: Date
+  updatedAt: Date
+}
+
+/** 复习卡排期状态（SM-2 简化版） */
+export interface ReviewScheduling {
+  /** 当前间隔（天）；0 = 尚未进入间隔排期（学习步：答错重来的 10 分钟步） */
+  intervalDays: number
+  /** 易度因子（1.3–2.8，2.5 起步） */
+  ease: number
+  /** 连续答对次数 */
+  repetitions: number
+}
+
+/** 生词本条目：划词查过的词（按词去重，重复查刷新释义与语境；进复习队列） */
+export interface VocabEntry {
+  /** 稳定 id：归一化词生成（小写/空白折叠）——同词同条，复习排期不因重查而丢 */
+  id: string
+  word: string
+  /** 发音（中文=拼音 / 外文=音标；查词服务没把握则省略） */
+  pronunciation?: string
+  /** 释义（中文，含词性；结合语境选义） */
+  definition: string
+  /** 用法/搭配提示 */
+  note?: string
+  /** 最近一次查词的语境句（原文截断，帮助回到记忆现场） */
+  context: string
+  bookId: string
+  chapterIndex: number
+  chapterTitle?: string
+  /** 查词次数（去重更新的痕迹） */
+  lookupCount: number
+  createdAt: Date
+  updatedAt: Date
+}
+
+/** 复习卡：术语卡条目/批注手记/生词进入复习队列后的形态（排期状态 + 卡面快照）。
+ *  卡面从来源派生（collect + reconcile 对账），排期是读者劳动成果，独立持久化。 */
+export interface ReviewCard {
+  id: string
+  bookId: string
+  /** 卡面来源：术语卡条目 / 批注手记 / 生词 */
+  source: 'glossary-term' | 'annotation' | 'vocab'
+  /** 正面（术语名 / 划线原文） */
+  front: string
+  /** 背面（书内定义 / 批注文字） */
+  back: string
+  scheduling: ReviewScheduling
+  /** 下次到期时间戳（ms） */
+  dueAt: number
+  /** 最近一次评分时间戳；undefined = 从未复习过（新卡） */
+  lastReviewedAt?: number
+  /** 读者明确移出复习（不再复习这张）；对账时不复活 */
+  dismissed?: boolean
   createdAt: Date
   updatedAt: Date
 }

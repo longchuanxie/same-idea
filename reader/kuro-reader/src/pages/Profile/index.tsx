@@ -68,7 +68,7 @@ export const ProfilePage: React.FC = () => {
             {cardFields.map(({ label, value, onClick }) => (
               <button
                 key={label}
-                className="text-left p-3 rounded-card bg-surface-container-lowest border border-outline-variant hover:bg-surface-container transition-colors disabled:cursor-default"
+                className="card-link p-3 disabled:cursor-default"
                 onClick={onClick}
                 disabled={!onClick}
               >
@@ -99,7 +99,7 @@ export const ProfilePage: React.FC = () => {
       {/* 真实功能入口（死卡片已清除：离线缓存/意见反馈无对应功能，不造假入口） */}
       <section className="flex flex-col">
         <button
-          className="px-6 py-4 flex items-center justify-between border border-outline-variant rounded-card-lg bg-surface hover:bg-surface-container transition-colors duration-200 mb-3"
+          className="card-link rounded-card-lg px-6 py-4 flex items-center justify-between duration-200 mb-3"
           onClick={() => navigate(ROUTES.NOTES)}
         >
           <span className="flex items-center gap-3">
@@ -109,7 +109,7 @@ export const ProfilePage: React.FC = () => {
           <span className="font-mono text-label-sm text-on-surface-variant">{annotationCount}</span>
         </button>
         <button
-          className="px-6 py-4 flex items-center justify-between border border-outline-variant rounded-card-lg bg-surface hover:bg-surface-container transition-colors duration-200"
+          className="card-link rounded-card-lg px-6 py-4 flex items-center justify-between duration-200"
           onClick={() => navigate(ROUTES.STATS)}
         >
           <span className="flex items-center gap-3">

@@ -2,17 +2,21 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useNavigate } from 'react-router-dom';
 
-import BookCoverImage from '@/components/atoms/BookCoverImage';
+import { BookCoverImage } from '@/components/atoms/BookCoverImage';
 import { Button } from '@/components/atoms/Button';
 import { FormatBadge } from '@/components/atoms/FormatBadge';
+import { ReadingRecapSheet } from '@/components/molecules/ReadingRecapSheet';
 import { COPY } from '@/constants/copy';
-import { ROUTES, bookDetailPath, readerPathForBook } from '@/constants/routes';
+import { ROUTES, bookDetailPath, readerPathForBook, reviewPath } from '@/constants/routes';
 import { STORAGE_KEYS } from '@/constants/storage';
 import { annotationRepo } from '@/services/storage/annotationRepo';
 import { useLibraryStore } from '@/stores/useLibraryStore';
+import { useReviewStore } from '@/stores/useReviewStore';
 import { useStatsStore } from '@/stores/useStatsStore';
 import type { Annotation, Book } from '@/types';
 import { describeLastRead } from '@/utils/readingProgress';
+import { daysSinceLastRead, isReturningReader } from '@/utils/readingRecap';
+import { buildReviewQueue } from '@/utils/reviewCatalog';
 import { findAnniversary, pickDailyRevisit, resolveRevisitTargets } from '@/utils/revisit';
 import { toast } from '@/utils/toast';
 
@@ -88,6 +92,8 @@ export const HomePage: React.FC = () => {
 
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [seatMenuFor, setSeatMenuFor] = useState<string | null>(null);
+  // 欢迎回来卡：久别回访的书（座位卡「回想想」chip 打开）
+  const [recapFor, setRecapFor] = useState<Book | null>(null);
   /** 座位区编辑态：显示每张卡的移出叉钮，卡片点击不再跳阅读器 */
   const [isSeatEditing, setIsSeatEditing] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -105,6 +111,14 @@ export const HomePage: React.FC = () => {
       cancelled = true;
     };
   }, []);
+
+  // 复习席：进门对账一次（新术语/新手记成卡、孤儿清列），到期数给入口亮灯
+  const reviewCards = useReviewStore((s) => s.cards);
+  const syncReview = useReviewStore((s) => s.sync);
+  useEffect(() => {
+    void syncReview();
+  }, [syncReview]);
+  const reviewDueCount = useMemo(() => buildReviewQueue(reviewCards).length, [reviewCards]);
 
   useEffect(() => {
     if (!seatMenuFor) return;
@@ -323,6 +337,19 @@ export const HomePage: React.FC = () => {
                             : `${seatBook.totalChapters} 话`}
                           <span className="font-mono ml-2">{pct}%</span>
                         </p>
+                        {/* 久别回访：回想想 chip（离开 ≥7 天才亮） */}
+                        {!isSeatEditing && isReturningReader(seatBook) && (
+                          <button
+                            className="mt-1.5 self-start inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-seal/50 bg-seal-soft/50 text-seal-deep font-label text-label-xs hover:bg-seal-soft transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setRecapFor(seatBook);
+                            }}
+                          >
+                            <span className="material-symbols-outlined text-[13px]">history</span>
+                            {COPY.recap.chip(daysSinceLastRead(seatBook) ?? 0)}
+                          </button>
+                        )}
                       </div>
                       <div className="mt-auto">
                         <div className="w-full h-0.5 bg-surface-container-highest mb-3" aria-hidden="true">
@@ -422,7 +449,7 @@ export const HomePage: React.FC = () => {
       {/* 今日之灯 */}
       <section className="mb-10">
         <button
-          className="w-full flex items-center gap-4 p-4 rounded-card border border-outline-variant bg-surface-container-low hover:bg-surface-container transition-colors text-left"
+          className="card-link w-full flex items-center gap-4 p-4"
           onClick={() => navigate(ROUTES.STATS)}
           aria-label={`今日已读 ${todayMinutes} 分钟，目标 ${dailyGoalMinutes} 分钟，查看台账`}
         >
@@ -478,7 +505,7 @@ export const HomePage: React.FC = () => {
             {excerpts.map(({ ann, book }) => (
               <button
                 key={ann.id}
-                className="text-left p-4 rounded-card bg-surface-container-low border border-outline-variant hover:bg-surface-container transition-colors"
+                className="card-link p-4"
                 onClick={() => openExcerpt(ann, book)}
               >
                 <p className="font-body text-body-md text-on-surface leading-relaxed line-clamp-2">
@@ -491,6 +518,36 @@ export const HomePage: React.FC = () => {
               </button>
             ))}
           </div>
+        </section>
+      )}
+
+      {/* 复习席：到期卡亮灯才出现——不打扰没有复习任务的日子 */}
+      {reviewDueCount > 0 && (
+        <section className="mb-10">
+          <article
+            className="flex items-center gap-4 border border-outline-variant rounded-card-lg shadow-paper bg-surface-container-low cursor-pointer group"
+            onClick={() => navigate(reviewPath())}
+          >
+            <div className="w-14 h-14 flex-shrink-0 flex items-center justify-center border-r border-outline-variant">
+              <span
+                className="material-symbols-outlined text-icon-lg text-seal"
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
+                school
+              </span>
+            </div>
+            <div className="flex flex-col justify-center flex-1 min-w-0 py-4">
+              <p className="font-label text-label-md text-primary group-hover:underline underline-offset-4">
+                {COPY.review.homeEntry(reviewDueCount)}
+              </p>
+              <p className="font-label text-label-sm text-on-surface-variant mt-0.5">
+                {COPY.review.homeEntryHint}
+              </p>
+            </div>
+            <span className="material-symbols-outlined text-icon-md text-on-surface-variant mr-4">
+              chevron_right
+            </span>
+          </article>
         </section>
       )}
 
@@ -584,6 +641,23 @@ export const HomePage: React.FC = () => {
             ))}
           </div>
         </section>
+      )}
+
+      {/* 欢迎回来卡：进度与痕迹（本地）+ 前情提要（AI）+ 继续读 */}
+      {recapFor && (
+        <ReadingRecapSheet
+          book={recapFor}
+          progress={readingProgress[recapFor.id]}
+          annotations={annotations.filter((ann) => ann.bookId === recapFor.id)}
+          onContinue={() => {
+            const progress = readingProgress[recapFor.id];
+            const chapter = progress?.chapterId
+              ? recapFor.chapters.find((ch) => ch.id === progress.chapterId) ?? recapFor.chapters[0]
+              : recapFor.chapters[0];
+            navigate(readerPathForBook(recapFor, chapter?.id));
+          }}
+          onClose={() => setRecapFor(null)}
+        />
       )}
     </div>
   );

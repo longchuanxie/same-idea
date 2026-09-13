@@ -1,7 +1,7 @@
 import { getDB, STORE_NAMES } from './db'
 
-/** 墓碑覆盖的记录类别：进度（按 bookId）、书签/批注/知识产物（按 id）、整本书（按 bookId 级联） */
-export type TombstoneKind = 'progress' | 'bookmark' | 'annotation' | 'knowledge' | 'book'
+/** 墓碑覆盖的记录类别：进度（按 bookId）、书签/批注/知识产物/生词/复习卡（按 id）、整本书（按 bookId 级联） */
+export type TombstoneKind = 'progress' | 'bookmark' | 'annotation' | 'knowledge' | 'vocab' | 'review' | 'book'
 
 export interface TombstoneRecord {
   /** `${kind}:${key}` 复合主键 */

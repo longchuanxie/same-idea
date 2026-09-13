@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 
 import { useNavigate, useParams } from 'react-router-dom';
 
-import BookCoverImage from '@/components/atoms/BookCoverImage';
+import { BookCoverImage } from '@/components/atoms/BookCoverImage';
 import { FormatBadge } from '@/components/atoms/FormatBadge';
 import { ROUTES, bookDetailPath } from '@/constants/routes';
 import { useLibraryStore } from '@/stores/useLibraryStore';
@@ -130,7 +130,7 @@ export const SubLibraryPage: React.FC = () => {
           <span className="material-symbols-outlined text-on-surface-variant text-6xl">folder_off</span>
           <p className="font-body text-body-md text-on-surface-variant">未找到该子书库</p>
           <button
-            className="font-label text-label-md text-primary border border-outline-variant px-6 py-2 hover:bg-surface-variant transition-colors"
+            className="btn-secondary px-6 py-2"
             onClick={() => navigate(ROUTES.LIBRARY)}
           >
             返回书架
@@ -156,7 +156,7 @@ export const SubLibraryPage: React.FC = () => {
               type="text"
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
-              className="flex-1 border border-outline-variant rounded px-3 py-1 font-display text-headline-md text-on-background bg-surface focus:outline-none focus:border-primary"
+              className="input-field flex-1 rounded-card font-display text-headline-md"
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleRename();
@@ -241,13 +241,13 @@ export const SubLibraryPage: React.FC = () => {
             <p className="font-body text-body-md text-on-surface-variant mb-6">此子书库暂无书籍</p>
             <div className="flex gap-3">
               <button
-                className="font-label text-label-md text-on-primary bg-primary px-6 py-2 rounded hover:opacity-90 transition-opacity"
+                className="btn-primary px-6 py-2"
                 onClick={goImport}
               >
                 导入书籍
               </button>
               <button
-                className="font-label text-label-md text-primary border border-outline-variant px-6 py-2 hover:bg-surface-variant transition-colors"
+                className="btn-secondary px-6 py-2"
                 onClick={() => navigate(ROUTES.LIBRARY)}
               >
                 去书架添加
@@ -386,7 +386,7 @@ export const SubLibraryPage: React.FC = () => {
             </label>
             <div className="flex gap-3 justify-end">
               <button
-                className="border border-outline-variant text-on-surface-variant font-label text-label-md px-6 py-2 rounded hover:bg-surface-variant transition-colors"
+                className="btn-secondary px-6 py-2"
                 onClick={() => {
                   setShowDeleteDialog(false);
                   setDeleteBooksOnRemove(false);
@@ -396,7 +396,7 @@ export const SubLibraryPage: React.FC = () => {
               </button>
               <button
                 className={`font-label text-label-md px-6 py-2 rounded hover:opacity-90 transition-colors ${
-                  deleteBooksOnRemove ? 'bg-error text-on-error' : 'bg-primary text-on-primary'
+                  deleteBooksOnRemove ? 'bg-error text-on-error' : 'option-active'
                 }`}
                 onClick={handleDeleteSubLibrary}
               >

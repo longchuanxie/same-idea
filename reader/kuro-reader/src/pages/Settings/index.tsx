@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState, useRef } from 'react';
 
 import { Collapsible } from '@/components/atoms/Collapsible';
 import { DropdownSelect } from '@/components/atoms/DropdownSelect';
+import { ToggleSwitch } from '@/components/atoms/ToggleSwitch';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
 import { GestureLock } from '@/components/organisms/GestureLock';
 import { COPY } from '@/constants/copy';
@@ -13,16 +14,18 @@ import {
   findKnowledgeAiProvider,
   matchProviderByBaseUrl,
 } from '@/services/ai/providers';
-import { applyMergedPayloadToLocal, runCloudSync, type SyncCredentials, type SyncPayload } from '@/services/cloudSync';
+import { SYNC_VERSION, applyMergedPayloadToLocal, runCloudSync, type SyncCredentials, type SyncPayload } from '@/services/cloudSync';
 import { annotationRepo } from '@/services/storage/annotationRepo';
 import { bookmarkRepo } from '@/services/storage/bookmarkRepo';
 import { knowledgeRepo } from '@/services/storage/knowledgeRepo';
 import { progressRepo } from '@/services/storage/progressRepo';
+import { reviewCardRepo } from '@/services/storage/reviewCardRepo';
 import { tombstoneRepo } from '@/services/storage/tombstoneRepo';
+import { vocabRepo } from '@/services/storage/vocabRepo';
 import { useAppStore } from '@/stores/useAppStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import { useStatsStore } from '@/stores/useStatsStore';
-import type { Annotation, Bookmark, KnowledgeArtifact, PaperType, ReadingProgress, UserSettings } from '@/types';
+import type { Annotation, Bookmark, KnowledgeArtifact, PaperType, ReadingProgress, ReviewCard, UserSettings, VocabEntry } from '@/types';
 import { isNativePlatform } from '@/utils/capacitor';
 import {
   PAPER_INK_COLOR,
@@ -34,10 +37,10 @@ import {
 import { getStorageUsage } from '@/utils/storage';
 import { toast } from '@/utils/toast';
 
-/** 备份格式版本：v2 起包括书签与批注；v3 起包括阅读时长簿；v4 起包括知识库产物。导入时兼容 v1-v3 */
-const BACKUP_VERSION = 4;
+/** 备份格式版本：v2 起包括书签与批注；v3 起包括阅读时长簿；v4 起包括知识库产物；v5 起包括生词本与复习卡。导入时兼容 v1-v4 */
+const BACKUP_VERSION = 5;
 // eslint-disable-next-line no-magic-numbers -- 历史备份版本号枚举，无业务阈值语义
-const LEGACY_BACKUP_VERSIONS = [1, 2, 3];
+const LEGACY_BACKUP_VERSIONS = [1, 2, 3, 4];
 
 /** 待确认恢复的备份内容（经版本校验后暂存，用户确认覆盖后才写入） */
 interface PendingBackup {
@@ -48,6 +51,9 @@ interface PendingBackup {
   stats?: { readingSessions: { date: string; minutes: number; bookId: string }[]; dailyGoalMinutes: number };
   /** v4 起：知识库产物 */
   knowledgeArtifacts?: KnowledgeArtifact[];
+  /** v5 起：生词本与复习卡（排期是劳动成果） */
+  vocabEntries?: VocabEntry[];
+  reviewCards?: ReviewCard[];
 }
 
 const TEXTURE_INTENSITY_WEAK_MAX = 33;
@@ -185,10 +191,12 @@ export const SettingsPage: React.FC = () => {
   const { books, tags, subLibraries, readingProgress } = useLibraryStore();
 
   const handleExportData = async () => {
-    const [bookmarks, annotations, knowledgeArtifacts] = await Promise.all([
+    const [bookmarks, annotations, knowledgeArtifacts, vocabEntries, reviewCards] = await Promise.all([
       bookmarkRepo.getAll(),
       annotationRepo.getAll(),
       knowledgeRepo.getAll(),
+      vocabRepo.getAll(),
+      reviewCardRepo.getAll(),
     ]);
     const statsState = useStatsStore.getState();
     const data = {
@@ -208,6 +216,9 @@ export const SettingsPage: React.FC = () => {
       },
       // v4 起：知识库产物（人物图谱/思维导图）
       knowledgeArtifacts,
+      // v5 起：生词本与复习卡（排期是劳动成果）
+      vocabEntries,
+      reviewCards,
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -261,6 +272,32 @@ export const SettingsPage: React.FC = () => {
             ...a,
             createdAt: new Date(a.createdAt),
             updatedAt: new Date(a.updatedAt),
+          })
+        )
+      );
+    }
+
+    // 生词本与复习卡（v5 备份起包含；旧备份无此字段则保留本地）
+    if (Array.isArray(data.vocabEntries)) {
+      await vocabRepo.deleteAll();
+      await Promise.all(
+        (data.vocabEntries as VocabEntry[]).map((entry) =>
+          vocabRepo.save({
+            ...entry,
+            createdAt: new Date(entry.createdAt),
+            updatedAt: new Date(entry.updatedAt),
+          })
+        )
+      );
+    }
+    if (Array.isArray(data.reviewCards)) {
+      await reviewCardRepo.deleteAll();
+      await Promise.all(
+        (data.reviewCards as ReviewCard[]).map((card) =>
+          reviewCardRepo.save({
+            ...card,
+            createdAt: new Date(card.createdAt),
+            updatedAt: new Date(card.updatedAt),
           })
         )
       );
@@ -349,19 +386,21 @@ export const SettingsPage: React.FC = () => {
         username: syncUsername || undefined,
         password: syncPassword || undefined,
       };
-      const [progressList, bookmarks, annotations, tombstones, knowledgeArtifacts] = await Promise.all([
+      const [progressList, bookmarks, annotations, tombstones, knowledgeArtifacts, vocabEntries, reviewCards] = await Promise.all([
         progressRepo.getAll(),
         bookmarkRepo.getAll(),
         annotationRepo.getAll(),
         tombstoneRepo.getAll(),
         knowledgeRepo.getAll(),
+        vocabRepo.getAll(),
+        reviewCardRepo.getAll(),
       ]);
       const readingProgress: Record<string, ReadingProgress> = {};
       for (const p of progressList) readingProgress[p.bookId] = p;
 
       const statsState = useStatsStore.getState();
       const localPayload: SyncPayload = {
-        version: 4,
+        version: SYNC_VERSION,
         exportedAt: new Date().toISOString(),
         readingProgress,
         bookmarks,
@@ -370,6 +409,9 @@ export const SettingsPage: React.FC = () => {
         tombstones: tombstones.map(({ kind, key, deletedAt }) => ({ kind, key, deletedAt })),
         // v4 起：知识库产物随载荷同步（多端知识库不丢）
         knowledgeArtifacts,
+        // v5 起：生词与复习排期随载荷同步（劳动成果不丢）
+        vocabEntries,
+        reviewCards,
         // v2 起：阅读时长簿随载荷同步（连击/热力图不再换机失忆）；
         // 明细超阈值时降级为按日聚合（牺牲按书维度，保住载荷体积）
         stats: {
@@ -390,8 +432,8 @@ export const SettingsPage: React.FC = () => {
         ok: true,
         text:
           result.direction === 'merged'
-            ? `已合并同步：进度 ${result.counts.progress} 本 · 批注 ${result.counts.annotations} 条 · 书签 ${result.counts.bookmarks} 条 · 知识件 ${result.counts.knowledge} 件`
-            : `已上传：进度 ${result.counts.progress} 本 · 批注 ${result.counts.annotations} 条 · 书签 ${result.counts.bookmarks} 条 · 知识件 ${result.counts.knowledge} 件`,
+            ? `已合并同步：进度 ${result.counts.progress} 本 · 批注 ${result.counts.annotations} 条 · 书签 ${result.counts.bookmarks} 条 · 知识件 ${result.counts.knowledge} 件 · 生词 ${result.counts.vocab} · 复习卡 ${result.counts.review}`
+            : `已上传：进度 ${result.counts.progress} 本 · 批注 ${result.counts.annotations} 条 · 书签 ${result.counts.bookmarks} 条 · 知识件 ${result.counts.knowledge} 件 · 生词 ${result.counts.vocab} · 复习卡 ${result.counts.review}`,
       });
     } catch (e) {
       setSyncMessage({ ok: false, text: (e as Error).message || '同步失败' });
@@ -478,8 +520,8 @@ export const SettingsPage: React.FC = () => {
       <div className="bg-background text-on-background min-h-screen flex flex-col items-center justify-center noise-overlay antialiased relative">
         <main className="w-full max-w-[400px] px-margin-mobile flex flex-col items-center gap-6 z-10 py-12">
           <header className="flex flex-col items-center text-center gap-2 w-full">
-            <div className="w-12 h-12 flex items-center justify-center rounded-full border border-outline-variant text-primary mb-2">
-              <span className="material-symbols-outlined text-[24px]">question_mark</span>
+            <div className="w-12 h-12 flex items-center justify-center rounded-card border border-outline-variant text-primary mb-2">
+              <span className="material-symbols-outlined text-icon-lg">question_mark</span>
             </div>
             <h1 className="font-display text-headline-sm text-primary">设置安全问题</h1>
             <p className="font-body text-body-sm text-on-surface-variant">
@@ -511,7 +553,7 @@ export const SettingsPage: React.FC = () => {
                   ]}
                 />
                 <input
-                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-3 font-body text-body-sm text-on-surface placeholder:text-on-surface-variant/50 focus:border-primary focus:ring-0 outline-none transition-colors"
+                  className="input-field"
                   placeholder="输入答案"
                   value={q.answer}
                   onChange={(e) => {
@@ -530,7 +572,7 @@ export const SettingsPage: React.FC = () => {
 
           <div className="flex gap-3 w-full">
             <button
-              className="flex-1 font-label text-label-md text-on-surface-variant border border-outline-variant rounded-xl py-3 hover:bg-surface-container transition-colors"
+              className="btn-secondary flex-1 py-3"
               onClick={() => {
                 setShowQuestionsSetup(false);
                 setPendingGesturePoints(null);
@@ -541,7 +583,7 @@ export const SettingsPage: React.FC = () => {
               取消
             </button>
             <button
-              className="flex-1 font-label text-label-md text-on-primary bg-primary rounded-xl py-3 hover:opacity-90 transition-opacity"
+              className="btn-primary flex-1 py-3"
               onClick={handleSubmitSecurityQuestions}
             >
               完成设置
@@ -565,7 +607,7 @@ export const SettingsPage: React.FC = () => {
           <div className="bg-surface rounded-lg border border-outline-variant overflow-hidden">
             <div className="p-6 border-b border-outline-variant flex justify-between items-center bg-surface-container-lowest">
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant">
+                <div className="icon-tile">
                   <span className="material-symbols-outlined">lock</span>
                 </div>
                 <div>
@@ -575,24 +617,17 @@ export const SettingsPage: React.FC = () => {
                   </p>
                 </div>
               </div>
-              <button
-                className={`relative inline-block w-11 h-6 rounded-full toggle-spring ${
-                  auth.isEnabled ? 'bg-primary' : 'bg-surface-variant'
-                }`}
-                onClick={() => {
-                  if (auth.isEnabled) {
-                    handleDisableLock();
-                  } else {
+              <ToggleSwitch
+                checked={auth.isEnabled}
+                ariaLabel="应用锁"
+                onChange={(next) => {
+                  if (next) {
                     setShowGestureSetup(true);
+                  } else {
+                    handleDisableLock();
                   }
                 }}
-              >
-                <span
-                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full toggle-thumb-spring border ${
-                    auth.isEnabled ? 'translate-x-5 border-primary' : 'border-outline-variant'
-                  }`}
-                />
-              </button>
+              />
             </div>
 
             {auth.isEnabled && (
@@ -602,7 +637,7 @@ export const SettingsPage: React.FC = () => {
                   onClick={() => setShowGestureChange(true)}
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant">
+                    <div className="icon-tile">
                       <span className="material-symbols-outlined">gesture</span>
                     </div>
                     <div>
@@ -620,7 +655,7 @@ export const SettingsPage: React.FC = () => {
                   onClick={() => setShowLockTimeoutOptions(!showLockTimeoutOptions)}
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant">
+                    <div className="icon-tile">
                       <span className="material-symbols-outlined">timer</span>
                     </div>
                     <div>
@@ -642,8 +677,8 @@ export const SettingsPage: React.FC = () => {
                         key={option.value}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                           auth.lockTimeout === option.value
-                            ? 'bg-primary text-on-primary'
-                            : 'bg-surface-container-high text-on-surface hover:bg-surface-variant'
+                            ? 'option-active'
+                            : 'option'
                         }`}
                         onClick={() => {
                           updateAuthConfig({ lockTimeout: option.value });
@@ -662,7 +697,7 @@ export const SettingsPage: React.FC = () => {
                   onClick={() => setShowMaxAttemptsOptions(!showMaxAttemptsOptions)}
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant">
+                    <div className="icon-tile">
                       <span className="material-symbols-outlined">pin</span>
                     </div>
                     <div>
@@ -684,8 +719,8 @@ export const SettingsPage: React.FC = () => {
                         key={option.value}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                           auth.maxAttempts === option.value
-                            ? 'bg-primary text-on-primary'
-                            : 'bg-surface-container-high text-on-surface hover:bg-surface-variant'
+                            ? 'option-active'
+                            : 'option'
                         }`}
                         onClick={() => {
                           updateAuthConfig({ maxAttempts: option.value });
@@ -724,7 +759,7 @@ export const SettingsPage: React.FC = () => {
               }}
             >
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant">
+                <div className="icon-tile">
                   <span className="material-symbols-outlined">brightness_medium</span>
                 </div>
                 <div>
@@ -737,7 +772,7 @@ export const SettingsPage: React.FC = () => {
 
             <div className="p-6 border-b border-outline-variant flex justify-between items-center bg-surface-container-lowest">
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant">
+                <div className="icon-tile">
                   <span className="material-symbols-outlined">fullscreen</span>
                 </div>
                 <div>
@@ -747,24 +782,16 @@ export const SettingsPage: React.FC = () => {
                   </p>
                 </div>
               </div>
-              <button
-                aria-label="隐藏状态栏"
-                className={`relative inline-block w-11 h-6 rounded-full toggle-spring ${
-                  settings.hideStatusBar ? 'bg-primary' : 'bg-surface-variant'
-                }`}
-                onClick={() => updateSettings({ hideStatusBar: !settings.hideStatusBar })}
-              >
-                <span
-                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full toggle-thumb-spring border ${
-                    settings.hideStatusBar ? 'translate-x-5 border-primary' : 'border-outline-variant'
-                  }`}
-                />
-              </button>
+              <ToggleSwitch
+                checked={settings.hideStatusBar}
+                ariaLabel="隐藏状态栏"
+                onChange={(next) => updateSettings({ hideStatusBar: next })}
+              />
             </div>
 
             <div className="p-6 border-b border-outline-variant flex justify-between items-center bg-surface-container-lowest">
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant">
+                <div className="icon-tile">
                   <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>note</span>
                 </div>
                 <div>
@@ -774,24 +801,17 @@ export const SettingsPage: React.FC = () => {
                   </p>
                 </div>
               </div>
-              <button
-                className={`relative inline-block w-11 h-6 rounded-full toggle-spring ${
-                  settings.paperMode ? 'bg-primary' : 'bg-surface-variant'
-                }`}
-                onClick={togglePaperMode}
-              >
-                <span
-                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full toggle-thumb-spring border ${
-                    settings.paperMode ? 'translate-x-5 border-primary' : 'border-outline-variant'
-                  }`}
-                />
-              </button>
+              <ToggleSwitch
+                checked={settings.paperMode}
+                ariaLabel="纸张模式"
+                onChange={() => togglePaperMode()}
+              />
             </div>
 
             <Collapsible isOpen={settings.paperMode}>
               <div className="p-6 border-b border-outline-variant bg-surface-container-lowest">
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant">
+                  <div className="icon-tile">
                     <span className="material-symbols-outlined">category</span>
                   </div>
                   <h3 className="font-display text-headline-xs text-on-surface">纸张类型</h3>
@@ -832,7 +852,7 @@ export const SettingsPage: React.FC = () => {
             <div className="p-6 bg-surface-container-lowest">
               <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant">
+                  <div className="icon-tile">
                     <span className="material-symbols-outlined">texture</span>
                   </div>
                   <h3 className="font-display text-headline-xs text-on-surface">纹理强度</h3>
@@ -848,7 +868,7 @@ export const SettingsPage: React.FC = () => {
                   max="100"
                   value={settings.textureIntensity}
                   onChange={(e) => updateSettings({ textureIntensity: Number(e.target.value) })}
-                  className="w-full h-1 bg-outline-variant rounded-lg appearance-none cursor-pointer accent-primary"
+                  className="w-full ink-slider cursor-pointer"
                 />
                 <div className="flex justify-between text-xs text-on-surface-variant mt-2 font-label text-label-sm">
                   <span>弱</span>
@@ -867,7 +887,7 @@ export const SettingsPage: React.FC = () => {
               onClick={() => setShowDirectionOptions(!showDirectionOptions)}
             >
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant">
+                <div className="icon-tile">
                   <span className="material-symbols-outlined">swap_horiz</span>
                 </div>
                 <div>
@@ -887,8 +907,8 @@ export const SettingsPage: React.FC = () => {
                 <button
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                     settings.readingDirection === 'rtl'
-                      ? 'bg-primary text-on-primary'
-                      : 'bg-surface-container-high text-on-surface hover:bg-surface-variant'
+                      ? 'option-active'
+                      : 'option'
                   }`}
                   onClick={() => {
                     updateSettings({ readingDirection: 'rtl' });
@@ -901,8 +921,8 @@ export const SettingsPage: React.FC = () => {
                 <button
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                     settings.readingDirection === 'ltr'
-                      ? 'bg-primary text-on-primary'
-                      : 'bg-surface-container-high text-on-surface hover:bg-surface-variant'
+                      ? 'option-active'
+                      : 'option'
                   }`}
                   onClick={() => {
                     updateSettings({ readingDirection: 'ltr' });
@@ -917,7 +937,7 @@ export const SettingsPage: React.FC = () => {
 
             <div className="p-6 border-b border-outline-variant flex justify-between items-center bg-surface-container-lowest">
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant">
+                <div className="icon-tile">
                   <span className="material-symbols-outlined">swipe</span>
                 </div>
                 <div>
@@ -927,18 +947,11 @@ export const SettingsPage: React.FC = () => {
                   </p>
                 </div>
               </div>
-              <button
-                className={`relative inline-block w-11 h-6 rounded-full toggle-spring ${
-                  settings.pageTurnGestures ? 'bg-primary' : 'bg-surface-variant'
-                }`}
-                onClick={() => updateSettings({ pageTurnGestures: !settings.pageTurnGestures })}
-              >
-                <span
-                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full toggle-thumb-spring border ${
-                    settings.pageTurnGestures ? 'translate-x-5 border-primary' : 'border-outline-variant'
-                  }`}
-                />
-              </button>
+              <ToggleSwitch
+                checked={settings.pageTurnGestures}
+                ariaLabel="滑动翻页"
+                onChange={(next) => updateSettings({ pageTurnGestures: next })}
+              />
             </div>
 
             <button
@@ -946,7 +959,7 @@ export const SettingsPage: React.FC = () => {
               onClick={() => setShowFontOptions(!showFontOptions)}
             >
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant">
+                <div className="icon-tile">
                   <span className="material-symbols-outlined">text_format</span>
                 </div>
                 <div>
@@ -964,8 +977,8 @@ export const SettingsPage: React.FC = () => {
                 <button
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                     settings.fontFamily === 'literata'
-                      ? 'bg-primary text-on-primary'
-                      : 'bg-surface-container-high text-on-surface hover:bg-surface-variant'
+                      ? 'option-active'
+                      : 'option'
                   }`}
                   onClick={() => {
                     updateSettings({ fontFamily: 'literata' });
@@ -978,8 +991,8 @@ export const SettingsPage: React.FC = () => {
                 <button
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                     settings.fontFamily === 'inter'
-                      ? 'bg-primary text-on-primary'
-                      : 'bg-surface-container-high text-on-surface hover:bg-surface-variant'
+                      ? 'option-active'
+                      : 'option'
                   }`}
                   onClick={() => {
                     updateSettings({ fontFamily: 'inter' });
@@ -1001,7 +1014,7 @@ export const SettingsPage: React.FC = () => {
                     step="1"
                     value={settings.fontSize}
                     onChange={(e) => updateSettings({ fontSize: Number(e.target.value) })}
-                    className="w-full h-1 bg-outline-variant rounded-lg appearance-none cursor-pointer accent-primary"
+                    className="w-full ink-slider cursor-pointer"
                   />
                   <div className="flex justify-between text-xs text-on-surface-variant mt-1 font-label text-label-sm">
                     <span>12px</span>
@@ -1018,7 +1031,7 @@ export const SettingsPage: React.FC = () => {
           <div className="bg-surface rounded-lg border border-outline-variant overflow-hidden">
             <div className="p-6 bg-surface-container-lowest">
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant">
+                <div className="icon-tile">
                   <span className="material-symbols-outlined">psychology</span>
                 </div>
                 <div>
@@ -1044,7 +1057,7 @@ export const SettingsPage: React.FC = () => {
                   {findKnowledgeAiProvider(aiProviderId)?.hint}
                 </p>
                 <input
-                  className="w-full bg-transparent border border-outline-variant/50 rounded-lg px-3 py-2 font-body text-body-sm text-primary focus:outline-none focus:border-primary transition-colors disabled:opacity-60"
+                  className="input-field"
                   placeholder={
                     isNativePlatform()
                       ? '服务地址，如 https://api.example.com'
@@ -1056,7 +1069,7 @@ export const SettingsPage: React.FC = () => {
                   onChange={(e) => updateSettings({ knowledgeAiUrl: e.target.value })}
                 />
                 <input
-                  className="w-full bg-transparent border border-outline-variant/50 rounded-lg px-3 py-2 font-body text-body-sm text-primary focus:outline-none focus:border-primary transition-colors"
+                  className="input-field"
                   placeholder={aiNeedsKey ? 'API Key（输入后自动测试连接）' : 'API Key（本机服务可留空）'}
                   aria-label="AI 服务 API Key"
                   type="password"
@@ -1078,7 +1091,7 @@ export const SettingsPage: React.FC = () => {
                   />
                 ) : (
                   <input
-                    className="w-full bg-transparent border border-outline-variant/50 rounded-lg px-3 py-2 font-body text-body-sm text-primary focus:outline-none focus:border-primary transition-colors"
+                    className="input-field"
                     placeholder="模型名（连接成功后自动列出可选模型）"
                     aria-label="AI 模型名"
                     value={settings.knowledgeAiModel}
@@ -1088,7 +1101,7 @@ export const SettingsPage: React.FC = () => {
               </div>
               <div className="flex items-center gap-3">
                 <button
-                  className="flex-1 bg-primary text-on-primary font-label text-label-md py-3 px-4 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="btn-primary flex-1 py-3 px-4"
                   onClick={() => void fetchAiModels()}
                   disabled={isFetchingAiModels || !settings.knowledgeAiUrl.trim()}
                 >
@@ -1117,7 +1130,7 @@ export const SettingsPage: React.FC = () => {
               aria-disabled="true"
             >
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant">
+                <div className="icon-tile">
                   <span className="material-symbols-outlined">storage</span>
                 </div>
                 <div>
@@ -1132,7 +1145,7 @@ export const SettingsPage: React.FC = () => {
             <div className="border-t border-outline-variant" />
             <div className="p-6 bg-surface-container-lowest">
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant">
+                <div className="icon-tile">
                   <span className="material-symbols-outlined">cloud_sync</span>
                 </div>
                 <div>
@@ -1144,20 +1157,20 @@ export const SettingsPage: React.FC = () => {
               </div>
               <div className="flex flex-col gap-3 mb-4">
                 <input
-                  className="w-full bg-transparent border border-outline-variant/50 rounded-lg px-3 py-2 font-body text-body-sm text-primary focus:outline-none focus:border-primary transition-colors"
+                  className="input-field"
                   placeholder="WebDAV 地址，如 http://nas:5005/dav"
                   value={syncServer}
                   onChange={(e) => { setSyncServer(e.target.value); persistSyncConfig(e.target.value, syncUsername, syncPassword); }}
                 />
                 <div className="flex gap-3">
                   <input
-                    className="flex-1 bg-transparent border border-outline-variant/50 rounded-lg px-3 py-2 font-body text-body-sm text-primary focus:outline-none focus:border-primary transition-colors"
+                    className="input-field flex-1"
                     placeholder="用户名"
                     value={syncUsername}
                     onChange={(e) => { setSyncUsername(e.target.value); persistSyncConfig(syncServer, e.target.value, syncPassword); }}
                   />
                   <input
-                    className="flex-1 bg-transparent border border-outline-variant/50 rounded-lg px-3 py-2 font-body text-body-sm text-primary focus:outline-none focus:border-primary transition-colors"
+                    className="input-field flex-1"
                     placeholder="密码"
                     type="password"
                     value={syncPassword}
@@ -1167,7 +1180,7 @@ export const SettingsPage: React.FC = () => {
               </div>
               <div className="flex items-center gap-3">
                 <button
-                  className="flex-1 bg-primary text-on-primary font-label text-label-md py-3 px-4 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="btn-primary flex-1 py-3 px-4"
                   onClick={handleSyncNow}
                   disabled={isSyncing || !syncServer.trim()}
                 >
@@ -1189,7 +1202,7 @@ export const SettingsPage: React.FC = () => {
             <div className="border-t border-outline-variant" />
             <div className="p-6 bg-surface-container-lowest">
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant">
+                <div className="icon-tile">
                   <span className="material-symbols-outlined">backup</span>
                 </div>
                 <div>
@@ -1201,13 +1214,13 @@ export const SettingsPage: React.FC = () => {
               </div>
               <div className="flex gap-3">
                 <button
-                  className="flex-1 bg-primary text-on-primary font-label text-label-md py-3 px-4 rounded-xl hover:opacity-90 transition-opacity"
+                  className="btn-primary flex-1 py-3 px-4"
                   onClick={handleExportData}
                 >
                   导出备份
                 </button>
                 <button
-                  className="flex-1 bg-transparent text-primary font-label text-label-md py-3 px-4 rounded-xl border border-outline-variant hover:bg-surface-container transition-colors"
+                  className="btn-secondary flex-1 py-3 px-4"
                   onClick={() => fileInputRef.current?.click()}
                 >
                   导入恢复

@@ -114,7 +114,7 @@ export const OpdsBrowser: React.FC<OpdsBrowserProps> = ({
         </button>
         {trail.map((crumb, i) => (
           <React.Fragment key={crumb.url}>
-            <span className="material-symbols-outlined text-[16px] text-on-surface-variant">chevron_right</span>
+            <span className="material-symbols-outlined text-icon-sm text-on-surface-variant">chevron_right</span>
             <button
               className={cn(
                 'font-label text-label-sm py-1 px-1 whitespace-nowrap transition-colors',

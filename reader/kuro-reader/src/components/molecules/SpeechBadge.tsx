@@ -28,7 +28,7 @@ export const SpeechBadge: React.FC<SpeechBadgeProps> = ({
         听书 {rate}x{engineLabel ? ` · ${engineLabel}` : ''}
       </span>
       {synthesizing && (
-        <span className="material-symbols-outlined text-[16px] text-on-primary animate-spin" aria-label="合成中">
+        <span className="material-symbols-outlined text-icon-sm text-on-primary animate-spin" aria-label="合成中">
           progress_activity
         </span>
       )}
@@ -38,7 +38,7 @@ export const SpeechBadge: React.FC<SpeechBadgeProps> = ({
         aria-label="切换倍速"
         data-ui-control
       >
-        <span className="material-symbols-outlined text-[16px]">speed</span>
+        <span className="material-symbols-outlined text-icon-sm">speed</span>
       </button>
       <button
         className="w-7 h-7 rounded-full flex items-center justify-center text-on-primary hover:bg-on-primary/20 transition-colors"

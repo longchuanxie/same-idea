@@ -134,7 +134,7 @@ function wrapWithMarkdownSpan(
     case 'sup':
       return <sup key={key}>{node}</sup>
     case 'mark':
-      return <mark key={key} className="rounded bg-yellow-300/35 px-0.5">{node}</mark>
+      return <mark key={key} className="rounded bg-lamp/30 px-0.5">{node}</mark>
     case 'underline':
       return <u key={key} className="underline-offset-2">{node}</u>
   }

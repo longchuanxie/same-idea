@@ -86,14 +86,14 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
                 aria-label="导出手记为 Markdown"
                 title="导出手记为 Markdown"
               >
-                <span className="material-symbols-outlined text-on-surface-variant text-[20px]">ios_share</span>
+                <span className="material-symbols-outlined text-on-surface-variant text-icon-md">ios_share</span>
               </button>
             )}
             <button
               className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-variant transition-colors"
               onClick={onClose}
             >
-              <span className="material-symbols-outlined text-on-surface-variant text-[20px]">close</span>
+              <span className="material-symbols-outlined text-on-surface-variant text-icon-md">close</span>
             </button>
           </div>
         </div>
@@ -123,7 +123,7 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
                         setSwipedId(null);
                       }}
                     >
-                      <span className="material-symbols-outlined text-on-error text-[20px]">delete</span>
+                      <span className="material-symbols-outlined text-on-error text-icon-md">delete</span>
                     </button>
                   </div>
 
@@ -170,7 +170,7 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
                           onChange={(e) => setEditNote(e.target.value)}
                           rows={2}
                           placeholder={isPageNote(ann) ? COPY.annotation.pageNotePlaceholder : COPY.annotation.clearToPureHighlight}
-                          className="w-full px-3 py-2 bg-surface-container-lowest border border-outline-variant/50 rounded-lg text-on-surface font-body text-body-sm resize-none focus:outline-none focus:border-primary"
+                          className="input-field resize-none"
                           autoFocus
                         />
                         <div className="flex justify-end gap-2 mt-2">
@@ -181,7 +181,7 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
                             取消
                           </button>
                           <button
-                            className="px-3 py-1 rounded font-label text-label-sm bg-primary text-on-primary hover:opacity-90 transition-opacity"
+                            className="btn-primary btn-sm px-3 py-1"
                             onClick={() => saveEdit(ann.id)}
                           >
                             保存

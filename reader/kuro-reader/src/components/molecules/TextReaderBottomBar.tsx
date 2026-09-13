@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 
+import { ToggleSwitch } from '@/components/atoms/ToggleSwitch';
 import { TEXT_READER_FONT_OPTIONS } from '@/constants/textReaderFonts';
 import type { PaperType, TextFontFamily, TextAlign, TextReadingMode, TtsEngineOption } from '@/types';
 import { cn } from '@/utils/cn';
@@ -78,7 +79,7 @@ const TTS_ENGINE_OPTIONS: { option: TtsEngineOption; label: string; icon: string
 ];
 
 const TTS_INPUT_CLASS =
-  'w-full h-10 rounded-lg border border-outline-variant bg-surface-container-high px-3 font-body text-body-sm text-on-surface placeholder:text-on-surface-faint focus:outline-none focus:border-primary';
+  'input-field h-10';
 
 const AUTO_ADVANCE_TEXT_CHAPTER_LABELS = {
   title: '章末自动衔接',
@@ -145,7 +146,7 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
             </div>
             <div className="flex items-center gap-2">
               <button
-                className="w-9 h-9 rounded-full border border-outline-variant flex items-center justify-center text-on-surface-variant hover:bg-surface-variant transition-colors disabled:opacity-30"
+                className="btn-icon w-9 h-9 border border-outline-variant disabled:opacity-30"
                 onClick={() => {
                   const idx = FONT_SIZES.indexOf(fontSize);
                   if (idx > 0) onFontSizeChange(FONT_SIZES[idx - 1]);
@@ -162,7 +163,7 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
                     className={cn(
                       'h-8 px-2 rounded-lg border text-label-sm font-label transition-colors',
                       fontSize === size
-                        ? 'bg-primary text-on-primary border-primary'
+                        ? 'option-active'
                         : 'bg-surface-container-high text-on-surface-variant border-outline-variant hover:border-primary/50'
                     )}
                     onClick={() => onFontSizeChange(size)}
@@ -172,7 +173,7 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
                 ))}
               </div>
               <button
-                className="w-9 h-9 rounded-full border border-outline-variant flex items-center justify-center text-on-surface-variant hover:bg-surface-variant transition-colors disabled:opacity-30"
+                className="btn-icon w-9 h-9 border border-outline-variant disabled:opacity-30"
                 onClick={() => {
                   const idx = FONT_SIZES.indexOf(fontSize);
                   if (idx >= 0 && idx < FONT_SIZES.length - 1) onFontSizeChange(FONT_SIZES[idx + 1]);
@@ -186,7 +187,7 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
           </div>
 
           {/* 行高控制 */}
-          <div className="py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant mb-4">
+          <div className="py-3 px-4 bg-surface-container-lowest rounded-card border border-outline-variant mb-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-on-surface-variant text-[18px]">format_line_spacing</span>
@@ -201,7 +202,7 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
                   className={cn(
                     'flex-1 h-9 rounded-lg border text-label-sm font-label transition-colors',
                     Math.abs(lineHeight - lh) < LINE_HEIGHT_MATCH_EPSILON
-                      ? 'bg-primary text-on-primary border-primary'
+                      ? 'option-active'
                       : 'bg-surface-container-high text-on-surface-variant border-outline-variant hover:border-primary/50'
                   )}
                   onClick={() => onLineHeightChange(lh)}
@@ -213,7 +214,7 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
           </div>
 
           {/* 字体 */}
-          <div className="py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant mb-4">
+          <div className="py-3 px-4 bg-surface-container-lowest rounded-card border border-outline-variant mb-4">
             <p className="font-label text-label-md text-on-surface mb-3">字体</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {TEXT_READER_FONT_OPTIONS.map(({ family, label, fontFamily }) => (
@@ -222,7 +223,7 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
                   className={cn(
                     'h-12 rounded-lg border text-label-sm transition-colors',
                     textFontFamily === family
-                      ? 'bg-primary text-on-primary border-primary'
+                      ? 'option-active'
                       : 'bg-surface-container-high text-on-surface-variant border-outline-variant hover:border-primary/50'
                   )}
                   style={{ fontFamily }}
@@ -235,14 +236,14 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
           </div>
 
           {/* 文字对齐 */}
-          <div className="py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant mb-4">
+          <div className="py-3 px-4 bg-surface-container-lowest rounded-card border border-outline-variant mb-4">
             <p className="font-label text-label-md text-on-surface mb-3">文字对齐</p>
             <div className="flex gap-2">
               <button
                 className={cn(
                   'flex-1 h-10 rounded-lg border text-label-sm font-label transition-colors flex items-center justify-center gap-2',
                   textAlign === 'left'
-                    ? 'bg-primary text-on-primary border-primary'
+                    ? 'option-active'
                     : 'bg-surface-container-high text-on-surface-variant border-outline-variant hover:border-primary/50'
                 )}
                 onClick={() => onTextAlignChange('left')}
@@ -254,7 +255,7 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
                 className={cn(
                   'flex-1 h-10 rounded-lg border text-label-sm font-label transition-colors flex items-center justify-center gap-2',
                   textAlign === 'justify'
-                    ? 'bg-primary text-on-primary border-primary'
+                    ? 'option-active'
                     : 'bg-surface-container-high text-on-surface-variant border-outline-variant hover:border-primary/50'
                 )}
                 onClick={() => onTextAlignChange('justify')}
@@ -266,7 +267,7 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
           </div>
 
           {/* 首行缩进 */}
-          <div className="flex items-center justify-between py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant mb-4">
+          <div className="flex items-center justify-between py-3 px-4 bg-surface-container-lowest rounded-card border border-outline-variant mb-4">
             <div className="flex items-center gap-3">
               <span className="material-symbols-outlined text-on-surface-variant">format_indent_increase</span>
               <div>
@@ -276,27 +277,15 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
                 </p>
               </div>
             </div>
-            <button
-              className={cn(
-                'relative inline-block w-11 h-6 rounded-full toggle-spring',
-                firstLineIndent ? 'bg-primary' : 'bg-surface-variant'
-              )}
-              onClick={onFirstLineIndentToggle}
-              aria-label={firstLineIndent ? '关闭首行缩进' : '开启首行缩进'}
-            >
-              <span
-                className={cn(
-                  'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full toggle-thumb-spring border',
-                  firstLineIndent
-                    ? 'translate-x-5 border-primary'
-                    : 'border-outline-variant'
-                )}
-              />
-            </button>
+            <ToggleSwitch
+              checked={firstLineIndent}
+              ariaLabel="首行缩进"
+              onChange={onFirstLineIndentToggle}
+            />
           </div>
 
           {/* 竖排书写 */}
-          <div className="flex items-center justify-between py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant mb-4">
+          <div className="flex items-center justify-between py-3 px-4 bg-surface-container-lowest rounded-card border border-outline-variant mb-4">
             <div className="flex items-center gap-3">
               <span className="material-symbols-outlined text-on-surface-variant">view_agenda</span>
               <div>
@@ -306,23 +295,11 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
                 </p>
               </div>
             </div>
-            <button
-              className={cn(
-                'relative inline-block w-11 h-6 rounded-full toggle-spring',
-                verticalWriting ? 'bg-primary' : 'bg-surface-variant'
-              )}
-              onClick={onVerticalWritingToggle}
-              aria-label={verticalWriting ? '关闭竖排书写' : '开启竖排书写'}
-            >
-              <span
-                className={cn(
-                  'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full toggle-thumb-spring border',
-                  verticalWriting
-                    ? 'translate-x-5 border-primary'
-                    : 'border-outline-variant'
-                )}
-              />
-            </button>
+            <ToggleSwitch
+              checked={verticalWriting}
+              ariaLabel="竖排书写"
+              onChange={onVerticalWritingToggle}
+            />
           </div>
 
           {/* ── 排版 tab 结束 ── */}
@@ -343,28 +320,16 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
                 </p>
               </div>
             </div>
-            <button
-              className={cn(
-                'relative inline-block w-11 h-6 rounded-full toggle-spring',
-                paperModeEnabled ? 'bg-primary' : 'bg-surface-variant'
-              )}
-              onClick={onPaperModeToggle}
-              aria-label={paperModeEnabled ? '关闭纸张模式' : '开启纸张模式'}
-            >
-              <span
-                className={cn(
-                  'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full toggle-thumb-spring border',
-                  paperModeEnabled
-                    ? 'translate-x-5 border-primary'
-                    : 'border-outline-variant'
-                )}
-              />
-            </button>
+            <ToggleSwitch
+              checked={paperModeEnabled}
+              ariaLabel="纸张模拟效果"
+              onChange={onPaperModeToggle}
+            />
           </div>
 
           {/* 纸张类型 */}
           {paperModeEnabled && (
-            <div className="py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant mb-4">
+            <div className="py-3 px-4 bg-surface-container-lowest rounded-card border border-outline-variant mb-4">
               <p className="font-label text-label-md text-on-surface mb-3">纸张类型</p>
               <div className="flex flex-wrap gap-2">
                 {paperTypes.map(({ type, config }) => (
@@ -373,12 +338,12 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
                     className={cn(
                       'flex items-center gap-1.5 px-3 py-2 rounded-lg border whitespace-nowrap transition-colors',
                       paperType === type
-                        ? 'bg-primary text-on-primary border-primary'
+                        ? 'option-active'
                         : 'bg-surface-container-high text-on-surface-variant border-outline-variant hover:border-primary/50'
                     )}
                     onClick={() => onPaperTypeChange(type)}
                   >
-                    <span className="material-symbols-outlined text-[16px]">{config.icon}</span>
+                    <span className="material-symbols-outlined text-icon-sm">{config.icon}</span>
                     <span className="font-label text-label-sm">{config.label}</span>
                   </button>
                 ))}
@@ -387,7 +352,7 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
           )}
 
           {/* 亮度 */}
-          <div className="py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant mb-4">
+          <div className="py-3 px-4 bg-surface-container-lowest rounded-card border border-outline-variant mb-4">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-on-surface-variant text-[18px]">brightness_6</span>
@@ -401,12 +366,12 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
               max={100}
               value={brightness}
               onChange={(e) => onBrightnessChange(Number(e.target.value))}
-              className="w-full h-1.5 bg-surface-variant rounded-full appearance-none cursor-pointer accent-primary"
+              className="w-full ink-slider cursor-pointer"
             />
           </div>
 
           {/* 色温 */}
-          <div className="py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant mb-4">
+          <div className="py-3 px-4 bg-surface-container-lowest rounded-card border border-outline-variant mb-4">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-on-surface-variant text-[18px]">thermostat</span>
@@ -422,7 +387,7 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
               max={100}
               value={colorTemperature}
               onChange={(e) => onColorTemperatureChange(Number(e.target.value))}
-              className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-primary"
+              className="w-full ink-slider cursor-pointer"
               style={{ background: `linear-gradient(to right, #ffffff, #ffcc80)` }}
             />
           </div>
@@ -443,7 +408,7 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
               max={100}
               value={textureIntensity}
               onChange={(e) => onTextureIntensityChange(Number(e.target.value))}
-              className="w-full h-1.5 bg-surface-variant rounded-full appearance-none cursor-pointer accent-primary"
+              className="w-full ink-slider cursor-pointer"
             />
           </div>
 
@@ -468,7 +433,7 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
                   className={cn(
                     'flex-1 h-12 rounded-lg border text-label-sm font-label transition-colors flex flex-col items-center justify-center gap-1',
                     textReadingMode === mode
-                      ? 'bg-primary text-on-primary border-primary'
+                      ? 'option-active'
                       : 'bg-surface-container-high text-on-surface-variant border-outline-variant hover:border-primary/50'
                   )}
                   onClick={() => onTextReadingModeChange(mode)}
@@ -491,23 +456,11 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
                 </p>
               </div>
             </div>
-            <button
-              className={cn(
-                'relative inline-block w-11 h-6 rounded-full toggle-spring',
-                autoAdvanceTextChapter ? 'bg-primary' : 'bg-surface-variant'
-              )}
-              onClick={onAutoAdvanceTextChapterToggle}
-              aria-label={autoAdvanceTextChapter ? AUTO_ADVANCE_TEXT_CHAPTER_LABELS.disableAria : AUTO_ADVANCE_TEXT_CHAPTER_LABELS.enableAria}
-            >
-              <span
-                className={cn(
-                  'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full toggle-thumb-spring border',
-                  autoAdvanceTextChapter
-                    ? 'translate-x-5 border-primary'
-                    : 'border-outline-variant'
-                )}
-              />
-            </button>
+            <ToggleSwitch
+              checked={autoAdvanceTextChapter}
+              ariaLabel={AUTO_ADVANCE_TEXT_CHAPTER_LABELS.title}
+              onChange={onAutoAdvanceTextChapterToggle}
+            />
           </div>
 
           {/* 自动滚动速度 */}
@@ -525,11 +478,11 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
               max={10}
               value={autoScrollSpeed}
               onChange={(e) => onAutoScrollSpeedChange(Number(e.target.value))}
-              className="w-full h-1.5 bg-surface-variant rounded-full appearance-none cursor-pointer accent-primary"
+              className="w-full ink-slider cursor-pointer"
             />
           </div>
           {/* 点击区域翻页 */}
-          <div className="flex items-center justify-between py-3 px-4 bg-surface-container-lowest rounded-xl border border-outline-variant mb-4">
+          <div className="flex items-center justify-between py-3 px-4 bg-surface-container-lowest rounded-card border border-outline-variant mb-4">
             <div className="flex items-center gap-3">
               <span className="material-symbols-outlined text-on-surface-variant">touch_app</span>
               <div>
@@ -539,23 +492,11 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
                 </p>
               </div>
             </div>
-            <button
-              className={cn(
-                'relative inline-block w-11 h-6 rounded-full toggle-spring',
-                tapZoneEnabled ? 'bg-primary' : 'bg-surface-variant'
-              )}
-              onClick={onTapZoneEnabledToggle}
-              aria-label={tapZoneEnabled ? '关闭点击区域翻页' : '开启点击区域翻页'}
-            >
-              <span
-                className={cn(
-                  'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full toggle-thumb-spring border',
-                  tapZoneEnabled
-                    ? 'translate-x-5 border-primary'
-                    : 'border-outline-variant'
-                )}
-              />
-            </button>
+            <ToggleSwitch
+              checked={tapZoneEnabled}
+              ariaLabel="点击区域翻页"
+              onChange={onTapZoneEnabledToggle}
+            />
           </div>
 
           {/* 听书发音引擎 */}
@@ -568,7 +509,7 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
                   className={cn(
                     'flex-1 h-12 rounded-lg border text-label-sm font-label transition-colors flex flex-col items-center justify-center gap-1',
                     ttsEngine === option
-                      ? 'bg-primary text-on-primary border-primary'
+                      ? 'option-active'
                       : 'bg-surface-container-high text-on-surface-variant border-outline-variant hover:border-primary/50'
                   )}
                   onClick={() => onTtsEngineChange(option)}

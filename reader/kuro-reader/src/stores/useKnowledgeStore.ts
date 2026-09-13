@@ -56,6 +56,16 @@ interface KnowledgeState {
   generateArtifact: (book: Book, type: KnowledgeArtifactType, options?: KnowledgeGenerationOptions) => Promise<boolean>
   cancelGeneration: (bookId: string, type: KnowledgeArtifactType) => void
   removeArtifact: (bookId: string, artifactId: string) => Promise<void>
+  /**
+   * 手工修订（修订模式消费）：对单件产物的 data 应用纯函数变更。
+   * 每次修订累计 manualEditCount 并刷新 updatedAt（云端 LWW 正确合并），
+   * 供重新生成前的覆盖警告判断"这份件里有你改过的东西"。
+   */
+  updateArtifactData: (
+    bookId: string,
+    artifactId: string,
+    mutate: (data: KnowledgeArtifact['data']) => KnowledgeArtifact['data']
+  ) => Promise<void>
 }
 
 /** 分块请求失败时的重试次数（单块一次重试，防瞬时抖动毁掉整轮生成） */
@@ -293,6 +303,19 @@ export const useKnowledgeStore = create<KnowledgeState>()((set, get) => ({
 
   removeArtifact: async (bookId, artifactId) => {
     await knowledgeRepo.remove(artifactId)
+    await get().loadArtifacts(bookId)
+  },
+
+  updateArtifactData: async (bookId, artifactId, mutate) => {
+    const artifact = await knowledgeRepo.get(artifactId)
+    if (!artifact || artifact.bookId !== bookId) return
+    const updated: KnowledgeArtifact = {
+      ...artifact,
+      data: mutate(artifact.data),
+      manualEditCount: (artifact.manualEditCount ?? 0) + 1,
+      updatedAt: new Date(),
+    }
+    await knowledgeRepo.save(updated)
     await get().loadArtifacts(bookId)
   },
 }))

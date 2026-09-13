@@ -57,7 +57,7 @@ export const AnnotationDetailModal: React.FC<AnnotationDetailModalProps> = ({
     <div className="fixed inset-0 z-[65] flex items-center justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-on-background/30" />
       <div
-        className="relative bg-surface rounded-card-lg shadow-2xl border border-outline-variant/50 max-w-sm mx-4 p-5 animate-fade-in"
+        className="relative bg-surface rounded-card-lg shadow-raised border border-outline-variant/50 max-w-sm mx-4 p-5 animate-fade-in"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2 mb-3">
@@ -81,7 +81,7 @@ export const AnnotationDetailModal: React.FC<AnnotationDetailModalProps> = ({
               onChange={(e) => setNote(e.target.value)}
               rows={3}
               placeholder={COPY.annotation.notePlaceholder}
-              className="w-full px-3 py-2 bg-surface-container-lowest border border-outline-variant/50 rounded-lg text-on-surface font-body text-body-sm resize-none focus:outline-none focus:border-primary placeholder:text-on-surface-variant/40"
+              className="input-field resize-none"
               autoFocus
             />
             <div className="flex items-center gap-2 mt-2">
@@ -115,7 +115,7 @@ export const AnnotationDetailModal: React.FC<AnnotationDetailModalProps> = ({
                 {COPY.annotation.cancel}
               </button>
               <button
-                className="px-4 py-1.5 rounded-lg font-label text-label-sm bg-primary text-on-primary hover:opacity-90 transition-opacity"
+                className="btn-primary btn-sm px-4 py-1.5"
                 onClick={saveEdit}
               >
                 {COPY.annotation.save}
@@ -151,7 +151,7 @@ export const AnnotationDetailModal: React.FC<AnnotationDetailModalProps> = ({
                   {COPY.annotation.remove}
                 </button>
                 <button
-                  className="px-4 py-1.5 rounded-lg font-label text-label-sm bg-primary text-on-primary hover:opacity-90 transition-opacity"
+                  className="btn-primary btn-sm px-4 py-1.5"
                   onClick={() => {
                     onNavigate(annotation);
                     onClose();

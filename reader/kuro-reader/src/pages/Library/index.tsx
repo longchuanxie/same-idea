@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 
 import { useNavigate, useLocation } from 'react-router-dom';
 
-import BookCoverImage from '@/components/atoms/BookCoverImage';
+import { BookCoverImage } from '@/components/atoms/BookCoverImage';
 import { FormatBadge } from '@/components/atoms/FormatBadge';
 import { BookEditDialog } from '@/components/molecules/BookEditDialog';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
@@ -363,7 +363,7 @@ export const LibraryPage: React.FC = () => {
           </p>
           <div className="flex flex-col w-full gap-4">
             <button
-              className="w-full bg-seal text-on-primary font-label text-label-md py-4 px-6 rounded-card hover:bg-seal-deep transition-colors"
+              className="btn-seal w-full py-4 px-6"
               onClick={() => navigate(ROUTES.IMPORT)}
             >
               去采编
@@ -411,14 +411,14 @@ export const LibraryPage: React.FC = () => {
             <span className="font-label text-label-sm text-on-surface-variant">{displayedBooks.length} 本</span>
             <div className="relative">
               <button
-                className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1"
+                className="btn-ghost text-on-surface-variant px-2.5 py-1.5 flex items-center gap-1"
                 onClick={() => setShowSortMenu(!showSortMenu)}
               >
-                <span className="material-symbols-outlined text-lg">sort</span>
+                <span className="material-symbols-outlined text-lg text-seal">sort</span>
                 排序
               </button>
               {showSortMenu && (
-                <div className="absolute right-0 top-full mt-2 bg-surface-bright border border-outline-variant rounded-lg shadow-lg z-50 min-w-[160px] overflow-hidden animate-scale-in">
+                <div className="absolute right-0 top-full mt-2 menu-surface z-50 min-w-[160px] overflow-hidden animate-scale-in">
                   <button
                     className={cn(
                       'w-full text-left px-4 py-2.5 font-label text-label-md hover:bg-surface-container transition-colors flex items-center gap-2',
@@ -464,18 +464,18 @@ export const LibraryPage: React.FC = () => {
               )}
             </div>
             <button
-              className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1"
+              className="btn-ghost text-on-surface-variant px-2.5 py-1.5 flex items-center gap-1"
               onClick={() => navigate(ROUTES.TAGS)}
               aria-label="分类目录"
               title="分类目录"
             >
-              <span className="material-symbols-outlined text-lg">sell</span>
+              <span className="material-symbols-outlined text-lg text-seal">sell</span>
               分类
             </button>
             <div className="flex items-center border border-outline-variant rounded overflow-hidden">
               <button
                 className={`w-8 h-8 flex items-center justify-center transition-colors ${
-                  viewMode === 'grid' ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:text-primary'
+                  viewMode === 'grid' ? 'option-active' : 'text-on-surface-variant hover:text-primary'
                 }`}
                 onClick={() => viewMode !== 'grid' && toggleViewMode()}
                 aria-label="网格视图"
@@ -485,7 +485,7 @@ export const LibraryPage: React.FC = () => {
               </button>
               <button
                 className={`w-8 h-8 flex items-center justify-center transition-colors border-l border-outline-variant ${
-                  viewMode === 'list' ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:text-primary'
+                  viewMode === 'list' ? 'option-active' : 'text-on-surface-variant hover:text-primary'
                 }`}
                 onClick={() => viewMode !== 'list' && toggleViewMode()}
                 aria-label="列表视图"
@@ -495,7 +495,7 @@ export const LibraryPage: React.FC = () => {
               </button>
             </div>
             <button
-              className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1"
+              className="btn-ghost text-on-surface-variant px-2.5 py-1.5 flex items-center gap-1"
               onClick={() => setIsSelectMode(true)}
             >
               <span className="material-symbols-outlined text-lg">checklist</span>
@@ -584,8 +584,8 @@ export const LibraryPage: React.FC = () => {
               }}
             >
               <div className="w-full border border-dashed border-outline-variant bg-surface-container-low aspect-[2/3] overflow-hidden mb-3 flex flex-col items-center justify-center hover:bg-surface-container transition-colors">
-                <div className="w-12 h-12 rounded-full border border-outline-variant flex items-center justify-center mb-3 bg-background group-hover:scale-105 transition-transform">
-                  <span className="material-symbols-outlined text-primary">add</span>
+                <div className="w-12 h-12 rounded-card border border-outline-variant flex items-center justify-center mb-3 bg-background group-hover:scale-105 transition-transform">
+                  <span className="material-symbols-outlined text-seal">add</span>
                 </div>
                 <span className="font-label text-label-md text-on-surface-variant group-hover:text-primary transition-colors">新建子书库</span>
               </div>
@@ -601,10 +601,10 @@ export const LibraryPage: React.FC = () => {
           <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
             <button
               className={cn(
-                'px-3 py-1.5 rounded-full font-label text-label-sm whitespace-nowrap transition-colors border',
+                'chip px-3 py-1.5',
                 activeTagId === null && !showFavoritesOnly
-                  ? 'bg-primary text-on-primary border-primary'
-                  : 'bg-surface-container text-on-surface-variant border-outline-variant hover:border-primary'
+                  ? 'chip-active'
+                  : ''
               )}
               onClick={() => {
                 setActiveTagId(null);
@@ -618,8 +618,8 @@ export const LibraryPage: React.FC = () => {
                 className={cn(
                   'px-3 py-1.5 rounded-full font-label text-label-sm whitespace-nowrap transition-colors border flex items-center gap-1',
                   showFavoritesOnly
-                    ? 'bg-primary text-on-primary border-primary'
-                    : 'bg-surface-container text-on-surface-variant border-outline-variant hover:border-primary'
+                    ? 'chip-active'
+                    : ''
                 )}
                 onClick={() => {
                   setShowFavoritesOnly(!showFavoritesOnly);
@@ -634,10 +634,10 @@ export const LibraryPage: React.FC = () => {
               <button
                 key={tag.id}
                 className={cn(
-                  'px-3 py-1.5 rounded-full font-label text-label-sm whitespace-nowrap transition-all border',
+                  'chip px-3 py-1.5',
                   activeTagId === tag.id
-                    ? 'text-white border-transparent'
-                    : 'bg-surface-container text-on-surface-variant border-outline-variant hover:border-primary'
+                    ? 'text-on-primary border-transparent'
+                    : ''
                 )}
                 style={activeTagId === tag.id ? { backgroundColor: tag.color } : undefined}
                 onClick={() => {
@@ -791,7 +791,7 @@ export const LibraryPage: React.FC = () => {
                 )}
                 {book.isFavorite && !isSelectMode && (
                   <div className="absolute bottom-2 left-2">
-                    <span className="material-symbols-outlined text-primary text-[20px] drop-shadow-sm" style={{ fontVariationSettings: "'FILL' 1" }}>bookmark</span>
+                    <span className="material-symbols-outlined text-primary text-icon-md drop-shadow-sm" style={{ fontVariationSettings: "'FILL' 1" }}>bookmark</span>
                   </div>
                 )}
                 {/* 书的生命状态（建议书 2.8-1）：在读=书脊进度丝带；读完=归架印点 */}
@@ -842,7 +842,7 @@ export const LibraryPage: React.FC = () => {
             {books.length > 0 ? '藏书已全部归入特藏室' : '主书架暂无书籍'}
           </p>
           <button
-            className="font-label text-label-md text-primary border border-outline-variant px-6 py-2 hover:bg-surface-variant transition-colors"
+            className="btn-secondary px-6 py-2"
             onClick={() => navigate(ROUTES.IMPORT)}
           >
             去导入
@@ -919,18 +919,18 @@ export const LibraryPage: React.FC = () => {
               value={newSubLibName}
               onChange={(e) => setNewSubLibName(e.target.value)}
               placeholder="输入子书库名称"
-              className="w-full border border-outline-variant rounded px-3 py-2 font-body text-body-md text-on-background bg-surface focus:outline-none focus:border-primary mb-4"
+              className="input-field mb-4"
               autoFocus
             />
             <div className="flex gap-3 justify-end">
               <button
-                className="border border-outline-variant text-on-surface-variant font-label text-label-md px-6 py-2 rounded hover:bg-surface-variant transition-colors"
+                className="btn-secondary px-6 py-2"
                 onClick={() => setShowNewSubLibDialog(false)}
               >
                 取消
               </button>
               <button
-                className="bg-primary text-on-primary font-label text-label-md px-6 py-2 rounded hover:opacity-90 transition-colors"
+                className="btn-primary px-6 py-2"
                 onClick={isSelectMode && selectedIds.size > 0 ? handleCreateSubLibrary : handleCreateEmptySubLibrary}
                 disabled={!newSubLibName.trim()}
               >
@@ -950,7 +950,7 @@ export const LibraryPage: React.FC = () => {
                 {subLibraries.map((subLib) => (
                   <button
                     key={subLib.id}
-                    className="w-full text-left p-3 border border-outline-variant rounded hover:bg-surface-container transition-colors flex items-center gap-3"
+                    className="card-link w-full p-3 flex items-center gap-3"
                     onClick={() => handleAddToSubLibrary(subLib.id)}
                   >
                     <span className="material-symbols-outlined text-on-surface-variant">folder</span>
@@ -966,7 +966,7 @@ export const LibraryPage: React.FC = () => {
             )}
             <div className="flex gap-3 justify-end">
               <button
-                className="border border-outline-variant text-on-surface-variant font-label text-label-md px-6 py-2 rounded hover:bg-surface-variant transition-colors"
+                className="btn-secondary px-6 py-2"
                 onClick={() => setShowAddToSubLibDialog(false)}
               >
                 取消

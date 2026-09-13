@@ -44,7 +44,7 @@ export const ChapterDrawer: React.FC<ChapterDrawerProps> = ({
       {/* 抽屉内容 */}
       <div
         className={cn(
-          'relative w-[280px] max-w-[80vw] h-full bg-surface shadow-2xl animate-slide-in-left',
+          'relative w-[280px] max-w-[80vw] h-full bg-surface shadow-raised animate-slide-in-left',
           'flex flex-col'
         )}
         onClick={(e) => e.stopPropagation()}
@@ -57,7 +57,7 @@ export const ChapterDrawer: React.FC<ChapterDrawerProps> = ({
             onClick={onClose}
             aria-label="关闭"
           >
-            <span className="material-symbols-outlined text-[20px]">close</span>
+            <span className="material-symbols-outlined text-icon-md">close</span>
           </button>
         </div>
 

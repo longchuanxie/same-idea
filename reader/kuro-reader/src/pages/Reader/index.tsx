@@ -1121,7 +1121,7 @@ export const ReaderPage: React.FC = () => {
           <span className="material-symbols-outlined text-on-surface-variant text-6xl">image_not_supported</span>
           <p className="font-body text-body-md text-on-surface-variant">无法加载页面</p>
           <button
-            className="font-label text-label-md text-primary border border-outline-variant px-6 py-2 hover:bg-surface-variant transition-colors"
+            className="btn-secondary px-6 py-2"
             onClick={() => navigate(-1)}
           >
             返回
@@ -1333,7 +1333,7 @@ export const ReaderPage: React.FC = () => {
 
       {readerNotice && (
         <div className="fixed top-gutter left-1/2 -translate-x-1/2 z-40 pointer-events-none mt-safe">
-          <div className="bg-on-surface/70 backdrop-blur-sm rounded-full px-4 py-2 shadow-md">
+          <div className="bg-on-surface/70 backdrop-blur-sm rounded-full px-4 py-2 shadow-paper">
             <span className="font-label text-label-sm text-surface">{readerNotice}</span>
           </div>
         </div>
@@ -1464,7 +1464,7 @@ export const ReaderPage: React.FC = () => {
                     <span className="material-symbols-outlined">navigate_before</span>
                   </button>
                   <button
-                    className="w-11 h-11 rounded-full bg-primary text-on-primary flex items-center justify-center hover:opacity-90 transition-opacity shadow-sm"
+                    className="w-11 h-11 rounded-full option-active flex items-center justify-center hover:opacity-90 transition-opacity shadow-paper"
                     onClick={goNextPage}
                     data-ui-control
                   >

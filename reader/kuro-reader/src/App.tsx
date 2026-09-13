@@ -7,6 +7,8 @@ import { ToastHost } from '@/components/atoms/Toast';
 import { AuthGuard } from '@/components/layouts/AuthGuard';
 import { MainLayout } from '@/components/layouts/MainLayout';
 import { ROUTES } from '@/constants/routes';
+import { AskLibraryPage } from '@/pages/Ask';
+import { AtlasPage } from '@/pages/Atlas';
 import { AuthPage } from '@/pages/Auth';
 import { BookDetailPage } from '@/pages/BookDetail';
 import { CustomCloudPage } from '@/pages/CustomCloud';
@@ -18,12 +20,14 @@ import { LibraryPage } from '@/pages/Library';
 import { NotesPage } from '@/pages/Notes';
 import { ProfilePage } from '@/pages/Profile';
 import { ReaderPage } from '@/pages/Reader';
+import { ReviewPage } from '@/pages/Review';
 import { SearchPage } from '@/pages/Search';
 import { SettingsPage } from '@/pages/Settings';
 import { StatsPage } from '@/pages/Stats';
 import { SubLibraryPage } from '@/pages/SubLibrary';
 import { TagsPage } from '@/pages/Tags';
 import { TextReaderPage } from '@/pages/TextReader';
+import { VocabularyPage } from '@/pages/Vocabulary';
 import { consumeBackPress } from '@/services/backHandler';
 import { useAppStore } from '@/stores/useAppStore';
 import { isNativePlatform, setStatusBarHidden } from '@/utils/capacitor';
@@ -131,6 +135,10 @@ const App: React.FC = () => {
           <Route path={ROUTES.STATS} element={<StatsPage />} />
           <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
           <Route path={ROUTES.NOTES} element={<NotesPage />} />
+          <Route path={ROUTES.REVIEW} element={<ReviewPage />} />
+          <Route path={ROUTES.VOCABULARY} element={<VocabularyPage />} />
+          <Route path={ROUTES.ASK} element={<AskLibraryPage />} />
+          <Route path={ROUTES.ATLAS} element={<AtlasPage />} />
           <Route path={ROUTES.KNOWLEDGE_HUB} element={<KnowledgeHubPage />} />
           <Route path={ROUTES.TAGS} element={<TagsPage />} />
         </Route>

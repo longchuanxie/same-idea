@@ -219,7 +219,7 @@ export const CustomCloudPage: React.FC = () => {
       {/* 连接信息 + 断开 */}
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="material-symbols-outlined text-primary text-[20px]">cloud_done</span>
+          <span className="material-symbols-outlined text-primary text-icon-md">cloud_done</span>
           <span className="font-label text-label-sm text-on-surface-variant truncate">{connectedLabel}</span>
         </div>
         <button
@@ -240,7 +240,7 @@ export const CustomCloudPage: React.FC = () => {
         </button>
         {breadcrumbs.map((seg) => (
           <React.Fragment key={seg.path}>
-            <span className="material-symbols-outlined text-[16px] text-on-surface-variant">chevron_right</span>
+            <span className="material-symbols-outlined text-icon-sm text-on-surface-variant">chevron_right</span>
             <button
               className={cn(
                 'font-label text-label-sm py-1 px-1 whitespace-nowrap transition-colors',
@@ -347,7 +347,7 @@ export const CustomCloudPage: React.FC = () => {
           </div>
           <div className="flex gap-3">
             <button
-              className="px-4 py-2 rounded-full bg-primary text-on-primary font-label text-label-sm hover:opacity-90 transition-opacity"
+              className="btn-primary btn-sm px-4 py-2"
               onClick={() => navigate(readerPathForBook(importedBook))}
             >
               开始阅读
@@ -384,7 +384,7 @@ export const CustomCloudPage: React.FC = () => {
                 className={cn(
                   'flex flex-col items-center justify-center py-3 px-2 border rounded-lg transition-all gap-1',
                   protocol === p.id
-                    ? 'border-primary bg-primary text-on-primary'
+                    ? 'option-active'
                     : 'border-outline-variant hover:border-primary text-on-surface bg-transparent'
                 )}
                 onClick={() => {
@@ -392,7 +392,7 @@ export const CustomCloudPage: React.FC = () => {
                   setConnectError(null);
                 }}
               >
-                <span className="material-symbols-outlined text-[20px]">{p.icon}</span>
+                <span className="material-symbols-outlined text-icon-md">{p.icon}</span>
                 <span className="font-label text-label-sm">{p.label}</span>
               </button>
             ))}
@@ -409,7 +409,7 @@ export const CustomCloudPage: React.FC = () => {
                 {protocol === 'opds' ? '目录地址' : protocol === 'nas' ? 'NAS 地址 / IP' : protocol === 'onedrive' ? '授权方式' : '服务器地址'}
               </label>
               <input
-                className="w-full bg-transparent border-0 border-b border-outline-variant px-0 py-2 font-body text-body-md text-primary placeholder:text-on-tertiary-container focus:ring-0 focus:border-primary transition-all outline-none"
+                className="input-field"
                 placeholder={placeholders.server}
                 type={protocol === 'onedrive' ? 'text' : 'url'}
                 value={serverAddress}
@@ -421,7 +421,7 @@ export const CustomCloudPage: React.FC = () => {
               <div className="w-full md:w-32 flex flex-col gap-2">
                 <label className="font-label text-label-sm text-on-surface-variant">端口 (选填)</label>
                 <input
-                  className="w-full bg-transparent border-0 border-b border-outline-variant px-0 py-2 font-body text-body-md text-primary placeholder:text-on-tertiary-container focus:ring-0 focus:border-primary transition-all outline-none"
+                  className="input-field"
                   placeholder={placeholders.port}
                   type="number"
                   value={port}
@@ -435,7 +435,7 @@ export const CustomCloudPage: React.FC = () => {
             <div className="flex flex-col gap-2">
               <label className="font-label text-label-sm text-on-surface-variant">路径 (选填)</label>
               <input
-                className="w-full bg-transparent border-0 border-b border-outline-variant px-0 py-2 font-body text-body-md text-primary placeholder:text-on-tertiary-container focus:ring-0 focus:border-primary transition-all outline-none"
+                className="input-field"
                 placeholder={protocol === 'nas' ? '/Comics' : '/books'}
                 type="text"
                 value={path}
@@ -452,7 +452,7 @@ export const CustomCloudPage: React.FC = () => {
                 {protocol === 'onedrive' ? '账户邮箱' : '用户名'}
               </label>
               <input
-                className="w-full bg-transparent border-0 border-b border-outline-variant px-0 py-2 font-body text-body-md text-primary placeholder:text-on-tertiary-container focus:ring-0 focus:border-primary transition-all outline-none"
+                className="input-field"
                 placeholder={protocol === 'onedrive' ? 'example@outlook.com' : '输入用户名'}
                 type="text"
                 value={username}
@@ -464,7 +464,7 @@ export const CustomCloudPage: React.FC = () => {
                 {protocol === 'onedrive' ? '授权码 / Token' : '密码'}
               </label>
               <input
-                className="w-full bg-transparent border-0 border-b border-outline-variant px-0 py-2 font-body text-body-md text-primary placeholder:text-on-tertiary-container focus:ring-0 focus:border-primary transition-all outline-none pr-10"
+                className="input-field pr-10"
                 placeholder="••••••••••••"
                 type={showPassword ? 'text' : 'password'}
                 value={password}
@@ -497,7 +497,7 @@ export const CustomCloudPage: React.FC = () => {
               className={cn(
                 'w-full py-4 font-label text-label-md rounded active:scale-[0.98] transition-all flex justify-center items-center gap-2',
                 isFormValid
-                  ? 'bg-primary text-on-primary hover:opacity-90'
+                  ? 'option-active hover:opacity-90'
                   : 'bg-surface-variant text-on-surface-variant cursor-not-allowed'
               )}
               onClick={handleConnect}
@@ -525,7 +525,7 @@ export const CustomCloudPage: React.FC = () => {
               className={cn(
                 'w-full py-4 font-label text-label-md rounded active:scale-[0.98] transition-all flex justify-center items-center gap-2',
                 isFormValid
-                  ? 'bg-primary text-on-primary hover:opacity-90'
+                  ? 'option-active hover:opacity-90'
                   : 'bg-surface-variant text-on-surface-variant cursor-not-allowed'
               )}
               onClick={handleConnect}
@@ -552,7 +552,7 @@ export const CustomCloudPage: React.FC = () => {
   );
 
   return (
-    <div className="bg-surface text-on-surface min-h-screen flex flex-col items-center">
+    <div className="bg-surface text-on-surface h-[100dvh] overflow-y-auto overscroll-contain flex flex-col items-center">
       <header className="w-full max-w-max-width-content px-margin-mobile md:px-margin-desktop py-unit bg-surface flex justify-between items-center sticky top-0 z-50 pt-safe">
         <div className="flex items-center gap-4">
           <button
