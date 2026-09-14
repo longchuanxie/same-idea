@@ -2,6 +2,7 @@
   "appId": "com.kuro.reader",
   "appName": "Kuro Reader",
   "webDir": "dist",
+  "webContentsDebuggingEnabled": true,
   "server": {
     "androidScheme": "https"
   },
