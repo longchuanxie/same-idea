@@ -52,7 +52,7 @@ function findBlockSpans(spans: MarkdownSpan[], block: MarkdownBlock): MarkdownSp
   return matches
 }
 
-const MarkdownImage: FC<{ span: MarkdownSpan }> = ({ span }) => {
+const MarkdownImage: FC<{ span: MarkdownSpan; measurementMode?: boolean }> = ({ span, measurementMode }) => {
   const [failed, setFailed] = useState(false)
   const source = span.href?.trim() ?? ''
   const alt = span.alt || 'Markdown 图片'
@@ -70,7 +70,10 @@ const MarkdownImage: FC<{ span: MarkdownSpan }> = ({ span }) => {
       src={source}
       alt={alt}
       title={span.title ?? undefined}
-      loading="lazy"
+      // 测量容器常驻屏幕外，lazy 图永远不会进入视口也就永远不会加载，
+      // 分页测量只能拿到占位高度 → 渲染页被真实图高撑爆、底部正文被裁；
+      // 测量时必须 eager 拿真实尺寸，加载完成后经 markdown-media-load 触发重分页
+      loading={measurementMode ? 'eager' : 'lazy'}
       decoding="async"
       referrerPolicy="no-referrer"
       className="my-3 inline-block max-h-[70vh] max-w-full rounded-lg object-contain align-middle"
@@ -85,7 +88,8 @@ function wrapWithMarkdownSpan(
   node: ReactNode,
   span: MarkdownSpan,
   key: string,
-  onInternalLink?: (href: string) => void
+  onInternalLink?: (href: string) => void,
+  measurementMode?: boolean
 ): ReactNode {
   switch (span.type) {
     case 'strong':
@@ -117,7 +121,7 @@ function wrapWithMarkdownSpan(
         </a>
       ) : node
     case 'image':
-      return <MarkdownImage key={key} span={span} />
+      return <MarkdownImage key={key} span={span} measurementMode={measurementMode} />
     case 'math':
       return (
         <MarkdownMath
@@ -238,7 +242,8 @@ export const MarkdownReaderContent: FC<MarkdownReaderContentProps> = ({
                 node,
                 span,
                 `${segmentStart}-${span.type}-${spanIndex}`,
-                onInternalLink
+                onInternalLink,
+                measurementMode
               )
             })
 

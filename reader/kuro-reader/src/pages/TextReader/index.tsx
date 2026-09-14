@@ -141,6 +141,10 @@ const RANDOM_ID_SLICE_END = 6;
 const TEXT_PAGE_TITLE_MARGIN_BOTTOM = 32;
 const TEXT_PAGE_TITLE_FONT_WEIGHT = '700';
 const TEXT_PAGE_TITLE_OPACITY = '0.8';
+// 块内拆页测量与渲染侧宽度对齐（对应 MarkdownReaderContent 的 Tailwind 类）
+const BLOCKQUOTE_TEXT_INSET_PX = 20; // border-l-4(4px) + pl-4(16px)
+const LIST_MARKER_GUTTER_BASE_PX = 16; // list-item 标记槽首层 1rem
+const LIST_MARKER_GUTTER_STEP_PX = 20; // 每层嵌套加 1.25rem
 const TEXT_CHAPTER_END_PROMPT_LABELS = {
   title: '\u5df2\u8bfb\u5b8c\u672c\u7ae0',
   action: '\u7ee7\u7eed\u4e0b\u4e00\u7ae0',
@@ -1036,7 +1040,16 @@ export const TextReaderPage: React.FC = () => {
     measureEl.style.boxSizing = 'border-box';
     measureEl.style.textAlign = textAlign === 'justify' ? 'justify' : 'left';
 
-    const measurePageHeight = (pageText: string, includeChapterTitle: boolean): number => {
+    /** 块内拆页的测量上下文：拆分发生在段内时，渲染宽度受块样式（左内边距/缩进）影响，
+     *  裸文本测量会比真实渲染更宽更矮 → 页被塞得过满、底部正文被 overflow-hidden 裁掉 */
+    interface SplitBlockContext {
+      kind: 'paragraph' | 'blockquote' | 'list-item';
+      listDepth?: number;
+      /** 切片是否从块首开始（段首缩进只在块首出现，与渲染侧 visibleStart === block.start 对齐） */
+      atBlockStart: boolean;
+    }
+
+    const measurePageHeight = (pageText: string, includeChapterTitle: boolean, block?: SplitBlockContext): number => {
       const wrapper = document.createElement('div');
 
       if (includeChapterTitle && hasMultipleChapters && currentChapter) {
@@ -1053,15 +1066,24 @@ export const TextReaderPage: React.FC = () => {
       contentEl.textContent = pageText;
       contentEl.style.whiteSpace = 'pre-wrap';
       contentEl.style.wordBreak = 'break-word';
-      contentEl.style.textIndent = firstLineIndent ? '2em' : '0';
+      // 块样式与渲染侧 getBlockClassName/inline style 逐项对齐：
+      // blockquote = border-l-4 + pl-4；list-item = 1rem + depth*1.25rem 的标记槽
+      if (block?.kind === 'blockquote') {
+        contentEl.style.paddingLeft = `${BLOCKQUOTE_TEXT_INSET_PX}px`;
+      } else if (block?.kind === 'list-item') {
+        contentEl.style.paddingLeft = `${LIST_MARKER_GUTTER_BASE_PX + (block.listDepth ?? 0) * LIST_MARKER_GUTTER_STEP_PX}px`;
+      }
+      // 段首缩进与渲染侧对齐：仅纯文本页与 paragraph 块首有 2em 缩进（引用/列表不带）
+      const indentApplies = block ? block.kind === 'paragraph' && block.atBlockStart : true;
+      contentEl.style.textIndent = firstLineIndent && indentApplies ? '2em' : '0';
       wrapper.appendChild(contentEl);
 
       measureEl.replaceChildren(wrapper);
       return measureEl.scrollHeight;
     };
 
-    const fitsPage = (pageText: string, includeChapterTitle: boolean): boolean =>
-      measurePageHeight(pageText, includeChapterTitle) <= pageHeight;
+    const fitsPage = (pageText: string, includeChapterTitle: boolean, block?: SplitBlockContext): boolean =>
+      measurePageHeight(pageText, includeChapterTitle, block) <= pageHeight;
 
     const markdownDocument = currentChapter.markdownDocument;
     const markdownMeasureEl = markdownMeasureRef.current;
@@ -1127,14 +1149,20 @@ export const TextReaderPage: React.FC = () => {
             while (cursor < block.end) {
               const includeChapterTitle = pages.length === 0;
               const remainingText = markdownDocument.text.slice(cursor, block.end);
-              if (fitsPage(remainingText, includeChapterTitle)) break;
+              // 拆分测量带上块上下文：切片是否块首决定段首缩进，块类型决定渲染宽度
+              const blockContext: SplitBlockContext = {
+                kind: block.type as SplitBlockContext['kind'],
+                listDepth: block.listDepth,
+                atBlockStart: cursor === block.start,
+              };
+              if (fitsPage(remainingText, includeChapterTitle, blockContext)) break;
 
               let low = MIN_TEXT_PAGE_LENGTH;
               let high = remainingText.length;
               let best = MIN_TEXT_PAGE_LENGTH;
               while (low <= high) {
                 const mid = Math.floor((low + high) / HALF_DIVISOR);
-                if (fitsPage(remainingText.slice(0, mid), includeChapterTitle)) {
+                if (fitsPage(remainingText.slice(0, mid), includeChapterTitle, blockContext)) {
                   best = mid;
                   low = mid + 1;
                 } else {
