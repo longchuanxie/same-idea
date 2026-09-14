@@ -8,7 +8,7 @@ interface TextProgressHintProps {
   estimatedTimeLeft: string;
 }
 
-/** 右上角常驻阅读进度指示器（拖动进度条或滚动时浮现） */
+/** 页末常驻阅读进度指示器（拖动进度条或翻页时浮现；Toast 层级，盖过阅读器底栏） */
 export const TextProgressHint: React.FC<TextProgressHintProps> = ({
   visible,
   overallPercent,
@@ -17,8 +17,8 @@ export const TextProgressHint: React.FC<TextProgressHintProps> = ({
   <div
     aria-hidden={!visible}
     className={cn(
-      'fixed top-gutter right-margin-mobile z-40 pointer-events-none mt-safe transition-all duration-300',
-      visible ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0'
+      'fixed bottom-gutter right-margin-mobile z-toast pointer-events-none mb-safe transition-all duration-300',
+      visible ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'
     )}
   >
     <div className="bg-on-surface/50 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-2">
