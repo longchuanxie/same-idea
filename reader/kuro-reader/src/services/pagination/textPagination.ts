@@ -2,19 +2,11 @@
  * 文本分页纯函数：给定"这段文本是否放得进一页"的测量回调，把章节内容切成页。
  *
  * 测量（DOM 渲染后量高）仍由调用方完成；这里只负责切分策略：
- * 二分查找最大可容纳长度 + 在断点附近回找句读，避免一行被拦腰截断。
+ * 二分查找最大可容纳长度 + 按句读分层回找断点，保证断句完整性。
  */
-
-/** 断点回找时优先命中的句读字符 */
-export const TEXT_PAGE_BREAK_CHARS = new Set(['。', '！', '？', '；', '，', '.', '!', '?', ';', ',', ' ', '\u3000']);
 
 /** 单页最短字符数（防止死循环/空白页） */
 export const MIN_TEXT_PAGE_LENGTH = 1;
-
-/** 断点回找窗口：ratio 比例下限/绝对字符上下限 */
-const BREAK_SEARCH_RATIO = 0.25;
-const BREAK_SEARCH_MIN = 32;
-const BREAK_SEARCH_MAX = 120;
 
 /** 二分中点 */
 const HALF_DIVISOR = 2;
@@ -25,24 +17,50 @@ export interface BreakSearchWindow {
   max?: number;
 }
 
-const DEFAULT_BREAK_SEARCH: BreakSearchWindow = { ratio: BREAK_SEARCH_RATIO, min: BREAK_SEARCH_MIN, max: BREAK_SEARCH_MAX };
+/** 断句完整性：分页断点按句读分层停靠——句末最优先，其次子句，最后才按容量硬切 */
+
+/** 句末字符：一整句的结束（含省略号与换行——换行即段落边界） */
+export const SENTENCE_END_CHARS = new Set(['。', '！', '？', '；', '…', '.', '!', '?', ';', '\n']);
+/** 子句字符：句末缺席时的次优断点（逗号/顿号/冒号/空格） */
+export const CLAUSE_BREAK_CHARS = new Set(['，', '、', '：', ',', ':', ' ', '\u3000']);
+/** 收尾字符：句末后紧随的引号/括号应并入本页，避免下一页以半个引号开头 */
+const TRAILING_CLOSER_CHARS = new Set([
+  '"', '"', "'", "'", '』', '」', '）', '】', '》', '〉', ')', ']', '}',
+]);
+
+/** 句末回找窗口：断在完整句末比塞满页面更重要，窗口给得更宽 */
+const SENTENCE_BREAK_SEARCH: BreakSearchWindow = { ratio: 0.5, min: 80, max: 400 };
+
+/** 子句回找窗口（沿用旧版比例与下限） */
+const CLAUSE_BREAK_SEARCH: BreakSearchWindow = { ratio: 0.25, min: 32, max: 120 };
+
+function searchBreakBackward(text: string, best: number, chars: Set<string>, window: BreakSearchWindow): number {
+  const proportional = Math.floor(best * window.ratio);
+  let range = Math.max(window.min, proportional);
+  if (window.max != null) range = Math.min(window.max, range);
+  const minBreak = Math.max(MIN_TEXT_PAGE_LENGTH, best - range);
+  for (let index = best; index >= minBreak; index--) {
+    if (chars.has(text[index - 1])) return index;
+  }
+  return -1;
+}
+
+/** 断点后吞并紧随的收尾引号/括号（不超过容量上限 best） */
+function absorbTrailingClosers(text: string, index: number, best: number): number {
+  while (index < best && TRAILING_CLOSER_CHARS.has(text[index])) index += 1;
+  return index;
+}
 
 /**
- * 在 best 附近向左回找句读断点；找不到则维持 best。
- * 返回值保证 >= MIN_TEXT_PAGE_LENGTH。
+ * 在 best 附近为分页断点选位：先回找句末（窗口更宽），找不到再回找子句，
+ * 都没有则按容量硬切。返回值 ∈ [1, best]，保证切出的页不会溢出。
  */
-export function findPreferredBreak(text: string, best: number, search: BreakSearchWindow = DEFAULT_BREAK_SEARCH): number {
-  const proportional = Math.floor(best * search.ratio);
-  let searchRange = Math.max(search.min, proportional);
-  if (search.max != null) searchRange = Math.min(search.max, searchRange);
-  const minBreak = Math.max(MIN_TEXT_PAGE_LENGTH, best - searchRange);
-
-  for (let index = best; index >= minBreak; index--) {
-    if (TEXT_PAGE_BREAK_CHARS.has(text[index - 1])) {
-      return index;
-    }
-  }
-
+export function findPreferredBreak(text: string, best: number, search: BreakSearchWindow = CLAUSE_BREAK_SEARCH): number {
+  if (best <= MIN_TEXT_PAGE_LENGTH) return best;
+  const sentenceIndex = searchBreakBackward(text, best, SENTENCE_END_CHARS, SENTENCE_BREAK_SEARCH);
+  if (sentenceIndex >= 0) return absorbTrailingClosers(text, sentenceIndex, best);
+  const clauseIndex = searchBreakBackward(text, best, CLAUSE_BREAK_CHARS, search);
+  if (clauseIndex >= 0) return clauseIndex;
   return best;
 }
 
@@ -172,7 +190,7 @@ export function paginatePlainText({
             hi = mid - 1;
           }
         }
-        // 旧版窗口：ratio 0.2、下限 50（与原 paginateContent 逐字一致）
+        // 句末窗口已并入 findPreferredBreak 分层策略，子句窗口沿用旧版比例
         const splitAt = findPreferredBreak(remaining, best, { ratio: 0.2, min: 50 });
         pages.push(remaining.slice(0, splitAt));
         remaining = remaining.slice(splitAt);

@@ -18,6 +18,22 @@ describe('findPreferredBreak', () => {
     const text = 'x'.repeat(10) + '。' + 'y'.repeat(5)
     expect(findPreferredBreak(text, 15, { ratio: 0.2, min: 50 })).toBe(11)
   })
+
+  it('句末优先于更近的子句逗号（断句完整性）', () => {
+    // 逗号在 index 5（更近），句号在 index 3 → 应断在完整句末而非子句
+    const text = '甲乙丙。丁，戊己庚辛'
+    expect(findPreferredBreak(text, 8)).toBe(4)
+  })
+
+  it('句末后吸收收尾引号，下一页不以半个引号开头', () => {
+    const text = '甲乙丙。"丁戊己庚辛'
+    expect(findPreferredBreak(text, 7)).toBe(5)
+  })
+
+  it('换行（段落边界）视作句末断点', () => {
+    const text = '甲乙\n丙丁戊己庚辛'
+    expect(findPreferredBreak(text, 7)).toBe(3)
+  })
 })
 
 describe('splitTextIntoPages', () => {
