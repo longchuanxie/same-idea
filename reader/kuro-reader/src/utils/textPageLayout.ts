@@ -7,7 +7,10 @@ const LANDSCAPE_OUTER_GUTTER = 64
 const MOBILE_VERTICAL_PADDING = 64
 const DESKTOP_VERTICAL_PADDING = 96
 const LANDSCAPE_VERTICAL_PADDING = 48
-const PAGE_MEASURE_SAFETY = 24
+/** 分页测量安全余量：测量与真机渲染之间存在无法逐项消除的度量漂移
+ *  （字体回退差异/子像素取整/textZoom 等），余量须盖住约一整行行高，
+ *  代价仅是每页少排约半行——宁可页尾略松，不可页底裁字 */
+const PAGE_MEASURE_SAFETY = 48
 const COLUMNS_PER_SPREAD = 2
 const VERTICAL_PAGE_SIDES = 2
 const COLUMNS_LARGE_OUTER_GUTTER = 64

@@ -17,7 +17,7 @@ describe('getTextPageLayout', () => {
     expect(layout.articleWidth).toBe(960)
     expect(layout.contentWidth).toBe(912)
     expect(layout.verticalPadding).toBe(48)
-    expect(layout.pageHeight).toBe(680)
+    expect(layout.pageHeight).toBe(656)
   })
 
   it('keeps the compact portrait reading width', () => {

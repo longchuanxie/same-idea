@@ -191,6 +191,9 @@ export const TextReaderPage: React.FC = () => {
 
   // 分页模式状态
   const [textPages, setTextPages] = useState<string[]>([]);
+  /** 分页引擎收尾用的上一版页面镜像（声明位置在 useTextProgressSaving 之前，就近自建） */
+  const previousPagesRef = useRef<string[]>([]);
+  previousPagesRef.current = textPages;
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [previousPageIndex, setPreviousPageIndex] = useState<number | null>(null);
   const [pageDirection, setPageDirection] = useState<'left' | 'right' | null>(null);
@@ -245,7 +248,7 @@ export const TextReaderPage: React.FC = () => {
     pageIndex?: number;
   } | null>(null);
   // 分页完成后跳过重置到第 0 页（用于媒体加载重分页时保留当前页）
-  const skipNextPageResetRef = useRef(false);
+  const preserveReadingPositionRef = useRef(false);
   // 分页定位请求：跨章节跳转/进度恢复把目标页排队，分页完成时同步消费，
   // 替代「定时器赌分页完成」的时序写法
   type PageRequest = { pageIndex?: number; ratio?: number };
@@ -305,17 +308,46 @@ export const TextReaderPage: React.FC = () => {
     return true;
   }, []);
 
-  /** 分页引擎统一收尾：消费定位请求 → 保留当前页 → 重置到第 0 页 */
+  /** 分页引擎统一收尾：消费定位请求 → 按字符偏移保留位置 → 重置到第 0 页。
+   *  与现有分页逐字节一致时原地跳过：字体加载完成/无效 resize 触发的重复分页不得复位读者位置 */
   const applyPaginationResult = useCallback(
     (pages: string[]) => {
+      const previousPages = previousPagesRef.current;
+      const sameChapterPaginated = paginatedChapterIndexRef.current === currentChapterIndexRef.current;
+      if (
+        sameChapterPaginated &&
+        previousPages.length === pages.length &&
+        previousPages.every((page, index) => page === pages[index])
+      ) {
+        consumePendingPageIndex(pages.length);
+        preserveReadingPositionRef.current = false;
+        return;
+      }
       setTextPages(pages);
       paginatedChapterIndexRef.current = currentChapterIndexRef.current;
       if (consumePendingPageIndex(pages.length)) return;
-      if (skipNextPageResetRef.current) {
-        skipNextPageResetRef.current = false;
-      } else {
-        setCurrentPageIndex(TEXT_PAGE_RESET_INDEX);
+      if (preserveReadingPositionRef.current && sameChapterPaginated) {
+        // 重切页后按字符偏移映射回「正在读的那段文字」所在新页（同下标会随切分漂移）；
+        // 换章场景不沿用：旧章偏移对新章无意义
+        preserveReadingPositionRef.current = false;
+        let offset = 0;
+        for (let i = 0; i < currentPageIndexRef.current && i < previousPages.length; i++) {
+          offset += previousPages[i].length;
+        }
+        let acc = 0;
+        let target = Math.max(0, pages.length - 1);
+        for (let i = 0; i < pages.length; i++) {
+          if (offset < acc + pages[i].length) {
+            target = i;
+            break;
+          }
+          acc += pages[i].length;
+        }
+        setCurrentPageIndex(target);
+        return;
       }
+      preserveReadingPositionRef.current = false;
+      setCurrentPageIndex(TEXT_PAGE_RESET_INDEX);
     },
     [consumePendingPageIndex]
   );
@@ -1210,8 +1242,18 @@ export const TextReaderPage: React.FC = () => {
   // 当章节或模式变化时重新分页
   useEffect(() => {
     if (textReadingMode !== 'scroll' && currentChapter) {
-      // 延迟一帧确保 DOM 已渲染
-      requestAnimationFrame(() => paginateMeasuredContent());
+      // 延迟一帧确保 DOM 已渲染；再等字体就绪才测量：webfont（文学体 Literata 等
+      // font-display: swap 字体）加载前后行宽不同，先测量后换字会让已切好的页面
+      // 多出行数、页底文字被裁
+      let cancelled = false;
+      requestAnimationFrame(() => {
+        document.fonts?.ready.then(() => {
+          if (!cancelled) paginateMeasuredContent();
+        });
+      });
+      return () => {
+        cancelled = true;
+      };
     } else if (textReadingMode !== 'scroll' && !currentChapter && !isLoading) {
       // 分页模式下但没有章节且不在加载中，说明章节为空
       setTextPages([]);
@@ -1222,17 +1264,27 @@ export const TextReaderPage: React.FC = () => {
   useEffect(() => {
     if (textReadingMode === 'scroll') return;
     const handleResize = () => {
+      // 旋转/分屏等布局变化重切页后，按字符偏移回到正在读的位置而不是弹回第 0 页
+      preserveReadingPositionRef.current = true;
       requestAnimationFrame(() => paginateMeasuredContent());
     };
     const handleMarkdownMediaLoad = () => {
-      skipNextPageResetRef.current = true;
+      preserveReadingPositionRef.current = true;
       requestAnimationFrame(() => paginateMeasuredContent());
     };
     window.addEventListener('resize', handleResize);
     window.addEventListener('markdown-media-load', handleMarkdownMediaLoad);
+    // webfont 晚于首次分页完成加载（unicode-range 子集随翻页按需拉取）时重排；
+    // 与现有分页一致时 applyPaginationResult 原地跳过，分页变化时按偏移保留位置
+    const handleFontsLoadingDone = () => {
+      preserveReadingPositionRef.current = true;
+      requestAnimationFrame(() => paginateMeasuredContent());
+    };
+    document.fonts?.addEventListener('loadingdone', handleFontsLoadingDone);
     return () => {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('markdown-media-load', handleMarkdownMediaLoad);
+      document.fonts?.removeEventListener('loadingdone', handleFontsLoadingDone);
     };
   }, [textReadingMode, paginateMeasuredContent]);
 
