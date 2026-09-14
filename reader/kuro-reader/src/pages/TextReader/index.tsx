@@ -124,6 +124,11 @@ const PAGE_MEASURE_SIDE_PADDING_PX = 48;
 // 翻书动画
 const BOOK_FLIP_ANIMATION_MS = 900;
 const PAGE_SLIDE_ANIMATION_MS = 650;
+/** 字体就绪等待上限：超时先分页，字体迟到后由 loadingdone 重排补齐 */
+const FONTS_READY_TIMEOUT_MS = 1500;
+/** 整章一页自检阈值：单页文本量超过页面理论容量的倍数即判定测量不可信 */
+const SINGLE_PAGE_SANITY_FACTOR = 1.5;
+const SINGLE_PAGE_MIN_CAPACITY_CHARS = 400;
 // 听书跟读
 /** 跟随滚动时高亮目标的目标落点（视口高度比例，偏上） */
 const SPEECH_FOLLOW_ANCHOR_RATIO = 0.4;
@@ -1224,8 +1229,17 @@ export const TextReaderPage: React.FC = () => {
         });
 
         pushPage(paginationEnd);
-        applyPaginationResult(pages.length > 0 ? pages : ['']);
-        return;
+        // 设备端自检：整章被收进一页说明测量高度不可信（个别 WebView 对屏外
+        // 固定定位容器的高度返回异常），转投独立测量通道（scrollHeight）重切，
+        // 宁可切分点不完美，不可整章一页导致后半章不可达
+        const capacityChars = Math.max(
+          SINGLE_PAGE_MIN_CAPACITY_CHARS,
+          Math.floor((pageHeight / Math.max(1, fontSize * lineHeight)) * (contentWidth / Math.max(1, fontSize)))
+        );
+        if (pages.length > 1 || markdownDocument.text.length <= capacityChars * SINGLE_PAGE_SANITY_FACTOR) {
+          applyPaginationResult(pages.length > 0 ? pages : ['']);
+          return;
+        }
       }
     }
 
@@ -1258,7 +1272,11 @@ export const TextReaderPage: React.FC = () => {
       // 多出行数、页底文字被裁
       let cancelled = false;
       requestAnimationFrame(() => {
-        document.fonts?.ready.then(() => {
+        // 字体就绪前不测量（webfont swap 会改变行宽）；个别 WebView ready 迟迟
+        // 不 resolve，超时兜底先行分页，迟到时由 loadingdone 重排补齐
+        const fontsReady = document.fonts?.ready ?? Promise.resolve();
+        const timeout = new Promise<void>((resolve) => setTimeout(resolve, FONTS_READY_TIMEOUT_MS));
+        Promise.race([fontsReady, timeout]).then(() => {
           if (!cancelled) paginateMeasuredContent();
         });
       });
