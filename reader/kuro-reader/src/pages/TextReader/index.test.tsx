@@ -102,8 +102,10 @@ vi.mock('@/services/storage/bookmarkRepo', () => ({
   bookmarkRepo: { getByBookId: vi.fn(async () => []), add: vi.fn(), remove: vi.fn() },
 }))
 vi.mock('@/services/tts/piperEngine', () => ({
-  piperModelStored: vi.fn(async () => false),
+  piperModelStored: vi.fn(async () => true),
   preloadPiperModel: vi.fn(async () => {}),
+  isPiperDownloading: vi.fn(() => false),
+  subscribePiperDownloadProgress: vi.fn(() => () => {}),
 }))
 vi.mock('@/hooks/useSpeech', () => ({
   useSpeech: vi.fn(() => ({

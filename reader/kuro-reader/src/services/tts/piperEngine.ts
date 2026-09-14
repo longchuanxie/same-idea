@@ -17,10 +17,42 @@ function loadModule(): Promise<PiperModule> {
   return modulePromise;
 }
 
-/** 复用推理会话:模型加载/worker 启动只发生一次;失败后清空缓存以便重试 */
-function getSession(): Promise<PiperSession> {
+// ===== 音色包下载：去重 + 进度广播 =====
+
+/** 进行中的预下载（并发触发共享同一次下载） */
+let activeDownload: Promise<void> | null = null;
+/** 完成前进度封顶值：100 只在下载真正结束（emitProgress(100)）时发出 */
+const DOWNLOAD_PRE_COMPLETE_CAP = 95;
+/** 下载进度百分比 0-100；-1 表示当前没有下载在进行 */
+let progressPercent = -1;
+const progressListeners = new Set<(percent: number) => void>();
+/** 各文件完成度（模型 .onnx 为主件，附 .json 很小） */
+const fileCompletion = new Map<string, number>();
+
+function emitProgress(percent: number): void {
+  progressPercent = percent;
+  progressListeners.forEach((listener) => listener(percent));
+}
+
+/** 单文件进度 → 汇总百分比（多文件平均，只前进不回退，完成前封顶 95） */
+function emitFileProgress(url: string, total: number, loaded: number): void {
+  fileCompletion.set(url, total > 0 ? loaded / total : 0);
+  let sum = 0;
+  for (const value of fileCompletion.values()) sum += value;
+  const percent = Math.min(DOWNLOAD_PRE_COMPLETE_CAP, Math.round((sum / Math.max(1, fileCompletion.size)) * 100));
+  if (percent > progressPercent) emitProgress(percent);
+}
+
+/** 创建推理会话(模型已在 OPFS 时直接加载);失败后清空缓存以便重试 */
+function createSession(): Promise<PiperSession> {
   sessionPromise ??= loadModule()
-    .then((tts) => tts.TtsSession.create({ voiceId: PIPER_VOICE_ID }))
+    .then((tts) =>
+      tts.TtsSession.create({
+        voiceId: PIPER_VOICE_ID,
+        // 会话初始化若仍需取模型（如朗读时自动重试路径），进度同样汇入广播
+        progress: (progress) => emitFileProgress(progress.url, progress.total, progress.loaded),
+      })
+    )
     .catch((error) => {
       sessionPromise = null;
       throw error;
@@ -29,11 +61,43 @@ function getSession(): Promise<PiperSession> {
 }
 
 /**
- * 预下载音色模型并初始化推理会话(复用 getSession,不阻塞调用方之外的状态)。
- * 供设置确认后立即触发下载,避免用户被反复提示"需要下载"。
+ * 预下载音色模型并初始化推理会话。
+ * 并发调用共享同一次下载；进度经 subscribePiperDownloadProgress 广播。
  */
 export async function preloadPiperModel(): Promise<void> {
-  await getSession();
+  if (activeDownload) return activeDownload;
+  activeDownload = (async () => {
+    try {
+      const tts = await loadModule();
+      if (!(await tts.stored()).includes(PIPER_VOICE_ID)) {
+        fileCompletion.clear();
+        emitProgress(0);
+        await tts.download(PIPER_VOICE_ID, (progress) =>
+          emitFileProgress(progress.url, progress.total, progress.loaded)
+        );
+        emitProgress(100);
+      }
+      await createSession();
+    } finally {
+      activeDownload = null;
+      emitProgress(-1);
+    }
+  })();
+  return activeDownload;
+}
+
+/** 当前是否正在下载音色包（下载中不再重复弹确认框） */
+export function isPiperDownloading(): boolean {
+  return activeDownload != null;
+}
+
+/** 订阅音色包下载进度（订阅即回放当前进度；-1 = 无下载）；返回退订函数 */
+export function subscribePiperDownloadProgress(listener: (percent: number) => void): () => void {
+  progressListeners.add(listener);
+  listener(progressPercent);
+  return () => {
+    progressListeners.delete(listener);
+  };
 }
 
 /** 音色模型是否已缓存到本机(OPFS),供设置 UI 提示是否需要下载 */
@@ -73,7 +137,8 @@ export class PiperEngine implements TtsEngine {
     token: number
   ): Promise<void> {
     try {
-      const session = await getSession();
+      // 若预下载正在进行，等它完成再建会话，避免并发重复下载
+      const session = await (activeDownload ?? Promise.resolve()).then(createSession);
       if (token !== this.tokenRef) return;
       const wav = await session.predict(text);
       if (token !== this.tokenRef) return;

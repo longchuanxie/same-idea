@@ -50,6 +50,8 @@ export interface TextReaderBottomBarProps {
   ttsServerUrl: string;
   ttsServerModel: string;
   ttsServerVoice: string;
+  /** 神经网络音色包下载进度（null = 没有下载在进行） */
+  neuralDownloadPercent?: number | null;
   onTtsEngineChange: (engine: TtsEngineOption) => void;
   onTtsServerFieldChange: (field: 'url' | 'model' | 'voice', value: string) => void;
   onClose: () => void;
@@ -124,6 +126,7 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
   ttsServerUrl,
   ttsServerModel,
   ttsServerVoice,
+  neuralDownloadPercent = null,
   onTtsEngineChange,
   onTtsServerFieldChange,
   onClose,
@@ -521,7 +524,9 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
             </div>
             {ttsEngine === 'neural' && (
               <p className="font-body text-body-sm text-on-surface-variant mt-3">
-                离线神经网络中文语音（huayan）。首次使用需下载约 60-80MB 音色包，仅下载一次。
+                {neuralDownloadPercent != null
+                  ? `音色包下载中 ${neuralDownloadPercent}%，完成后自动离线可用。`
+                  : '离线神经网络中文语音（huayan）。首次使用需下载约 60-80MB 音色包，仅下载一次。'}
               </p>
             )}
             {ttsEngine === 'server' && (

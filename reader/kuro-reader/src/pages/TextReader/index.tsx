@@ -57,7 +57,7 @@ import { annotationRepo } from '@/services/storage/annotationRepo';
 import { bookmarkRepo } from '@/services/storage/bookmarkRepo';
 import { vocabRepo, vocabEntryId } from '@/services/storage/vocabRepo';
 import { loadTextContent, resolveTextChapterIndex, type TextChapter } from '@/services/textContent';
-import { piperModelStored, preloadPiperModel } from '@/services/tts/piperEngine';
+import { isPiperDownloading, piperModelStored, preloadPiperModel, subscribePiperDownloadProgress } from '@/services/tts/piperEngine';
 import { useAppStore } from '@/stores/useAppStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import type { Bookmark, Annotation, AnnotationStyle, TtsEngineOption, VocabEntry } from '@/types';
@@ -832,10 +832,21 @@ export const TextReaderPage: React.FC = () => {
 
   // 听书引擎切换:神经网络首次启用前确认音色包下载体积
   const [pendingNeuralConfirm, setPendingNeuralConfirm] = useState(false);
+  // 音色包下载进度（null = 没有下载在进行；引擎层去重并发下载并广播进度）
+  const [neuralDownloadPercent, setNeuralDownloadPercent] = useState<number | null>(null);
+  useEffect(
+    () => subscribePiperDownloadProgress((percent) => setNeuralDownloadPercent(percent >= 0 ? percent : null)),
+    []
+  );
   const handleTtsEngineChange = useCallback(async (engine: TtsEngineOption) => {
     // 已取消过下载确认的用户不再重复打扰:再次主动选择即视为同意,直接启用
     const dismissed = useAppStore.getState().settings.ttsModelPromptDismissed;
     if (engine === 'neural' && !dismissed && !(await piperModelStored())) {
+      // 下载已在后台进行:不再重复弹窗,直接启用引擎(就绪前朗读先走系统语音)
+      if (isPiperDownloading()) {
+        useAppStore.getState().updateSettings({ ttsEngine: engine });
+        return;
+      }
       setPendingNeuralConfirm(true);
       return;
     }
@@ -2582,12 +2593,26 @@ export const TextReaderPage: React.FC = () => {
         </main>
       )}
 
-      {/* 进度指示器（常驻右上角） */}
+      {/* 阅读进度指示器（页末右下） */}
       <TextProgressHint
         visible={isProgressHintVisible || isProgressDragging}
         overallPercent={overallReadingPercent}
         estimatedTimeLeft={estimatedTimeLeft}
       />
+
+      {/* 音色包下载进度（页末左侧，与右侧阅读进度指示互不遮挡） */}
+      {neuralDownloadPercent != null && (
+        <div
+          className="fixed bottom-gutter left-margin-mobile z-toast pointer-events-none mb-safe animate-fade-in"
+          role="status"
+          aria-label={`语音包下载中 ${neuralDownloadPercent}%`}
+        >
+          <div className="bg-on-surface/50 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-2">
+            <span className="material-symbols-outlined text-label-sm text-surface animate-spin">progress_activity</span>
+            <span className="font-label text-label-sm text-surface tabular-nums">语音包下载 {neuralDownloadPercent}%</span>
+          </div>
+        </div>
+      )}
 
       {/* 自动滚动指示器 */}
       {isAutoScrolling && <AutoScrollBadge />}
@@ -2717,6 +2742,7 @@ export const TextReaderPage: React.FC = () => {
             }
           }}
           ttsEngine={settings.ttsEngine}
+          neuralDownloadPercent={neuralDownloadPercent}
           ttsServerUrl={settings.ttsServerUrl}
           ttsServerModel={settings.ttsServerModel}
           ttsServerVoice={settings.ttsServerVoice}
