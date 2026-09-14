@@ -20,7 +20,8 @@ function isSelectionLongEnough(text: string): boolean {
   return text.length >= MIN_SELECTION_TEXT_LENGTH || (text.length === 1 && CJK_CHAR_RE.test(text));
 }
 const LONG_PRESS_DURATION = 500;
-const LONG_PRESS_THRESHOLD = 15;
+/** 长按取消位移阈值：慢起滚动前 500ms 内的常见抖动（20px 上下）不该被当成「按住不动」 */
+const LONG_PRESS_THRESHOLD = 24;
 const SELECTION_CHANGE_DEBOUNCE_MS = 100;
 /** 二分中点 / 选区弹窗中心点 */
 const HALF_DIVISOR = 2;
@@ -54,6 +55,8 @@ export function useTextSelection({
   const lastTouchEndTimeRef = useRef<number>(0);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
+  /** 本次触摸是否发生过超阈值的滑动（滚动/翻页手势），抬指后不再主动选词 */
+  const touchMovedRef = useRef(false);
 
   useEffect(() => {
     // mousedown 仅用于记录起始位置，不设置选中标记
@@ -257,6 +260,7 @@ export function useTextSelection({
 
       const touch = e.touches[0];
       touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+      touchMovedRef.current = false;
       isSelectingTextRef.current = false;
 
       // 启动长按定时器
@@ -271,12 +275,13 @@ export function useTextSelection({
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-      // 移动超过阈值则取消长按
-      if (longPressTimerRef.current && touchStartPosRef.current) {
+      // 移动超过阈值则取消长按，并记下「这是滑动手势」：抬指后不再主动选词
+      if (touchStartPosRef.current) {
         const touch = e.touches[0];
         const dx = touch.clientX - touchStartPosRef.current.x;
         const dy = touch.clientY - touchStartPosRef.current.y;
         if (Math.sqrt(dx * dx + dy * dy) > LONG_PRESS_THRESHOLD) {
+          touchMovedRef.current = true;
           clearLongPress();
         }
       }
@@ -300,6 +305,10 @@ export function useTextSelection({
       setTimeout(() => {
         if (isSelectingTextRef.current) return; // 长按定时器已处理
 
+        // 滑动手势（滚动/翻页）抬指不主动点亮浮层——带选区滚动时频繁复弹是误触发主诉之一；
+        // 原生手柄扩选的浮层由 selectionchange 稳定路径兜底
+        if (touchMovedRef.current) return;
+
         // 1. 先检查是否已有选区（真机原生长按选词）
         const sel = window.getSelection();
         if (sel && !sel.isCollapsed && isSelectionLongEnough(sel.toString().trim())) {
@@ -307,10 +316,11 @@ export function useTextSelection({
           return;
         }
 
-        // 2. 没有现成选区时，主动在触摸点选词
-        //    - 滚动模式：任何触摸都触发（无翻页冲突）
+        // 2. 没有现成选区时，主动在触摸点选词——仅限原地按住/点按（未发生滑动）。
+        //    滚动手势（touchmove 超阈值）绝不触发，否则上下滚动会频繁误弹批注/复制浮层
+        //    - 滚动模式：原地点按即选词（无翻页冲突）
         //    - 分页模式：仅长按（定时器已超时）才触发，避免与翻页冲突
-        if (savedPos && isScrollMode) {
+        if (savedPos && isScrollMode && !touchMovedRef.current) {
           if (selectWordAtPoint(savedPos.x, savedPos.y)) {
             showFloatingButton();
           }

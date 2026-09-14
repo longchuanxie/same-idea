@@ -246,10 +246,65 @@ describe('useTextSelection', () => {
     vi.spyOn(window, 'getSelection').mockReturnValue(sel)
 
     fireTouch(article, 'touchstart', 60, 88)
-    fireTouch(article, 'touchmove', 60 + 40, 88) // 移动 40px > 阈值 15
+    fireTouch(article, 'touchmove', 60 + 40, 88) // 移动 40px > 阈值 24
     act(() => {
       vi.advanceTimersByTime(600)
     })
     expect(result.current.selectionInfo).toBeNull()
+  })
+
+  it('滚动模式：滑动抬指不触发选词（上下滚动不再误弹批注/复制浮层）', () => {
+    vi.useFakeTimers()
+    const { article } = setupArticle('漫画对白内容')
+    scrollContainerRef.current = document.createElement('div')
+    const { result } = renderHookWithRefs()
+    const collapsedSel = {
+      isCollapsed: true,
+      rangeCount: 0,
+      toString: () => '',
+    } as unknown as Selection
+    const getSelectionSpy = vi.spyOn(window, 'getSelection').mockReturnValue(collapsedSel)
+
+    fireTouch(article, 'touchstart', 60, 400)
+    fireTouch(article, 'touchmove', 60, 400 - 120) // 竖向滑动 120px：一次向上滚动手势
+    fireTouch(article, 'touchend', 60, 400 - 120)
+    act(() => {
+      vi.advanceTimersByTime(200) // 越过 touchend 的 100ms 选词窗口
+    })
+    expect(result.current.selectionInfo).toBeNull()
+    // 滑动手势不应进入主动选词分支（caretRangeFromPoint 从未被需要）
+    expect(result.current.isSelectingTextRef.current).toBe(false)
+    expect(getSelectionSpy).toHaveBeenCalled()
+  })
+
+  it('滚动模式：原地按住后抬指（未滑动）仍触发点按选词', () => {
+    vi.useFakeTimers()
+    const { article, textNode } = setupArticle('漫画对白内容')
+    scrollContainerRef.current = document.createElement('div')
+    const { result } = renderHookWithRefs()
+
+    const collapsedSel = {
+      isCollapsed: true,
+      rangeCount: 0,
+      toString: () => '',
+    } as unknown as Selection
+    const sel = makeSelection(textNode, 0, 2)
+    mockRect(sel.getRangeAt(0))
+    vi.spyOn(window, 'getSelection')
+      .mockReturnValueOnce(collapsedSel) // touchstart：尚无既有选区
+      .mockReturnValueOnce(collapsedSel) // touchend 延迟检查：暂无选区（才会走主动选词）
+      .mockReturnValue(sel) // selectFromPos 写入选区 + showFloatingButton 采样
+
+    const range = sel.getRangeAt(0)
+    Object.defineProperty(document, 'caretRangeFromPoint', { value: () => range, configurable: true })
+
+    // 原地点按：touchstart 与 touchend 同坐标，无 touchmove
+    fireTouch(article, 'touchstart', 60, 88)
+    fireTouch(article, 'touchend', 60, 88)
+    act(() => {
+      vi.advanceTimersByTime(200)
+    })
+    expect(result.current.selectionInfo?.text).toBe('漫画')
+    expect(result.current.isSelectingTextRef.current).toBe(true)
   })
 })
