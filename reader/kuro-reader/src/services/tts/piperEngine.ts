@@ -6,6 +6,24 @@ import type { TtsEngine, TtsSpeakContext, TtsSpeakHandlers } from './types';
 /** Piper 中文音色(单女声,medium 质量 ~60-80MB,首次使用时下载并存入 OPFS) */
 export const PIPER_VOICE_ID = 'zh_CN-huayan-medium';
 
+/** 库的类型声明遗漏了 opfs 写入接口，运行时确实导出（存储键按 URL 文件名推导） */
+type PiperOpfsWriter = {
+  writeBlob: (url: string, blob: Blob) => Promise<void>;
+};
+
+/** 模型文件源：HuggingFace 直连在部分网络不可达（fetch failed），自动切换镜像 */
+const MODEL_SOURCE_ORIGINS = [
+  'https://huggingface.co/diffusionstudio/piper-voices/resolve/main',
+  'https://hf-mirror.com/diffusionstudio/piper-voices/resolve/main',
+];
+/** 模型相对路径（与库内 PATH_MAP[voiceId] 一致） */
+const MODEL_RELATIVE_PATH = 'zh/zh_CN/huayan/medium/zh_CN-huayan-medium.onnx';
+/** 单源连接超时：超时未响应即切换下一源（进入流式读取后不再限时） */
+const MODEL_SOURCE_CONNECT_TIMEOUT_MS = 12000;
+/** 模型体进度映射到 5-95% 区间（0% 留给开始、100% 只在写入 OPFS 完成后发出） */
+const MODEL_PROGRESS_RANGE_START = 5;
+const MODEL_PROGRESS_RANGE_SPAN = 90;
+
 type PiperModule = typeof PiperTts;
 type PiperSession = InstanceType<PiperModule['TtsSession']>;
 
@@ -60,9 +78,42 @@ function createSession(): Promise<PiperSession> {
   return sessionPromise;
 }
 
+/** 按源顺序拉取模型文件：连接超时或请求失败自动切换下一源（镜像） */
+async function fetchModelFile(relPath: string, onProgress: (loaded: number, total: number) => void): Promise<Blob> {
+  let lastError: unknown = null;
+  for (const origin of MODEL_SOURCE_ORIGINS) {
+    const controller = new AbortController();
+    const connectTimer = setTimeout(() => controller.abort(), MODEL_SOURCE_CONNECT_TIMEOUT_MS);
+    try {
+      const res = await fetch(`${origin}/${relPath}`, { signal: controller.signal });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      clearTimeout(connectTimer);
+      const total = Number(res.headers.get('Content-Length') ?? 0);
+      const reader = res.body?.getReader();
+      if (!reader) return new Blob([await res.arrayBuffer()]);
+      const chunks: BlobPart[] = [];
+      let loaded = 0;
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        loaded += value.length;
+        if (total > 0) onProgress(loaded, total);
+      }
+      return new Blob(chunks);
+    } catch (error) {
+      clearTimeout(connectTimer);
+      lastError = error;
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error('模型源全部不可达');
+}
+
 /**
  * 预下载音色模型并初始化推理会话。
  * 并发调用共享同一次下载；进度经 subscribePiperDownloadProgress 广播。
+ * 模型文件自实现多源下载（HF 直连 + hf-mirror 镜像）后经库 writeBlob 落入
+ * OPFS——库按文件名存取，写入端不限制字节来源，会话初始化即可零网络加载。
  */
 export async function preloadPiperModel(): Promise<void> {
   if (activeDownload) return activeDownload;
@@ -70,11 +121,22 @@ export async function preloadPiperModel(): Promise<void> {
     try {
       const tts = await loadModule();
       if (!(await tts.stored()).includes(PIPER_VOICE_ID)) {
+        const modelOriginUrl = (file: string) => `${MODEL_SOURCE_ORIGINS[0]}/${MODEL_RELATIVE_PATH}${file}`;
         fileCompletion.clear();
         emitProgress(0);
-        await tts.download(PIPER_VOICE_ID, (progress) =>
-          emitFileProgress(progress.url, progress.total, progress.loaded)
-        );
+        // 配置文件（.onnx.json，很小）
+        const configBlob = await fetchModelFile(`${MODEL_RELATIVE_PATH}.json`, () => undefined);
+        await (tts as PiperModule & PiperOpfsWriter).writeBlob(modelOriginUrl('.json'), configBlob);
+        // 模型（.onnx，数十 MB，进度主要来自这里）
+        let modelTotal = 0;
+        const modelBlob = await fetchModelFile(MODEL_RELATIVE_PATH, (loaded, total) => {
+          modelTotal = total || modelTotal;
+          if (modelTotal > 0) {
+            const percent = Math.min(MODEL_PROGRESS_RANGE_START + MODEL_PROGRESS_RANGE_SPAN, Math.round(MODEL_PROGRESS_RANGE_START + (loaded / modelTotal) * MODEL_PROGRESS_RANGE_SPAN));
+            if (percent > progressPercent) emitProgress(percent);
+          }
+        });
+        await (tts as PiperModule & PiperOpfsWriter).writeBlob(modelOriginUrl(''), modelBlob);
         emitProgress(100);
       }
       await createSession();
