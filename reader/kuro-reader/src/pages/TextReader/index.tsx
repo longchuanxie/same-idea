@@ -126,6 +126,8 @@ const BOOK_FLIP_ANIMATION_MS = 900;
 const PAGE_SLIDE_ANIMATION_MS = 650;
 /** 字体就绪等待上限：超时先分页，字体迟到后由 loadingdone 重排补齐 */
 const FONTS_READY_TIMEOUT_MS = 1500;
+/** 测量容器图片加载等待上限：超时按当前状态先分页 */
+const MEASURE_IMAGES_TIMEOUT_MS = 3000;
 /** 整章一页自检阈值：单页文本量超过页面理论容量的倍数即判定测量不可信 */
 const SINGLE_PAGE_SANITY_FACTOR = 1.5;
 const SINGLE_PAGE_MIN_CAPACITY_CHARS = 400;
@@ -1056,7 +1058,7 @@ export const TextReaderPage: React.FC = () => {
     applyPaginationResult(pages);
   }, [currentChapter, textReadingMode, fontSize, lineHeight, resolvedFontFamily, firstLineIndent, applyPaginationResult]);
 
-  const paginateMeasuredContent = useCallback(() => {
+  const paginateMeasuredContent = useCallback(async () => {
     if (!currentChapter || textReadingMode === 'scroll') {
       setTextPages([]);
       return;
@@ -1072,6 +1074,26 @@ export const TextReaderPage: React.FC = () => {
 
     if (pageHeight <= 0 || contentWidth <= 0) return;
 
+    // 等测量容器内的图片完成加载（含失败）再量：图片未就绪时高度是占位值，
+    // 会把带图页排得过满，渲染时被 overflow-hidden 裁掉尾部内容。
+    // 超时兜底保证分页最终总会执行。
+    const pendingMeasureImages = markdownMeasureRef.current
+      ? Array.from(markdownMeasureRef.current.querySelectorAll('img')).filter((img) => !img.complete)
+      : [];
+    if (pendingMeasureImages.length > 0) {
+      await new Promise<void>((resolve) => {
+        let remaining = pendingMeasureImages.length;
+        const done = () => {
+          remaining -= 1;
+          if (remaining <= 0) resolve();
+        };
+        pendingMeasureImages.forEach((img) => {
+          img.addEventListener('load', done, { once: true });
+          img.addEventListener('error', done, { once: true });
+        });
+        setTimeout(resolve, MEASURE_IMAGES_TIMEOUT_MS);
+      });
+    }
 
     measureEl.style.position = 'absolute';
     measureEl.style.left = '-99999px';
@@ -1277,7 +1299,7 @@ export const TextReaderPage: React.FC = () => {
         const fontsReady = document.fonts?.ready ?? Promise.resolve();
         const timeout = new Promise<void>((resolve) => setTimeout(resolve, FONTS_READY_TIMEOUT_MS));
         Promise.race([fontsReady, timeout]).then(() => {
-          if (!cancelled) paginateMeasuredContent();
+          if (!cancelled) void paginateMeasuredContent();
         });
       });
       return () => {
@@ -1295,11 +1317,11 @@ export const TextReaderPage: React.FC = () => {
     const handleResize = () => {
       // 旋转/分屏等布局变化重切页后，按字符偏移回到正在读的位置而不是弹回第 0 页
       preserveReadingPositionRef.current = true;
-      requestAnimationFrame(() => paginateMeasuredContent());
+      requestAnimationFrame(() => void paginateMeasuredContent());
     };
     const handleMarkdownMediaLoad = () => {
       preserveReadingPositionRef.current = true;
-      requestAnimationFrame(() => paginateMeasuredContent());
+      requestAnimationFrame(() => void paginateMeasuredContent());
     };
     window.addEventListener('resize', handleResize);
     window.addEventListener('markdown-media-load', handleMarkdownMediaLoad);
@@ -1307,7 +1329,7 @@ export const TextReaderPage: React.FC = () => {
     // 与现有分页一致时 applyPaginationResult 原地跳过，分页变化时按偏移保留位置
     const handleFontsLoadingDone = () => {
       preserveReadingPositionRef.current = true;
-      requestAnimationFrame(() => paginateMeasuredContent());
+      requestAnimationFrame(() => void paginateMeasuredContent());
     };
     document.fonts?.addEventListener('loadingdone', handleFontsLoadingDone);
     return () => {
