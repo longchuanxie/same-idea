@@ -128,6 +128,11 @@ const PAGE_SLIDE_ANIMATION_MS = 650;
 const FONTS_READY_TIMEOUT_MS = 1500;
 /** 测量容器图片加载等待上限：超时按当前状态先分页 */
 const MEASURE_IMAGES_TIMEOUT_MS = 3000;
+/** 页容量自校准：单次收缩步长（约半行）与累计上限，防病态循环 */
+const CAPACITY_SHRINK_STEP_PX = 12;
+const MAX_CAPACITY_SHRINK_PX = 240;
+/** 页容量收缩下限：低于此值不再收缩（正常阅读不可能触达） */
+const MIN_PAGE_CAPACITY_PX = 240;
 /** 整章一页自检阈值：单页文本量超过页面理论容量的倍数即判定测量不可信 */
 const SINGLE_PAGE_SANITY_FACTOR = 1.5;
 const SINGLE_PAGE_MIN_CAPACITY_CHARS = 400;
@@ -262,6 +267,8 @@ export const TextReaderPage: React.FC = () => {
   const pendingPageRequestRef = useRef<PageRequest | null>(null);
   // 最近一次完成分页的章节下标（判断现有 textPages 是否对当前章节有效）
   const paginatedChapterIndexRef = useRef(-1);
+  /** 页容量自校准收缩量：渲染自检发现溢出时增长，收敛到本机「绝不裁字」的容量 */
+  const pageCapacityShrinkRef = useRef(0);
 
   const { getBookById, updateProgress } = useLibraryStore();
   const { settings } = useAppStore();
@@ -1070,7 +1077,10 @@ export const TextReaderPage: React.FC = () => {
       return;
     }
 
-    const { contentWidth, pageHeight } = getCurrentTextPageLayout(isColumnsLayoutActive);
+    const { contentWidth, pageHeight: layoutPageHeight } = getCurrentTextPageLayout(isColumnsLayoutActive);
+    // 自校准收缩量：设备度量漂移经渲染后自检发现溢出时增长，使本机分页容量
+    // 收敛到「绝不裁字」的水平（见下方渲染自检 effect）
+    const pageHeight = Math.max(MIN_PAGE_CAPACITY_PX, layoutPageHeight - pageCapacityShrinkRef.current);
 
     if (pageHeight <= 0 || contentWidth <= 0) return;
 
@@ -1338,6 +1348,37 @@ export const TextReaderPage: React.FC = () => {
       document.fonts?.removeEventListener('loadingdone', handleFontsLoadingDone);
     };
   }, [textReadingMode, paginateMeasuredContent]);
+
+  // 渲染自检（页容量自校准）：分页度量与真机渲染之间存在无法逐项消除的漂移
+  // （字体回退行盒/textZoom/子像素取整）。当前页渲染后若文字越过裁切边界，
+  // 增长页容量收缩量并重分页（按字符偏移保留位置），直到本机收敛到不裁字。
+  useEffect(() => {
+    if (textReadingMode === 'scroll' || !currentChapter || textPages.length === 0) return;
+    const frame = requestAnimationFrame(() => {
+      const content = document.querySelector('[data-reader-content]');
+      const article = document.querySelector('[data-reader-article]');
+      if (!content || !article) return;
+      const articleRect = article.getBoundingClientRect();
+      const padBottom = parseFloat(getComputedStyle(article).paddingBottom) || 0;
+      const boundary = articleRect.bottom - padBottom;
+      let overflow = 0;
+      const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
+      let node;
+      while ((node = walker.nextNode())) {
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        const rect = range.getBoundingClientRect();
+        if (rect.bottom > boundary) overflow = Math.max(overflow, rect.bottom - boundary);
+      }
+      if (overflow <= 1) return;
+      const nextShrink = pageCapacityShrinkRef.current + Math.ceil(overflow) + CAPACITY_SHRINK_STEP_PX;
+      if (nextShrink > MAX_CAPACITY_SHRINK_PX) return; // 已到上限，放弃继续收缩避免循环
+      pageCapacityShrinkRef.current = nextShrink;
+      preserveReadingPositionRef.current = true;
+      void paginateMeasuredContent();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [currentPageIndex, textPages, textReadingMode, currentChapter, paginateMeasuredContent]);
 
   // 翻页
   // 连滚翻页：动画期间的后续翻页暂存，动画结束立即执行（建议书 B2，替代硬拦截的生硬感）
