@@ -1113,7 +1113,45 @@
   outline: none;
 }
 
-/* 色温滑轨：纸白→琥珀的物理光源示意渐变（豁免域色，见 design-tokens §5；两 Reader 底栏共用） */
+/* 色温滑轨：纸白→琥珀的物理光源示意渐变（豁免域色，见 design-tokens §5；两 Reader 底栏共用）。
+   必须自绘（appearance:none）：原生 range 外观会盖掉元素背景，渐变只改 background 不可见。 */
 .temperature-ramp {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 8px;
+  border-radius: 4px;
   background: linear-gradient(to right, #ffffff, #ffcc80);
+  cursor: pointer;
+  outline: none;
+}
+
+.temperature-ramp::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgb(var(--color-primary));
+  border: 2px solid rgb(var(--color-surface));
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.temperature-ramp::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.temperature-ramp::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgb(var(--color-primary));
+  border: 2px solid rgb(var(--color-surface));
+  cursor: pointer;
+}
+
+.temperature-ramp::-moz-range-track {
+  background: transparent;
+  border: none;
 }
