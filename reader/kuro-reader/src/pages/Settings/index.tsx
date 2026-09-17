@@ -27,6 +27,7 @@ import { useAppStore } from '@/stores/useAppStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import { useStatsStore } from '@/stores/useStatsStore';
 import type { Annotation, Bookmark, KnowledgeArtifact, PaperType, ReadingProgress, ReviewCard, UserSettings, VocabEntry } from '@/types';
+import { stripSensitiveSettings } from '@/utils/backupSettings';
 import { isNativePlatform } from '@/utils/capacitor';
 import {
   PAPER_INK_COLOR,
@@ -217,7 +218,8 @@ export const SettingsPage: React.FC = () => {
     const data = {
       version: BACKUP_VERSION,
       exportedAt: new Date().toISOString(),
-      settings,
+      // 敏感凭据不入备份：导出文件可能经网盘/分享流转；恢复端 Partial 合并，缺字段即保留本机现值
+      settings: stripSensitiveSettings(settings),
       books,
       tags,
       subLibraries,
