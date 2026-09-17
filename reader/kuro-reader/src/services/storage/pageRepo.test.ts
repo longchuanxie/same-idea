@@ -59,4 +59,17 @@ describe('pageRepo CRUD', () => {
     const c2Page = await pageRepo.getPage('c2', 'ch1', 0)
     expect(c2Page).toBeDefined()
   })
+
+  it('deleteAllPages does not touch sibling books whose id extends the target id', async () => {
+    // 键区间删除的边界：`book-1` 与其前缀扩展 `book-1-x`、`book-10` 互不误伤
+    await pageRepo.saveAllPages('book-1', 'ch1', [new Blob(['a']), new Blob(['b'])])
+    await pageRepo.saveAllPages('book-1-x', 'ch1', [new Blob(['c'])])
+    await pageRepo.saveAllPages('book-10', 'ch1', [new Blob(['d'])])
+    await pageRepo.deleteAllPages('book-1')
+
+    expect(await pageRepo.getPage('book-1', 'ch1', 0)).toBeUndefined()
+    expect(await pageRepo.getPage('book-1', 'ch1', 1)).toBeUndefined()
+    expect(await pageRepo.getPage('book-1-x', 'ch1', 0)).toBeDefined()
+    expect(await pageRepo.getPage('book-10', 'ch1', 0)).toBeDefined()
+  })
 })

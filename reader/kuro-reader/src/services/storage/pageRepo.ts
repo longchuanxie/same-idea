@@ -5,6 +5,9 @@ export function makePageKey(bookId: string, chapterId: string, pageIndex: number
   return `${bookId}/${chapterId}/${pageIndex}`
 }
 
+/** deleteAllPages 键区间上界种子：'0' 是 id 字母表 [0-9a-z] 中最小的字符 */
+const PAGE_KEY_UPPER_BOUND = '0'
+
 export const pageRepo = {
   async savePage(bookId: string, chapterId: string, pageIndex: number, blob: Blob): Promise<void> {
     const db = await getDB()
@@ -27,16 +30,18 @@ export const pageRepo = {
     await tx.done
   },
 
-  /** 删除某 book 所有页面（cursor 扫描前缀，确保不影响其他 book） */
+  /**
+   * 删除某 book 所有页面（键区间扫描，复杂度只与该书页数相关）。
+   * 键形如 `bookId/chapterId/pageIndex`：区间 [`${bookId}/`, `${bookId}0`) 恰好覆盖该书全部键——
+   * 其他书键要么以更小字符接在前缀后（< 下界），要么 ≥ '0'（> 上界）；bookId 本身不含 '/'。
+   */
   async deleteAllPages(bookId: string): Promise<void> {
     const db = await getDB()
     const tx = db.transaction(STORE_NAMES.pages, 'readwrite')
-    const prefix = `${bookId}/`
-    let cursor = await tx.store.openCursor()
+    const range = IDBKeyRange.bound(`${bookId}/`, `${bookId}${PAGE_KEY_UPPER_BOUND}`, false, true)
+    let cursor = await tx.store.openCursor(range)
     while (cursor) {
-      if (typeof cursor.key === 'string' && cursor.key.startsWith(prefix)) {
-        await cursor.delete()
-      }
+      await cursor.delete()
       cursor = await cursor.continue()
     }
     await tx.done
