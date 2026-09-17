@@ -4,6 +4,28 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 import { isNativePlatform } from '@/utils/capacitor';
 
 const DOWNLOAD_TIMEOUT = 120000;
+/** base64 分块解码块长（4 的倍数，保证不劈开编码组） */
+const BASE64_CHUNK_CHARS = 0x8000;
+/** base64 编码率：4 字符编码 3 字节 */
+const BASE64_CHARS_PER_GROUP = 4;
+const BASE64_BYTES_PER_GROUP = 3;
+
+/**
+ * base64 → 字节：按块解码直写预分配 Uint8Array。
+ * 旧实现经 number[] 逐字转换，百 MB 书会凭空多出两份全量拷贝（number[] 每元素 8 字节）。
+ */
+export function base64ToUint8Array(base64: string): Uint8Array {
+  const bytes = new Uint8Array(Math.floor((base64.length * BASE64_BYTES_PER_GROUP) / BASE64_CHARS_PER_GROUP));
+  let offset = 0;
+  for (let i = 0; i < base64.length; i += BASE64_CHUNK_CHARS) {
+    const binary = atob(base64.slice(i, i + BASE64_CHUNK_CHARS));
+    for (let j = 0; j < binary.length; j++) {
+      bytes[offset + j] = binary.charCodeAt(j);
+    }
+    offset += binary.length;
+  }
+  return bytes.subarray(0, offset);
+}
 
 interface DownloadOptions {
   url: string;
@@ -53,13 +75,7 @@ async function downloadNative(options: DownloadOptions): Promise<DownloadResult>
     });
 
     const base64Data = readResult.data as string;
-    const byteCharacters = atob(base64Data);
-    const byteNumbers = new Array(byteCharacters.length);
-    for (let i = 0; i < byteCharacters.length; i++) {
-      byteNumbers[i] = byteCharacters.charCodeAt(i);
-    }
-    const byteArray = new Uint8Array(byteNumbers);
-    const blob = new Blob([byteArray]);
+    const blob = new Blob([base64ToUint8Array(base64Data)]);
 
     await Filesystem.deleteFile({
       directory: Directory.Cache,
