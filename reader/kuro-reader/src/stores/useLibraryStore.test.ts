@@ -539,8 +539,62 @@ describe('importFile', () => {
     )
 
     expect(book).toBeNull()
-    expect(useLibraryStore.getState().error).toBe('所有压缩包解析失败')
+    // 失败文件名随错误一并透出，不再无从追查
+    expect(useLibraryStore.getState().error).toBe('所有压缩包解析失败（第01话.cbz、第02话.cbz）')
     expect(useLibraryStore.getState().isImporting).toBe(false)
+  })
+
+  it('importArchivesAsBook partial failure: book still imports, warning names the failed file', async () => {
+    const fileB: ParsedBook = {
+      format: 'comic', title: '夜航 第02话', coverBlob: new Blob(['cover-b']),
+      imagePages: [new Blob(['b1'])], imagePageNames: ['b1.jpg'],
+    }
+    getParserForFileMock.mockImplementation(({ name }: { name: string }) => {
+      if (name.includes('坏包')) {
+        return { canParse: () => true, parse: vi.fn().mockRejectedValue(new Error('坏包')) }
+      }
+      return { canParse: () => true, parse: vi.fn().mockResolvedValue(fileB) }
+    })
+    bookRepoMock.saveCover.mockResolvedValue(undefined)
+    pageRepoMock.saveAllPages.mockResolvedValue(undefined)
+    bookRepoMock.save.mockResolvedValue(undefined)
+
+    const book = await useLibraryStore.getState().importArchivesAsBook(
+      [new File(['x'], '夜航 第02话.cbz'), new File(['x'], '坏包.cbz')],
+      '我的文件夹'
+    )
+
+    // 一个包坏：其余照常成书，坏包文件名经 importWarning 汇总透出
+    expect(book).not.toBeNull()
+    expect(book?.totalChapters).toBe(1)
+    expect(useLibraryStore.getState().error).toBeNull()
+    expect(useLibraryStore.getState().importWarning).toContain('坏包.cbz')
+    expect(useLibraryStore.getState().importWarning).toContain('1 个压缩包解析失败')
+  })
+
+  it('importArchivesAsBook unsupported files are counted into the warning', async () => {
+    getParserForFileMock.mockImplementation(({ name }: { name: string }) => {
+      if (name.includes('.txt')) return null // 无法解析的类型
+      return {
+        canParse: () => true,
+        parse: vi.fn().mockResolvedValue({
+          format: 'comic', title: '夜航 第02话', coverBlob: new Blob(['cover']),
+          imagePages: [new Blob(['b1'])], imagePageNames: ['b1.jpg'],
+        }),
+      }
+    })
+    bookRepoMock.saveCover.mockResolvedValue(undefined)
+    pageRepoMock.saveAllPages.mockResolvedValue(undefined)
+    bookRepoMock.save.mockResolvedValue(undefined)
+
+    const book = await useLibraryStore.getState().importArchivesAsBook(
+      [new File(['x'], '夜航 第02话.cbz'), new File(['x'], '说明.txt')],
+      '我的文件夹'
+    )
+
+    expect(book).not.toBeNull()
+    expect(useLibraryStore.getState().importWarning).toContain('说明.txt')
+    expect(useLibraryStore.getState().importWarning).toContain('不支持合并')
   })
 
   it('uses streaming parse for files above 50MB when available', async () => {

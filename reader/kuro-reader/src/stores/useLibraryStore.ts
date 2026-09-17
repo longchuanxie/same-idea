@@ -27,6 +27,8 @@ export interface LibraryState {
   isImporting: boolean;
   importProgress: number;
   error: string | null;
+  /** 部分成功警示：导入整体成功但个别文件被跳过/失败时的汇总说明（供页面 toast） */
+  importWarning: string | null;
   batchImportTotal: number;
   batchImportCurrent: number;
   batchImportCurrentFile: string;
@@ -115,6 +117,27 @@ const PERCENT_MULTIPLIER = 100;
 /** 导入归属选项：从特藏室发起导入时指定 subLibraryId，新书直接归入该特藏室 */
 export interface ImportOptions {
   subLibraryId?: string;
+}
+
+/** 部分成功警示文案：整体导入成功但存在被跳过/解析失败的文件时非空 */
+const WARNING_NAME_PREVIEW_LIMIT = 3;
+
+/** 汇总文件名用于提示：最多列 3 个，多则「等 N 个」 */
+function summarizeFileNames(names: string[]): string {
+  const shown = names.slice(0, WARNING_NAME_PREVIEW_LIMIT).join('、');
+  return names.length > WARNING_NAME_PREVIEW_LIMIT ? `${shown} 等 ${names.length} 个文件` : shown;
+}
+
+/** 部分成功警示文案：整体导入成功但存在被跳过/解析失败的文件时非空 */
+function buildPartialImportWarning(failedFiles: string[], unsupportedFiles: string[]): string | null {
+  if (failedFiles.length === 0 && unsupportedFiles.length === 0) return null;
+  if (failedFiles.length === 0) {
+    return `已跳过 ${unsupportedFiles.length} 个不支持合并的文件（仅图片档案可并入一书）：${summarizeFileNames(unsupportedFiles)}`;
+  }
+  if (unsupportedFiles.length === 0) {
+    return `${failedFiles.length} 个压缩包解析失败未并入：${summarizeFileNames(failedFiles)}`;
+  }
+  return `部分文件未并入：解析失败 ${failedFiles.length} 个、类型不支持 ${unsupportedFiles.length} 个`;
 }
 
 /** 将 ParsedBook 转换为 Book + Chapter 实体 */
@@ -223,6 +246,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
   isImporting: false,
   importProgress: 0,
   error: null,
+  importWarning: null,
   batchImportTotal: 0,
   batchImportCurrent: 0,
   batchImportCurrentFile: '',
@@ -260,7 +284,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
   },
 
   importFile: async (file: File, opts?: ImportOptions) => {
-    set({ isImporting: true, importProgress: 0, error: null });
+    set({ isImporting: true, importProgress: 0, error: null, importWarning: null });
     try {
       set({ importProgress: 10 });
 
@@ -362,7 +386,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
   },
 
   importFolder: async (files: File[], folderName: string, opts?: ImportOptions) => {
-    set({ isImporting: true, importProgress: 0, error: null });
+    set({ isImporting: true, importProgress: 0, error: null, importWarning: null });
     try {
       set({ importProgress: IMPORT_PROGRESS_PARSING_BASE });
 
@@ -423,7 +447,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
   },
 
   importArchivesAsBook: async (files: File[], fallbackTitle: string, opts?: ImportOptions) => {
-    set({ isImporting: true, importProgress: 0, error: null });
+    set({ isImporting: true, importProgress: 0, error: null, importWarning: null });
     try {
       // 按文件名中的章节序号排序（无序号的排最后）
       const sorted = [...files]
@@ -437,15 +461,24 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
       const bookId = `book-${Date.now()}-${Math.random().toString(RANDOM_ID_RADIX).substring(RANDOM_ID_SUBSTRING_START, RANDOM_ID_SUBSTRING_LENGTH)}`;
       const chapterPayloads: { chapter: Chapter; pages: Blob[] }[] = [];
       let coverBlob: Blob | null = null;
+      // 部分失败记账：解析抛错的文件与类型不支持合并的文件（结束时有书入库则汇总警示）
+      const failedFiles: string[] = [];
+      const unsupportedFiles: string[] = [];
 
       for (let i = 0; i < sorted.length; i++) {
         set({ importProgress: IMPORT_PROGRESS_PARSING_BASE + Math.round(((i + 1) / sorted.length) * IMPORT_PROGRESS_PARSING_SPAN * PERCENT_MULTIPLIER) });
         const parser = getParserForFile(sorted[i].file);
-        if (!parser) continue;
+        if (!parser) {
+          unsupportedFiles.push(sorted[i].file.name);
+          continue;
+        }
         try {
           const parsed = await parser.parse(sorted[i].file);
           // 合并仅支持图片型档案（文本类原始文件存储模型为单文件一书）
-          if (parsed.format !== 'comic') continue;
+          if (parsed.format !== 'comic') {
+            unsupportedFiles.push(sorted[i].file.name);
+            continue;
+          }
           if (!coverBlob) coverBlob = parsed.coverBlob;
 
           // 文件内部已识别出多章时按章并入；否则整个文件为一章
@@ -469,12 +502,14 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
             });
           }
         } catch {
+          failedFiles.push(sorted[i].file.name);
           continue;
         }
       }
 
       if (chapterPayloads.length === 0 || !coverBlob) {
-        set({ error: '所有压缩包解析失败', isImporting: false, importProgress: 0 });
+        const detail = failedFiles.length > 0 ? `（${summarizeFileNames(failedFiles)}）` : '';
+        set({ error: `所有压缩包解析失败${detail}`, isImporting: false, importProgress: 0 });
         return null;
       }
 
@@ -516,6 +551,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
         coverUrls: { ...state.coverUrls, [bookId]: coverUrl },
         isImporting: false,
         importProgress: 100,
+        importWarning: buildPartialImportWarning(failedFiles, unsupportedFiles),
       }));
 
       if (opts?.subLibraryId) {
@@ -534,6 +570,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
       isImporting: true,
       importProgress: 0,
       error: null,
+      importWarning: null,
       batchImportTotal: files.length,
       batchImportCurrent: 0,
       batchImportCurrentFile: '',

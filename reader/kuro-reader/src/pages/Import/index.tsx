@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 
 import { Capacitor } from '@capacitor/core';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -52,10 +52,16 @@ export const ImportPage: React.FC = () => {
     isImporting,
     importProgress,
     error,
+    importWarning,
     batchImportTotal,
     batchImportCurrent,
     batchImportCurrentFile,
   } = useLibraryStore();
+
+  // 部分成功警示：整体导入成功但个别文件被跳过/解析失败时汇总告知（store 每次导入开始时复位）
+  useEffect(() => {
+    if (importWarning) toast(importWarning);
+  }, [importWarning]);
 
   // 特藏室目标模式：从特藏室页「导入」进入（路由 state 携带目标），新书直接归入该特藏室
   const importTarget = (location.state ?? {}) as { targetSubLibraryId?: string; targetSubLibraryName?: string };
