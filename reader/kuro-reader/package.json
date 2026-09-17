@@ -19,7 +19,6 @@
     "@capacitor-community/text-to-speech": "^8.0.2",
     "@capacitor/android": "^8.3.4",
     "@capacitor/app": "^8.1.0",
-    "@capacitor/cli": "^8.3.4",
     "@capacitor/clipboard": "^8.0.1",
     "@capacitor/core": "^8.3.4",
     "@capacitor/file-transfer": "^2.0.4",
@@ -47,6 +46,7 @@
     "zustand": "4.4"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.3.4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/react": "18.2",
