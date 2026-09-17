@@ -12,6 +12,7 @@ import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
 import { KnowledgeSection } from '@/components/molecules/knowledge/KnowledgeSection';
 import { COPY } from '@/constants/copy';
 import { ROUTES, readerPathForBook } from '@/constants/routes';
+import { useClickOutside } from '@/hooks/useClickOutside';
 import { useHistoryBack } from '@/hooks/useHistoryBack';
 import { annotationRepo } from '@/services/storage/annotationRepo';
 import { useLibraryStore } from '@/stores/useLibraryStore';
@@ -78,16 +79,7 @@ export const BookDetailPage: React.FC = () => {
   }, [id]);
 
   // ⋯ 菜单点击外部关闭
-  useEffect(() => {
-    if (!showMoreMenu) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
-        setShowMoreMenu(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showMoreMenu]);
+  useClickOutside(moreMenuRef, showMoreMenu, () => setShowMoreMenu(false));
 
   const book = books.find((b) => b.id === id);
 

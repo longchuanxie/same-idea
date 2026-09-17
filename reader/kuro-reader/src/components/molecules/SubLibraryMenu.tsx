@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 
+import { useClickOutside } from '@/hooks/useClickOutside';
 
 export interface SubLibraryMenuProps {
   subLibraryId: string;
@@ -20,16 +21,7 @@ export const SubLibraryMenu: React.FC<SubLibraryMenuProps> = ({
   const menuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
+  useClickOutside(menuRef, isOpen, () => setIsOpen(false));
 
   const handleRename = () => {
     if (editName.trim() && editName.trim() !== subLibraryName) {

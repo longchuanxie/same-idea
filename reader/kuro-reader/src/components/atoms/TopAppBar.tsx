@@ -1,9 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 
 import { useNavigate } from 'react-router-dom';
 
 import { APP_CONFIG } from '@/constants/config';
 import { ROUTES } from '@/constants/routes';
+import { useClickOutside } from '@/hooks/useClickOutside';
 import { cn } from '@/utils/cn';
 
 export interface TopAppBarProps {
@@ -52,16 +53,7 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
     }
   };
 
-  useEffect(() => {
-    if (!menuOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [menuOpen]);
+  useClickOutside(menuRef, menuOpen, () => setMenuOpen(false));
 
   const handleMenuAction = (action: () => void) => {
     setMenuOpen(false);

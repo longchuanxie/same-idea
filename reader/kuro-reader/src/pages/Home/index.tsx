@@ -9,6 +9,7 @@ import { ReadingRecapSheet } from '@/components/molecules/ReadingRecapSheet';
 import { COPY } from '@/constants/copy';
 import { ROUTES, bookDetailPath, readerPathForBook, reviewPath } from '@/constants/routes';
 import { STORAGE_KEYS } from '@/constants/storage';
+import { useClickOutside } from '@/hooks/useClickOutside';
 import { annotationRepo } from '@/services/storage/annotationRepo';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import { useReviewStore } from '@/stores/useReviewStore';
@@ -120,16 +121,7 @@ export const HomePage: React.FC = () => {
   }, [syncReview]);
   const reviewDueCount = useMemo(() => buildReviewQueue(reviewCards).length, [reviewCards]);
 
-  useEffect(() => {
-    if (!seatMenuFor) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setSeatMenuFor(null);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [seatMenuFor]);
+  useClickOutside(menuRef, seatMenuFor != null, () => setSeatMenuFor(null));
 
   const continueReading = getContinueReading();
   const seatBook = continueReading[0];
