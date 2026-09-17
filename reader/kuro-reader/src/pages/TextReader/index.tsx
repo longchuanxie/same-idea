@@ -57,7 +57,7 @@ import { annotationRepo } from '@/services/storage/annotationRepo';
 import { bookmarkRepo } from '@/services/storage/bookmarkRepo';
 import { vocabRepo, vocabEntryId } from '@/services/storage/vocabRepo';
 import { loadTextContent, resolveTextChapterIndex, type TextChapter } from '@/services/textContent';
-import { isPiperDownloading, piperModelStored, preloadPiperModel, subscribePiperDownloadProgress } from '@/services/tts/piperEngine';
+import { isPiperDownloading, normalizePiperDownloadPercent, piperModelStored, preloadPiperModel, PROGRESS_INDETERMINATE, subscribePiperDownloadProgress } from '@/services/tts/piperEngine';
 import { useAppStore } from '@/stores/useAppStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import type { Bookmark, Annotation, AnnotationStyle, TtsEngineOption, VocabEntry } from '@/types';
@@ -849,7 +849,7 @@ export const TextReaderPage: React.FC = () => {
   // 音色包下载进度（null = 没有下载在进行；引擎层去重并发下载并广播进度）
   const [neuralDownloadPercent, setNeuralDownloadPercent] = useState<number | null>(null);
   useEffect(
-    () => subscribePiperDownloadProgress((percent) => setNeuralDownloadPercent(percent >= 0 ? percent : null)),
+    () => subscribePiperDownloadProgress((percent) => setNeuralDownloadPercent(normalizePiperDownloadPercent(percent))),
     []
   );
   const handleTtsEngineChange = useCallback(async (engine: TtsEngineOption) => {
@@ -2712,16 +2712,18 @@ export const TextReaderPage: React.FC = () => {
         estimatedTimeLeft={estimatedTimeLeft}
       />
 
-      {/* 音色包下载进度（页末左侧，与右侧阅读进度指示互不遮挡） */}
+      {/* 音色包下载进度（页末左侧，与右侧阅读进度指示互不遮挡）；-2 = 原生通道兜底下载，无细粒度百分比 */}
       {neuralDownloadPercent != null && (
         <div
           className="fixed bottom-gutter left-margin-mobile z-toast pointer-events-none mb-safe animate-fade-in"
           role="status"
-          aria-label={`语音包下载中 ${neuralDownloadPercent}%`}
+          aria-label={neuralDownloadPercent === PROGRESS_INDETERMINATE ? '语音包下载中' : `语音包下载中 ${neuralDownloadPercent}%`}
         >
           <div className="bg-on-surface/50 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-2">
             <span className="material-symbols-outlined text-label-sm text-surface animate-spin">progress_activity</span>
-            <span className="font-label text-label-sm text-surface tabular-nums">语音包下载 {neuralDownloadPercent}%</span>
+            <span className="font-label text-label-sm text-surface tabular-nums">
+              {neuralDownloadPercent === PROGRESS_INDETERMINATE ? '语音包下载中' : `语音包下载 ${neuralDownloadPercent}%`}
+            </span>
           </div>
         </div>
       )}

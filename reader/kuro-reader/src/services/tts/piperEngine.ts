@@ -1,3 +1,4 @@
+import { CapacitorHttp } from '@capacitor/core';
 import type * as PiperTts from '@mintplex-labs/piper-tts-web';
 
 import { playBlob, type BlobPlaybackControls } from './blobPlayback';
@@ -23,6 +24,16 @@ const MODEL_SOURCE_CONNECT_TIMEOUT_MS = 12000;
 /** 模型体进度映射到 5-95% 区间（0% 留给开始、100% 只在写入 OPFS 完成后发出） */
 const MODEL_PROGRESS_RANGE_START = 5;
 const MODEL_PROGRESS_RANGE_SPAN = 90;
+/** 原生通道下载读取超时（大文件走慢速镜像时放宽） */
+const MODEL_DOWNLOAD_READ_TIMEOUT_MS = 600000;
+/** 进度值：-2 = 原生通道下载中（无细粒度进度）；-1 = 空闲 */
+export const PROGRESS_INDETERMINATE = -2;
+
+/** 订阅方口径：>=0 原样百分比；-2 不确定态原样透传；其余（-1 空闲）返回 null 表示不显示 */
+export function normalizePiperDownloadPercent(percent: number): number | null {
+  if (percent >= 0) return percent;
+  return percent === PROGRESS_INDETERMINATE ? PROGRESS_INDETERMINATE : null;
+}
 
 type PiperModule = typeof PiperTts;
 type PiperSession = InstanceType<PiperModule['TtsSession']>;
@@ -78,31 +89,60 @@ function createSession(): Promise<PiperSession> {
   return sessionPromise;
 }
 
-/** 按源顺序拉取模型文件：连接超时或请求失败自动切换下一源（镜像） */
-async function fetchModelFile(relPath: string, onProgress: (loaded: number, total: number) => void): Promise<Blob> {
+/** 确保模型已就绪：缺失时（如取消过确认框后直接启用）走多源下载补齐 */
+async function ensureModelReady(): Promise<void> {
+  if (activeDownload) {
+    await activeDownload;
+    return;
+  }
+  if (!(await piperModelStored())) {
+    await preloadPiperModel();
+  }
+}
+
+/** 按源顺序拉取模型文件。每源两级尝试：
+ *  1) window.fetch 流式（有细粒度进度，但受源站 CORS 限制——hf-mirror 不带 ACAO 头会失败）
+ *  2) CapacitorHttp 原生请求（无 CORS 限制，无细粒度进度，经 onIndeterminate 通知） */
+async function fetchModelFile(
+  relPath: string,
+  onProgress: (loaded: number, total: number) => void,
+  onIndeterminate: () => void
+): Promise<Blob> {
   let lastError: unknown = null;
   for (const origin of MODEL_SOURCE_ORIGINS) {
+    const url = `${origin}/${relPath}`;
+    // 一级：fetch 流式（进度）
     const controller = new AbortController();
     const connectTimer = setTimeout(() => controller.abort(), MODEL_SOURCE_CONNECT_TIMEOUT_MS);
     try {
-      const res = await fetch(`${origin}/${relPath}`, { signal: controller.signal });
+      const res = await fetch(url, { signal: controller.signal });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       clearTimeout(connectTimer);
       const total = Number(res.headers.get('Content-Length') ?? 0);
       const reader = res.body?.getReader();
-      if (!reader) return new Blob([await res.arrayBuffer()]);
-      const chunks: BlobPart[] = [];
-      let loaded = 0;
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        chunks.push(value);
-        loaded += value.length;
-        if (total > 0) onProgress(loaded, total);
+      if (reader) {
+        const chunks: BlobPart[] = [];
+        let loaded = 0;
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          chunks.push(value);
+          loaded += value.length;
+          if (total > 0) onProgress(loaded, total);
+        }
+        return new Blob(chunks);
       }
-      return new Blob(chunks);
+      return new Blob([await res.arrayBuffer()]);
     } catch (error) {
       clearTimeout(connectTimer);
+      lastError = error;
+    }
+    // 二级：CapacitorHttp 原生请求（WebView 跨源被 CORS 拦截时仍可下载）
+    try {
+      onIndeterminate();
+      const res = await CapacitorHttp.get({ url, responseType: 'arraybuffer', connectTimeout: MODEL_SOURCE_CONNECT_TIMEOUT_MS, readTimeout: MODEL_DOWNLOAD_READ_TIMEOUT_MS });
+      return new Blob([res.data as ArrayBuffer]);
+    } catch (error) {
       lastError = error;
     }
   }
@@ -125,7 +165,7 @@ export async function preloadPiperModel(): Promise<void> {
         fileCompletion.clear();
         emitProgress(0);
         // 配置文件（.onnx.json，很小）
-        const configBlob = await fetchModelFile(`${MODEL_RELATIVE_PATH}.json`, () => undefined);
+        const configBlob = await fetchModelFile(`${MODEL_RELATIVE_PATH}.json`, () => undefined, () => emitProgress(PROGRESS_INDETERMINATE));
         await (tts as PiperModule & PiperOpfsWriter).writeBlob(modelOriginUrl('.json'), configBlob);
         // 模型（.onnx，数十 MB，进度主要来自这里）
         let modelTotal = 0;
@@ -135,7 +175,7 @@ export async function preloadPiperModel(): Promise<void> {
             const percent = Math.min(MODEL_PROGRESS_RANGE_START + MODEL_PROGRESS_RANGE_SPAN, Math.round(MODEL_PROGRESS_RANGE_START + (loaded / modelTotal) * MODEL_PROGRESS_RANGE_SPAN));
             if (percent > progressPercent) emitProgress(percent);
           }
-        });
+        }, () => emitProgress(PROGRESS_INDETERMINATE));
         await (tts as PiperModule & PiperOpfsWriter).writeBlob(modelOriginUrl(''), modelBlob);
         emitProgress(100);
       }
@@ -153,7 +193,7 @@ export function isPiperDownloading(): boolean {
   return activeDownload != null;
 }
 
-/** 订阅音色包下载进度（订阅即回放当前进度；-1 = 无下载）；返回退订函数 */
+/** 订阅音色包下载进度（订阅即回放当前进度；-2 = 原生通道下载无细粒度进度；-1 = 无下载）；返回退订函数 */
 export function subscribePiperDownloadProgress(listener: (percent: number) => void): () => void {
   progressListeners.add(listener);
   listener(progressPercent);
@@ -199,8 +239,10 @@ export class PiperEngine implements TtsEngine {
     token: number
   ): Promise<void> {
     try {
-      // 若预下载正在进行，等它完成再建会话，避免并发重复下载
-      const session = await (activeDownload ?? Promise.resolve()).then(createSession);
+      // 若预下载正在进行，等它完成再建会话，避免并发重复下载；
+      // 模型缺失时先经多源下载补齐，再建会话（库内直连 HF 在部分网络必失败）
+      await ensureModelReady();
+      const session = await createSession();
       if (token !== this.tokenRef) return;
       const wav = await session.predict(text);
       if (token !== this.tokenRef) return;

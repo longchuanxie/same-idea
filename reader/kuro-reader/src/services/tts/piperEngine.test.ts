@@ -3,11 +3,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const createMock = vi.fn((..._args: unknown[]) => undefined)
 const writeBlobMock = vi.fn(async (..._args: unknown[]) => {})
 const storedMock = vi.fn(async (): Promise<string[]> => [])
+const capacitorHttpGet = vi.fn()
 
 vi.mock('@mintplex-labs/piper-tts-web', () => ({
   TtsSession: { create: (...args: unknown[]) => createMock(...args) },
   writeBlob: (...args: unknown[]) => writeBlobMock(...args),
   stored: () => storedMock(),
+}))
+
+vi.mock('@capacitor/core', () => ({
+  CapacitorHttp: { get: (...args: unknown[]) => capacitorHttpGet(...args) },
 }))
 
 // sessionPromise / activeDownload 为模块级缓存,每个用例重载模块以隔离
@@ -39,6 +44,7 @@ describe('preloadPiperModel', () => {
     createMock.mockReset()
     writeBlobMock.mockReset()
     storedMock.mockResolvedValue([])
+    capacitorHttpGet.mockReset()
     createMock.mockResolvedValue(undefined)
   })
 
@@ -130,5 +136,53 @@ describe('preloadPiperModel', () => {
     expect(seen[0]).toBe(-1) // 订阅回放当前空闲态
     expect(seen).toContain(100)
     expect(seen[seen.length - 1]).toBe(-1)
+  })
+
+  it('fetch 全部被拦（如 CORS）时回退 CapacitorHttp 原生通道完成下载', async () => {
+    capacitorHttpGet.mockResolvedValue({ data: new ArrayBuffer(10) })
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('Failed to fetch') }))
+    const mod = await loadEngine()
+    await mod.preloadPiperModel()
+    // 两个文件各走一次原生兜底，均写入 OPFS
+    expect(capacitorHttpGet).toHaveBeenCalledTimes(2)
+    expect(writeBlobMock).toHaveBeenCalledTimes(2)
+    expect(createMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('原生兜底下载期间播报不确定态进度（-2），结束后回空闲', async () => {
+    capacitorHttpGet.mockResolvedValue({ data: new ArrayBuffer(10) })
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('Failed to fetch') }))
+    const mod = await loadEngine()
+    const seen: number[] = []
+    const unsubscribe = mod.subscribePiperDownloadProgress((percent) => seen.push(percent))
+    await mod.preloadPiperModel()
+    unsubscribe()
+    expect(seen).toContain(mod.PROGRESS_INDETERMINATE)
+    expect(seen[seen.length - 1]).toBe(-1)
+  })
+
+  it('fetch 与原生兜底全部失败才报错，不写 OPFS', async () => {
+    capacitorHttpGet.mockRejectedValue(new Error('native failed'))
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('fetch failed') }))
+    const mod = await loadEngine()
+    await expect(mod.preloadPiperModel()).rejects.toThrow()
+    expect(writeBlobMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('normalizePiperDownloadPercent', () => {
+  it('非负百分比原样透传', async () => {
+    const mod = await loadEngine()
+    expect(mod.normalizePiperDownloadPercent(0)).toBe(0)
+    expect(mod.normalizePiperDownloadPercent(47)).toBe(47)
+    expect(mod.normalizePiperDownloadPercent(100)).toBe(100)
+  })
+
+  it('不确定态（-2）原样透传给 UI 呈现，空闲（-1）等其他负值返回 null', async () => {
+    const mod = await loadEngine()
+    expect(mod.PROGRESS_INDETERMINATE).toBe(-2)
+    expect(mod.normalizePiperDownloadPercent(mod.PROGRESS_INDETERMINATE)).toBe(-2)
+    expect(mod.normalizePiperDownloadPercent(-1)).toBeNull()
+    expect(mod.normalizePiperDownloadPercent(-3)).toBeNull()
   })
 })

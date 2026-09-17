@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 
 import { ToggleSwitch } from '@/components/atoms/ToggleSwitch';
 import { TEXT_READER_FONT_OPTIONS } from '@/constants/textReaderFonts';
+import { PROGRESS_INDETERMINATE } from '@/services/tts/piperEngine';
 import type { PaperType, TextFontFamily, TextAlign, TextReadingMode, TtsEngineOption } from '@/types';
 import { cn } from '@/utils/cn';
 import { getAllPaperTypes } from '@/utils/paperTexture';
@@ -525,7 +526,9 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
             {ttsEngine === 'neural' && (
               <p className="font-body text-body-sm text-on-surface-variant mt-3">
                 {neuralDownloadPercent != null
-                  ? `音色包下载中 ${neuralDownloadPercent}%，完成后自动离线可用。`
+                  ? neuralDownloadPercent === PROGRESS_INDETERMINATE
+                    ? '音色包下载中，完成后自动离线可用。'
+                    : `音色包下载中 ${neuralDownloadPercent}%，完成后自动离线可用。`
                   : '离线神经网络中文语音（huayan）。首次使用需下载约 60-80MB 音色包，仅下载一次。'}
               </p>
             )}
