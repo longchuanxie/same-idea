@@ -64,7 +64,7 @@ describe('useReviewStore', () => {
     await useReviewStore.getState().grade('c1', 'good')
 
     const updated = useReviewStore.getState().cards[0]
-    expect(updated.repetitions ?? updated.scheduling.repetitions).toBe(1)
+    expect(updated.scheduling.repetitions).toBe(1)
     expect(updated.dueAt).toBeGreaterThan(before)
     expect(updated.lastReviewedAt).toBeGreaterThanOrEqual(before)
     expect(updated.dismissed).toBeUndefined()
@@ -93,7 +93,7 @@ describe('useReviewStore', () => {
   it('sync 移除孤儿卡并保留现有卡', async () => {
     // 本地两卡，对账判定 c1 移除；无新建
     const { reconcileReviewCards } = await import('@/utils/reviewCatalog')
-    vi.mocked(reconcileReviewCards).mockReturnValue({ toSave: [], toRemoveIds: ['c1'] })
+    vi.mocked(reconcileReviewCards).mockReturnValue({ toSave: [], toRemoveIds: ['c1'], keptDismissedIds: [] })
     reviewCardRepoMock.getAll.mockResolvedValue([makeCard({ id: 'c1' }), makeCard({ id: 'c2' })])
 
     await useReviewStore.getState().sync()

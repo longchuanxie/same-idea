@@ -37,6 +37,9 @@ const PROTOCOLS: ProtocolOption[] = [
 /** 浏览支持的协议（其余仅保留连接测试） */
 const BROWSABLE_PROTOCOLS = new Set<ProtocolOption['id']>(['webdav', 'nas', 'ftp']);
 
+/** 帮助抽屉的「仅测试连接」标注：OPDS 走独立书库浏览器，同样可浏览 */
+const HELP_TEST_ONLY = new Set<ProtocolOption['id']>(['smb', 'onedrive']);
+
 const formatFileSize = (bytes: number): string => {
   if (bytes <= 0) return '-';
   const KB = 1024;
@@ -602,7 +605,7 @@ export const CustomCloudPage: React.FC = () => {
                   <div className="min-w-0">
                     <p className="font-label text-label-md text-primary">
                       {label}
-                      {!BROWSABLE_PROTOCOLS.has(id) && (
+                      {HELP_TEST_ONLY.has(id) && (
                         <span className="font-label text-label-xs text-on-surface-faint ml-2">仅测试连接</span>
                       )}
                     </p>
