@@ -1112,3 +1112,8 @@
   cursor: pointer;
   outline: none;
 }
+
+/* 色温滑轨：纸白→琥珀的物理光源示意渐变（豁免域色，见 design-tokens §5；两 Reader 底栏共用） */
+.temperature-ramp {
+  background: linear-gradient(to right, #ffffff, #ffcc80);
+}

@@ -158,13 +158,14 @@
 - [x] knowledge-hub / GenerationOptionsSheet / Settings / Auth / ChapterEndPrompt 已收编（2026-09）。
 - [ ] `text-[10px]/[11px]/[14px]/[18px]` 微字号暂属默许档（徽章/密集 UI），新增界面禁用。
 - [ ] 硬编码 `z-50` 浮层未全量对齐 z 协议，改动浮层时顺手归档。
+- [x] 色温渐变两处内联 hex 收编为 `.temperature-ramp` 配方类；守卫新增 inline hex 规则（2026-09）。
 
 ## 5. 豁免清单（先立项再豁免，守卫脚本同步放行）
 
 | 位置 | 写法 | 理由 |
 |---|---|---|
 | `FullscreenViewer.tsx` | `bg-white/10 text-white` | 媒体之上恒用白，不随主题 |
-| 亮度/色温条（两 Reader 底栏） | `linear-gradient(#ffffff, #ffcc80)` | 色温功能演示渐变（光源本体） |
+| 亮度/色温条（两 Reader 底栏） | `.temperature-ramp` 配方类（`linear-gradient(#ffffff, #ffcc80)` 渐变本体） | 色温功能演示渐变（光源本体）；2026-09 由两处内联复制沉淀为 index.css 配方类 |
 | `MindmapView.tsx` `BRANCH_COLORS` | 8 色域数组 | 思维导图分支分类色，域调色板 |
 | `MarkdownReaderContent` mark | `bg-lamp/30` | 荧光标记=琥珀（lamp 立项豁免：非交互） |
 | `Home` 今日之灯 | `drop-shadow(lamp)` | lamp 光晕即元素本体 |

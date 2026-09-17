@@ -17,6 +17,7 @@ const RULES = [
   [/\brounded-(?:xl|2xl|3xl)\b/, '体系外圆角档（用 rounded-card / rounded-card-lg / rounded-lg）'],
   [/\bshadow-(?:md|lg|xl|2xl)\b/, '体系外投影（用 shadow-paper / shadow-paper-up / shadow-raised）'],
   [/text-\[(?:16|20|24)px\]/, '图标魔数字号（用 text-icon-sm / text-icon-md / text-icon-lg）'],
+  [/style=\{\{[^}]*#[0-9a-fA-F]{3,8}/, '内联十六进制色（色板唯一真源在 index.css；域色渐变走豁免清单沉淀为配方类，如 .temperature-ramp）'],
 ];
 
 function* walk(dir) {

@@ -391,8 +391,7 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
               max={100}
               value={colorTemperature}
               onChange={(e) => onColorTemperatureChange(Number(e.target.value))}
-              className="w-full ink-slider cursor-pointer"
-              style={{ background: `linear-gradient(to right, #ffffff, #ffcc80)` }}
+              className="temperature-ramp w-full ink-slider cursor-pointer"
             />
           </div>
 
