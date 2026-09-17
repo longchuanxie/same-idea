@@ -67,6 +67,7 @@ export const CustomCloudPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
 
   // 浏览模式状态
   const [client, setClient] = useState<CloudStorageClient | null>(null);
@@ -566,10 +567,57 @@ export const CustomCloudPage: React.FC = () => {
           </button>
           <h1 className="font-display text-headline-md text-primary tracking-tight">自定义云端来源</h1>
         </div>
-        <button className="text-on-surface-variant hover:text-primary transition-colors p-2 -mr-2">
+        <button
+          className="text-on-surface-variant hover:text-primary transition-colors p-2 -mr-2"
+          onClick={() => setIsHelpOpen(true)}
+          aria-label="连接说明"
+        >
           <span className="material-symbols-outlined">help_outline</span>
         </button>
       </header>
+
+      {/* 连接说明：6 协议用途与地址示例 */}
+      {isHelpOpen && (
+        <div className="fixed inset-0 z-[60] flex flex-col justify-end">
+          <div className="absolute inset-0 bg-on-background/40 animate-fade-in" onClick={() => setIsHelpOpen(false)} />
+          <div className="relative bg-surface rounded-t-card-lg max-h-[70vh] flex flex-col animate-slide-up shadow-raised">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/50">
+              <h3 className="font-display text-headline-sm text-primary">连接说明</h3>
+              <button
+                className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-variant transition-colors"
+                onClick={() => setIsHelpOpen(false)}
+                aria-label="关闭"
+              >
+                <span className="material-symbols-outlined text-on-surface-variant text-icon-md">close</span>
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4 space-y-3">
+              <p className="font-body text-body-sm text-on-surface-variant">
+                填服务地址、端口与凭据后「测试连接」，连接成功即可浏览并下载导入。支持导入
+                epub / txt / md / pdf / zip / cbz / cbr。
+              </p>
+              {PROTOCOLS.map(({ id, label, icon, description }) => (
+                <div key={id} className="flex items-start gap-3 py-2 border-b border-outline-variant/30 last:border-b-0">
+                  <span className="material-symbols-outlined text-secondary text-icon-md shrink-0 mt-0.5">{icon}</span>
+                  <div className="min-w-0">
+                    <p className="font-label text-label-md text-primary">
+                      {label}
+                      {!BROWSABLE_PROTOCOLS.has(id) && (
+                        <span className="font-label text-label-xs text-on-surface-faint ml-2">仅测试连接</span>
+                      )}
+                    </p>
+                    <p className="font-body text-body-sm text-on-surface-variant">{description}</p>
+                  </div>
+                </div>
+              ))}
+              <p className="font-label text-label-sm text-on-surface-faint pt-1">
+                示例：WebDAV 填 192.168.1.10，端口 5005，路径 /dav；OPDS 填完整目录地址，如
+                http://192.168.1.10:8080/opds
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isOpdsConnected ? (
         <OpdsBrowser
