@@ -28,7 +28,9 @@ const PROPS = {
   onClose: vi.fn(),
 }
 
-const setup = (annotations: Annotation[], overrides: Partial<typeof PROPS> = {}) =>
+type AnnotationListPropsFull = React.ComponentProps<typeof AnnotationList>
+
+const setup = (annotations: Annotation[], overrides: Partial<AnnotationListPropsFull> = {}) =>
   render(<AnnotationList {...PROPS} annotations={annotations} {...overrides} />)
 
 /** 每条手记卡片的根节点：以章节标题文本定位最近容器 */
@@ -66,5 +68,69 @@ describe('AnnotationList', () => {
     setup([makeAnnotation({ id: 'ann-1' })], { onNavigate })
     fireEvent.click(cardOf('第一章'))
     expect(onNavigate).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('AnnotationList 书签 tab', () => {
+  const makeBookmark = (id: string, chapterTitle: string) => ({
+    id,
+    bookId: 'b1',
+    chapterIndex: 0,
+    chapterTitle,
+    pageIndex: 2,
+    textPreview: `夹了书签的那一页-${id}`,
+    createdAt: new Date('2026-09-01T09:00:00'),
+  })
+
+  const BOOKMARK_PROPS = {
+    bookmarks: [makeBookmark('bm-1', '第一章'), makeBookmark('bm-2', '第二章')],
+    onBookmarkSelect: vi.fn(),
+    onBookmarkDelete: vi.fn(),
+  }
+
+  it('不传书签 props 时不出现书签 tab（图页阅读器单 tab 兼容）', () => {
+    setup([])
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+  })
+
+  it('传入书签 props 时出现双 tab，默认停留在手记', () => {
+    setup([makeAnnotation({ id: 'ann-1' })], BOOKMARK_PROPS)
+    const tablist = screen.getByRole('tablist')
+    expect(within(tablist).getByRole('tab', { name: /手记/ })).toHaveAttribute('aria-selected', 'true')
+    expect(within(tablist).getByRole('tab', { name: /书签/ })).toHaveAttribute('aria-selected', 'false')
+    // 手记列表内容仍在
+    expect(screen.getByText('一条笔记')).toBeInTheDocument()
+  })
+
+  it('切到书签 tab 列出书签，点击条目回调 onBookmarkSelect', () => {
+    const onBookmarkSelect = vi.fn()
+    setup([], { ...BOOKMARK_PROPS, onBookmarkSelect })
+
+    fireEvent.click(screen.getByRole('tab', { name: /书签/ }))
+    expect(screen.getByText('夹了书签的那一页-bm-1')).toBeInTheDocument()
+    expect(screen.getByText('夹了书签的那一页-bm-2')).toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByText('夹了书签的那一页-bm-1').closest('div.bg-surface-container-low') as HTMLElement
+    )
+    expect(onBookmarkSelect).toHaveBeenCalledWith(expect.objectContaining({ id: 'bm-1' }))
+  })
+
+  it('书签删除按钮回调 onBookmarkDelete', () => {
+    const onBookmarkDelete = vi.fn()
+    setup([], { ...BOOKMARK_PROPS, onBookmarkDelete })
+
+    fireEvent.click(screen.getByRole('tab', { name: /书签/ }))
+    const firstCard = screen.getByText('夹了书签的那一页-bm-1').closest('div.bg-surface-container-low') as HTMLElement
+    const cardRoot = firstCard.parentElement as HTMLElement
+    fireEvent.click(within(cardRoot).getByText('delete').closest('button') as HTMLElement)
+    expect(onBookmarkDelete).toHaveBeenCalledWith('bm-1')
+  })
+
+  it('书签为空时展示空态引导', () => {
+    setup([], { ...BOOKMARK_PROPS, bookmarks: [] })
+    fireEvent.click(screen.getByRole('tab', { name: /书签/ }))
+    expect(screen.getByText('暂无书签')).toBeInTheDocument()
+    expect(screen.getByText('点击顶栏书签按钮添加')).toBeInTheDocument()
   })
 })

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 import { COPY } from '@/constants/copy';
-import type { Annotation, AnnotationStyle } from '@/types';
+import type { Annotation, AnnotationStyle, Bookmark } from '@/types';
 import { exportAnnotationsToMarkdown } from '@/utils/annotationExport';
 import { cn } from '@/utils/cn';
 import { isPageNote } from '@/utils/pageAnnotation';
@@ -13,7 +13,13 @@ interface AnnotationListProps {
   onDelete: (annotationId: string) => void;
   onNavigate: (annotation: Annotation) => void;
   onClose: () => void;
+  /** 书签数据与回调：提供后面板出现「书签」tab（图页阅读器无书签功能，不传即单 tab） */
+  bookmarks?: Bookmark[];
+  onBookmarkSelect?: (bookmark: Bookmark) => void;
+  onBookmarkDelete?: (bookmarkId: string) => void;
 }
+
+type ListTab = 'notes' | 'bookmarks';
 
 export const AnnotationList: React.FC<AnnotationListProps> = ({
   annotations,
@@ -22,10 +28,17 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
   onDelete,
   onNavigate,
   onClose,
+  bookmarks,
+  onBookmarkSelect,
+  onBookmarkDelete,
 }) => {
+  const [activeTab, setActiveTab] = useState<ListTab>('notes');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editNote, setEditNote] = useState('');
   const [swipedId, setSwipedId] = useState<string | null>(null);
+
+  const hasBookmarkTab = bookmarks != null && onBookmarkSelect != null && onBookmarkDelete != null;
+  const bookmarkList = bookmarks ?? [];
 
   const formatTime = (date: Date) => {
     const d = new Date(date);
@@ -62,6 +75,11 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
     }
   };
 
+  const TABS: { key: ListTab; label: string; count: number }[] = [
+    { key: 'notes', label: '手记', count: annotations.length },
+    ...(hasBookmarkTab ? [{ key: 'bookmarks' as const, label: '书签', count: bookmarkList.length }] : []),
+  ];
+
   return (
     <div className="fixed inset-0 z-[60] flex flex-col justify-end">
       {/* 遮罩 */}
@@ -72,22 +90,50 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
 
       {/* 面板 */}
       <div className="relative bg-surface rounded-t-card-lg max-h-[70vh] flex flex-col animate-slide-up shadow-raised">
-        {/* 标题栏 */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/50">
-          <h3 className="font-display text-headline-sm text-primary">手记</h3>
+        {/* 标题栏：tab 切换 + 操作 */}
+        <div className="flex items-center justify-between px-5 py-3 border-b border-outline-variant/50">
+          {hasBookmarkTab ? (
+            <div className="flex gap-4 flex-1 min-w-0" role="tablist" aria-label="手记与书签">
+              {TABS.map(({ key, label, count }) => (
+                <button
+                  key={key}
+                  role="tab"
+                  aria-selected={activeTab === key}
+                  className={cn(
+                    'relative flex items-center gap-1.5 py-2 font-display text-headline-sm transition-colors',
+                    activeTab === key ? 'text-primary' : 'text-on-surface-variant hover:text-primary'
+                  )}
+                  onClick={() => setActiveTab(key)}
+                >
+                  {label}
+                  <span className="font-label text-label-sm text-on-surface-variant opacity-60">{count}</span>
+                  {activeTab === key && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-primary rounded-full"
+                    />
+                  )}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <h3 className="font-display text-headline-sm text-primary">手记</h3>
+          )}
           <div className="flex items-center gap-2">
-            <span className="font-label text-label-sm text-on-surface-variant opacity-60">
-              {annotations.length} 条
-            </span>
-            {annotations.length > 0 && (
-              <button
-                className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-variant transition-colors"
-                onClick={() => exportAnnotationsToMarkdown(bookTitle, undefined, annotations)}
-                aria-label="导出手记为 Markdown"
-                title="导出手记为 Markdown"
-              >
-                <span className="material-symbols-outlined text-on-surface-variant text-icon-md">ios_share</span>
-              </button>
+            {activeTab === 'notes' && annotations.length > 0 && (
+              <>
+                <span className="font-label text-label-sm text-on-surface-variant opacity-60">
+                  {annotations.length} 条
+                </span>
+                <button
+                  className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-variant transition-colors"
+                  onClick={() => exportAnnotationsToMarkdown(bookTitle, undefined, annotations)}
+                  aria-label="导出手记为 Markdown"
+                  title="导出手记为 Markdown"
+                >
+                  <span className="material-symbols-outlined text-on-surface-variant text-icon-md">ios_share</span>
+                </button>
+              </>
             )}
             <button
               className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-variant transition-colors"
@@ -100,120 +146,192 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
 
         {/* 列表 */}
         <div className="flex-1 overflow-y-auto overscroll-contain">
-          {annotations.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 gap-3">
-              <span className="material-symbols-outlined text-on-surface-variant text-5xl opacity-40">edit_note</span>
-              <p className="font-body text-body-md text-on-surface-variant">墙上还没有手记</p>
-              <p className="font-label text-label-sm text-on-surface-faint">读的时候，长按一句话就能把它贴上来</p>
-            </div>
-          ) : (
-            <div className="py-2">
-              {annotations.map((ann) => (
-                <div
-                  key={ann.id}
-                  className="relative overflow-hidden mx-3 my-1 rounded-card-lg"
-                  onTouchStart={() => setSwipedId(ann.id)}
-                >
-                  {/* 删除按钮 */}
-                  <div className="absolute right-0 top-0 bottom-0 w-20 bg-error flex items-center justify-center rounded-r-card">
-                    <button
-                      className="w-full h-full flex items-center justify-center"
+          {activeTab === 'notes' ? (
+            annotations.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-3">
+                <span className="material-symbols-outlined text-on-surface-variant text-5xl opacity-40">edit_note</span>
+                <p className="font-body text-body-md text-on-surface-variant">墙上还没有手记</p>
+                <p className="font-label text-label-sm text-on-surface-faint">读的时候，长按一句话就能把它贴上来</p>
+              </div>
+            ) : (
+              <div className="py-2">
+                {annotations.map((ann) => (
+                  <div
+                    key={ann.id}
+                    className="relative overflow-hidden mx-3 my-1 rounded-card-lg"
+                    onTouchStart={() => setSwipedId(ann.id)}
+                  >
+                    {/* 删除按钮 */}
+                    <div className="absolute right-0 top-0 bottom-0 w-20 bg-error flex items-center justify-center rounded-r-card">
+                      <button
+                        className="w-full h-full flex items-center justify-center"
+                        onClick={() => {
+                          onDelete(ann.id);
+                          setSwipedId(null);
+                        }}
+                      >
+                        <span className="material-symbols-outlined text-on-error text-icon-md">delete</span>
+                      </button>
+                    </div>
+
+                    {/* 内容 */}
+                    <div
+                      className={cn(
+                        'bg-surface-container-low px-4 py-3 rounded-card-lg transition-transform duration-200 cursor-pointer',
+                        swipedId === ann.id ? '-translate-x-20' : 'translate-x-0'
+                      )}
                       onClick={() => {
-                        onDelete(ann.id);
-                        setSwipedId(null);
+                        if (swipedId === ann.id) {
+                          setSwipedId(null);
+                          return;
+                        }
+                        onNavigate(ann);
                       }}
                     >
-                      <span className="material-symbols-outlined text-on-error text-icon-md">delete</span>
-                    </button>
-                  </div>
+                      {/* 章节标题 + 时间 */}
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="material-symbols-outlined text-secondary text-[14px]">{getStyleInfo(ann.style).icon}</span>
+                        <span className="font-label text-label-md text-primary truncate flex-1">
+                          {ann.chapterTitle}
+                        </span>
+                        <span className="font-label text-label-xs text-on-surface-variant opacity-40 bg-surface-variant/50 px-1.5 py-0.5 rounded">
+                          {getStyleInfo(ann.style).label}
+                        </span>
+                        <span className="font-mono text-label-sm text-on-surface-faint">
+                          {formatTime(ann.updatedAt)}
+                        </span>
+                      </div>
 
-                  {/* 内容 */}
-                  <div
-                    className={cn(
-                      'bg-surface-container-low px-4 py-3 rounded-card-lg transition-transform duration-200 cursor-pointer',
-                      swipedId === ann.id ? '-translate-x-20' : 'translate-x-0'
-                    )}
-                    onClick={() => {
-                      if (swipedId === ann.id) {
-                        setSwipedId(null);
-                        return;
-                      }
-                      onNavigate(ann);
-                    }}
-                  >
-                    {/* 章节标题 + 时间 */}
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="material-symbols-outlined text-secondary text-[14px]">{getStyleInfo(ann.style).icon}</span>
-                      <span className="font-label text-label-md text-primary truncate flex-1">
-                        {ann.chapterTitle}
-                      </span>
-                      <span className="font-label text-label-xs text-on-surface-variant opacity-40 bg-surface-variant/50 px-1.5 py-0.5 rounded">
-                        {getStyleInfo(ann.style).label}
-                      </span>
-                      <span className="font-mono text-label-sm text-on-surface-faint">
-                        {formatTime(ann.updatedAt)}
-                      </span>
-                    </div>
+                      {/* 引文：左书脊线 + 衬线 */}
+                      <div className="border-l-2 border-seal/70 pl-3 py-1 mb-2">
+                        <p className="font-body text-body-sm text-on-surface/80 line-clamp-2">
+                          「{ann.selectedText.length > 100 ? ann.selectedText.slice(0, 100) + '…' : ann.selectedText}」
+                        </p>
+                      </div>
 
-                    {/* 引文：左书脊线 + 衬线 */}
-                    <div className="border-l-2 border-seal/70 pl-3 py-1 mb-2">
-                      <p className="font-body text-body-sm text-on-surface/80 line-clamp-2">
-                        「{ann.selectedText.length > 100 ? ann.selectedText.slice(0, 100) + '…' : ann.selectedText}」
-                      </p>
-                    </div>
-
-                    {/* 批注内容 */}
-                    {editingId === ann.id ? (
-                      <div className="mt-2" onClick={(e) => e.stopPropagation()}>
-                        <textarea
-                          value={editNote}
-                          onChange={(e) => setEditNote(e.target.value)}
-                          rows={2}
-                          placeholder={isPageNote(ann) ? COPY.annotation.pageNotePlaceholder : COPY.annotation.clearToPureHighlight}
-                          className="input-field resize-none"
-                          autoFocus
-                        />
-                        <div className="flex justify-end gap-2 mt-2">
+                      {/* 批注内容 */}
+                      {editingId === ann.id ? (
+                        <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                          <textarea
+                            value={editNote}
+                            onChange={(e) => setEditNote(e.target.value)}
+                            rows={2}
+                            placeholder={isPageNote(ann) ? COPY.annotation.pageNotePlaceholder : COPY.annotation.clearToPureHighlight}
+                            className="input-field resize-none"
+                            autoFocus
+                          />
+                          <div className="flex justify-end gap-2 mt-2">
+                            <button
+                              className="px-3 py-1 rounded font-label text-label-sm text-on-surface-variant hover:bg-surface-variant transition-colors"
+                              onClick={() => { setEditingId(null); setEditNote(''); }}
+                            >
+                              取消
+                            </button>
+                            <button
+                              className="btn-primary btn-sm px-3 py-1"
+                              onClick={() => saveEdit(ann.id)}
+                            >
+                              保存
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-start justify-between gap-2">
+                          {ann.note ? (
+                            <p className="font-body text-body-sm text-on-surface flex-1">
+                              {ann.note}
+                            </p>
+                          ) : (
+                            <span className="font-label text-label-xs text-on-surface-faint flex-1">
+                              {isPageNote(ann) ? COPY.annotation.pageNote : COPY.annotation.pureHighlight}
+                            </span>
+                          )}
                           <button
-                            className="px-3 py-1 rounded font-label text-label-sm text-on-surface-variant hover:bg-surface-variant transition-colors"
-                            onClick={() => { setEditingId(null); setEditNote(''); }}
+                            className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center hover:bg-surface-variant transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              startEdit(ann);
+                            }}
                           >
-                            取消
-                          </button>
-                          <button
-                            className="btn-primary btn-sm px-3 py-1"
-                            onClick={() => saveEdit(ann.id)}
-                          >
-                            保存
+                            <span className="material-symbols-outlined text-on-surface-variant text-[14px]">edit</span>
                           </button>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-start justify-between gap-2">
-                        {ann.note ? (
-                          <p className="font-body text-body-sm text-on-surface flex-1">
-                            {ann.note}
-                          </p>
-                        ) : (
-                          <span className="font-label text-label-xs text-on-surface-faint flex-1">
-                            {isPageNote(ann) ? COPY.annotation.pageNote : COPY.annotation.pureHighlight}
-                          </span>
-                        )}
-                        <button
-                          className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center hover:bg-surface-variant transition-colors"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            startEdit(ann);
-                          }}
-                        >
-                          <span className="material-symbols-outlined text-on-surface-variant text-[14px]">edit</span>
-                        </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )
+          ) : (
+            bookmarkList.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-3">
+                <span className="material-symbols-outlined text-on-surface-variant text-5xl opacity-40">bookmark_border</span>
+                <p className="font-body text-body-md text-on-surface-variant opacity-60">暂无书签</p>
+                <p className="font-label text-label-sm text-on-surface-variant opacity-40">点击顶栏书签按钮添加</p>
+              </div>
+            ) : (
+              <div className="py-2">
+                {bookmarkList.map((bm) => (
+                  <div
+                    key={bm.id}
+                    className="relative overflow-hidden mx-3 my-1 rounded-card-lg"
+                    onTouchStart={() => setSwipedId(bm.id)}
+                  >
+                    {/* 删除按钮（滑动显示） */}
+                    <div className="absolute right-0 top-0 bottom-0 w-20 bg-error flex items-center justify-center rounded-r-card">
+                      <button
+                        className="w-full h-full flex items-center justify-center"
+                        onClick={() => {
+                          onBookmarkDelete?.(bm.id);
+                          setSwipedId(null);
+                        }}
+                      >
+                        <span className="material-symbols-outlined text-on-error text-icon-md">delete</span>
+                      </button>
+                    </div>
+
+                    {/* 内容 */}
+                    <div
+                      className={cn(
+                        'bg-surface-container-low px-4 py-3 rounded-card-lg transition-transform duration-200 cursor-pointer',
+                        swipedId === bm.id ? '-translate-x-20' : 'translate-x-0'
+                      )}
+                      onClick={() => {
+                        if (swipedId === bm.id) {
+                          setSwipedId(null);
+                          return;
+                        }
+                        onBookmarkSelect?.(bm);
+                      }}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="material-symbols-outlined text-primary text-icon-sm">bookmark</span>
+                            <span className="font-label text-label-md text-primary truncate">
+                              {bm.chapterTitle}
+                            </span>
+                          </div>
+                          {bm.textPreview && (
+                            <p className="font-body text-body-sm text-on-surface-variant line-clamp-2 mb-1 pl-6">
+                              {bm.textPreview}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-3 pl-6">
+                            <span className="font-label text-label-sm text-on-surface-variant opacity-60">
+                              {bm.pageIndex != null ? `第 ${bm.pageIndex + 1} 页` : `${Math.round((bm.scrollRatio ?? 0) * 100)}%`}
+                            </span>
+                            <span className="font-label text-label-sm text-on-surface-variant opacity-40">
+                              {formatTime(bm.createdAt)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
           )}
         </div>
       </div>

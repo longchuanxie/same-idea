@@ -6,7 +6,6 @@ import { AnnotationDetailModal } from '@/components/molecules/AnnotationDetailMo
 import { AnnotationList } from '@/components/molecules/AnnotationList';
 import { AnnotationPopup } from '@/components/molecules/AnnotationPopup';
 import { AutoScrollBadge } from '@/components/molecules/AutoScrollBadge';
-import { BookmarkPanel } from '@/components/molecules/BookmarkPanel';
 import { ChapterDrawer } from '@/components/molecules/ChapterDrawer';
 import { ChapterEndPrompt } from '@/components/molecules/ChapterEndPrompt';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
@@ -217,7 +216,6 @@ export const TextReaderPage: React.FC = () => {
   // 书签 & 批注状态
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
-  const [isBookmarkPanelOpen, setIsBookmarkPanelOpen] = useState(false);
   const [isAnnotationListOpen, setIsAnnotationListOpen] = useState(false);
   const [isSearchPanelOpen, setIsSearchPanelOpen] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
@@ -787,7 +785,6 @@ export const TextReaderPage: React.FC = () => {
     if (selectionPopup) { setSelectionPopup(null); return true; }
     if (highlightedAnnotation) { setHighlightedAnnotation(null); return true; }
     if (isBottomBarVisible) { setIsBottomBarVisible(false); return true; }
-    if (isBookmarkPanelOpen) { setIsBookmarkPanelOpen(false); return true; }
     if (isAnnotationListOpen) { setIsAnnotationListOpen(false); return true; }
     if (isSearchPanelOpen) { setIsSearchPanelOpen(false); return true; }
     if (isChapterDrawerOpen) { setIsChapterDrawerOpen(false); return true; }
@@ -1695,7 +1692,7 @@ export const TextReaderPage: React.FC = () => {
 
   // 书签跳转
   const handleBookmarkSelect = useCallback((bm: Bookmark) => {
-    setIsBookmarkPanelOpen(false);
+    setIsAnnotationListOpen(false);
 
     if (bm.chapterIndex === currentChapterIndex) {
       // 同章节：直接定位
@@ -2898,21 +2895,14 @@ export const TextReaderPage: React.FC = () => {
         />
       )}
 
-      {/* 书签面板 */}
-      {isBookmarkPanelOpen && (
-        <BookmarkPanel
-          bookmarks={bookmarks}
-          onSelect={handleBookmarkSelect}
-          onDelete={handleBookmarkDelete}
-          onClose={() => setIsBookmarkPanelOpen(false)}
-        />
-      )}
-
-      {/* 批注列表面板 */}
+      {/* 批注/书签列表面板（tab 切换） */}
       {isAnnotationListOpen && (
         <AnnotationList
           annotations={annotations}
           bookTitle={title}
+          bookmarks={bookmarks}
+          onBookmarkSelect={handleBookmarkSelect}
+          onBookmarkDelete={handleBookmarkDelete}
           onEdit={handleAnnotationEdit}
           onDelete={handleAnnotationDelete}
           onNavigate={handleAnnotationNavigate}
