@@ -24,7 +24,6 @@ const fullSettings = {
   textureIntensity: 50,
   readingDirection: 'ltr' as const,
   pageTurnGestures: true,
-  cloudSync: false,
   fontSize: 18,
   fontFamily: 'literata' as const,
   brightness: 100,

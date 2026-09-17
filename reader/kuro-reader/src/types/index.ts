@@ -120,7 +120,6 @@ export interface UserSettings {
   hideStatusBar: boolean
   readingDirection: 'rtl' | 'ltr'
   pageTurnGestures: boolean
-  cloudSync: boolean
   fontSize: number
   fontFamily: 'literata' | 'inter'
   brightness: number

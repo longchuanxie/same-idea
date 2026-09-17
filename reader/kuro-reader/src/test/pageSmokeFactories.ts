@@ -108,7 +108,6 @@ export function makeAppStoreState(overrides: Record<string, unknown> = {}) {
       textureIntensity: 50,
       readingDirection: 'ltr',
       pageTurnGestures: true,
-      cloudSync: false,
       fontSize: 18,
       fontFamily: 'literata',
       brightness: 100,

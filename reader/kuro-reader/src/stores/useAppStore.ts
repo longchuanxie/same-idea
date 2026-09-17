@@ -39,7 +39,6 @@ const DEFAULT_SETTINGS: UserSettings = {
   hideStatusBar: false,
   readingDirection: 'rtl',
   pageTurnGestures: true,
-  cloudSync: false,
   fontSize: 16,
   fontFamily: 'literata',
   brightness: 100,
