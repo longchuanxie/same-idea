@@ -13,4 +13,6 @@ export const STORAGE_KEYS = {
   HIDDEN_CONTINUE: 'kuro-reader-hidden-continue',
   /** 回望席「今日不再看」：[{id, date}]，跨日自动失效 */
   HIDDEN_REVISITS: 'kuro-reader-hidden-revisits',
+  /** 阅读器底部设置面板上次停留的 tab（排版/外观/更多） */
+  READER_SETTINGS_TAB: 'kuro-reader-settings-tab',
 } as const;

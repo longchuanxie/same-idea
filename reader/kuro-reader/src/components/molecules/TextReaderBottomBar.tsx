@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 
 import { ToggleSwitch } from '@/components/atoms/ToggleSwitch';
+import { STORAGE_KEYS } from '@/constants/storage';
 import { TEXT_READER_FONT_OPTIONS } from '@/constants/textReaderFonts';
 import { PROGRESS_INDETERMINATE } from '@/services/tts/piperEngine';
 import type { PaperType, TextFontFamily, TextAlign, TextReadingMode, TtsEngineOption } from '@/types';
@@ -133,7 +134,23 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
   onClose,
 }) => {
   const paperTypes = getAllPaperTypes();
-  const [activeTab, setActiveTab] = useState<SettingsTab>('typography');
+  // 记忆上次停留 tab：高频项（阅读模式/发音引擎在「更多」）不必每次重新走三层
+  const [activeTab, setActiveTabState] = useState<SettingsTab>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.READER_SETTINGS_TAB);
+      return saved && SETTINGS_TABS.some(({ key }) => key === saved) ? (saved as SettingsTab) : 'typography';
+    } catch {
+      return 'typography';
+    }
+  });
+  const setActiveTab = (tab: SettingsTab) => {
+    setActiveTabState(tab);
+    try {
+      localStorage.setItem(STORAGE_KEYS.READER_SETTINGS_TAB, tab);
+    } catch {
+      // 隐私模式等存储不可用：仅失去记忆，功能不受影响
+    }
+  };
 
   // ── 排版 tab：字号 / 行距 / 字体 / 对齐 / 首行缩进 / 竖排 ──
   const typographyPanel = (
