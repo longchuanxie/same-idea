@@ -69,6 +69,8 @@ export interface ChatJsonOptions {
 }
 
 const DEFAULT_TIMEOUT_MS = 120_000
+/** 模型列表/连接测试是轻量请求，不应久等（chat 补全才是 120s 长任务） */
+const MODELS_TIMEOUT_MS = 15_000
 const EXTRACT_TEMPERATURE = 0.2
 /** 错误响应体回显上限（防超长 HTML 刷屏） */
 const ERROR_BODY_PREVIEW_CHARS = 200
@@ -149,34 +151,43 @@ export async function chatCompletionJson<T>(
 export async function listModels(config: AiProviderConfig): Promise<string[]> {
   const base = normalizeAiBaseUrl(config.baseUrl)
   if (!base) throw new AiRequestError('AI 服务地址未配置')
-  let response: Response
+  // 连接测试/拉列表不能永久挂起：超时与响应体读取都在同一守护内
+  const timeoutController = new AbortController()
+  const timeoutId = window.setTimeout(() => timeoutController.abort(), MODELS_TIMEOUT_MS)
   try {
-    response = await fetch(modelsListUrl(base), {
-      headers: config.apiKey.trim() ? { Authorization: `Bearer ${config.apiKey.trim()}` } : {},
-    })
-  } catch (e) {
-    throw new AiRequestError(`无法连接 AI 服务：${(e as Error).message}`)
-  }
-  if (!response.ok) {
-    const body = await response.text().catch(() => '')
-    throw new AiRequestError(
-      `AI 服务返回 ${response.status}${body ? `：${body.slice(0, ERROR_BODY_PREVIEW_CHARS)}` : ''}`,
-      response.status
-    )
-  }
-  const payload = (await response.json().catch(() => null)) as { data?: unknown } | null
-  if (!payload || !Array.isArray(payload.data)) {
-    throw new AiRequestError('服务没有返回模型列表（可能不支持 /models 接口）')
-  }
-  const ids = new Set<string>()
-  for (const item of payload.data) {
-    if (typeof item === 'string' && item.trim()) ids.add(item.trim())
-    else if (item != null && typeof item === 'object' && typeof (item as { id?: unknown }).id === 'string') {
-      const id = (item as { id: string }).id.trim()
-      if (id) ids.add(id)
+    let response: Response
+    try {
+      response = await fetch(modelsListUrl(base), {
+        headers: config.apiKey.trim() ? { Authorization: `Bearer ${config.apiKey.trim()}` } : {},
+        signal: timeoutController.signal,
+      })
+    } catch (e) {
+      if (timeoutController.signal.aborted) throw new AiRequestError('AI 服务响应超时')
+      throw new AiRequestError(`无法连接 AI 服务：${(e as Error).message}`)
     }
+    if (!response.ok) {
+      const body = await response.text().catch(() => '')
+      throw new AiRequestError(
+        `AI 服务返回 ${response.status}${body ? `：${body.slice(0, ERROR_BODY_PREVIEW_CHARS)}` : ''}`,
+        response.status
+      )
+    }
+    const payload = (await response.json().catch(() => null)) as { data?: unknown } | null
+    if (!payload || !Array.isArray(payload.data)) {
+      throw new AiRequestError('服务没有返回模型列表（可能不支持 /models 接口）')
+    }
+    const ids = new Set<string>()
+    for (const item of payload.data) {
+      if (typeof item === 'string' && item.trim()) ids.add(item.trim())
+      else if (item != null && typeof item === 'object' && typeof (item as { id?: unknown }).id === 'string') {
+        const id = (item as { id: string }).id.trim()
+        if (id) ids.add(id)
+      }
+    }
+    return [...ids].sort((a, b) => a.localeCompare(b))
+  } finally {
+    window.clearTimeout(timeoutId)
   }
-  return [...ids].sort((a, b) => a.localeCompare(b))
 }
 
 /**

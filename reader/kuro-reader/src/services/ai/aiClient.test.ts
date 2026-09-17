@@ -152,4 +152,22 @@ describe('listModels', () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network down')))
     await expect(listModels(baseConfig)).rejects.toThrow('无法连接')
   })
+
+  it('端点无响应时 15s 超时，不永久挂起', async () => {
+    vi.useFakeTimers()
+    try {
+      // 模拟服务端接收连接但不返回：仅在 abort 时 reject
+      vi.stubGlobal('fetch', vi.fn((_: RequestInfo | URL, init?: RequestInit) =>
+        new Promise<Response>((_, reject) => {
+          init?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true })
+        })
+      ))
+      const pending = listModels(baseConfig)
+      const assertion = expect(pending).rejects.toThrow('AI 服务响应超时')
+      await vi.advanceTimersByTimeAsync(15_000)
+      await assertion
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })
