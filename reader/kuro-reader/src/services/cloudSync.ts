@@ -311,6 +311,10 @@ export async function runCloudSync(
   credentials: SyncCredentials,
   local: SyncPayload
 ): Promise<SyncResult> {
+  // 已填用户名却缺密码：与其发 `Basic user:` 让服务器回 401 伪装成鉴权失败，不如提前说清
+  if (credentials.username?.trim() && !credentials.password) {
+    throw new Error('已填写 WebDAV 用户名但密码为空，请补全密码后再同步');
+  }
   const url = buildSyncUrl(credentials.serverAddress);
   const auth = authConfig(credentials);
 

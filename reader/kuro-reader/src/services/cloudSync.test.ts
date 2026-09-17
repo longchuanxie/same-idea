@@ -317,6 +317,14 @@ describe('runCloudSync', () => {
     ).rejects.toBeDefined()
     expect(axios.put).not.toHaveBeenCalled()
   })
+
+  it('username with empty password: fails fast with a clear message instead of sending empty Basic auth', async () => {
+    await expect(
+      runCloudSync({ serverAddress: 'http://nas/dav', username: 'user', password: '' }, makePayload())
+    ).rejects.toThrow('请补全密码')
+    expect(axios.get).not.toHaveBeenCalled()
+    expect(axios.put).not.toHaveBeenCalled()
+  })
 })
 
 describe('applyMergedPayloadToLocal', () => {
