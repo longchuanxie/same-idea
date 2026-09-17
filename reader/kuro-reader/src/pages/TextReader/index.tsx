@@ -1780,44 +1780,65 @@ export const TextReaderPage: React.FC = () => {
 
   // 文本选区检测已迁出至 useTextSelection hook（鼠标拖选/触摸长按/selectionchange 兜底）
 
+  /** 选区归属章：以选区所在 article 的章为准（滚动模式多章同挂），取不到才回退当前章 */
+  const resolveSelectionChapterIndex = useCallback(
+    (sel: Pick<TextSelectionInfo, 'chapterIndex'>): number | null => {
+      const candidate = sel.chapterIndex;
+      if (candidate != null && candidate >= 0 && candidate < chapters.length) return candidate;
+      return currentChapterIndex >= 0 && currentChapterIndex < chapters.length ? currentChapterIndex : null;
+    },
+    [chapters.length, currentChapterIndex]
+  );
+
   // 保存批注：从选区信息构建批注（笔记可为空 = 纯划线）
   const buildAnnotationFromSelection = useCallback((
-    sel: Pick<TextSelectionInfo, 'text' | 'contentOffset' | 'contentEndOffset'>,
+    sel: Pick<TextSelectionInfo, 'text' | 'contentOffset' | 'contentEndOffset' | 'chapterIndex'>,
     note: string,
     style: AnnotationStyle,
     tagIds: string[] = []
   ): Annotation | null => {
-    if (!bookId || !currentChapter) return null;
+    const chapterIndex = resolveSelectionChapterIndex(sel);
+    if (!bookId || chapterIndex == null) return null;
+    const chapter = chapters[chapterIndex];
+    if (!chapter) return null;
 
-    const content = currentChapter.content;
-    // 优先使用从选区 Range 计算的精确偏移，回退到 indexOf
-    const startOffset = sel.contentOffset != null && sel.contentOffset >= 0
-      ? sel.contentOffset
-      : content.indexOf(sel.text);
-    const endOffset = sel.contentEndOffset != null && sel.contentEndOffset >= startOffset
-      ? sel.contentEndOffset
-      : startOffset >= 0 ? startOffset + sel.text.length : 0;
+    // 章内源文本坐标系：渲染层写下的 data-source-start 锚点给出的偏移直接可用；
+    // 取不到锚点（选区跨容器边界等）才回退到内容检索——绝不使用"看起来合理"的猜测值
+    const content = chapter.content;
+    const located = sel.contentOffset != null && sel.contentOffset >= 0
+      ? {
+          startOffset: sel.contentOffset,
+          endOffset: sel.contentEndOffset != null && sel.contentEndOffset >= sel.contentOffset
+            ? sel.contentEndOffset
+            : sel.contentOffset + sel.text.length,
+        }
+      : (() => {
+          const found = content.indexOf(sel.text);
+          return found >= 0 ? { startOffset: found, endOffset: found + sel.text.length } : null;
+        })();
+    if (!located) return null;
 
     return {
       id: `ann-${Date.now()}-${Math.random().toString(RANDOM_ID_RADIX).slice(RANDOM_ID_SLICE_START, RANDOM_ID_SLICE_END)}`,
       bookId,
-      chapterIndex: currentChapterIndex,
-      chapterTitle: currentChapter.title,
+      chapterIndex,
+      chapterTitle: chapter.title,
       selectedText: sel.text,
       note,
-      startOffset: startOffset >= 0 ? startOffset : 0,
-      endOffset,
-      // 稳定锚点：内容表示变化后仍可重定位
+      startOffset: located.startOffset,
+      endOffset: located.endOffset,
+      // 稳定锚点：以界面上真正选中的文本为针，与重挂时的比对口径一致，
+      // 内容表示变化（EPUB 转换管线调整、换行归一）后仍可重定位
       anchor:
-        startOffset >= 0 && endOffset > startOffset
-          ? computeAnnotationAnchor(content, startOffset, endOffset)
+        located.endOffset > located.startOffset
+          ? computeAnnotationAnchor(content, located.startOffset, located.endOffset, sel.text)
           : undefined,
       style,
       tagIds: tagIds.length > 0 ? tagIds : undefined,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-  }, [bookId, currentChapter, currentChapterIndex]);
+  }, [bookId, chapters, resolveSelectionChapterIndex]);
 
   const handleAnnotationSave = useCallback(async (note: string, style: AnnotationStyle, tagIds: string[] = []) => {
     if (!selectionPopup) return;
@@ -1842,8 +1863,9 @@ export const TextReaderPage: React.FC = () => {
       showToast(COPY.vocab.aiNotConfigured);
       return;
     }
-    const chapter = chapters[currentChapterIndex];
-    if (!chapter) return;
+    const chapterIndex = resolveSelectionChapterIndex(sel);
+    const chapter = chapterIndex == null ? undefined : chapters[chapterIndex];
+    if (chapterIndex == null || !chapter) return;
     const offset = sel.contentOffset != null && sel.contentOffset >= 0
       ? sel.contentOffset
       : chapter.content.indexOf(sel.text);
@@ -1868,7 +1890,7 @@ export const TextReaderPage: React.FC = () => {
         y: sel.position.y + SELECTION_POPUP_OFFSET_Y,
       },
       bookId,
-      chapterIndex: currentChapterIndex,
+      chapterIndex,
       chapterTitle: chapter.title,
     });
 
@@ -1883,7 +1905,7 @@ export const TextReaderPage: React.FC = () => {
       );
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps -- 选区/手势 ref 跨渲染稳定，列为依赖无意义
-  }, [bookId, chapters, currentChapterIndex, showToast, title]);
+  }, [bookId, chapters, resolveSelectionChapterIndex, showToast, title]);
 
   // 收进生词本：按词去重（重查是更新不是新增），复习排期经稳定 id 得以保留
   const handleVocabSave = useCallback(async (result: VocabLookupResult) => {
@@ -2140,11 +2162,16 @@ export const TextReaderPage: React.FC = () => {
   }
 
   // 按边界点把文本切段渲染：批注端点与听书范围端点并入边界集合，任一分段内命中状态一致，
-  // 听书范围与批注重叠时按段嵌套（听书 span 包在批注 mark 外层），不会丢文本
+  // 听书范围与批注重叠时按段嵌套（听书 span 包在批注 mark 外层），不会丢文本。
+  //
+  // sourceBase = 本段文本在**章节源文本**中的起点（滚动模式为 0，分页模式为 pageStartOffset）。
+  // 每个分段都写下 data-source-start，使纯文本/TXT 与 Markdown 共用同一套偏移锚点契约——
+  // 选区 → 章内偏移的还原不再有"Markdown 走锚点、纯文本走 document.querySelector 猜测"两套规则。
   const renderTextWithRanges = (
     text: string,
     annotations: Annotation[],
-    speech: { start: number; end: number } | null
+    speech: { start: number; end: number } | null,
+    sourceBase: number = TEXT_PAGE_RESET_INDEX
   ): React.ReactNode[] => {
     const points = new Set<number>([0, text.length]);
     annotations.forEach((a) => {
@@ -2163,7 +2190,9 @@ export const TextReaderPage: React.FC = () => {
       if (segEnd <= segStart) continue;
       const segmentText = text.slice(segStart, segEnd);
       const ann = annotations.find((a) => a.startOffset <= segStart && a.endOffset >= segEnd);
-      let node: React.ReactNode = segmentText;
+      let node: React.ReactNode = (
+        <span key={`src-${segStart}`} data-source-start={sourceBase + segStart}>{segmentText}</span>
+      );
       if (ann) {
         const presentation = getAnnotationPresentation(ann.style, effectiveColor, ann.id);
         node = (
@@ -2177,7 +2206,9 @@ export const TextReaderPage: React.FC = () => {
               setHighlightedAnnotation(ann);
             }}
           >
-            {segmentText}
+            {/* 包住带锚点的 span 而不是替换它：批注命中段同样必须留 [data-source-start]，
+                否则在已高亮的文字上再选词会取不到偏移（与 MarkdownReaderContent 的包法一致） */}
+            {node}
           </mark>
         );
       }
@@ -2191,13 +2222,13 @@ export const TextReaderPage: React.FC = () => {
     return parts;
   };
 
-  // 渲染带批注高亮与听书跟读高亮的文本（滚动模式：章节全文坐标系）
+  // 渲染带批注高亮与听书跟读高亮的文本（滚动模式：章节全文坐标系，sourceBase = 0）
   const renderContentWithAnnotations = (content: string, chapterIdx: number) => {
     const chapterAnns = currentChapterAnnotations.filter(
       (a) => a.chapterIndex === chapterIdx && a.startOffset >= 0 && a.endOffset > a.startOffset
     ).sort((a, b) => a.startOffset - b.startOffset);
-    if (chapterAnns.length === 0 && !speechRange) return content;
-    return renderTextWithRanges(content, chapterAnns, speechRange);
+    // 无批注时也走分段渲染：锚点必须常驻，否则"先选后批"的第一步就没有坐标系可用
+    return renderTextWithRanges(content, chapterAnns, speechRange, TEXT_PAGE_RESET_INDEX);
   };
 
   // 分页模式下渲染批注高亮：将章节级偏移映射为页内偏移
@@ -2221,8 +2252,8 @@ export const TextReaderPage: React.FC = () => {
             : null;
         })()
       : null;
-    if (pageAnns.length === 0 && !pageSpeech) return pageContent;
-    return renderTextWithRanges(pageContent, pageAnns, pageSpeech);
+    // 页内偏移一律叠加 pageStartOffset 落成"章内偏移"，锚点因此与滚动模式同坐标系
+    return renderTextWithRanges(pageContent, pageAnns, pageSpeech, pageStartOffset);
   };
 
   // 计算指定页在完整章节中的起始偏移（通过累积页长度计算，避免 indexOf 在重复内容时定位错误）
@@ -2339,10 +2370,8 @@ export const TextReaderPage: React.FC = () => {
               highlightRange={chapterSpeechRange}
               onAnnotationClick={setHighlightedAnnotation}
             />
-          ) : chapterAnns.length > 0 || chapterSpeechRange ? (
-            renderTextWithRanges(content, chapterAnns, chapterSpeechRange)
           ) : (
-            content
+            renderTextWithRanges(content, chapterAnns, chapterSpeechRange, TEXT_PAGE_RESET_INDEX)
           )}
         </div>
       </div>
@@ -2370,6 +2399,7 @@ export const TextReaderPage: React.FC = () => {
       return (
         <article
           data-reader-article
+          data-chapter-index={currentChapterIndex}
           className={articleClassName}
           style={{
             ...articleStyle,
@@ -2393,6 +2423,7 @@ export const TextReaderPage: React.FC = () => {
           <article
             key={spreadPageIndex}
             data-reader-article
+            data-chapter-index={currentChapterIndex}
             className={cn(
               'h-full min-w-0 flex-1 overflow-hidden px-6 lg:px-10',
               spreadPageIndex === pageIndex && 'border-r border-outline-variant/30',
@@ -2930,6 +2961,7 @@ export const TextReaderPage: React.FC = () => {
               },
               contentOffset: selectionInfo.contentOffset,
               contentEndOffset: selectionInfo.contentEndOffset,
+              chapterIndex: selectionInfo.chapterIndex,
             });
             setSelectionInfo(null);
           }}

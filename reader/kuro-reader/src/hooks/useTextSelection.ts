@@ -1,11 +1,20 @@
 import React, { useEffect, useRef, useState } from 'react';
 
+import {
+  alignOffsetsWithTrimmedText,
+  isNodeInArticle,
+  resolveSelectionScope,
+  type SelectionOffsets,
+} from '@/utils/selectionScope';
+
 /** 浮动批注按钮/批注弹窗共用的选区信息形态 */
 export interface TextSelectionInfo {
   text: string;
   position: { x: number; y: number };
   contentOffset?: number;
   contentEndOffset?: number;
+  /** 选区归属章（滚动模式多章同挂时由渲染层标注给出；缺省表示调用方回退当前章） */
+  chapterIndex?: number;
 }
 
 const MIN_SELECTION_TEXT_LENGTH = 2;
@@ -37,7 +46,10 @@ export interface UseTextSelectionParams {
  * 文本选区检测（TextReader 专用）：
  * - 鼠标拖选（mouseup 后一帧采样）与触摸长按选词（caretRangeFromPoint + 词边界扩展）
  * - selectionchange 防抖兜底：任何来源（含原生选区手柄）的稳定选区都会点亮浮动按钮
- * - 选区偏移计算：优先 Markdown 源码 data-source-start 锚，回退正文 Range 长度
+ * - 选区偏移与归属章统一由 selectionScope 解析（章内源文本坐标系 + [data-chapter-index]）
+ *
+ * 采样只有一条实现路径（captureSelection）：鼠标、长按、selectionchange 三种触发方式
+ * 共用同一份「有效性判定 + 偏移对齐 + 坐标采样」，避免规则在多个副本之间漂移。
  *
  * 页面通过 isSelectingTextRef 抑制选区后的合成 click，通过 lastTouchEndTimeRef
  * 抑制触摸后的点击翻页。
@@ -69,102 +81,67 @@ export function useTextSelection({
       isSelectingTextRef.current = false;
     };
 
+    /** 当前原生选区是否可用于批注（正文内 + 长度达标 + 未跨章） */
+    const isSelectionUsable = (): boolean => {
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed || !sel.toString().trim()) return false;
+      if (!isSelectionLongEnough(sel.toString().trim())) return false;
+      if (!isNodeInArticle(sel.anchorNode)) return false;
+      // 跨章选区无法用单章偏移表达：章内偏移在跨章时不可比，宁可不点亮浮层
+      return !resolveSelectionScope(sel).crossChapter;
+    };
+
+    /**
+     * 采样当前原生选区 → 浮动条数据。
+     * 偏移拿不到锚点时**不给偏移**（contentOffset 留空），由落库侧回退 indexOf；
+     * 给出一个错位的数字比留空更有害。
+     */
+    const captureSelection = (): TextSelectionInfo | null => {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return null;
+
+      const rawText = sel.toString();
+      const text = rawText.trim();
+      if (!isSelectionLongEnough(text)) return null;
+
+      const scope = resolveSelectionScope(sel);
+      const offsets: SelectionOffsets | null = alignOffsetsWithTrimmedText(rawText, text, scope.offsets);
+
+      const rect = sel.getRangeAt(0).getBoundingClientRect();
+      return {
+        text,
+        position: { x: rect.left + rect.width / HALF_DIVISOR, y: rect.top },
+        contentOffset: offsets ? offsets.start : undefined,
+        contentEndOffset: offsets ? offsets.end : undefined,
+        chapterIndex: scope.chapterIndex ?? undefined,
+      };
+    };
+
     const handleMouseUp = () => {
       // 延迟一帧检测选区，确保浏览器已完成选区更新
       requestAnimationFrame(() => {
-        const sel = window.getSelection();
-        if (!sel || sel.isCollapsed || !sel.toString().trim()) {
+        if (!isSelectionUsable()) {
           isSelectingTextRef.current = false;
           return;
         }
-        const text = sel.toString().trim();
-        if (!isSelectionLongEnough(text)) {
+        const info = captureSelection();
+        if (!info) {
           isSelectingTextRef.current = false;
           return;
         }
-
-        const anchorNode = sel.anchorNode;
-        if (!anchorNode) return;
-        let node: Node | null = anchorNode.nodeType === Node.TEXT_NODE
-          ? anchorNode.parentElement
-          : anchorNode as HTMLElement;
-        while (node) {
-          if (node instanceof Element && node.hasAttribute('data-reader-article')) break;
-          node = node.parentNode;
-        }
-        if (!node || !(node instanceof Element)) {
-          isSelectingTextRef.current = false;
-          return;
-        }
-
         isSelectingTextRef.current = true;
-        const range = sel.getRangeAt(0);
-        const rect = range.getBoundingClientRect();
-        const selectionOffsets = computeSelectionOffsets(sel);
-        let contentOffset = selectionOffsets.start;
-        let contentEndOffset = selectionOffsets.end;
-
-        // 修正 trim 造成的偏移：sel.toString() 可能含前导空白，trim 后 text 起始位置后移
-        if (contentOffset >= 0) {
-          const rawSelText = sel.toString();
-          const trimShift = rawSelText.indexOf(text);
-          if (trimShift > 0) contentOffset += trimShift;
-          const trailingTrim = rawSelText.length - trimShift - text.length;
-          if (contentEndOffset >= 0 && trailingTrim > 0) contentEndOffset -= trailingTrim;
-        }
-
-        setSelectionInfo({
-          text,
-          position: { x: rect.left + rect.width / HALF_DIVISOR, y: rect.top },
-          contentOffset: contentOffset >= 0 ? contentOffset : undefined,
-          contentEndOffset: contentEndOffset >= 0 ? contentEndOffset : undefined,
-        });
+        setSelectionInfo(info);
       });
     };
 
-    // 检查选区是否在文章内容区域内
-    const isSelectionInArticle = (): boolean => {
-      const sel = window.getSelection();
-      if (!sel || !sel.anchorNode) return false;
-      let node: Node | null = sel.anchorNode.nodeType === Node.TEXT_NODE
-        ? sel.anchorNode.parentElement
-        : sel.anchorNode as HTMLElement;
-      while (node) {
-        if (node instanceof Element && node.hasAttribute('data-reader-article')) return true;
-        node = node.parentNode;
-      }
-      return false;
-    };
-
-    const showFloatingButton = () => {
-      const sel = window.getSelection();
-      if (!sel || sel.isCollapsed || !sel.toString().trim()) return;
-      const text = sel.toString().trim();
-      if (!isSelectionLongEnough(text)) return;
-      if (!isSelectionInArticle()) return;
-
+    /** 采样并点亮浮动动作条；返回是否成功点亮 */
+    const showFloatingButton = (): boolean => {
+      if (!isSelectionUsable()) return false;
+      const info = captureSelection();
+      if (!info) return false;
       isSelectingTextRef.current = true;
-      const range = sel.getRangeAt(0);
-      const rect = range.getBoundingClientRect();
-      const selectionOffsets = computeSelectionOffsets(sel);
-      let contentOffset = selectionOffsets.start;
-      let contentEndOffset = selectionOffsets.end;
-
-      // 修正 trim 造成的偏移：sel.toString() 可能含前导空白，trim 后 text 起始位置后移
-      if (contentOffset >= 0) {
-        const rawSelText = sel.toString();
-        const trimShift = rawSelText.indexOf(text);
-        if (trimShift > 0) contentOffset += trimShift;
-        const trailingTrim = rawSelText.length - trimShift - text.length;
-        if (contentEndOffset >= 0 && trailingTrim > 0) contentEndOffset -= trailingTrim;
-      }
-
-      setSelectionInfo({
-        text,
-        position: { x: rect.left + rect.width / HALF_DIVISOR, y: rect.top },
-        contentOffset: contentOffset >= 0 ? contentOffset : undefined,
-        contentEndOffset: contentEndOffset >= 0 ? contentEndOffset : undefined,
-      });
+      setSelectionInfo(info);
+      return true;
     };
 
     // 在文本节点中从 offset 向两侧搜索最近的非空白字符位置
@@ -310,8 +287,7 @@ export function useTextSelection({
         if (touchMovedRef.current) return;
 
         // 1. 先检查是否已有选区（真机原生长按选词）
-        const sel = window.getSelection();
-        if (sel && !sel.isCollapsed && isSelectionLongEnough(sel.toString().trim())) {
+        if (isSelectionUsable()) {
           showFloatingButton();
           return;
         }
@@ -338,9 +314,7 @@ export function useTextSelection({
         selectionChangeDebounce = null;
         // 批注编辑弹窗已打开时不干扰
         if (selectionPopupRef.current) return;
-        const sel = window.getSelection();
-        const hasSelection = sel && !sel.isCollapsed && isSelectionLongEnough(sel.toString().trim());
-        if (hasSelection) {
+        if (isSelectionUsable()) {
           // 有效选区 → 等选区稳定后显示浮动批注按钮
           showFloatingButton();
         } else if (selectionInfoRef.current) {
@@ -393,41 +367,4 @@ export function useTextSelection({
     /** 最近 touchend 时刻（抑制触摸后的点击翻页） */
     lastTouchEndTimeRef,
   };
-}
-
-/** 计算选区起始位置在章节内容中的字符偏移（排除章节标题等额外 DOM 元素）：
- *  优先 Markdown 源码 data-source-start 锚（还原源文偏移），回退正文 Range 长度 */
-function computeSelectionOffsets(sel: Selection): { start: number; end: number } {
-  const contentEl = document.querySelector('[data-reader-content]');
-  if (!contentEl || !sel.rangeCount) return { start: -1, end: -1 };
-  const range = sel.getRangeAt(0);
-
-  const getSourceOffset = (container: Node, offset: number): number | null => {
-    const element = container.nodeType === Node.TEXT_NODE
-      ? container.parentElement
-      : container as Element;
-    const sourceElement = element?.closest<HTMLElement>('[data-source-start]');
-    if (!sourceElement) return null;
-
-    const sourceStart = Number(sourceElement.dataset.sourceStart);
-    if (!Number.isFinite(sourceStart)) return null;
-    const localRange = document.createRange();
-    localRange.selectNodeContents(sourceElement);
-    localRange.setEnd(container, offset);
-    return sourceStart + localRange.toString().length;
-  };
-
-  const markdownStart = getSourceOffset(range.startContainer, range.startOffset);
-  const markdownEnd = getSourceOffset(range.endContainer, range.endOffset);
-  if (markdownStart != null && markdownEnd != null) {
-    return { start: markdownStart, end: markdownEnd };
-  }
-
-  const startRange = document.createRange();
-  startRange.selectNodeContents(contentEl);
-  startRange.setEnd(range.startContainer, range.startOffset);
-  const endRange = document.createRange();
-  endRange.selectNodeContents(contentEl);
-  endRange.setEnd(range.endContainer, range.endOffset);
-  return { start: startRange.toString().length, end: endRange.toString().length };
 }

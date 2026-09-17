@@ -166,4 +166,45 @@ describe('TextReader 页面冒烟', () => {
       expect(screen.getByText('页面测试小说')).toBeTruthy()
     })
   })
+
+  it('已高亮段落仍保留 [data-source-start] 锚点（在其上再选词取得到偏移）', async () => {
+    // 章内容：'这是第一章的正文内容，用于页面冒烟断言。'
+    const chapterContent = '这是第一章的正文内容，用于页面冒烟断言。'
+    const start = chapterContent.indexOf('一章的正文内')
+    const selectedText = chapterContent.slice(start, start + 6)
+
+    const { annotationRepo } = await import('@/services/storage/annotationRepo')
+    const getByBookId = annotationRepo.getByBookId as unknown as { mockResolvedValue: (v: unknown) => void }
+    getByBookId.mockResolvedValue([
+      {
+        id: 'ann-anchor-1',
+        bookId: 'b1',
+        chapterIndex: 0,
+        chapterTitle: '第一章',
+        selectedText,
+        note: '',
+        startOffset: start,
+        endOffset: start + selectedText.length,
+        style: 'highlight',
+        createdAt: new Date('2026-09-01'),
+        updatedAt: new Date('2026-09-01'),
+      },
+    ])
+    try {
+      renderPage()
+
+      await waitFor(() => {
+        // 批注命中后正文会被切成多段，故不能按整句文本找节点
+        const mark = document.querySelector('[data-reader-content] mark')
+        expect(mark).toBeTruthy()
+        // 关键不变量：批注用 mark 包住带锚点的 span，而不是把 span 替换成裸 mark。
+        // 一旦退化成裸 mark，在已高亮文字上继续选词就会取不到偏移。
+        const anchor = mark!.querySelector('span[data-source-start]')
+        expect(anchor).not.toBeNull()
+        expect(anchor!.getAttribute('data-source-start')).toBe(String(start))
+      })
+    } finally {
+      getByBookId.mockResolvedValue([])
+    }
+  })
 })

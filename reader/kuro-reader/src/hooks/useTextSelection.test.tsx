@@ -307,4 +307,112 @@ describe('useTextSelection', () => {
     expect(result.current.selectionInfo?.text).toBe('漫画')
     expect(result.current.isSelectingTextRef.current).toBe(true)
   })
+
+  it('无缝续读多章同挂：第 2 章选区报出该章的章内偏移与归属章', async () => {
+    const root = document.createElement('div')
+    root.innerHTML = `
+      <main>
+        <article data-reader-article data-chapter-index="0">
+          <div data-reader-content><span data-source-start="0">第一章正文内容开头</span></div>
+        </article>
+        <article data-reader-article data-chapter-index="1">
+          <div data-reader-content><span data-source-start="0">第二章节的正文内容</span></div>
+        </article>
+      </main>`
+    document.body.appendChild(root)
+    const node = root.querySelectorAll('[data-source-start]')[1].firstChild as Text
+    const { result } = renderHookWithRefs()
+
+    const sel = makeSelection(node, 0, 2)
+    mockRect(sel.getRangeAt(0))
+    vi.spyOn(window, 'getSelection').mockReturnValue(sel)
+
+    fireDocEvent('mouseup')
+    await nextFrame()
+
+    // 回归：旧实现把"文档首个内容容器"当基准，这里会返回 38（前章长度 + 容器间空白）
+    expect(result.current.selectionInfo?.contentOffset).toBe(0)
+    expect(result.current.selectionInfo?.contentEndOffset).toBe(2)
+    expect(result.current.selectionInfo?.chapterIndex).toBe(1)
+  })
+
+  it('分页纯文本：页内偏移叠加 pageStartOffset 落成章内偏移', async () => {
+    const root = document.createElement('div')
+    root.innerHTML = `
+      <article data-reader-article data-chapter-index="0">
+        <div data-reader-content><span data-source-start="1200">本页开头正文</span></div>
+      </article>`
+    document.body.appendChild(root)
+    const node = root.querySelector('span')!.firstChild as Text
+    const { result } = renderHookWithRefs()
+
+    const sel = makeSelection(node, 0, 2)
+    mockRect(sel.getRangeAt(0))
+    vi.spyOn(window, 'getSelection').mockReturnValue(sel)
+
+    fireDocEvent('mouseup')
+    await nextFrame()
+
+    expect(result.current.selectionInfo?.contentOffset).toBe(1200)
+  })
+
+  it('无锚点时不给偏移（宁可留空，也不给错值）', async () => {
+    const root = document.createElement('div')
+    root.innerHTML = `
+      <article data-reader-article>
+        <div data-reader-content>没有锚点的纯文本正文</div>
+      </article>`
+    document.body.appendChild(root)
+    const node = root.querySelector('[data-reader-content]')!.firstChild as Text
+    const { result } = renderHookWithRefs()
+
+    const sel = makeSelection(node, 0, 2)
+    mockRect(sel.getRangeAt(0))
+    vi.spyOn(window, 'getSelection').mockReturnValue(sel)
+
+    fireDocEvent('mouseup')
+    await nextFrame()
+
+    expect(result.current.selectionInfo?.text).toBe('没有')
+    expect(result.current.selectionInfo?.contentOffset).toBeUndefined()
+    expect(result.current.selectionInfo?.contentEndOffset).toBeUndefined()
+  })
+
+  it('跨章选区不点亮浮层', async () => {
+    const root = document.createElement('div')
+    root.innerHTML = `
+      <main>
+        <article data-reader-article data-chapter-index="0">
+          <div data-reader-content><span data-source-start="0">第一章正文</span></div>
+        </article>
+        <article data-reader-article data-chapter-index="1">
+          <div data-reader-content><span data-source-start="0">第二章正文</span></div>
+        </article>
+      </main>`
+    document.body.appendChild(root)
+    const first = root.querySelectorAll('span')[0].firstChild as Text
+    const second = root.querySelectorAll('span')[1].firstChild as Text
+    const { result } = renderHookWithRefs()
+
+    const range = document.createRange()
+    range.setStart(first, 1)
+    range.setEnd(second, 2)
+    mockRect(range)
+    const sel = {
+      isCollapsed: false,
+      rangeCount: 1,
+      anchorNode: first,
+      toString: () => '章正文第',
+      getRangeAt: () => range,
+      removeAllRanges: vi.fn(),
+      addRange: vi.fn(),
+    } as unknown as Selection
+    vi.spyOn(window, 'getSelection').mockReturnValue(sel)
+
+    fireDocEvent('mouseup')
+    await nextFrame()
+
+    expect(result.current.selectionInfo).toBeNull()
+    expect(result.current.isSelectingTextRef.current).toBe(false)
+  })
 })

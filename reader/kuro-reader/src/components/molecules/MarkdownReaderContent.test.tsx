@@ -62,6 +62,47 @@ describe('MarkdownReaderContent', () => {
     expect(screen.getByText('第一段内容。').closest('.speech-reading')).toBeNull()
   })
 
+  it('批注用 mark 包住带锚点的 span，而不是把 span 替换成裸 mark', () => {
+    const markdown = '这是第一章的正文内容，用于锚点断言。'
+    const doc = parseMarkdownDocument(markdown)
+    const phrase = '一章的正文内'
+    const start = doc.text.indexOf(phrase)
+    const end = start + phrase.length
+
+    const { container } = render(
+      <MarkdownReaderContent
+        document={doc}
+        annotations={[
+          {
+            id: 'ann-md-anchor-1',
+            bookId: 'b1',
+            chapterIndex: 0,
+            chapterTitle: '第一章',
+            selectedText: doc.text.slice(start, end),
+            note: '',
+            startOffset: start,
+            endOffset: end,
+            style: 'highlight',
+            createdAt: new Date('2026-09-01'),
+            updatedAt: new Date('2026-09-01'),
+          },
+        ]}
+        color="#222222"
+        firstLineIndent={false}
+        onAnnotationClick={vi.fn()}
+      />
+    )
+
+    // 关键不变量：命中批注的段必须仍是 <mark> 包住 [data-source-start] 的 span。
+    // 一旦退化成裸 <mark>（把 span 顶掉），在已高亮文字上继续选词就取不到偏移，
+    // 表现为浮动动作条不出现 / 落库静默失败——该回归曾在纯文本路径上真实发生过。
+    const mark = container.querySelector('mark')
+    expect(mark).not.toBeNull()
+    const anchor = mark!.querySelector('[data-source-start]')
+    expect(anchor).not.toBeNull()
+    expect(anchor!.getAttribute('data-source-start')).toBe(String(start))
+  })
+
   it('allows safe links and leaves unsafe links inert', () => {
     renderMarkdown('[安全链接](https://example.com) [危险链接](javascript:alert(1))')
 
