@@ -127,6 +127,35 @@ P0-3 属于「装饰层命中后把带锚点的节点**替换**掉」这一类�
 
 ---
 
+## 0.4 P0-4：移动端无法扩选（拖拽手柄整链缺失，真机实测定位）
+
+**症状**：长按能选出（自绘的）一个字，但没有拖拽手柄，选区无法扩大/缩小；动作条出现后更是一切触摸都被吞掉。
+
+**根因（三重叠加，缺一不现）**——全部在 Android 模拟器（API 35 WebView）上用 CDP + `adb input` 真实触摸实测复现：
+
+1. **`contextmenu preventDefault` 连根掐断原生选词管线**。文章区域里拦掉 contextmenu 后，WebView 的原生长按选词（选区+拖拽手柄）整链不再发生（对照实验：仅放行 contextmenu、其余不动，原生选词立即恢复）。原生层 `MainActivity` 只过滤 ActionMode 菜单项，不禁选区——凶手就是 Web 层这一行。
+2. **JS `addRange` 写入的选区没有原生拖拽手柄**。自定义 500ms 定时器与原生选词竞速且总是抢跑（谁后写谁生效），用户拿到的是一份"死"选区。
+3. **选区稳定 600ms 后挂载的全屏透明取消遮罩（z-68）拦截手柄拖拽**。A/B 实证：遮罩在 → 拖柄无效；移除遮罩 → 同一拖拽立即扩选。长按后立即拖（遮罩未挂载）也一直可用。
+
+另有一个真机才有的衍生坑：**Chromium 对原生选区的 tap-collapse 会原地回滚**——外点取消时选区先被折叠，~84ms 后又被 Chromium 恢复（`selectionchange` 记录 `→C→C→复活`），表现为"点一下消不掉"。
+
+**修复**：
+
+| 项 | 落点 |
+| --- | --- |
+| contextmenu 分流：触摸长按放行（原生管线依赖它），鼠标右键（桌面）仍拦截 | `useTextSelection.ts` |
+| 长按原生优先：兜底定时器 500→700ms，命中时若原生选区已就位则**绝不覆写**（保住手柄），只采样点亮动作条；JS 选词降级为原生未就位时的兜底 | `useTextSelection.ts` |
+| 去全屏遮罩 → 文档级捕获 click 外点取消；选区矩形外扩 30px 邻域豁免（盖住手柄触摸）；UI 控件上的点击只取消选区、按钮照常生效（P1-5 顺带解决）；正文空白点击吞掉以免触发翻页/UI 切换 | `SelectionFloatingButton.tsx` |
+| 原生浮动工具栏（Copy/Share/Select all）与自绘动作条叠屏：`onActionModeStarted` 对 `TYPE_FLOATING` 直接 `finish()`（finish 只收菜单不收选区，手柄保留） | `MainActivity.java` |
+| 幽灵回滚清扫：外点取消后 +220ms 补一刀 `removeAllRanges`，以动作条文本为守卫（回滚恢复的是同一段选区；220ms 内不可能完成一次新长按） | `TextReader/index.tsx` |
+
+**验收（模拟器端到端，`scripts/cdp-eval.mjs` 驱动 CDP + `adb input` 真实触摸）**：
+长按 → 原生选区 + 双手柄 + 自绘动作条（系统工具栏不再出现）→ 拖右手柄扩选 `1→6` 字（动作条持续点亮）→ 点「划线」落库（`<mark>` 数 +1、位置正确）→ 点空白一次即取消（选区收起、动作条消失、滚动位置不动）。已知无害边界：行首标点（如"。"）单独被选中时其右手柄拖拽偶发无效，为 Chromium 对该选区边界的固有行为，换任一汉字即正常。
+
+回归测试：`useTextSelection.test.tsx`（15）、`SelectionFloatingButton.test.tsx`（7）——覆盖原生优先不覆写、contextmenu 分流、无遮罩外点取消、选区邻域豁免、动作条内点击放行。全量 868 例绿；`tsc`/`eslint`/令牌守卫绿。
+
+---
+
 ## 1. 验证方式（探针实测）
 
 写了一个临时探针（`vitest` + jsdom，跑完已删除，代码见附录 A），直接对 hook 断言实际产出的 `contentOffset`：

@@ -11,6 +11,8 @@ import {
 export interface TextSelectionInfo {
   text: string;
   position: { x: number; y: number };
+  /** 选区包围盒（视口坐标）：动作条用它豁免选区/手柄邻域的触摸，避免拖柄扩选被当成外点取消 */
+  rect?: { x: number; y: number; width: number; height: number };
   contentOffset?: number;
   contentEndOffset?: number;
   /** 选区归属章（滚动模式多章同挂时由渲染层标注给出；缺省表示调用方回退当前章） */
@@ -28,7 +30,12 @@ const CJK_CHAR_RE = /[\u4e00-\u9fff\u3400-\u4dbf\u3000-\u303f\u3040-\u309f\u30a0
 function isSelectionLongEnough(text: string): boolean {
   return text.length >= MIN_SELECTION_TEXT_LENGTH || (text.length === 1 && CJK_CHAR_RE.test(text));
 }
-const LONG_PRESS_DURATION = 500;
+/** 原生选词兜底延时：Android WebView 原生长按选词（约 500ms）必须优先落位——
+ * JS addRange 写入的选区没有原生拖拽手柄，抢跑会夺走用户的扩选能力（真机实测），
+ * 因此自定义选词延后到原生超时未出现时才兜底 */
+const LONG_PRESS_FALLBACK_DELAY = 700;
+/** contextmenu 归属判定窗口：触摸抬指后该时长内的 contextmenu 视为长按手势产生（放行），否则视为鼠标右键（拦截） */
+const CONTEXTMENU_TOUCH_WINDOW_MS = 1500;
 /** 长按取消位移阈值：慢起滚动前 500ms 内的常见抖动（20px 上下）不该被当成「按住不动」 */
 const LONG_PRESS_THRESHOLD = 24;
 const SELECTION_CHANGE_DEBOUNCE_MS = 100;
@@ -44,7 +51,10 @@ export interface UseTextSelectionParams {
 
 /**
  * 文本选区检测（TextReader 专用）：
- * - 鼠标拖选（mouseup 后一帧采样）与触摸长按选词（caretRangeFromPoint + 词边界扩展）
+ * - 选区来源原生优先：Android WebView 长按选词/拖拽手柄扩选由浏览器接管
+ *   （contextmenu 放行 + 原生层收掉浮动工具栏），selectionchange 稳定后点亮浮动按钮；
+ *   JS 选词（caretRangeFromPoint + 词边界扩展）只作原生未就位时的兜底（无手柄）
+ * - 鼠标拖选在 mouseup 后一帧采样
  * - selectionchange 防抖兜底：任何来源（含原生选区手柄）的稳定选区都会点亮浮动按钮
  * - 选区偏移与归属章统一由 selectionScope 解析（章内源文本坐标系 + [data-chapter-index]）
  *
@@ -111,6 +121,7 @@ export function useTextSelection({
       return {
         text,
         position: { x: rect.left + rect.width / HALF_DIVISOR, y: rect.top },
+        rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
         contentOffset: offsets ? offsets.start : undefined,
         contentEndOffset: offsets ? offsets.end : undefined,
         chapterIndex: scope.chapterIndex ?? undefined,
@@ -221,6 +232,12 @@ export function useTextSelection({
       }
     };
 
+    /** 当前是否已有落在正文内的非折叠选区（原生长按选词已就位的标志） */
+    const hasNativeSelectionInArticle = (): boolean => {
+      const sel = window.getSelection();
+      return !!sel && !sel.isCollapsed && !!sel.toString().trim() && isNodeInArticle(sel.anchorNode);
+    };
+
     // ===== 触摸事件 =====
     const handleTouchStart = (e: TouchEvent) => {
       const target = e.target as HTMLElement;
@@ -240,15 +257,20 @@ export function useTextSelection({
       touchMovedRef.current = false;
       isSelectingTextRef.current = false;
 
-      // 启动长按定时器
+      // 启动长按定时器：原生选词优先（约 500ms 落位），超时未见原生选区才用 JS 选词兜底
       clearLongPress();
       longPressTimerRef.current = setTimeout(() => {
         longPressTimerRef.current = null;
-        if (touchStartPosRef.current) {
-          selectWordAtPoint(touchStartPosRef.current.x, touchStartPosRef.current.y);
+        if (!touchStartPosRef.current) return;
+        // 原生选区已就位 → 绝不覆写（覆写会摧毁原生手柄），只采样点亮动作条
+        if (hasNativeSelectionInArticle()) {
+          showFloatingButton();
+          return;
+        }
+        if (selectWordAtPoint(touchStartPosRef.current.x, touchStartPosRef.current.y)) {
           showFloatingButton();
         }
-      }, LONG_PRESS_DURATION);
+      }, LONG_PRESS_FALLBACK_DELAY);
     };
 
     const handleTouchMove = (e: TouchEvent) => {
@@ -325,13 +347,20 @@ export function useTextSelection({
       }, SELECTION_STABLE_DELAY);
     };
 
-    // 阻止阅读区域内的系统上下文菜单（避免 Google Lens / OCR 图片识别等原生菜单干扰）
-    // 我们通过 selectWordAtPoint + selectionchange 自行管理文本选区，无需依赖原生 ActionMode
+    // 正文区域的 contextmenu 分流处理：
+    // - 触摸长按产生的 contextmenu 必须放行——preventDefault 会连根掐断 WebView 的
+    //   原生选词管线（选区+拖拽手柄都不再出现，扩选能力随之丧失，真机实测复现）；
+    //   原生弹出的浮动工具栏由原生层 MainActivity 对 TYPE_FLOATING 直接 finish。
+    // - 鼠标右键（桌面）仍拦截，避免浏览器原生菜单打断阅读沉浸。
     const handleContextMenu = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (target.closest('[data-reader-article]')) {
-        e.preventDefault();
-      }
+      if (!target.closest('[data-reader-article]')) return;
+      // 手指按下的极短时间内不会有 touchstart 计时之外的来源：触摸产生的 contextmenu
+      // 总是发生在 touchstart 之后；鼠标右键则远离任何 touch 时间戳
+      const touchOriginated =
+        touchStartPosRef.current !== null ||
+        Date.now() - lastTouchEndTimeRef.current < CONTEXTMENU_TOUCH_WINDOW_MS;
+      if (!touchOriginated) e.preventDefault();
     };
 
     document.addEventListener('mousedown', handleMouseDown);

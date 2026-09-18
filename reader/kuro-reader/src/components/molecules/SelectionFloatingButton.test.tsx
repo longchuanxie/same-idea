@@ -6,6 +6,7 @@ import { COPY } from '@/constants/copy'
 
 const PROPS = {
   position: { x: 200, y: 200 },
+  selectionRect: undefined as unknown as { x: number; y: number; width: number; height: number },
   onHighlight: vi.fn(),
   onCopy: vi.fn(),
   onOpen: vi.fn(),
@@ -46,10 +47,33 @@ describe('SelectionFloatingButton', () => {
     expect(onOpen).toHaveBeenCalledTimes(1)
   })
 
-  it('点击空白遮罩触发 onCancel', () => {
+  it('点击动作条外空白触发 onCancel（文档级捕获，无全屏遮罩）', () => {
     const onCancel = vi.fn()
-    const { container } = setup({ onCancel })
-    fireEvent.click(container.firstElementChild as HTMLElement)
+    setup({ onCancel })
+    fireEvent.click(document.body, { clientX: 10, clientY: 600 })
     expect(onCancel).toHaveBeenCalledTimes(1)
+  })
+
+  it('点击选区/手柄邻域不取消（拖柄扩选的触摸不能被当成外点）', () => {
+    const onCancel = vi.fn()
+    setup({
+      onCancel,
+      selectionRect: { x: 100, y: 200, width: 60, height: 20 },
+    })
+    // 选区矩形下方 24px 内 = 原生拖拽手柄所在位置
+    fireEvent.click(document.body, { clientX: 150, clientY: 224 })
+    expect(onCancel).not.toHaveBeenCalled()
+    // 外扩边界之外才取消
+    fireEvent.click(document.body, { clientX: 400, clientY: 400 })
+    expect(onCancel).toHaveBeenCalledTimes(1)
+  })
+
+  it('点击动作条自身不触发 onCancel，动作照常触发', () => {
+    const onCancel = vi.fn()
+    const onHighlight = vi.fn()
+    setup({ onCancel, onHighlight })
+    fireEvent.click(screen.getByRole('button', { name: COPY.annotation.highlightAction }))
+    expect(onHighlight).toHaveBeenCalledTimes(1)
+    expect(onCancel).not.toHaveBeenCalled()
   })
 })

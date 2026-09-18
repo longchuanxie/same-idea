@@ -202,7 +202,7 @@ describe('useTextSelection', () => {
     expect(result.current.selectionInfo).not.toBeNull()
   })
 
-  it('触摸长按选词：定时器到期后按坐标选词并显示浮动按钮', () => {
+  it('触摸长按：原生选区未就位时 700ms 兜底选词并显示浮动按钮', () => {
     vi.useFakeTimers()
     const { article, textNode } = setupArticle('漫画对白内容')
     const { result } = renderHookWithRefs()
@@ -210,7 +210,8 @@ describe('useTextSelection', () => {
     const sel = makeSelection(textNode, 0, 2)
     const range = sel.getRangeAt(0)
     mockRect(range)
-    // touchstart 时还没有选区（收起态），长按定时器到期后才由选词逻辑产生选区
+    // touchstart 时还没有选区（收起态），兜底定时器到期时原生仍未接管（仍收起），
+    // 才由 JS 选词兜底产生选区
     const collapsedSel = {
       isCollapsed: true,
       rangeCount: 0,
@@ -218,24 +219,76 @@ describe('useTextSelection', () => {
     } as unknown as Selection
     const getSelectionSpy = vi
       .spyOn(window, 'getSelection')
-      .mockReturnValueOnce(collapsedSel)
-      .mockReturnValue(sel)
+      .mockReturnValueOnce(collapsedSel) // touchstart：既有选区检查
+      .mockReturnValueOnce(collapsedSel) // 定时器：原生接管检查（未接管）
+      .mockReturnValue(sel) // selectFromPos 写入 + showFloatingButton 采样
     // jsdom 无 caretRangeFromPoint，直接定义
     Object.defineProperty(document, 'caretRangeFromPoint', { value: () => range, configurable: true })
 
     fireTouch(article, 'touchstart', 60, 88)
-    // 未到长按时长：不触发
+    // 未到兜底时长：不触发
     act(() => {
       vi.advanceTimersByTime(400)
     })
     expect(result.current.selectionInfo).toBeNull()
 
     act(() => {
-      vi.advanceTimersByTime(100) // 到达 LONG_PRESS_DURATION(500)
+      vi.advanceTimersByTime(300) // 到达 LONG_PRESS_FALLBACK_DELAY(700)
     })
     expect(getSelectionSpy).toHaveBeenCalled()
     expect(result.current.selectionInfo?.text).toBe('漫画')
     expect(result.current.isSelectingTextRef.current).toBe(true)
+  })
+
+  it('触摸长按：原生选区已就位 → 不覆写选区（保住原生手柄），只点亮动作条', () => {
+    vi.useFakeTimers()
+    const { article, textNode } = setupArticle('漫画对白内容')
+    const { result } = renderHookWithRefs()
+
+    const nativeSel = makeSelection(textNode, 0, 2)
+    mockRect(nativeSel.getRangeAt(0))
+    const collapsedSel = {
+      isCollapsed: true,
+      rangeCount: 0,
+      toString: () => '',
+    } as unknown as Selection
+    vi.spyOn(window, 'getSelection')
+      .mockReturnValueOnce(collapsedSel) // touchstart：无既有选区
+      .mockReturnValue(nativeSel) // 定时器：原生选区已就位 + 采样
+    const caretSpy = vi.fn(() => null)
+    Object.defineProperty(document, 'caretRangeFromPoint', { value: caretSpy, configurable: true })
+
+    fireTouch(article, 'touchstart', 60, 88)
+    act(() => {
+      vi.advanceTimersByTime(700)
+    })
+    // 原生优先：绝不走 JS 选词（覆写会摧毁原生拖拽手柄）
+    expect(caretSpy).not.toHaveBeenCalled()
+    expect(result.current.selectionInfo?.text).toBe('漫画')
+    expect(result.current.selectionInfo?.rect).toEqual({
+      x: 100, y: 200, width: 60, height: 20,
+    })
+    expect(result.current.isSelectingTextRef.current).toBe(true)
+  })
+
+  it('contextmenu 分流：触摸长按放行（原生选词管线依赖它），鼠标右键仍拦截', () => {
+    const { article } = setupArticle('漫画对白内容')
+    renderHookWithRefs()
+
+    // 鼠标右键：远离任何触摸时间戳 → preventDefault
+    const mouseEvent = new MouseEvent('contextmenu', { bubbles: true, cancelable: true })
+    act(() => {
+      article.dispatchEvent(mouseEvent)
+    })
+    expect(mouseEvent.defaultPrevented).toBe(true)
+
+    // 触摸长按：紧跟 touchstart（手指未抬）→ 放行
+    fireTouch(article, 'touchstart', 60, 88)
+    const touchEvent = new MouseEvent('contextmenu', { bubbles: true, cancelable: true })
+    act(() => {
+      article.dispatchEvent(touchEvent)
+    })
+    expect(touchEvent.defaultPrevented).toBe(false)
   })
 
   it('触摸移动超阈值取消长按', () => {

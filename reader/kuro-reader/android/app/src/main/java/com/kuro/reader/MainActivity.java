@@ -28,11 +28,19 @@ public class MainActivity extends BridgeActivity {
     }
 
     /**
-     * Intercept WebView text selection ActionMode to remove Google Lens/Search/Share.
-     * Only keep standard text actions: Copy, Select All, Paste, Cut.
+     * Intercept WebView text selection ActionMode.
+     * - TYPE_FLOATING（Chromium 选区浮动工具栏 Copy/Share/Select all）：直接 finish——
+     *   阅读器的划线/复制/批注动作条由 Web 层自绘，系统条与它叠屏；
+     *   finish 只收菜单，不收选区，原生拖拽手柄保留（扩选依赖手柄）。
+     * - 其余（主 ActionMode）沿用过滤：只留标准文本操作。
      */
     @Override
     public void onActionModeStarted(ActionMode mode) {
+        if (mode.getType() == ActionMode.TYPE_FLOATING) {
+            mode.finish();
+            super.onActionModeStarted(mode);
+            return;
+        }
         Menu menu = mode.getMenu();
         stripToTextActions(menu);
         new Handler(Looper.getMainLooper()).postDelayed(() -> stripToTextActions(menu), MENU_POPULATE_DELAY_MS);

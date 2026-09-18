@@ -110,6 +110,9 @@ const HALF_DIVISOR = 2; // 二分查找中点 / 选区弹窗中心点 / 页边�
 // UI 时序
 const UI_AUTO_HIDE_AFTER_LOAD_MS = 3000;
 const SELECTION_POPUP_MISCLICK_GUARD_MS = 400;
+/** 原生选区幽灵回滚清扫延时：Chromium 对原生选区的 tap-collapse 会在 ~80ms 后原地回滚
+ * （真机实测：外点取消后选区复活、动作条重亮），需补一刀延迟清除 */
+const SELECTION_GHOST_SWEEP_DELAY_MS = 220;
 // 触摸翻页与点按区
 const SWIPE_TAP_SUPPRESS_WINDOW_MS = 500;
 const TAP_ZONE_CENTER_RATIO = 0.25;
@@ -2923,6 +2926,7 @@ export const TextReaderPage: React.FC = () => {
       {selectionInfo && !selectionPopup && !vocabLookup && !translateState && (
         <SelectionFloatingButton
           position={selectionInfo.position}
+          selectionRect={selectionInfo.rect}
           onHighlight={handleQuickHighlight}
           onLookup={
             selectionInfo.text.trim().length <= VOCAB_LOOKUP_MAX_CHARS
@@ -2958,9 +2962,17 @@ export const TextReaderPage: React.FC = () => {
             setSelectionInfo(null);
           }}
           onCancel={() => {
+            // click 到达时 Chromium 已把原生选区折叠为空，幽灵文本只能取自动作条状态
+            const ghostText = selectionInfo.text;
             setSelectionInfo(null);
             window.getSelection()?.removeAllRanges();
             isSelectingTextRef.current = false;
+            // 二段清扫：Chromium 对原生选区的 tap-collapse 会原地回滚，延迟补清；
+            // 文本守卫避免误杀延时窗口内的新选区（重新长按至少需 500ms，物理上到不了 220ms）
+            window.setTimeout(() => {
+              const sel = window.getSelection();
+              if (sel && !sel.isCollapsed && sel.toString().trim() === ghostText) sel.removeAllRanges();
+            }, SELECTION_GHOST_SWEEP_DELAY_MS);
           }}
         />
       )}

@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 
 import { COPY } from '@/constants/copy';
 
 const VIEWPORT_EDGE_PX = 8;
+/** 选区/手柄豁免区外扩：盖住选区行下方的原生拖拽手柄（水滴球在选区矩形下方 ~24px） */
+const SELECTION_EXEMPT_MARGIN_PX = 30;
 const BUTTON_OFFSET_X_PX = 48;
 const BUTTON_OFFSET_Y_PX = 52;
 /** 动作条（划线/复制/查词/批注）的最长宽度 */
@@ -12,6 +14,8 @@ const BUTTON_DIVIDER_CLASS = 'w-px h-5 bg-on-primary/30 my-1';
 
 interface SelectionFloatingButtonProps {
   position: { x: number; y: number };
+  /** 选区包围盒（视口坐标）：其外扩邻域内的触摸属于选区本身或原生拖拽手柄，不触发外点取消 */
+  selectionRect?: { x: number; y: number; width: number; height: number };
   /** 一键划线：零输入直接保存纯高亮 */
   onHighlight: () => void;
   /** 复制选中文本到剪贴板 */
@@ -25,21 +29,70 @@ interface SelectionFloatingButtonProps {
   onCancel: () => void;
 }
 
-/** 选中文本后的浮动动作条（划线 / 复制 / 查词|翻译 / 批注）+ 透明取消遮罩 */
+/** 判断点击点是否落在选区（含手柄）邻域内 */
+function isWithinSelectionZone(
+  point: { x: number; y: number },
+  rect?: { x: number; y: number; width: number; height: number }
+): boolean {
+  if (!rect) return false;
+  const m = SELECTION_EXEMPT_MARGIN_PX;
+  return (
+    point.x >= rect.x - m &&
+    point.x <= rect.x + rect.width + m &&
+    point.y >= rect.y - m &&
+    point.y <= rect.y + rect.height + m
+  );
+}
+
+/**
+ * 选中文本后的浮动动作条（划线 / 复制 / 查词|翻译 / 批注）。
+ *
+ * 外点取消不走全屏遮罩：遮罩会拦下原生选区手柄的拖拽触摸（扩选直接失效，真机实测），
+ * 也会吃掉顶栏/底栏按钮的第一次点击。改为文档级捕获 click：
+ * - 点在动作条内 → 不处理（按钮自身 stopPropagation，不会到 document）；
+ * - 点在选区/手柄邻域 → 不处理（拖柄扩选、点选区本身）；
+ * - 点在 UI 控件上 → 仅取消选区，控件点击照常生效（选区存在时导航可一次点中）；
+ * - 点在正文空白 → 取消选区并吞掉该 click（避免顺手触发翻页/UI 切换）。
+ */
 export const SelectionFloatingButton: React.FC<SelectionFloatingButtonProps> = ({
   position,
+  selectionRect,
   onHighlight,
   onCopy,
   onOpen,
   onLookup,
   onTranslate,
   onCancel,
-}) => (
-  <>
-    {/* 透明遮罩：点击空白区域取消选区 */}
-    <div className="fixed inset-0 z-[68]" onClick={onCancel} />
-    {/* 浮动动作条 */}
+}) => {
+  // 快照最新回调与选区矩形，监听器只在挂载时注册一次
+  const cancelRef = useRef(onCancel);
+  cancelRef.current = onCancel;
+  const zoneRef = useRef(selectionRect);
+  zoneRef.current = selectionRect;
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleDocClick = (e: MouseEvent) => {
+      const node = e.target as Node | null;
+      // 捕获阶段先于动作条按钮的 onClick 执行：点在动作条内直接放行
+      if (containerRef.current && node && containerRef.current.contains(node)) return;
+      if (isWithinSelectionZone({ x: e.clientX, y: e.clientY }, zoneRef.current)) return;
+      const target = e.target as HTMLElement;
+      const isUiControl = !!target.closest('button, a, input, textarea, select, [role="button"], [data-ui-control]');
+      cancelRef.current();
+      if (!isUiControl) {
+        // 正文/空白处的点击只用于取消选区：吞掉，防止同一个 click 继续触发翻页或 UI 切换
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    };
+    document.addEventListener('click', handleDocClick, true);
+    return () => document.removeEventListener('click', handleDocClick, true);
+  }, []);
+
+  return (
     <div
+      ref={containerRef}
       className="fixed z-[69] option-active rounded-full shadow-paper-up flex items-center divide-none animate-fade-in hover:shadow-raised active:scale-95 transition-shadow"
       style={{
         left: Math.max(
@@ -125,5 +178,5 @@ export const SelectionFloatingButton: React.FC<SelectionFloatingButtonProps> = (
         <span className="font-label text-label-sm">{COPY.annotation.annotateAction}</span>
       </button>
     </div>
-  </>
-);
+  );
+};
