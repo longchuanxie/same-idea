@@ -139,6 +139,8 @@ const CAPACITY_SHRINK_STEP_PX = 12;
 const MAX_CAPACITY_SHRINK_PX = 240;
 /** 页容量收缩下限：低于此值不再收缩（正常阅读不可能触达） */
 const MIN_PAGE_CAPACITY_PX = 240;
+/** 分页结果缓存上限（章）：签名命中直接复用，章节往返不再全章重排 */
+const PAGINATION_CACHE_LIMIT = 8;
 /** 整章一页自检阈值：单页文本量超过页面理论容量的倍数即判定测量不可信 */
 const SINGLE_PAGE_SANITY_FACTOR = 1.5;
 const SINGLE_PAGE_MIN_CAPACITY_CHARS = 400;
@@ -218,6 +220,9 @@ export const TextReaderPage: React.FC = () => {
   const [pageDirection, setPageDirection] = useState<'left' | 'right' | null>(null);
   const [isPageAnimating, setIsPageAnimating] = useState(false);
   const measureRef = useRef<HTMLDivElement>(null);
+  /** 分页结果缓存：key = 书+章+全部影响布局的版式签名。命中即复用，
+   *  章节抽屉往返/字号来回调/同签名重跑（resize 抖动）零测量成本 */
+  const paginationCacheRef = useRef(new Map<string, string[]>());
   const markdownMeasureRef = useRef<HTMLDivElement>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
@@ -1100,6 +1105,39 @@ export const TextReaderPage: React.FC = () => {
     const charsPerLineUpper = Math.max(MIN_CHARS_PER_LINE, Math.ceil(contentWidth / Math.max(1, fontSize)) * PAGE_CHAR_DENSITY_FACTOR);
     const pageLengthUpperBound = linesPerPage * charsPerLineUpper;
 
+    // 版式签名缓存：所有影响分页结果的输入都在 key 里（pageHeight 已含自校准收缩，
+    // 其变化自然换 key）。颜色不参与布局，特意不入 key——切主题直接命中缓存
+    const paginationCacheKey = [
+      bookId,
+      currentChapter.id,
+      currentChapter.content.length,
+      fontSize,
+      lineHeight,
+      resolvedFontFamily,
+      textAlign,
+      firstLineIndent,
+      hasMultipleChapters,
+      isColumnsLayoutActive,
+      contentWidth,
+      pageHeight,
+    ].join('|');
+    const cachedPages = paginationCacheRef.current.get(paginationCacheKey);
+    if (cachedPages) {
+      applyPaginationResult(cachedPages);
+      return;
+    }
+    const finishPagination = (pages: string[]) => {
+      const cache = paginationCacheRef.current;
+      // 先删再放维持插入序：超限时淘汰最旧签名
+      cache.delete(paginationCacheKey);
+      cache.set(paginationCacheKey, pages);
+      if (cache.size > PAGINATION_CACHE_LIMIT) {
+        const oldestKey = cache.keys().next().value;
+        if (oldestKey != null) cache.delete(oldestKey);
+      }
+      applyPaginationResult(pages);
+    };
+
     // 等测量容器内的图片完成加载（含失败）再量：图片未就绪时高度是占位值，
     // 会把带图页排得过满，渲染时被 overflow-hidden 裁掉尾部内容。
     // 超时兜底保证分页最终总会执行。
@@ -1285,7 +1323,7 @@ export const TextReaderPage: React.FC = () => {
           Math.floor((pageHeight / Math.max(1, fontSize * lineHeight)) * (contentWidth / Math.max(1, fontSize)))
         );
         if (pages.length > 1 || markdownDocument.text.length <= capacityChars * SINGLE_PAGE_SANITY_FACTOR) {
-          applyPaginationResult(pages.length > 0 ? pages : ['']);
+          finishPagination(pages.length > 0 ? pages : ['']);
           return;
         }
       }
@@ -1298,8 +1336,9 @@ export const TextReaderPage: React.FC = () => {
     measureEl.removeAttribute('style');
     measureEl.replaceChildren();
 
-    applyPaginationResult(pages);
+    finishPagination(pages);
   }, [
+    bookId,
     currentChapter,
     textReadingMode,
     fontSize,
