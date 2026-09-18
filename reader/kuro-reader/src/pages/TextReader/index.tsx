@@ -123,6 +123,10 @@ const PAGE_MEASURE_RESERVED_HEIGHT_PX = 128;
 const PAGE_MEASURE_MAX_WIDTH_PX = 680;
 const PAGE_MEASURE_SIDE_PADDING_PX = 48;
 // 分页二分搜索窗口
+/** 每行字数上界的字符密度倍率：CJK 按字宽 1em 计，拉丁字符约 0.5em，取 2 倍覆盖 */
+const PAGE_CHAR_DENSITY_FACTOR = 2;
+/** 每行字数下限：极窄视口的保底值，防容量上界算成 0 */
+const MIN_CHARS_PER_LINE = 4;
 // 翻书动画
 const BOOK_FLIP_ANIMATION_MS = 900;
 const PAGE_SLIDE_ANIMATION_MS = 650;
@@ -1088,6 +1092,14 @@ export const TextReaderPage: React.FC = () => {
 
     if (pageHeight <= 0 || contentWidth <= 0) return;
 
+    // 单页容量上界（字符）：行数 × 每行字数上界（CJK 按字宽 1em，拉丁约 0.5em，取 2 倍覆盖）。
+    // 二分搜索窗口收到一页量级：单次测量最多渲染一页多的文本而不是剩余全章，
+    // 大章节分页的强制回流字节量从 O(整章) 降到 O(单页)。上界偏松只多费一点测量，
+    // 偏紧只产生略松的页（每页仍经 fitsPage 验证），两端都不影响正确性。
+    const linesPerPage = Math.max(1, Math.ceil(pageHeight / Math.max(1, fontSize * lineHeight)));
+    const charsPerLineUpper = Math.max(MIN_CHARS_PER_LINE, Math.ceil(contentWidth / Math.max(1, fontSize)) * PAGE_CHAR_DENSITY_FACTOR);
+    const pageLengthUpperBound = linesPerPage * charsPerLineUpper;
+
     // 等测量容器内的图片完成加载（含失败）再量：图片未就绪时高度是占位值，
     // 会把带图页排得过满，渲染时被 overflow-hidden 裁掉尾部内容。
     // 超时兜底保证分页最终总会执行。
@@ -1242,7 +1254,7 @@ export const TextReaderPage: React.FC = () => {
               if (fitsPage(remainingText, includeChapterTitle, blockContext)) break;
 
               let low = MIN_TEXT_PAGE_LENGTH;
-              let high = remainingText.length;
+              let high = Math.min(remainingText.length, pageLengthUpperBound);
               let best = MIN_TEXT_PAGE_LENGTH;
               while (low <= high) {
                 const mid = Math.floor((low + high) / HALF_DIVISOR);
@@ -1279,7 +1291,9 @@ export const TextReaderPage: React.FC = () => {
       }
     }
 
-    const pages = splitTextIntoPages(currentChapter.content, fitsPage);
+    const pages = splitTextIntoPages(currentChapter.content, fitsPage, {
+      maxPageLength: pageLengthUpperBound,
+    });
 
     measureEl.removeAttribute('style');
     measureEl.replaceChildren();

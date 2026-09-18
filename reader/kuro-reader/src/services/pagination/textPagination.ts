@@ -11,6 +11,17 @@ export const MIN_TEXT_PAGE_LENGTH = 1;
 /** 二分中点 */
 const HALF_DIVISOR = 2;
 
+/** 单页容量上界的默认值：未提供剪枝提示时不设限 */
+const UNBOUNDED_PAGE_LENGTH = Number.POSITIVE_INFINITY;
+
+export interface SplitTextIntoPagesOptions {
+  /** 单页可容纳字符数的上界（调用方按视口尺寸估算）：
+   *  二分搜索窗口从 [1, 剩余全文] 收窄到 [1, 上界]，单次测量的渲染量
+   *  从 O(整章剩余) 降到 O(单页)——十万字章节分页的强制回流字节量降两个数量级。
+   *  上界偏小时只产生略松的页（每页仍经 fitsPage 验证，绝不溢出），不影响正确性。 */
+  maxPageLength?: number;
+}
+
 export interface BreakSearchWindow {
   ratio: number;
   min: number;
@@ -66,28 +77,36 @@ export function findPreferredBreak(text: string, best: number, search: BreakSear
 
 /**
  * 按页容量顺序切分整章纯文本：
- * 每页先整段尝试，放不下则二分找最大前缀，再回找句读微调断点。
+ * 每页先整段尝试，放不下则二分找最大前缀（窗口受 maxPageLength 剪枝），
+ * 再回找句读微调断点。
  *
  * @param content 章节全文
  * @param fitsPage (pageText, isFirstPage) => 是否放得进一页（首页可能含章节标题）
+ * @param options.maxPageLength 单页容量上界（字符），用于收窄二分窗口
  */
 export function splitTextIntoPages(
   content: string,
-  fitsPage: (pageText: string, isFirstPage: boolean) => boolean
+  fitsPage: (pageText: string, isFirstPage: boolean) => boolean,
+  options: SplitTextIntoPagesOptions = {}
 ): string[] {
+  const pageLengthBound = options.maxPageLength != null && options.maxPageLength > 0
+    ? options.maxPageLength
+    : UNBOUNDED_PAGE_LENGTH;
   const pages: string[] = [];
   let remaining = content;
 
   while (remaining.length > 0) {
     const isFirstPage = pages.length === 0;
 
-    if (fitsPage(remaining, isFirstPage)) {
+    // 整章直试仅在剩余 ≤ 上界时进行：剩余超过上界时单页必放不下（fits 对前缀单调），
+    // 跳过可让全部测量的渲染量都收在一页量级；上界估计病态偏小时最多多切一页，不影响正确性
+    if (remaining.length <= pageLengthBound && fitsPage(remaining, isFirstPage)) {
       pages.push(remaining);
       break;
     }
 
     let low = MIN_TEXT_PAGE_LENGTH;
-    let high = remaining.length;
+    let high = Math.min(remaining.length, pageLengthBound);
     let best = 0;
 
     while (low <= high) {

@@ -69,4 +69,36 @@ describe('splitTextIntoPages', () => {
     const pages = splitTextIntoPages(text, () => false)
     expect(pages.join('')).toBe(text)
   })
+
+  it('maxPageLength 剪枝二分窗口：所有测量文本不超过上界（整章直试一并跳过）', () => {
+    const fits = (t: string) => t.length <= 8
+    const measured: number[] = []
+    const spyFits = (t: string) => {
+      measured.push(t.length)
+      return fits(t)
+    }
+    const text = '甲乙丙丁。'.repeat(50) // 250 字符
+    const pages = splitTextIntoPages(text, spyFits, { maxPageLength: 12 })
+    expect(pages.join('')).toBe(text)
+    // 剩余超过上界时整章直试被跳过：任何一次测量的渲染量都不超过一页上界
+    expect(Math.max(...measured)).toBeLessThanOrEqual(12)
+    for (const page of pages) expect(page.length).toBeLessThanOrEqual(8)
+  })
+
+  it('宽松上界与无上界产出完全相同的页面', () => {
+    const fits = (t: string) => t.length <= 7
+    const text = '春风又绿江南岸。明月何时照我还。'
+    expect(splitTextIntoPages(text, fits, { maxPageLength: 999 })).toEqual(
+      splitTextIntoPages(text, fits)
+    )
+  })
+
+  it('上界偏紧时页面只松不溢：每页仍全部通过 fitsPage 且覆盖全文', () => {
+    // 真实容量 6，上界给 4：每页 ≤4 字，切分点仍优先句读
+    const fits = (t: string) => t.length <= 6
+    const text = '东风夜放花千树。更吹落、星如雨。'
+    const pages = splitTextIntoPages(text, fits, { maxPageLength: 4 })
+    expect(pages.join('')).toBe(text)
+    for (const page of pages) expect(page.length).toBeLessThanOrEqual(4)
+  })
 })
