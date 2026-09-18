@@ -27,4 +27,13 @@ describe('Notes 页面冒烟', () => {
     expect(await screen.findByText('墙上还没有手记')).toBeTruthy()
     expect(holder.library.loadBooks).toHaveBeenCalled()
   })
+
+  it('?bookId= 深链按本书初始化筛选（渲染不崩）', async () => {
+    render(
+      <MemoryRouter initialEntries={['/notes?bookId=b1']}>
+        <NotesPage />
+      </MemoryRouter>
+    )
+    expect(await screen.findByText('墙上还没有手记')).toBeTruthy()
+  })
 })

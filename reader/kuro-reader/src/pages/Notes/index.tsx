@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { NotesOutlineDialog, type NotesOutlineDialogState } from '@/components/molecules/NotesOutlineDialog';
 import { COPY } from '@/constants/copy';
@@ -42,8 +42,13 @@ const KIND_LABELS: Record<AnnotationKind, string> = {
 export const NotesPage: React.FC = () => {
   const navigate = useNavigate();
   const { books, tags, loadBooks } = useLibraryStore();
+  const [searchParams] = useSearchParams();
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
-  const [filter, setFilter] = useState<AnnotationFilter>(EMPTY_ANNOTATION_FILTER);
+  // ?bookId= 深链（档案卡「查看全部手记」）：只作初始筛选，用户仍可切换
+  const [filter, setFilter] = useState<AnnotationFilter>(() => {
+    const bookId = searchParams.get('bookId');
+    return bookId ? { ...EMPTY_ANNOTATION_FILTER, bookId } : EMPTY_ANNOTATION_FILTER;
+  });
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [outline, setOutline] = useState<NotesOutlineDialogState | null>(null);
 

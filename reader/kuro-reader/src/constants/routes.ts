@@ -116,6 +116,11 @@ export function vocabularyPath(): string {
   return '/vocabulary';
 }
 
+/** 摘抄墙路径；bookId 可选——档案卡「查看全部手记」按本书筛选直达 */
+export function notesPath(bookId?: string): string {
+  return bookId ? `/notes?bookId=${encodeURIComponent(bookId)}` : '/notes';
+}
+
 /** 问藏书的路径（知识库聚合页入口跳转用） */
 export function askPath(): string {
   return '/ask';

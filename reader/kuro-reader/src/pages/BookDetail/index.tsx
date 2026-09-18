@@ -11,7 +11,7 @@ import { CitationDialog } from '@/components/molecules/CitationDialog';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
 import { KnowledgeSection } from '@/components/molecules/knowledge/KnowledgeSection';
 import { COPY } from '@/constants/copy';
-import { ROUTES, readerPathForBook } from '@/constants/routes';
+import { ROUTES, notesPath, readerPathForBook } from '@/constants/routes';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { useHistoryBack } from '@/hooks/useHistoryBack';
 import { annotationRepo } from '@/services/storage/annotationRepo';
@@ -500,7 +500,6 @@ export const BookDetailPage: React.FC = () => {
                 <span className="font-label text-label-sm text-on-surface-variant">
                   共 {book.chapters.length} {book.format === 'text' ? '章' : '话'}
                 </span>
-                <span className="material-symbols-outlined text-icon-md text-on-surface-faint">keyboard_arrow_down</span>
               </span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -571,13 +570,22 @@ export const BookDetailPage: React.FC = () => {
                   </button>
                 ))}
             </div>
-            <button
-              className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1.5"
-              onClick={() => void handleExportAnnotations()}
-            >
-              <span className="material-symbols-outlined text-icon-sm">ios_share</span>
-              导出全部 Markdown
-            </button>
+            <div className="flex items-center gap-4">
+              <button
+                className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1.5"
+                onClick={() => navigate(notesPath(book.id))}
+              >
+                查看全部
+                <span className="material-symbols-outlined text-icon-sm">chevron_right</span>
+              </button>
+              <button
+                className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1.5"
+                onClick={() => void handleExportAnnotations()}
+              >
+                <span className="material-symbols-outlined text-icon-sm">ios_share</span>
+                导出全部 Markdown
+              </button>
+            </div>
           </section>
         )}
       </main>
@@ -585,7 +593,11 @@ export const BookDetailPage: React.FC = () => {
       <ConfirmDialog
         isOpen={confirmDelete}
         title={`把《${book.title}》从馆中移除？`}
-        message={`它的 ${annotations.length} 条手记与阅读进度会一并消失。`}
+        message={
+          annotations.length > 0
+            ? `它的 ${annotations.length} 条手记与阅读进度会一并消失。`
+            : '它的阅读进度会一并消失。'
+        }
         confirmLabel="移除"
         cancelLabel="留下"
         variant="danger"

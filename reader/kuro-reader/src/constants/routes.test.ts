@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest'
 import {
   ANNOTATION_QUERY_PARAM,
   knowledgeSourcePath,
+  notesPath,
   parseGotoParam,
   readerPathForBook,
   textReaderPath,
@@ -32,6 +33,12 @@ describe('批注直达路由', () => {
     expect(textReaderPath('b1', undefined, 'ann 100%')).toBe(
       `/text-reader/b1?${ANNOTATION_QUERY_PARAM}=ann%20100%25`
     )
+  })
+
+  it('notesPath 无参落摘抄墙，带 bookId 时按本书筛选深链', () => {
+    expect(notesPath()).toBe('/notes')
+    expect(notesPath('b1')).toBe('/notes?bookId=b1')
+    expect(notesPath('weird id/1')).toBe('/notes?bookId=weird%20id%2F1')
   })
 })
 
