@@ -1118,7 +1118,8 @@ export const TextReaderPage: React.FC = () => {
     measureEl.style.fontSize = `${fontSize}px`;
     measureEl.style.lineHeight = String(lineHeight);
     measureEl.style.fontFamily = resolvedFontFamily;
-    measureEl.style.color = effectiveColor;
+    // 注意：不设 color——颜色不影响布局，设了就会把它拖进分页依赖，
+    // 切主题/纸色会触发无谓的全章重排
     measureEl.style.whiteSpace = 'normal';
     measureEl.style.wordBreak = 'break-word';
     measureEl.style.boxSizing = 'border-box';
@@ -1177,7 +1178,6 @@ export const TextReaderPage: React.FC = () => {
       markdownMeasureEl.style.fontSize = `${fontSize}px`;
       markdownMeasureEl.style.lineHeight = String(lineHeight);
       markdownMeasureEl.style.fontFamily = resolvedFontFamily;
-      markdownMeasureEl.style.color = effectiveColor;
       markdownMeasureEl.style.textAlign = textAlign === 'justify' ? 'justify' : 'left';
 
       const measuredBlocks = Array.from(
@@ -1291,7 +1291,6 @@ export const TextReaderPage: React.FC = () => {
     fontSize,
     lineHeight,
     resolvedFontFamily,
-    effectiveColor,
     textAlign,
     hasMultipleChapters,
     firstLineIndent,
