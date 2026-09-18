@@ -33,7 +33,7 @@ export const SpeechBadge: React.FC<SpeechBadgeProps> = ({
         </span>
       )}
       <button
-        className="w-7 h-7 rounded-full flex items-center justify-center text-on-primary hover:bg-on-primary/20 transition-colors"
+        className="w-11 h-11 rounded-full flex items-center justify-center text-on-primary hover:bg-on-primary/20 transition-colors"
         onClick={onCycleRate}
         aria-label="切换倍速"
         data-ui-control
@@ -41,7 +41,7 @@ export const SpeechBadge: React.FC<SpeechBadgeProps> = ({
         <span className="material-symbols-outlined text-icon-sm">speed</span>
       </button>
       <button
-        className="w-7 h-7 rounded-full flex items-center justify-center text-on-primary hover:bg-on-primary/20 transition-colors"
+        className="w-11 h-11 rounded-full flex items-center justify-center text-on-primary hover:bg-on-primary/20 transition-colors"
         onClick={onPauseResume}
         aria-label={paused ? '继续播报' : '暂停播报'}
         data-ui-control
@@ -49,7 +49,7 @@ export const SpeechBadge: React.FC<SpeechBadgeProps> = ({
         <span className="material-symbols-outlined text-[18px]">{paused ? 'play_arrow' : 'pause'}</span>
       </button>
       <button
-        className="w-7 h-7 rounded-full flex items-center justify-center text-on-primary hover:bg-on-primary/20 transition-colors"
+        className="w-11 h-11 rounded-full flex items-center justify-center text-on-primary hover:bg-on-primary/20 transition-colors"
         onClick={onStop}
         aria-label="停止听书"
         data-ui-control
