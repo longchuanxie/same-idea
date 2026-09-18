@@ -8,6 +8,7 @@ export const COPY = {
     backupVersionUnsupported: '这份备份来得太早——版本不受支持',
     backupRestored: '馆藏已从备份恢复',
     backupBroken: '这份备份打不开——文件可能损坏或格式不对',
+    backupRestoreFailed: '恢复中途失败，本地数据可能只恢复了一部分——请重试或换一份备份文件',
     /** 手记 */
     noAnnotations: '这本书还没有手记。读的时候，长按一句话就能把它贴上墙',
     /** 馆务 */

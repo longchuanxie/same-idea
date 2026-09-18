@@ -250,84 +250,103 @@ export const SettingsPage: React.FC = () => {
 
   /** 用户确认后执行覆盖恢复 */
   const restoreBackup = async (data: PendingBackup) => {
-    if (data.settings) updateSettings(data.settings);
-
-    // 阅读进度：覆盖写入 IndexedDB 并刷新内存状态
-    const importedProgress: Record<string, ReadingProgress> = data.readingProgress || {};
-    const existingProgress = await progressRepo.getAll();
-    await Promise.all(existingProgress.map((p) => progressRepo.remove(p.bookId)));
-    await Promise.all(Object.values(importedProgress).map((p) => progressRepo.save(p)));
-
-    // 书签与批注（v2 备份起包含）
-    if (Array.isArray(data.bookmarks)) {
-      await bookmarkRepo.deleteAll();
+    try {
+      // 阅读进度：覆盖写入 IndexedDB 并刷新内存状态
+      const importedProgress: Record<string, ReadingProgress> = data.readingProgress || {};
+      const existingProgress = await progressRepo.getAll();
+      await Promise.all(existingProgress.map((p) => progressRepo.remove(p.bookId)));
       await Promise.all(
-        (data.bookmarks as Bookmark[]).map((b) =>
-          bookmarkRepo.add({ ...b, createdAt: new Date(b.createdAt) })
-        )
+        Object.values(importedProgress)
+          .filter((p) => p && typeof p.bookId === 'string')
+          .map((p) => progressRepo.save(p))
       );
-    }
-    if (Array.isArray(data.annotations)) {
-      await annotationRepo.deleteAll();
-      await Promise.all(
-        (data.annotations as Annotation[]).map((a) =>
-          annotationRepo.add({
-            ...a,
-            createdAt: new Date(a.createdAt),
-            updatedAt: new Date(a.updatedAt),
-          })
-        )
-      );
-    }
 
-    // 知识库产物（v4 备份起包含；旧备份无此字段则保留本地）
-    if (Array.isArray(data.knowledgeArtifacts)) {
-      await knowledgeRepo.deleteAll();
-      await Promise.all(
-        (data.knowledgeArtifacts as KnowledgeArtifact[]).map((a) =>
-          knowledgeRepo.save({
-            ...a,
-            createdAt: new Date(a.createdAt),
-            updatedAt: new Date(a.updatedAt),
-          })
-        )
-      );
-    }
+      // 书签与批注（v2 备份起包含）；缺 id 的坏记录跳过，不让单条脏数据中断整体恢复
+      if (Array.isArray(data.bookmarks)) {
+        await bookmarkRepo.deleteAll();
+        await Promise.all(
+          (data.bookmarks as Bookmark[])
+            .filter((b) => b && typeof b.id === 'string')
+            .map((b) => bookmarkRepo.add({ ...b, createdAt: new Date(b.createdAt) }))
+        );
+      }
+      if (Array.isArray(data.annotations)) {
+        await annotationRepo.deleteAll();
+        await Promise.all(
+          (data.annotations as Annotation[])
+            .filter((a) => a && typeof a.id === 'string')
+            .map((a) =>
+              annotationRepo.add({
+                ...a,
+                createdAt: new Date(a.createdAt),
+                updatedAt: new Date(a.updatedAt),
+              })
+            )
+        );
+      }
 
-    // 生词本与复习卡（v5 备份起包含；旧备份无此字段则保留本地）
-    if (Array.isArray(data.vocabEntries)) {
-      await vocabRepo.deleteAll();
-      await Promise.all(
-        (data.vocabEntries as VocabEntry[]).map((entry) =>
-          vocabRepo.save({
-            ...entry,
-            createdAt: new Date(entry.createdAt),
-            updatedAt: new Date(entry.updatedAt),
-          })
-        )
-      );
-    }
-    if (Array.isArray(data.reviewCards)) {
-      await reviewCardRepo.deleteAll();
-      await Promise.all(
-        (data.reviewCards as ReviewCard[]).map((card) =>
-          reviewCardRepo.save({
-            ...card,
-            createdAt: new Date(card.createdAt),
-            updatedAt: new Date(card.updatedAt),
-          })
-        )
-      );
-    }
+      // 知识库产物（v4 备份起包含；旧备份无此字段则保留本地）
+      if (Array.isArray(data.knowledgeArtifacts)) {
+        await knowledgeRepo.deleteAll();
+        await Promise.all(
+          (data.knowledgeArtifacts as KnowledgeArtifact[])
+            .filter((a) => a && typeof a.id === 'string')
+            .map((a) =>
+              knowledgeRepo.save({
+                ...a,
+                createdAt: new Date(a.createdAt),
+                updatedAt: new Date(a.updatedAt),
+              })
+            )
+        );
+      }
 
-    await useLibraryStore.getState().loadBooks();
+      // 生词本与复习卡（v5 备份起包含；旧备份无此字段则保留本地）
+      if (Array.isArray(data.vocabEntries)) {
+        await vocabRepo.deleteAll();
+        await Promise.all(
+          (data.vocabEntries as VocabEntry[])
+            .filter((entry) => entry && typeof entry.id === 'string')
+            .map((entry) =>
+              vocabRepo.save({
+                ...entry,
+                createdAt: new Date(entry.createdAt),
+                updatedAt: new Date(entry.updatedAt),
+              })
+            )
+        );
+      }
+      if (Array.isArray(data.reviewCards)) {
+        await reviewCardRepo.deleteAll();
+        await Promise.all(
+          (data.reviewCards as ReviewCard[])
+            .filter((card) => card && typeof card.id === 'string')
+            .map((card) =>
+              reviewCardRepo.save({
+                ...card,
+                createdAt: new Date(card.createdAt),
+                updatedAt: new Date(card.updatedAt),
+              })
+            )
+        );
+      }
 
-    // 阅读时长簿（v3 备份起包含；旧备份无此字段则保留本地）
-    if (data.stats && Array.isArray(data.stats.readingSessions)) {
-      useStatsStore.getState().restoreStats(data.stats);
+      await useLibraryStore.getState().loadBooks();
+
+      // 阅读时长簿（v3 备份起包含；旧备份无此字段则保留本地）
+      if (data.stats && Array.isArray(data.stats.readingSessions)) {
+        useStatsStore.getState().restoreStats(data.stats);
+      }
+
+      // 设置最后生效：恢复中途失败时不留下"设置已改、数据没到"的混合状态
+      if (data.settings) updateSettings(data.settings);
+
+      toast(COPY.toast.backupRestored);
+    } catch {
+      // 恢复失败必须出声：此时本地可能只写入了一半，提示用户重试
+      toast(COPY.toast.backupRestoreFailed);
+      await useLibraryStore.getState().loadBooks();
     }
-
-    toast(COPY.toast.backupRestored);
   };
 
   const handleImportData = (e: React.ChangeEvent<HTMLInputElement>) => {
