@@ -19,7 +19,8 @@ export const resolveNav = (pathname: string): NavItem => {
 };
 
 export interface AppBarConfig {
-  variant: 'home' | 'default' | 'back' | 'detail';
+  /** none = 页面自绘页头（子书库页有带重命名编辑的专属页头，不叠加通用顶栏） */
+  variant: 'home' | 'default' | 'back' | 'detail' | 'none';
   title?: string;
 }
 
@@ -31,7 +32,7 @@ export const getAppBarConfig = (pathname: string): AppBarConfig => {
     return { variant: 'default', title: '书库' };
   }
   if (pathname.startsWith('/library/')) {
-    return { variant: 'back', title: '子书库' };
+    return { variant: 'none' };
   }
   if (pathname === '/import') {
     return { variant: 'back', title: '导入书籍' };

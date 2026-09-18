@@ -83,7 +83,7 @@ export const MainLayout: React.FC = () => {
             sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-60'
           )}
         >
-          <TopAppBar variant={variant} title={title} />
+          {variant !== 'none' && <TopAppBar variant={variant} title={title} />}
           <main className="pb-32 md:pb-24 lg:pb-12">
             <Outlet />
           </main>

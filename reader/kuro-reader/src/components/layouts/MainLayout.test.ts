@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveNav } from '@/components/layouts/mainLayoutChrome';
+import { getAppBarConfig, resolveNav } from '@/components/layouts/mainLayoutChrome';
 
 describe('resolveNav 底栏高亮归属', () => {
   it('一级路由归属各自的底栏 tab', () => {
@@ -25,5 +25,12 @@ describe('resolveNav 底栏高亮归属', () => {
   it('统计归属首页、检索归属书库（就近入口域）', () => {
     expect(resolveNav('/stats')).toBe('home');
     expect(resolveNav('/search')).toBe('library');
+  });
+});
+
+describe('getAppBarConfig 顶栏配置', () => {
+  it('子书库页不叠加通用顶栏（页面自带带重命名编辑的专属页头，防双标题双返回）', () => {
+    expect(getAppBarConfig('/library')).toEqual({ variant: 'default', title: '书库' });
+    expect(getAppBarConfig('/library/sub-1')).toEqual({ variant: 'none' });
   });
 });
