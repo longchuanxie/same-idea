@@ -12,11 +12,15 @@ type PiperOpfsWriter = {
   writeBlob: (url: string, blob: Blob) => Promise<void>;
 };
 
-/** 模型文件源：HuggingFace 直连在部分网络不可达（fetch failed），自动切换镜像 */
-const MODEL_SOURCE_ORIGINS = [
-  'https://huggingface.co/diffusionstudio/piper-voices/resolve/main',
-  'https://hf-mirror.com/diffusionstudio/piper-voices/resolve/main',
-];
+/** 模型仓（Piper 官方音色库镜像） */
+const MODEL_REPO = 'diffusionstudio/piper-voices';
+/** writeBlob 的存储键按此规范 URL 的文件名推导，必须保持稳定 */
+const MODEL_CANONICAL_BASE = `https://huggingface.co/${MODEL_REPO}/resolve/main`;
+/** 模型文件源顺序：HF 直连（官方 CDN 固定 CORS，部分网络不可达）→ hf-mirror（国内可达，
+ *  但其 /resolve 的 307 在 Chromium cors 模式下复检必败——实测，需经 revision API 走
+ *  /api/resolve-cache 直出） */
+const MODEL_HF_ORIGIN = `https://huggingface.co/${MODEL_REPO}`;
+const MODEL_MIRROR_ORIGIN = 'https://hf-mirror.com';
 /** 模型相对路径（与库内 PATH_MAP[voiceId] 一致） */
 const MODEL_RELATIVE_PATH = 'zh/zh_CN/huayan/medium/zh_CN-huayan-medium.onnx';
 /** 单源连接超时：超时未响应即切换下一源（进入流式读取后不再限时） */
@@ -101,21 +105,57 @@ async function ensureModelReady(): Promise<void> {
 }
 
 /** 按源顺序拉取模型文件。每源两级尝试：
- *  1) window.fetch 流式（有细粒度进度，但受源站 CORS 限制——hf-mirror 不带 ACAO 头会失败）
+ *  1) window.fetch 流式（有细粒度进度；受源站 CORS 限制）
  *  2) CapacitorHttp 原生请求（无 CORS 限制，无细粒度进度，经 onIndeterminate 通知） */
+type ModelSource = {
+  label: string;
+  /** 原生兜底通道的直拼 URL 基座（无 CORS，307 也能跟） */
+  origin: string;
+  /** 解析出 fetch 流式可用的最终 URL；失败时回退 origin 直拼 */
+  resolveUrl: (relPath: string, signal: AbortSignal) => Promise<string>;
+};
+
+/** hf-mirror：/resolve 307 跳转的 CORS 复检在 Chromium 下必败（本地实测），
+ *  经 revision API 拿 sha 后走 /api/resolve-cache 直出（单跳 302 到 CDN，实测可过） */
+async function mirrorDirectUrl(relPath: string, signal: AbortSignal): Promise<string> {
+  const res = await fetch(`${MODEL_MIRROR_ORIGIN}/api/models/${MODEL_REPO}/revision/main`, {
+    signal,
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const info = (await res.json()) as { sha?: string };
+  if (!info.sha) throw new Error('镜像 revision API 未返回 sha');
+  return `${MODEL_MIRROR_ORIGIN}/api/resolve-cache/models/${MODEL_REPO}/${info.sha}/${relPath}`;
+}
+
+const MODEL_SOURCES: ModelSource[] = [
+  {
+    label: 'HF 直连',
+    origin: MODEL_HF_ORIGIN,
+    resolveUrl: async (relPath) => `${MODEL_HF_ORIGIN}/resolve/main/${relPath}`,
+  },
+  {
+    label: 'hf-mirror',
+    origin: `${MODEL_MIRROR_ORIGIN}/${MODEL_REPO}/resolve/main`,
+    resolveUrl: mirrorDirectUrl,
+  },
+];
+
 async function fetchModelFile(
   relPath: string,
   onProgress: (loaded: number, total: number) => void,
   onIndeterminate: () => void
 ): Promise<Blob> {
   let lastError: unknown = null;
-  for (const origin of MODEL_SOURCE_ORIGINS) {
-    const url = `${origin}/${relPath}`;
-    // 一级：fetch 流式（进度）
+  for (const source of MODEL_SOURCES) {
+    const fallbackUrl = `${source.origin}/${relPath}`;
+    // 一级：fetch 流式（进度）。mirror 的 sha 解析也在连接超时守护内。
     const controller = new AbortController();
     const connectTimer = setTimeout(() => controller.abort(), MODEL_SOURCE_CONNECT_TIMEOUT_MS);
+    let url = fallbackUrl;
     try {
-      const res = await fetch(url, { signal: controller.signal });
+      url = await source.resolveUrl(relPath, controller.signal);
+      const res = await fetch(url, { signal: controller.signal, cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       clearTimeout(connectTimer);
       const total = Number(res.headers.get('Content-Length') ?? 0);
@@ -137,7 +177,8 @@ async function fetchModelFile(
       clearTimeout(connectTimer);
       lastError = error;
     }
-    // 二级：CapacitorHttp 原生请求（WebView 跨源被 CORS 拦截时仍可下载）
+    // 二级：CapacitorHttp 原生请求（WebView 跨源被 CORS 拦截时仍可下载；
+    // 原生栈无 CORS 且能跟随 307/302，镜像解析失败时回退 origin 直拼 URL）
     try {
       onIndeterminate();
       const res = await CapacitorHttp.get({ url, responseType: 'arraybuffer', connectTimeout: MODEL_SOURCE_CONNECT_TIMEOUT_MS, readTimeout: MODEL_DOWNLOAD_READ_TIMEOUT_MS });
@@ -161,7 +202,7 @@ export async function preloadPiperModel(): Promise<void> {
     try {
       const tts = await loadModule();
       if (!(await tts.stored()).includes(PIPER_VOICE_ID)) {
-        const modelOriginUrl = (file: string) => `${MODEL_SOURCE_ORIGINS[0]}/${MODEL_RELATIVE_PATH}${file}`;
+        const modelOriginUrl = (file: string) => `${MODEL_CANONICAL_BASE}/${MODEL_RELATIVE_PATH}${file}`;
         fileCompletion.clear();
         emitProgress(0);
         // 配置文件（.onnx.json，很小）

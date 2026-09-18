@@ -79,20 +79,50 @@ describe('preloadPiperModel', () => {
     expect(urls.some((url) => url.endsWith('.onnx.json'))).toBe(true)
   })
 
-  it('主源失败自动切换镜像源，全部失败才报错', async () => {
+  it('主源失败自动切换镜像源（revision API 解析后直出），全部失败才报错', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
+      if (url.includes('/api/models/diffusionstudio/piper-voices/revision/main')) {
+        return new Response(JSON.stringify({ sha: '840e38a7e26d813bd6221b78cfbaefa3585b3f71' }), { status: 200 })
+      }
       if (url.startsWith('https://hf-mirror.com/')) return fakeResponse(10)
       throw new TypeError('fetch failed')
     })
     vi.stubGlobal('fetch', fetchMock)
     const mod = await loadEngine()
     await expect(mod.preloadPiperModel()).resolves.toBeUndefined()
-    expect(fetchMock).toHaveBeenCalledTimes(4) // 2 个文件 × 每个先主源后镜像
+    // 2 个文件 ×（HF 1 次失败 + 镜像 revision API 1 次 + 镜像直出 1 次）= 6
+    expect(fetchMock).toHaveBeenCalledTimes(6)
+    expect(writeBlobMock).toHaveBeenCalledTimes(2)
+    // 走的是 resolve-cache 直出（绕开 /resolve 的 307 CORS 失败点）
+    const fetchedUrls = fetchMock.mock.calls.map((call) => String(call[0]))
+    expect(fetchedUrls.filter((url) => url.includes('/api/resolve-cache/models/')).length).toBe(2)
+  })
+
+  it('镜像 revision API 失败时回退 resolve 直拼并由原生通道兜底', async () => {
+    // HF 的 fetch 与原生兜底都失败，才会走到镜像源
+    capacitorHttpGet.mockImplementation(async ({ url }: { url: string }) => {
+      if (url.startsWith('https://hf-mirror.com/')) return { data: new ArrayBuffer(10) }
+      throw new Error('native failed')
+    })
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/api/models/') || url.startsWith('https://huggingface.co/')) throw new TypeError('fetch failed')
+      throw new TypeError('CORS blocked')
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const mod = await loadEngine()
+    await mod.preloadPiperModel()
+    // 每文件先在 HF 源走完（fetch ✗ + 原生 ✗）再到镜像：原生共 4 次，其中镜像 resolve 直拼 2 次成功
+    expect(capacitorHttpGet).toHaveBeenCalledTimes(4)
+    const nativeUrls = capacitorHttpGet.mock.calls.map((call) => String((call[0] as { url: string }).url))
+    const mirrorUrls = nativeUrls.filter((url) => url.startsWith('https://hf-mirror.com/diffusionstudio/piper-voices/resolve/main/'))
+    expect(mirrorUrls.length).toBe(2)
     expect(writeBlobMock).toHaveBeenCalledTimes(2)
   })
 
   it('全部源失败时下载失败，不写 OPFS', async () => {
+    capacitorHttpGet.mockRejectedValue(new Error('native failed'))
     vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('fetch failed') }))
     const mod = await loadEngine()
     await expect(mod.preloadPiperModel()).rejects.toThrow()
