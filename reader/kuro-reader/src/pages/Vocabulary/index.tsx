@@ -57,21 +57,17 @@ export const VocabularyPage: React.FC = () => {
   const handleDelete = async (entry: VocabEntry) => {
     await vocabRepo.remove(entry.id)
     setEntries((prev) => prev?.filter((e) => e.id !== entry.id) ?? null)
-    // 删除可撤销（判例 1-9）：词卡连带复习排期一起回来，原位复原
+    // 删除可撤销（判例 1-9）。撤销=以新 updatedAt 重存：云同步 LWW 里
+    // 「晚于墓碑的记录胜出」，原样写回会被自己的删除墓碑再次删掉。
+    // 代价是词卡按最新触碰排到列表顶部，属可接受的撤销语义。
     toast(COPY.vocab.deletedToast, {
       durationMs: 5000,
       action: {
         label: '撤销',
         onAction: () => {
-          void vocabRepo.save(entry).then(() => {
-            setEntries((prev) => {
-              if (!prev) return prev
-              const next = [...prev]
-              const origIndex = next.findIndex((e) => e.createdAt > entry.createdAt)
-              if (origIndex < 0) next.push(entry)
-              else next.splice(origIndex, 0, entry)
-              return next
-            })
+          const revived: VocabEntry = { ...entry, updatedAt: new Date() }
+          void vocabRepo.save(revived).then(() => {
+            setEntries((prev) => (prev ? [revived, ...prev] : prev))
           })
         },
       },
