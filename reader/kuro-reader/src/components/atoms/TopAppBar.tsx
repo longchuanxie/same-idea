@@ -102,19 +102,27 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
               </button>
               {menuOpen && (
                 <div className="absolute right-0 top-full mt-1 w-48 menu-surface py-1 z-50 animate-scale-in origin-top-right">
+                  {/* more 菜单只收底栏到不了的页面：手记/生词本/复习席（导入/知识库/设置由底栏承载，不再重复） */}
                   <button
                     className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-variant transition-colors text-seal hover:text-seal-deep"
-                    onClick={() => handleMenuAction(() => navigate(ROUTES.IMPORT))}
+                    onClick={() => handleMenuAction(() => navigate(ROUTES.NOTES))}
                   >
-                    <span className="material-symbols-outlined text-icon-md">upload_file</span>
-                    <span className="font-label text-label-md">导入书籍</span>
+                    <span className="material-symbols-outlined text-icon-md">edit_note</span>
+                    <span className="font-label text-label-md">手记</span>
                   </button>
                   <button
                     className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-variant transition-colors text-seal hover:text-seal-deep"
-                    onClick={() => handleMenuAction(() => navigate(ROUTES.KNOWLEDGE_HUB))}
+                    onClick={() => handleMenuAction(() => navigate(ROUTES.VOCABULARY))}
                   >
-                    <span className="material-symbols-outlined text-icon-md">psychology</span>
-                    <span className="font-label text-label-md">知识库</span>
+                    <span className="material-symbols-outlined text-icon-md">translate</span>
+                    <span className="font-label text-label-md">生词本</span>
+                  </button>
+                  <button
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-variant transition-colors text-seal hover:text-seal-deep"
+                    onClick={() => handleMenuAction(() => navigate(ROUTES.REVIEW))}
+                  >
+                    <span className="material-symbols-outlined text-icon-md">style</span>
+                    <span className="font-label text-label-md">复习席</span>
                   </button>
                   {/* 阅读统计入口收敛为顶栏图表 icon（建议书 5.3：删除重复项）；
                       批量管理统一走书库页「管理」按钮，不再绕道菜单 */}
