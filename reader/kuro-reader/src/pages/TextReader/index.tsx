@@ -48,6 +48,7 @@ import { translateSelection } from '@/services/ai/translation';
 import { lookupWord, type VocabLookupResult } from '@/services/ai/vocabLookup';
 import { revokeEpubObjectUrls } from '@/services/epubContent';
 import {
+  findMaxFitLength,
   findPreferredBreak,
   paginatePlainText,
   splitTextIntoPages,
@@ -141,6 +142,8 @@ const MAX_CAPACITY_SHRINK_PX = 240;
 const MIN_PAGE_CAPACITY_PX = 240;
 /** 分页结果缓存上限（章）：签名命中直接复用，章节往返不再全章重排 */
 const PAGINATION_CACHE_LIMIT = 8;
+/** Markdown 块填充当前页的最小前缀量（字符，约一行）：低于此值整块搬移，避免碎页 */
+const MIN_FILL_SPLIT_CHARS = 40;
 /** 整章一页自检阈值：单页文本量超过页面理论容量的倍数即判定测量不可信 */
 const SINGLE_PAGE_SANITY_FACTOR = 1.5;
 const SINGLE_PAGE_MIN_CAPACITY_CHARS = 400;
@@ -1262,12 +1265,6 @@ export const TextReaderPage: React.FC = () => {
             + Number.parseFloat(computedStyle.marginTop || '0')
             + Number.parseFloat(computedStyle.marginBottom || '0');
           const availableHeight = pageHeight - (pages.length === 0 ? titleHeight : 0);
-
-          if (usedHeight > 0 && usedHeight + blockHeight > availableHeight) {
-            pushPage(block.start);
-          }
-
-          const freshAvailableHeight = pageHeight - (pages.length === 0 ? titleHeight : 0);
           const containsImage = markdownDocument.spans.some(
             (span) => span.type === 'image' && span.start < block.end && span.end > block.start
           );
@@ -1276,6 +1273,37 @@ export const TextReaderPage: React.FC = () => {
             || block.type === 'blockquote'
             || block.type === 'list-item'
           );
+
+          // 块放不进当前页剩余空间：可拆块先用前段填满（老行为整块搬移，块越高留白越大），
+          // 填充量不足最小行文量时退回整块搬移；残余与后续块在新页正常累积
+          if (usedHeight > 0 && usedHeight + blockHeight > availableHeight) {
+            let fillLen: number | null = null;
+            if (canSplitInside) {
+              const remainingSpace = availableHeight - usedHeight;
+              const blockText = markdownDocument.text.slice(block.start, block.end);
+              const fitLen = findMaxFitLength(
+                blockText,
+                (prefix) => measurePageHeight(
+                  prefix,
+                  false,
+                  { kind: block.type as SplitBlockContext['kind'], listDepth: block.listDepth, atBlockStart: true }
+                ) <= remainingSpace,
+                { maxPageLength: pageLengthUpperBound }
+              );
+              if (fitLen >= MIN_FILL_SPLIT_CHARS) {
+                const breakAt = findPreferredBreak(blockText, fitLen);
+                fillLen = breakAt >= MIN_FILL_SPLIT_CHARS ? breakAt : null;
+              }
+            }
+            if (fillLen != null) {
+              pushPage(block.start + fillLen);
+              if (block.start + fillLen < block.end) pushPage(block.end);
+              return;
+            }
+            pushPage(block.start);
+          }
+
+          const freshAvailableHeight = pageHeight - (pages.length === 0 ? titleHeight : 0);
 
           if (blockHeight > freshAvailableHeight && canSplitInside) {
             if (pageStart < block.start) pushPage(block.start);
@@ -1291,18 +1319,11 @@ export const TextReaderPage: React.FC = () => {
               };
               if (fitsPage(remainingText, includeChapterTitle, blockContext)) break;
 
-              let low = MIN_TEXT_PAGE_LENGTH;
-              let high = Math.min(remainingText.length, pageLengthUpperBound);
-              let best = MIN_TEXT_PAGE_LENGTH;
-              while (low <= high) {
-                const mid = Math.floor((low + high) / HALF_DIVISOR);
-                if (fitsPage(remainingText.slice(0, mid), includeChapterTitle, blockContext)) {
-                  best = mid;
-                  low = mid + 1;
-                } else {
-                  high = mid - 1;
-                }
-              }
+              const best = findMaxFitLength(
+                remainingText,
+                (prefix) => fitsPage(prefix, includeChapterTitle, blockContext),
+                { maxPageLength: pageLengthUpperBound }
+              );
               const splitLength = Math.max(MIN_TEXT_PAGE_LENGTH, findPreferredBreak(remainingText, best));
               pushPage(cursor + splitLength);
               cursor += splitLength;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { findPreferredBreak, splitTextIntoPages } from './textPagination'
+import { findMaxFitLength, findPreferredBreak, splitTextIntoPages } from './textPagination'
 
 describe('findPreferredBreak', () => {
   it('在回找窗口内命中句读', () => {
@@ -40,6 +40,32 @@ describe('findPreferredBreak', () => {
     const text = 'x'.repeat(199) + '。' + 'y'.repeat(249) + '，' + 'z'.repeat(30)
     const best = text.length
     expect(findPreferredBreak(text, best)).toBe(best - 30)
+  })
+})
+
+describe('findMaxFitLength', () => {
+  it('二分找最大可容纳前缀', () => {
+    const fits = (t: string) => t.length <= 7
+    expect(findMaxFitLength('abcdefg hijklmn', fits)).toBe(7)
+  })
+
+  it('全部放得下时返回全文长度', () => {
+    expect(findMaxFitLength('短文', () => true)).toBe(2)
+  })
+
+  it('什么都放不下时返回 0', () => {
+    expect(findMaxFitLength('abcd', () => false)).toBe(0)
+  })
+
+  it('maxPrefix 剪枝：任何一次测量的前缀都不超过上界', () => {
+    const fits = (t: string) => t.length <= 5
+    const measured: number[] = []
+    const best = findMaxFitLength('x'.repeat(300), (t) => {
+      measured.push(t.length)
+      return fits(t)
+    }, { maxPageLength: 10 })
+    expect(best).toBe(5)
+    expect(Math.max(...measured)).toBeLessThanOrEqual(10)
   })
 })
 

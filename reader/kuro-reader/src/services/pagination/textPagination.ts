@@ -77,6 +77,34 @@ export function findPreferredBreak(text: string, best: number, search: BreakSear
 }
 
 /**
+ * 二分查找文本的最大可容纳前缀长度（配合调用方的测量回调）。
+ * 返回 0 表示连最短前缀都放不下。
+ * maxPrefix 收窄二分窗口（单次测量的渲染量上界），语义见 splitTextIntoPages。
+ */
+export function findMaxFitLength(
+  text: string,
+  fits: (prefix: string) => boolean,
+  options: SplitTextIntoPagesOptions = {}
+): number {
+  const bound = options.maxPageLength != null && options.maxPageLength > 0
+    ? options.maxPageLength
+    : UNBOUNDED_PAGE_LENGTH;
+  let low = MIN_TEXT_PAGE_LENGTH;
+  let high = Math.max(MIN_TEXT_PAGE_LENGTH, Math.min(text.length, bound));
+  let best = 0;
+  while (low <= high) {
+    const mid = Math.floor((low + high) / HALF_DIVISOR);
+    if (fits(text.slice(0, mid))) {
+      best = mid;
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
+  }
+  return best;
+}
+
+/**
  * 按页容量顺序切分整章纯文本：
  * 每页先整段尝试，放不下则二分找最大前缀（窗口受 maxPageLength 剪枝），
  * 再回找句读微调断点。
@@ -106,19 +134,7 @@ export function splitTextIntoPages(
       break;
     }
 
-    let low = MIN_TEXT_PAGE_LENGTH;
-    let high = Math.min(remaining.length, pageLengthBound);
-    let best = 0;
-
-    while (low <= high) {
-      const mid = Math.floor((low + high) / HALF_DIVISOR);
-      if (fitsPage(remaining.slice(0, mid), isFirstPage)) {
-        best = mid;
-        low = mid + 1;
-      } else {
-        high = mid - 1;
-      }
-    }
+    const best = findMaxFitLength(remaining, (prefix) => fitsPage(prefix, isFirstPage), options);
 
     let splitAt = best > 0 ? findPreferredBreak(remaining, best) : MIN_TEXT_PAGE_LENGTH;
 
