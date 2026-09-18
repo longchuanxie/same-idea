@@ -88,6 +88,13 @@ function createSession(): Promise<PiperSession> {
     .then((tts) =>
       tts.TtsSession.create({
         voiceId: PIPER_VOICE_ID,
+        // WASM 本地伺服（public/piper-wasm/）：库默认 CDN（cdnjs/jsdelivr）在部分网络不可达，
+        // 且 node_modules 的 ort JS 版本须与本地 wasm 匹配，防 CDN 版本漂移错配
+        wasmPaths: {
+          onnxWasm: '/piper-wasm/',
+          piperData: '/piper-wasm/piper_phonemize.data',
+          piperWasm: '/piper-wasm/piper_phonemize.wasm',
+        },
         // 会话初始化若仍需取模型（如朗读时自动重试路径），进度同样汇入广播
         progress: (progress) => emitFileProgress(progress.url, progress.total, progress.loaded),
       })
