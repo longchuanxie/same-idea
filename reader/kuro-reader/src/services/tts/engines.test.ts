@@ -1,3 +1,4 @@
+import { Capacitor } from '@capacitor/core';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 
 import { resolveEngine, type TtsEngineConfig } from './engineSelector'
@@ -159,6 +160,39 @@ describe('ServerTtsEngine', () => {
     expect(onError).not.toHaveBeenCalled();
     expect(FakeAudio.instances).toHaveLength(0);
   });
+
+  it('prefetches the next chunk in the background and reuses it on speak', async () => {
+    const engine = new ServerTtsEngine(config);
+    fetchMock.mockResolvedValue({ ok: true, blob: () => Promise.resolve(new Blob(['audio'])) });
+
+    // 后台预取：prepare 即发起请求，speak 同文本同倍速时直接消费，不再发请求
+    engine.prepare('第二句。', { rate: 1, lang: 'zh-CN' });
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    const onDone = vi.fn();
+    const onError = vi.fn();
+    engine.speak('第二句。', { rate: 1, lang: 'zh-CN' }, { onDone, onError });
+    await vi.waitFor(() => expect(FakeAudio.instances).toHaveLength(1));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    FakeAudio.instances[0].onended?.();
+    expect(onDone).toHaveBeenCalledTimes(1);
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it('re-fetches when the rate changed since the prefetch', async () => {
+    const engine = new ServerTtsEngine(config);
+    fetchMock.mockResolvedValue({ ok: true, blob: () => Promise.resolve(new Blob(['audio'])) });
+
+    engine.prepare('第二句。', { rate: 1, lang: 'zh-CN' });
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    // speed 参与服务端合成：倍速变化后预取不命中，现场重新请求
+    engine.speak('第二句。', { rate: 1.5, lang: 'zh-CN' }, { onDone: vi.fn(), onError: vi.fn() });
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(FakeAudio.instances).toHaveLength(1));
+    expect(FakeAudio.instances[0].playbackRate).toBe(1.5);
+  });
 });
 
 describe('resolveEngine', () => {
@@ -184,5 +218,21 @@ describe('resolveEngine', () => {
 
   it('resolves neural directly', () => {
     expect(resolveEngine({ ...baseConfig, engine: 'neural' }).id).toBe('neural');
+  });
+
+  it('routes system/native/auto to the native engine inside the android webview', () => {
+    const spy = vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
+    try {
+      expect(resolveEngine({ ...baseConfig, engine: 'system' }).id).toBe('native');
+      expect(resolveEngine({ ...baseConfig, engine: 'native' }).id).toBe('native');
+      expect(resolveEngine(baseConfig).id).toBe('native');
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('falls back auto to neural when the browser has no speechSynthesis at all', () => {
+    vi.unstubAllGlobals();
+    expect(resolveEngine(baseConfig).id).toBe('neural');
   });
 })

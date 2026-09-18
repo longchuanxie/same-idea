@@ -24,6 +24,11 @@ export class WebSpeechEngine implements TtsEngine {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = ctx.rate;
     utterance.lang = ctx.lang;
+    // 起播事件：部分内核（微信 X5 等）对象存在却永不发声，编排器以此解除看门狗
+    utterance.onstart = () => {
+      if (token !== this.tokenRef) return;
+      handlers.onStart?.();
+    };
     utterance.onend = () => {
       if (token !== this.tokenRef) return;
       handlers.onDone();

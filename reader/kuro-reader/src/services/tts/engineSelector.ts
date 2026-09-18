@@ -32,9 +32,17 @@ function getPiperEngine(): TtsEngine {
   return piperEngine;
 }
 
+/** 神经网络引擎在任何浏览器环境可用（WASM/模型在 speak 时按需加载），移动端最稳的兜底 */
+export function isNeuralSupported(): boolean {
+  return typeof window !== 'undefined';
+}
+
 function getAutoEngine(): TtsEngine {
-  // 原生环境(安卓 WebView)不支持 Web Speech,必须走设备语音
-  return isNativeTtsAvailable() ? getNativeEngine() : getSystemEngine();
+  // 可用性链：App 内 WebView 无 Web Speech → 设备语音；
+  // 浏览器连 speechSynthesis 都没有（少数国产内核）→ 神经网络离线语音兜底
+  if (isNativeTtsAvailable()) return getNativeEngine();
+  if (isWebSpeechSupported()) return getSystemEngine();
+  return getPiperEngine();
 }
 
 /**
@@ -45,7 +53,8 @@ function getAutoEngine(): TtsEngine {
 export function resolveEngine(config: TtsEngineConfig): TtsEngine {
   switch (config.engine) {
     case 'system':
-      return isWebSpeechSupported() ? getSystemEngine() : getAutoEngine();
+      // 安卓 WebView 即使暴露 speechSynthesis 也无声（实测），按不支持处理回退 auto 链
+      return isWebSpeechSupported() && !isNativeTtsAvailable() ? getSystemEngine() : getAutoEngine();
     case 'native':
       return isNativeTtsAvailable() ? getNativeEngine() : getAutoEngine();
     case 'neural':

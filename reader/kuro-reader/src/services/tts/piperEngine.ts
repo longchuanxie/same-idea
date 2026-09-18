@@ -281,14 +281,41 @@ export class PiperEngine implements TtsEngine {
   readonly label = '神经网络';
   private tokenRef = 0;
   private playback: BlobPlaybackControls | null = null;
+  /** 后台预合成产物（文本即缓存键；合成结果与倍速无关，倍速在播放端实现） */
+  private prefetch: { text: string; promise: Promise<Blob> } | null = null;
+  /** 会话内 predict 串行队列：现场推理与后台预合成共用，杜绝并发 predict（同会话并发无合同） */
+  private queue: Promise<unknown> = Promise.resolve();
 
   isAvailable(): boolean {
     return typeof window !== 'undefined';
   }
 
+  /** 当前分块播放期间后台预合成下一分块，消除块间解析间隙 */
+  prepare(text: string): void {
+    if (this.prefetch?.text === text) return;
+    const promise = this.enqueuePredict(text);
+    promise.catch(() => undefined); // 未被消费的预合成失败静默；speak 消费时按原路径报错
+    this.prefetch = { text, promise };
+  }
+
   speak(text: string, ctx: TtsSpeakContext, handlers: TtsSpeakHandlers): void {
     const token = ++this.tokenRef;
     void this.speakAsync(text, ctx, handlers, token);
+  }
+
+  /** 排入串行队列执行一次推理；队列吞掉前置失败，本结果照常 reject 给调用方 */
+  private enqueuePredict(text: string): Promise<Blob> {
+    const result = this.queue.then(() => this.predictWav(text));
+    this.queue = result.catch(() => undefined);
+    return result;
+  }
+
+  private async predictWav(text: string): Promise<Blob> {
+    // 若预下载正在进行，等它完成再建会话，避免并发重复下载；
+    // 模型缺失时先经多源下载补齐，再建会话（库内直连 HF 在部分网络必失败）
+    await ensureModelReady();
+    const session = await createSession();
+    return session.predict(text);
   }
 
   private async speakAsync(
@@ -298,12 +325,10 @@ export class PiperEngine implements TtsEngine {
     token: number
   ): Promise<void> {
     try {
-      // 若预下载正在进行，等它完成再建会话，避免并发重复下载；
-      // 模型缺失时先经多源下载补齐，再建会话（库内直连 HF 在部分网络必失败）
-      await ensureModelReady();
-      const session = await createSession();
-      if (token !== this.tokenRef) return;
-      const wav = await session.predict(text);
+      // 命中同文本预合成产物则直接取用，否则现场推理（同样走串行队列）
+      const prefetch = this.prefetch?.text === text ? this.prefetch.promise : null;
+      this.prefetch = null;
+      const wav = await (prefetch ?? this.enqueuePredict(text));
       if (token !== this.tokenRef) return;
       this.playback = playBlob(wav, ctx, {
         onDone: () => {
@@ -337,5 +362,6 @@ export class PiperEngine implements TtsEngine {
 
   dispose(): void {
     this.cancel();
+    this.prefetch = null;
   }
 }

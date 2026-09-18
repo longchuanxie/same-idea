@@ -9,6 +9,8 @@ export interface TtsSpeakContext {
 }
 
 export interface TtsSpeakHandlers {
+  /** 引擎实际开始发声（供编排器解除起播看门狗）；不实现则由编排器按超时兜底 */
+  onStart?: () => void;
   /** 自然播完一块 */
   onDone: () => void;
   /** 播报失败;被 cancel 中止时引擎不回调(编排器以会话令牌判定),也可显式抛 TtsCancelledError */
@@ -35,6 +37,12 @@ export interface TtsEngine {
   readonly label: string;
   isAvailable(): boolean;
   speak(text: string, ctx: TtsSpeakContext, handlers: TtsSpeakHandlers): void;
+  /**
+   * 后台预合成下一分块（可选，合成型引擎实现）。
+   * 编排器在当前分块起播的同时调用，speak 同文本时直接取用产物，消除块间合成间隙。
+   * 语义：尽力而为——失败静默，speak 消费时按原路径重新合成/报错。
+   */
+  prepare?(text: string, ctx: TtsSpeakContext): void;
   pause(): void;
   resume(): void;
   cancel(): void;

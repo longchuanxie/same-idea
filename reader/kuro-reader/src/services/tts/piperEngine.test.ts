@@ -1,8 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const createMock = vi.fn((..._args: unknown[]) => undefined)
+const createMock = vi.fn((..._args: unknown[]): unknown => undefined)
 const storedMock = vi.fn(async (): Promise<string[]> => [])
 const capacitorHttpGet = vi.fn()
+const predictMock = vi.fn(async (text: string) => new Blob([`wav:${text}`]))
 
 vi.mock('@mintplex-labs/piper-tts-web', () => ({
   TtsSession: { create: (...args: unknown[]) => createMock(...args) },
@@ -235,5 +236,92 @@ describe('normalizePiperDownloadPercent', () => {
     expect(mod.normalizePiperDownloadPercent(mod.PROGRESS_INDETERMINATE)).toBe(-2)
     expect(mod.normalizePiperDownloadPercent(-1)).toBeNull()
     expect(mod.normalizePiperDownloadPercent(-3)).toBeNull()
+  })
+})
+
+describe('PiperEngine', () => {
+  // ── Audio Fake（合成出的 wav 经 HTMLAudioElement 播放）──
+  class FakeAudio {
+    static instances: FakeAudio[] = []
+    src = ''
+    playbackRate = 1
+    onended: (() => void) | null = null
+    onerror: (() => void) | null = null
+    play = vi.fn(() => Promise.resolve())
+    pause = vi.fn()
+    removeAttribute = vi.fn()
+    constructor() {
+      FakeAudio.instances.push(this)
+    }
+  }
+
+  beforeEach(() => {
+    vi.resetModules()
+    vi.unstubAllGlobals()
+    storedMock.mockResolvedValue(['zh_CN-huayan-medium'])
+    predictMock.mockClear()
+    predictMock.mockImplementation(async (text: string) => new Blob([`wav:${text}`]))
+    createMock.mockReset()
+    createMock.mockResolvedValue({ predict: predictMock })
+    FakeAudio.instances = []
+    vi.stubGlobal('Audio', FakeAudio)
+    installFakeOpfs()
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('后台预合成下一分块，speak 命中后不重复推理', async () => {
+    const { PiperEngine } = await loadEngine()
+    const engine = new PiperEngine()
+
+    engine.prepare('第二句。')
+    await vi.waitFor(() => expect(predictMock).toHaveBeenCalledTimes(1))
+
+    const onDone = vi.fn()
+    const onError = vi.fn()
+    engine.speak('第二句。', { rate: 1, lang: 'zh-CN' }, { onDone, onError })
+    await vi.waitFor(() => expect(FakeAudio.instances).toHaveLength(1))
+    // 复用预合成产物：总推理次数仍为 1
+    expect(predictMock).toHaveBeenCalledTimes(1)
+
+    FakeAudio.instances[0].onended?.()
+    expect(onDone).toHaveBeenCalledTimes(1)
+    expect(onError).not.toHaveBeenCalled()
+  })
+
+  it('未命中预合成的分块现场推理', async () => {
+    const { PiperEngine } = await loadEngine()
+    const engine = new PiperEngine()
+
+    engine.prepare('第二句。')
+    await vi.waitFor(() => expect(predictMock).toHaveBeenCalledTimes(1))
+
+    engine.speak('第三句。', { rate: 1, lang: 'zh-CN' }, { onDone: vi.fn(), onError: vi.fn() })
+    await vi.waitFor(() => expect(FakeAudio.instances).toHaveLength(1))
+    expect(predictMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('现场推理与后台预合成经串行队列执行，绝不并发', async () => {
+    const { PiperEngine } = await loadEngine()
+    let running = 0
+    let maxRunning = 0
+    predictMock.mockImplementation(async (text: string) => {
+      running += 1
+      maxRunning = Math.max(maxRunning, running)
+      await new Promise((resolve) => setTimeout(resolve, 5))
+      running -= 1
+      return new Blob([`wav:${text}`])
+    })
+
+    const engine = new PiperEngine()
+    // 首块现场推理仍在排队/执行时就预合成下一块：两次推理必须先后串行
+    engine.speak('第一句。', { rate: 1, lang: 'zh-CN' }, { onDone: vi.fn(), onError: vi.fn() })
+    engine.prepare('第二句。')
+
+    await vi.waitFor(() => expect(FakeAudio.instances).toHaveLength(1))
+    await vi.waitFor(() => expect(predictMock).toHaveBeenCalledTimes(2))
+    expect(maxRunning).toBe(1)
   })
 })

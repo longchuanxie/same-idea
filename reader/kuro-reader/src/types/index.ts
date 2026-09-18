@@ -108,8 +108,8 @@ export type TextAlign = 'left' | 'justify'
 /** 文本阅读模式 */
 export type TextReadingMode = 'scroll' | 'paginate' | 'book' | 'columns'
 
-/** 听书发音引擎(与 services/tts 的 TtsEngineSetting 对应,不含 'native'——原生环境归入系统语音语义) */
-export type TtsEngineOption = 'auto' | 'system' | 'neural' | 'server'
+/** 听书发音引擎(与 services/tts 的 TtsEngineSetting 一致;'native' 仅 App 内展示) */
+export type TtsEngineOption = 'auto' | 'system' | 'native' | 'neural' | 'server'
 
 export interface UserSettings {
   theme: 'light' | 'dark' | 'auto'

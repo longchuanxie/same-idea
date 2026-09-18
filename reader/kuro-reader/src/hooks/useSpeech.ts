@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { resolveEngine, type TtsEngineConfig } from '@/services/tts/engineSelector';
+import { isNeuralSupported, resolveEngine, type TtsEngineConfig } from '@/services/tts/engineSelector';
 import { isNativeTtsAvailable } from '@/services/tts/nativeTtsEngine';
 import { TtsCancelledError, type TtsEngine } from '@/services/tts/types';
 import { isWebSpeechSupported } from '@/services/tts/webSpeechEngine';
@@ -15,6 +15,8 @@ const RATES = [1, 1.25, 1.5, 2];
 const SENTENCE_END_PATTERN = /[。！？!?；;]/g;
 /** 播报语言 */
 const SPEECH_LANG = 'zh-CN';
+/** 系统/设备类引擎起播看门狗：窗口内未收到 onStart 即判引擎哑火（部分内核对象存在却永不发声） */
+const VOICE_START_WATCHDOG_MS = 8000;
 
 /** 带原文偏移的语音分块：text 恒等于 sourceText.slice(start, end) */
 export interface SpeechChunk {
@@ -94,17 +96,23 @@ export interface SpeechController {
  * 听书播报编排器：分块队列 × 可插拔 TTS 引擎。
  * - 章节文本按句分块顺序播报，天然规避单 utterance 长度限制
  * - 引擎由 useAppStore 的 ttsEngine 设置解析（engineSelector），播报中切换设置会从当前分块续播
+ * - 流水线：当前分块起播时即预合成下一分块（prepare），合成型引擎的解析耗时藏进播放时长里
  * - 会话令牌：stop/倍速切换后，旧分块的回调不再推进队列
  * - onFinished 仅在全部分块自然播完时触发（用于自动续播下一章）；引擎失败经 onError 上报
  * - currentChunkRange 叠加 baseOffset 后即「章节坐标系」的播报范围，供正文范围高亮跟读
  */
-export function useSpeech(onFinished?: () => void, onError?: (message: string) => void): SpeechController {
+export function useSpeech(
+  onFinished?: () => void,
+  onError?: (message: string) => void,
+  onNotice?: (message: string) => void
+): SpeechController {
   const ttsEngineSetting = useAppStore((state) => state.settings.ttsEngine);
   const ttsServerUrl = useAppStore((state) => state.settings.ttsServerUrl);
   const ttsServerModel = useAppStore((state) => state.settings.ttsServerModel);
   const ttsServerVoice = useAppStore((state) => state.settings.ttsServerVoice);
 
-  const supported = isWebSpeechSupported() || isNativeTtsAvailable();
+  // 神经网络引擎在任何浏览器可用：无 Web Speech 的环境也视为支持（auto 链会落到神经网络）
+  const supported = isWebSpeechSupported() || isNativeTtsAvailable() || isNeuralSupported();
   const [speaking, setSpeaking] = useState(false);
   const [paused, setPaused] = useState(false);
   const [rate, setRate] = useState(RATES[0]);
@@ -122,10 +130,54 @@ export function useSpeech(onFinished?: () => void, onError?: (message: string) =
   const engineRef = useRef<TtsEngine | null>(null);
   const speakingRef = useRef(false);
   const pausedRef = useRef(false);
+  /** 系统/设备类引擎的起播看门狗定时器 */
+  const watchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** 神经网络兜底每会话至多一次，防失败引擎与兜底引擎互相拉扯 */
+  const fallbackTriedRef = useRef(false);
   const onFinishedRef = useRef(onFinished);
   onFinishedRef.current = onFinished;
   const onErrorRef = useRef(onError);
   onErrorRef.current = onError;
+  const onNoticeRef = useRef(onNotice);
+  onNoticeRef.current = onNotice;
+  const speakNextRef = useRef<() => void>(() => undefined);
+
+  const haltWithError = useCallback((message: string) => {
+    speakingRef.current = false;
+    pausedRef.current = false;
+    setSpeaking(false);
+    setPaused(false);
+    setCurrentIndex(null);
+    setCurrentChunkRange(null);
+    setChunkCount(0);
+    setSynthesizing(false);
+    onErrorRef.current?.(message);
+  }, []);
+
+  const clearVoiceWatchdog = useCallback(() => {
+    if (watchdogRef.current != null) {
+      clearTimeout(watchdogRef.current);
+      watchdogRef.current = null;
+    }
+  }, []);
+
+  /** 当前引擎哑火/失败后的兜底：换神经网络引擎从当前分块续播，并以 notice 告知换挡原因 */
+  const tryNeuralFallback = useCallback((notice: string): boolean => {
+    if (fallbackTriedRef.current) return false;
+    const setting = useAppStore.getState().settings.ttsEngine;
+    // 显式指定神经网络/自定义服务时不兜底：用户在调这两者，失败应如实上报
+    if (setting === 'neural' || setting === 'server') return false;
+    if (engineRef.current?.id === 'neural') return false;
+    fallbackTriedRef.current = true;
+    sessionRef.current += 1;
+    clearVoiceWatchdog();
+    engineRef.current?.cancel();
+    engineRef.current = resolveEngine({ engine: 'neural', serverUrl: '', serverModel: '', serverVoice: '' });
+    setEngineLabel(engineRef.current.label);
+    onNoticeRef.current?.(notice);
+    speakNextRef.current();
+    return true;
+  }, [clearVoiceWatchdog]);
 
   const speakNext = useCallback(() => {
     const session = sessionRef.current;
@@ -149,33 +201,45 @@ export function useSpeech(onFinished?: () => void, onError?: (message: string) =
       end: baseOffsetRef.current + chunk.end,
     });
     setSynthesizing(true);
+    clearVoiceWatchdog();
+    // 系统/设备类引擎起播无声（部分内核对象存在却永不回调）时兜底换引擎，避免听书卡死转圈
+    if (engine?.id === 'system' || engine?.id === 'native') {
+      watchdogRef.current = setTimeout(() => {
+        if (sessionRef.current !== session) return;
+        engineRef.current?.cancel();
+        if (tryNeuralFallback(`「${engine.label}」长时间无响应，已改用神经网络朗读`)) return;
+        haltWithError(`「${engine.label}」长时间无响应，请换用其他发音引擎`);
+      }, VOICE_START_WATCHDOG_MS);
+    }
     engine?.speak(chunk.text, { rate: rateRef.current, lang: SPEECH_LANG }, {
+      onStart: clearVoiceWatchdog,
       onDone: () => {
         if (sessionRef.current !== session) return;
+        clearVoiceWatchdog();
         indexRef.current += 1;
         setSynthesizing(false);
         speakNext();
       },
       onError: (error) => {
         if (sessionRef.current !== session) return;
+        clearVoiceWatchdog();
         setSynthesizing(false);
         if (error instanceof TtsCancelledError) return;
-        speakingRef.current = false;
-        pausedRef.current = false;
-        setSpeaking(false);
-        setPaused(false);
-        setCurrentIndex(null);
-        setCurrentChunkRange(null);
-        setChunkCount(0);
-        onErrorRef.current?.(error.message || '语音播报失败');
+        if (tryNeuralFallback(`「${engine?.label ?? '当前引擎'}」朗读失败，已改用神经网络朗读`)) return;
+        haltWithError(error.message || '语音播报失败');
       },
     });
-  }, []);
+    // 当前分块起播的同时后台预合成下一分块（神经网络/服务端引擎实现），消除块间解析间隙
+    const nextChunk = chunksRef.current[indexRef.current + 1];
+    if (nextChunk) engine?.prepare?.(nextChunk.text, { rate: rateRef.current, lang: SPEECH_LANG });
+  }, [clearVoiceWatchdog, tryNeuralFallback, haltWithError]);
+  speakNextRef.current = speakNext;
 
   const start = useCallback(
     (text: string, baseOffset = 0) => {
       if (!supported) return;
       sessionRef.current += 1;
+      fallbackTriedRef.current = false;
       const engine = resolveEngine({
         engine: ttsEngineSetting,
         serverUrl: ttsServerUrl,
@@ -209,6 +273,7 @@ export function useSpeech(onFinished?: () => void, onError?: (message: string) =
     if (!supported) return;
     sessionRef.current += 1;
     engineRef.current?.cancel();
+    clearVoiceWatchdog();
     speakingRef.current = false;
     pausedRef.current = false;
     setSpeaking(false);
@@ -217,7 +282,7 @@ export function useSpeech(onFinished?: () => void, onError?: (message: string) =
     setCurrentChunkRange(null);
     setChunkCount(0);
     setSynthesizing(false);
-  }, [supported]);
+  }, [supported, clearVoiceWatchdog]);
 
   const pause = useCallback(() => {
     if (!supported || !speakingRef.current || pausedRef.current) return;
@@ -263,6 +328,8 @@ export function useSpeech(onFinished?: () => void, onError?: (message: string) =
     const engine = resolveEngine(ttsConfigRef.current);
     if (engine.id === engineRef.current?.id && engine.id !== 'server') return;
     sessionRef.current += 1;
+    // 用户手动换引擎：新引擎重新获得一次哑火兜底机会
+    fallbackTriedRef.current = false;
     engineRef.current?.cancel();
     engineRef.current = engine;
     setEngineLabel(engine.label);
@@ -277,6 +344,10 @@ export function useSpeech(onFinished?: () => void, onError?: (message: string) =
       engineRef.current?.dispose();
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
+      }
+      if (watchdogRef.current != null) {
+        clearTimeout(watchdogRef.current);
+        watchdogRef.current = null;
       }
     };
   }, []);

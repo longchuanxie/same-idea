@@ -58,6 +58,8 @@ export class NativeTtsEngine implements TtsEngine {
       return;
     }
     try {
+      // 插件无起播事件：调用即视为已起播（设备缺 TTS 引擎时 speak 会立即 reject，走 onError）
+      handlers.onStart?.();
       await plugin.speak({ text, lang: ctx.lang, rate: ctx.rate });
       if (token !== this.tokenRef) return;
       this.current = null;

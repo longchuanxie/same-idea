@@ -4,6 +4,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useSpeech, splitSpeechChunks, splitSpeechChunksWithOffsets } from '@/hooks/useSpeech'
 import { useAppStore } from '@/stores/useAppStore'
 
+// 兜底/无 Web Speech 场景会落到神经网络引擎：测试内一律让 piper 动态导入失败
+vi.mock('@mintplex-labs/piper-tts-web', () => {
+  throw new Error('piper unavailable in test env')
+})
+
 
 class FakeUtterance {
   text: string;
@@ -223,13 +228,66 @@ describe('useSpeech', () => {
     expect(spoken[spoken.length - 1].rate).toBe(1.25);
   });
 
-  it('is a no-op without speechSynthesis support', () => {
+  it('falls through to the neural engine and surfaces its failure without speechSynthesis', async () => {
     vi.unstubAllGlobals();
-    const { result } = renderHook(() => useSpeech());
-    expect(result.current.supported).toBe(false);
+    const onError = vi.fn();
+    const { result } = renderHook(() => useSpeech(undefined, onError));
+    // 神经网络引擎在浏览器环境恒可用：支持位不受 speechSynthesis 缺失影响
+    expect(result.current.supported).toBe(true);
     act(() => result.current.start('正文。'));
+    // auto 链落到神经网络，测试内 piper 导入失败 → 错误如实上报
+    await act(async () => {
+      await vi.waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
+    });
     expect(result.current.speaking).toBe(false);
-    expect(spoken).toHaveLength(0);
+    expect(result.current.engineLabel).toBe('神经网络');
+  });
+
+  it('switches to neural with a notice when the system voice never starts', async () => {
+    vi.useFakeTimers();
+    try {
+      const onNotice = vi.fn();
+      const onError = vi.fn();
+      const { result } = renderHook(() => useSpeech(undefined, onError, onNotice));
+      act(() => result.current.start('正文。'));
+      expect(spoken).toHaveLength(1);
+
+      // 系统语音入队后始终不 onstart（部分内核静默哑火）：看门狗到点兜底换神经网络
+      act(() => vi.advanceTimersByTime(8000));
+      expect(onNotice).toHaveBeenCalledTimes(1);
+      expect(onNotice).toHaveBeenCalledWith(expect.stringContaining('系统语音'));
+      expect(result.current.engineLabel).toBe('神经网络');
+      expect(result.current.speaking).toBe(true);
+
+      // 兜底引擎（测试内 piper 不可用）失败后如实上报，且不再二次兜底
+      await act(async () => {
+        await vi.waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
+      });
+      expect(onNotice).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('stops and reports engine errors via onError without fallback for explicit server setting', () => {
+    const onError = vi.fn();
+    act(() => {
+      useAppStore.getState().updateSettings({ ttsEngine: 'server' });
+    });
+    const { result } = renderHook(() => useSpeech(undefined, onError));
+    act(() => result.current.start('正文。'));
+    const utterance = spoken[spoken.length - 1];
+
+    act(() => utterance.onerror?.({ error: 'not-supported' }));
+    // 显式指定自定义服务（未配置地址时解析为系统语音）不兜底：调参场景失败应如实上报
+    expect(result.current.speaking).toBe(false);
+    expect(result.current.currentChunkRange).toBeNull();
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError).toHaveBeenCalledWith(expect.stringContaining('系统语音'));
+
+    act(() => {
+      useAppStore.getState().updateSettings({ ttsEngine: 'auto' });
+    });
   });
 
   it('exposes the engine label and keeps fallback to system for unconfigured server', () => {
@@ -248,18 +306,5 @@ describe('useSpeech', () => {
       useAppStore.getState().updateSettings({ ttsEngine: 'auto' });
     });
     act(() => result.current.stop());
-  });
-
-  it('stops and reports engine errors via onError', () => {
-    const onError = vi.fn();
-    const { result } = renderHook(() => useSpeech(undefined, onError));
-    act(() => result.current.start('正文。'));
-    const utterance = spoken[spoken.length - 1];
-
-    act(() => utterance.onerror?.({ error: 'not-supported' }));
-    expect(result.current.speaking).toBe(false);
-    expect(result.current.currentChunkRange).toBeNull();
-    expect(onError).toHaveBeenCalledTimes(1);
-    expect(onError).toHaveBeenCalledWith(expect.stringContaining('系统语音'));
   });
 })

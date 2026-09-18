@@ -24,6 +24,8 @@ export class ServerTtsEngine implements TtsEngine {
   readonly label = '自定义服务';
   private tokenRef = 0;
   private playback: BlobPlaybackControls | null = null;
+  /** 后台预取产物（speed 参与服务端合成，缓存键 = 文本 × 倍速） */
+  private prefetch: { text: string; rate: number; promise: Promise<Blob> } | null = null;
 
   constructor(private readonly config: ServerTtsConfig) {}
 
@@ -31,9 +33,34 @@ export class ServerTtsEngine implements TtsEngine {
     return normalizeServerUrl(this.config.url).length > 0;
   }
 
+  /** 当前分块播放期间后台预取下一分块音频，消除块间网络等待 */
+  prepare(text: string, ctx: TtsSpeakContext): void {
+    if (this.prefetch?.text === text && this.prefetch.rate === ctx.rate) return;
+    const promise = this.fetchSpeech(text, ctx);
+    promise.catch(() => undefined); // 未被消费的预取失败静默；speak 消费时按原路径报错
+    this.prefetch = { text, rate: ctx.rate, promise };
+  }
+
   speak(text: string, ctx: TtsSpeakContext, handlers: TtsSpeakHandlers): void {
     const token = ++this.tokenRef;
     void this.speakAsync(text, ctx, handlers, token);
+  }
+
+  private async fetchSpeech(text: string, ctx: TtsSpeakContext): Promise<Blob> {
+    const base = normalizeServerUrl(this.config.url);
+    const response = await fetch(`${base}/v1/audio/speech`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: this.config.model || 'tts-1',
+        voice: this.config.voice || 'alloy',
+        input: text,
+        speed: ctx.rate,
+        response_format: 'mp3',
+      }),
+    });
+    if (!response.ok) throw new Error(`TTS 服务返回 ${response.status}`);
+    return response.blob();
   }
 
   private async speakAsync(
@@ -42,22 +69,13 @@ export class ServerTtsEngine implements TtsEngine {
     handlers: TtsSpeakHandlers,
     token: number
   ): Promise<void> {
-    const base = normalizeServerUrl(this.config.url);
+    // 命中同文本同倍速的预取产物则直接取用，否则现场请求
+    const prefetch = this.prefetch?.text === text && this.prefetch.rate === ctx.rate
+      ? this.prefetch.promise
+      : null;
+    this.prefetch = null;
     try {
-      const response = await fetch(`${base}/v1/audio/speech`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: this.config.model || 'tts-1',
-          voice: this.config.voice || 'alloy',
-          input: text,
-          speed: ctx.rate,
-          response_format: 'mp3',
-        }),
-      });
-      if (token !== this.tokenRef) return;
-      if (!response.ok) throw new Error(`TTS 服务返回 ${response.status}`);
-      const blob = await response.blob();
+      const blob = await (prefetch ?? this.fetchSpeech(text, ctx));
       if (token !== this.tokenRef) return;
       this.playback = playBlob(blob, ctx, {
         onDone: () => {
@@ -91,5 +109,6 @@ export class ServerTtsEngine implements TtsEngine {
 
   dispose(): void {
     this.cancel();
+    this.prefetch = null;
   }
 }
