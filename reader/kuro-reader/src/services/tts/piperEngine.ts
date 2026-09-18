@@ -84,14 +84,17 @@ function emitFileProgress(url: string, total: number, loaded: number): void {
 
 /** 创建推理会话(模型已在 OPFS 时直接加载);失败后清空缓存以便重试 */
 function createSession(): Promise<PiperSession> {
+  // onnxWasm 基座按环境切换：dev 下 Vite 只对 node_modules 的 ?import 模块请求正确伺服
+  // （public 静态文件会 500）；生产构建 public/piper-wasm 随 dist 拷入 APK。
+  const onnxWasmBase = import.meta.env.DEV ? '/node_modules/onnxruntime-web/dist/' : '/piper-wasm/';
   sessionPromise ??= loadModule()
     .then((tts) =>
       tts.TtsSession.create({
         voiceId: PIPER_VOICE_ID,
-        // WASM 本地伺服（public/piper-wasm/）：库默认 CDN（cdnjs/jsdelivr）在部分网络不可达，
+        // WASM 本地伺服：库默认 CDN（cdnjs/jsdelivr）在部分网络不可达，
         // 且 node_modules 的 ort JS 版本须与本地 wasm 匹配，防 CDN 版本漂移错配
         wasmPaths: {
-          onnxWasm: '/piper-wasm/',
+          onnxWasm: onnxWasmBase,
           piperData: '/piper-wasm/piper_phonemize.data',
           piperWasm: '/piper-wasm/piper_phonemize.wasm',
         },
