@@ -57,7 +57,25 @@ export const VocabularyPage: React.FC = () => {
   const handleDelete = async (entry: VocabEntry) => {
     await vocabRepo.remove(entry.id)
     setEntries((prev) => prev?.filter((e) => e.id !== entry.id) ?? null)
-    toast(COPY.vocab.deletedToast)
+    // 删除可撤销（判例 1-9）：词卡连带复习排期一起回来，原位复原
+    toast(COPY.vocab.deletedToast, {
+      durationMs: 5000,
+      action: {
+        label: '撤销',
+        onAction: () => {
+          void vocabRepo.save(entry).then(() => {
+            setEntries((prev) => {
+              if (!prev) return prev
+              const next = [...prev]
+              const origIndex = next.findIndex((e) => e.createdAt > entry.createdAt)
+              if (origIndex < 0) next.push(entry)
+              else next.splice(origIndex, 0, entry)
+              return next
+            })
+          })
+        },
+      },
+    })
   }
 
   const handleExport = () => {
