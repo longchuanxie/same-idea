@@ -253,6 +253,8 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
 
   loadBooks: async () => {
     set({ isLoading: true, error: null });
+    // 进入时快照旧封面表：并发触发时各轮回收各自快照，不会误删上一轮刚生成的新 URL
+    const previousCoverUrls = get().coverUrls;
     try {
       const books = await bookRepo.getAll();
       const booksWithTags = books.map((b) => ({
@@ -267,6 +269,10 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
           coverUrls[book.id] = URL.createObjectURL(blob);
         }
       }
+      // 整体重载回收旧封面 URL：loadBooks 会被首页挂载/云同步反复触发，不回收即会话级泄漏
+      Object.values(previousCoverUrls).forEach((url) => {
+        if (url) URL.revokeObjectURL(url);
+      });
       const readingProgress = await loadProgressWithMigration();
 
       const subLibraries = await subLibraryRepo.getAll();
