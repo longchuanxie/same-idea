@@ -146,7 +146,9 @@ export const NotesPage: React.FC = () => {
       model: settings.knowledgeAiModel,
     };
     if (!isProviderConfigured(config)) {
-      toast(COPY.notesTheme.aiNotConfigured);
+      toast(COPY.notesTheme.aiNotConfigured, {
+        action: { label: '去设置', onAction: () => navigate(ROUTES.SETTINGS) },
+      });
       return;
     }
     const focusLabel = filter.tagId

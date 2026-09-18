@@ -3,10 +3,12 @@ import React from 'react';
 interface UndoToastProps {
   message: string;
   onUndo?: () => void;
+  /** 动作按钮文案；默认「撤销」，也可作「去设置」等恢复出口 */
+  actionLabel?: string;
 }
 
-/** 底部轻提示；提供 onUndo 时附带撤销按钮（由调用方负责定时隐藏） */
-export const UndoToast: React.FC<UndoToastProps> = ({ message, onUndo }) => (
+/** 底部轻提示；提供 onUndo 时附带动作按钮（由调用方负责定时隐藏） */
+export const UndoToast: React.FC<UndoToastProps> = ({ message, onUndo, actionLabel = '撤销' }) => (
   <div
     className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[70] animate-fade-in"
     role="status"
@@ -20,7 +22,7 @@ export const UndoToast: React.FC<UndoToastProps> = ({ message, onUndo }) => (
           onClick={onUndo}
           data-ui-control
         >
-          撤销
+          {actionLabel}
         </button>
       )}
     </div>

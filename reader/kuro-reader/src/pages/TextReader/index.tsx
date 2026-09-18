@@ -1,6 +1,6 @@
 import React, { useEffect, useCallback, useRef, useState, useMemo } from 'react';
 
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 
 import { AnnotationDetailModal } from '@/components/molecules/AnnotationDetailModal';
 import { AnnotationList } from '@/components/molecules/AnnotationList';
@@ -175,6 +175,7 @@ const getCurrentTextPageLayout = (isColumnsLayoutActive: boolean) => getTextPage
 
 export const TextReaderPage: React.FC = () => {
   const historyBack = useHistoryBack();
+  const navigate = useNavigate();
   const { bookId, chapterId } = useParams<{ bookId: string; chapterId?: string }>();
   const [searchParams] = useSearchParams();
   /** 外部批注直达目标（?ann=<id>）；一次导航只消费一次 */
@@ -506,12 +507,12 @@ export const TextReaderPage: React.FC = () => {
     return () => { cancelled = true };
   }, [bookId]);
 
-  // 轻提示（撤销 / 方向引导）
-  const [toast, setToast] = useState<{ message: string; undo?: () => void } | null>(null);
+  // 轻提示（撤销 / 方向引导 / AI 未配置的去设置出口）
+  const [toast, setToast] = useState<{ message: string; undo?: () => void; actionLabel?: string } | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const showToast = useCallback((message: string, undo?: () => void) => {
+  const showToast = useCallback((message: string, undo?: () => void, actionLabel?: string) => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    setToast({ message, undo });
+    setToast({ message, undo, actionLabel });
     toastTimerRef.current = setTimeout(() => {
       setToast(null);
       toastTimerRef.current = null;
@@ -1863,7 +1864,7 @@ export const TextReaderPage: React.FC = () => {
     const { settings: s } = useAppStore.getState();
     const config = { baseUrl: s.knowledgeAiUrl, apiKey: s.knowledgeAiKey, model: s.knowledgeAiModel };
     if (!isProviderConfigured(config)) {
-      showToast(COPY.vocab.aiNotConfigured);
+      showToast(COPY.vocab.aiNotConfigured, () => navigate(ROUTES.SETTINGS), '去设置');
       return;
     }
     const chapterIndex = resolveSelectionChapterIndex(sel);
@@ -1944,7 +1945,7 @@ export const TextReaderPage: React.FC = () => {
     const { settings: s } = useAppStore.getState();
     const config = { baseUrl: s.knowledgeAiUrl, apiKey: s.knowledgeAiKey, model: s.knowledgeAiModel };
     if (!isProviderConfigured(config)) {
-      showToast(COPY.translate.aiNotConfigured);
+      showToast(COPY.translate.aiNotConfigured, () => navigate(ROUTES.SETTINGS), '去设置');
       return;
     }
     const position = {
@@ -1965,7 +1966,7 @@ export const TextReaderPage: React.FC = () => {
           : null
       );
     }
-  }, [showToast, title, selectionInfoRef, isSelectingTextRef, setSelectionInfo]);
+  }, [showToast, title, selectionInfoRef, isSelectingTextRef, setSelectionInfo, navigate]);
 
   // 译文存为批注：原文划线 + 笔记即译文（进摘抄墙与复习队列）
   const handleTranslateSave = useCallback(
@@ -2869,7 +2870,7 @@ export const TextReaderPage: React.FC = () => {
         />
       )}
 
-      {toast && <UndoToast message={toast.message} onUndo={toast.undo} />}
+      {toast && <UndoToast message={toast.message} onUndo={toast.undo} actionLabel={toast.actionLabel} />}
 
       {/* 神经网络音色包首次下载确认 */}
       <ConfirmDialog
