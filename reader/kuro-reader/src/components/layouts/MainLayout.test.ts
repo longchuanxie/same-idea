@@ -33,4 +33,11 @@ describe('getAppBarConfig 顶栏配置', () => {
     expect(getAppBarConfig('/library')).toEqual({ variant: 'default', title: '书库' });
     expect(getAppBarConfig('/library/sub-1')).toEqual({ variant: 'none' });
   });
+
+  it('学习闭环与知识域次级页顶栏带标题（不再出现光秃返回键）', () => {
+    expect(getAppBarConfig('/review')).toEqual({ variant: 'back', title: '复习席' });
+    expect(getAppBarConfig('/vocabulary')).toEqual({ variant: 'back', title: '生词本' });
+    expect(getAppBarConfig('/ask')).toEqual({ variant: 'back', title: '问藏书' });
+    expect(getAppBarConfig('/atlas')).toEqual({ variant: 'back', title: '跨书图谱' });
+  });
 });

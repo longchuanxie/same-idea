@@ -61,5 +61,17 @@ export const getAppBarConfig = (pathname: string): AppBarConfig => {
   if (pathname === '/tags') {
     return { variant: 'back', title: '分类目录' };
   }
+  if (pathname === '/review') {
+    return { variant: 'back', title: '复习席' };
+  }
+  if (pathname === '/vocabulary') {
+    return { variant: 'back', title: '生词本' };
+  }
+  if (pathname === '/ask') {
+    return { variant: 'back', title: '问藏书' };
+  }
+  if (pathname === '/atlas') {
+    return { variant: 'back', title: '跨书图谱' };
+  }
   return { variant: 'back' };
 };
