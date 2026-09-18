@@ -401,6 +401,9 @@ export async function applyMergedPayloadToLocal(merged: SyncPayload): Promise<vo
     // 以合并结果整体覆盖本地墓碑表（remove 期间的临时写入被统一收敛）
     await tombstoneRepo.replaceAll(tombstones.map((t) => ({ ...t, id: `${t.kind}:${t.key}` })));
   }
+  // 过期墓碑收敛：合并结果为空（全部过期）时上面的 replaceAll 不会执行，
+  // 本地过期墓碑会被永久保留并随每次上传携带——每次同步顺手清一次
+  await tombstoneRepo.purgeExpired();
 }
 
 /** 整书墓碑落地：删除该书名下全部进度/书签/批注/知识产物/生词/复习卡 */

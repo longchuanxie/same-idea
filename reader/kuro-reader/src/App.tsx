@@ -57,9 +57,13 @@ const App: React.FC = () => {
       } else {
         CapacitorApp.exitApp();
       }
-    }).then((listener) => {
-      removeListener = () => listener.remove();
-    });
+    })
+      .then((listener) => {
+        removeListener = () => listener.remove();
+      })
+      .catch(() => {
+        // 原生桥不可用（如纯 Web 调试）：返回键策略静默缺席，不让 Promise 悬挂成 unhandled rejection
+      });
 
     return () => removeListener?.();
   }, []);

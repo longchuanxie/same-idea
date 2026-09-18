@@ -772,12 +772,12 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     set((state) => ({
       readingProgress: { ...state.readingProgress, [bookId]: stamped },
     }));
-    // 持久化到 IndexedDB（fire-and-forget，与书籍元数据保存策略一致）
-    progressRepo.save(stamped);
+    // 持久化到 IndexedDB（fire-and-forget，与书籍元数据保存策略一致）；吞掉 rejection 防悬挂
+    progressRepo.save(stamped).catch(() => {});
     const book = get().books.find((b) => b.id === bookId);
     if (book) {
       const updatedBook = { ...book, lastReadAt: new Date() };
-      bookRepo.save(updatedBook);
+      bookRepo.save(updatedBook).catch(() => {});
       set((state) => ({
         books: state.books.map((b) =>
           b.id === bookId ? updatedBook : b
