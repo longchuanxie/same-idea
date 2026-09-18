@@ -39,8 +39,9 @@ const TRAILING_CLOSER_CHARS = new Set([
   '"', '"', "'", "'", '』', '」', '）', '】', '》', '〉', ')', ']', '}',
 ]);
 
-/** 句末回找窗口：断在完整句末比塞满页面更重要，窗口给得更宽 */
-const SENTENCE_BREAK_SEARCH: BreakSearchWindow = { ratio: 0.5, min: 80, max: 400 };
+/** 句末回找窗口：断在完整句末优先，但牺牲有上限（max ≈ 5 行）——
+ *  长段无句读时为等一个句号留出近整页空白，比段中硬切更伤阅读 */
+const SENTENCE_BREAK_SEARCH: BreakSearchWindow = { ratio: 0.5, min: 80, max: 200 };
 
 /** 子句回找窗口（沿用旧版比例与下限） */
 const CLAUSE_BREAK_SEARCH: BreakSearchWindow = { ratio: 0.25, min: 32, max: 120 };

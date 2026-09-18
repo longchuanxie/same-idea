@@ -34,6 +34,13 @@ describe('findPreferredBreak', () => {
     const text = '甲乙\n丙丁戊己庚辛'
     expect(findPreferredBreak(text, 7)).toBe(3)
   })
+
+  it('句末超出牺牲上限时回退子句断点——不为等句号留出近整页空白', () => {
+    // 句号在回退 280 字符处（超 max 200），逗号在回退 30 字符处（子句窗口 120 内）
+    const text = 'x'.repeat(199) + '。' + 'y'.repeat(249) + '，' + 'z'.repeat(30)
+    const best = text.length
+    expect(findPreferredBreak(text, best)).toBe(best - 30)
+  })
 })
 
 describe('splitTextIntoPages', () => {

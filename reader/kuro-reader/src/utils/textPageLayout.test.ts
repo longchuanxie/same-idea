@@ -17,7 +17,8 @@ describe('getTextPageLayout', () => {
     expect(layout.articleWidth).toBe(960)
     expect(layout.contentWidth).toBe(912)
     expect(layout.verticalPadding).toBe(48)
-    expect(layout.pageHeight).toBe(656)
+    // pageHeight = 800 - 48*2 - 28（静态安全余量收窄到一行，自校准兜底防裁字）
+    expect(layout.pageHeight).toBe(676)
   })
 
   it('keeps the compact portrait reading width', () => {
