@@ -7,15 +7,8 @@ import type { TtsEngine, TtsSpeakContext, TtsSpeakHandlers } from './types';
 /** Piper 中文音色(单女声,medium 质量 ~60-80MB,首次使用时下载并存入 OPFS) */
 export const PIPER_VOICE_ID = 'zh_CN-huayan-medium';
 
-/** 库的类型声明遗漏了 opfs 写入接口，运行时确实导出（存储键按 URL 文件名推导） */
-type PiperOpfsWriter = {
-  writeBlob: (url: string, blob: Blob) => Promise<void>;
-};
-
 /** 模型仓（Piper 官方音色库镜像） */
 const MODEL_REPO = 'diffusionstudio/piper-voices';
-/** writeBlob 的存储键按此规范 URL 的文件名推导，必须保持稳定 */
-const MODEL_CANONICAL_BASE = `https://huggingface.co/${MODEL_REPO}/resolve/main`;
 /** 模型文件源顺序：HF 直连（官方 CDN 固定 CORS，部分网络不可达）→ hf-mirror（国内可达，
  *  但其 /resolve 的 307 在 Chromium cors 模式下复检必败——实测，需经 revision API 走
  *  /api/resolve-cache 直出） */
@@ -41,6 +34,19 @@ export function normalizePiperDownloadPercent(percent: number): number | null {
 
 type PiperModule = typeof PiperTts;
 type PiperSession = InstanceType<PiperModule['TtsSession']>;
+
+/**
+ * 按库的 OPFS 约定写入模型文件：根目录 piper/ 下以模型 URL 尾段（<voiceId>.onnx[.json]）为键。
+ * 库未导出 writeBlob（内部实现且强制 HF 域校验），TtsSession/stored() 读取同约定，自写可被识别。
+ */
+async function writeModelBlobToOpfs(basename: string, blob: Blob): Promise<void> {
+  const root = await navigator.storage.getDirectory();
+  const dir = await root.getDirectoryHandle('piper', { create: true });
+  const file = await dir.getFileHandle(basename, { create: true });
+  const writable = await file.createWritable();
+  await writable.write(blob);
+  await writable.close();
+}
 
 let modulePromise: Promise<PiperModule> | null = null;
 let sessionPromise: Promise<PiperSession> | null = null;
@@ -193,8 +199,11 @@ async function fetchModelFile(
 /**
  * 预下载音色模型并初始化推理会话。
  * 并发调用共享同一次下载；进度经 subscribePiperDownloadProgress 广播。
- * 模型文件自实现多源下载（HF 直连 + hf-mirror 镜像）后经库 writeBlob 落入
- * OPFS——库按文件名存取，写入端不限制字节来源，会话初始化即可零网络加载。
+/**
+ * 预下载音色模型并初始化推理会话。
+ * 并发调用共享同一次下载；进度经 subscribePiperDownloadProgress 广播。
+ * 模型文件自实现多源下载（HF 直连 + hf-mirror 镜像两段式）后按库的 OPFS 约定
+ * 写入根目录 piper/（文件名取模型 URL 尾段）——TtsSession 读取同约定，会话初始化即可零网络加载。
  */
 export async function preloadPiperModel(): Promise<void> {
   if (activeDownload) return activeDownload;
@@ -202,12 +211,11 @@ export async function preloadPiperModel(): Promise<void> {
     try {
       const tts = await loadModule();
       if (!(await tts.stored()).includes(PIPER_VOICE_ID)) {
-        const modelOriginUrl = (file: string) => `${MODEL_CANONICAL_BASE}/${MODEL_RELATIVE_PATH}${file}`;
         fileCompletion.clear();
         emitProgress(0);
         // 配置文件（.onnx.json，很小）
         const configBlob = await fetchModelFile(`${MODEL_RELATIVE_PATH}.json`, () => undefined, () => emitProgress(PROGRESS_INDETERMINATE));
-        await (tts as PiperModule & PiperOpfsWriter).writeBlob(modelOriginUrl('.json'), configBlob);
+        await writeModelBlobToOpfs(`${PIPER_VOICE_ID}.onnx.json`, configBlob);
         // 模型（.onnx，数十 MB，进度主要来自这里）
         let modelTotal = 0;
         const modelBlob = await fetchModelFile(MODEL_RELATIVE_PATH, (loaded, total) => {
@@ -217,7 +225,7 @@ export async function preloadPiperModel(): Promise<void> {
             if (percent > progressPercent) emitProgress(percent);
           }
         }, () => emitProgress(PROGRESS_INDETERMINATE));
-        await (tts as PiperModule & PiperOpfsWriter).writeBlob(modelOriginUrl(''), modelBlob);
+        await writeModelBlobToOpfs(`${PIPER_VOICE_ID}.onnx`, modelBlob);
         emitProgress(100);
       }
       await createSession();

@@ -1,19 +1,44 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const createMock = vi.fn((..._args: unknown[]) => undefined)
-const writeBlobMock = vi.fn(async (..._args: unknown[]) => {})
 const storedMock = vi.fn(async (): Promise<string[]> => [])
 const capacitorHttpGet = vi.fn()
 
 vi.mock('@mintplex-labs/piper-tts-web', () => ({
   TtsSession: { create: (...args: unknown[]) => createMock(...args) },
-  writeBlob: (...args: unknown[]) => writeBlobMock(...args),
   stored: () => storedMock(),
 }))
 
 vi.mock('@capacitor/core', () => ({
   CapacitorHttp: { get: (...args: unknown[]) => capacitorHttpGet(...args) },
 }))
+
+// ===== 假 OPFS：jsdom 无 OPFS，记录写入文件与字节数 =====
+const opfsFiles = new Map<string, number>()
+function installFakeOpfs() {
+  opfsFiles.clear()
+  const dirHandle = {
+    async getFileHandle(name: string, opts?: { create?: boolean }) {
+      if (!opfsFiles.has(name) && !opts?.create) throw new Error(`NotFound: ${name}`)
+      return {
+        async createWritable() {
+          let bytes = 0
+          return {
+            write: async (part: BlobPart) => {
+              bytes += part instanceof Blob ? part.size : (part as ArrayBuffer).byteLength ?? 0
+            },
+            close: async () => { opfsFiles.set(name, bytes) },
+          }
+        },
+        async getFile() { return { size: opfsFiles.get(name) ?? 0 } as File },
+      }
+    },
+  }
+  const root = { getDirectoryHandle: async () => dirHandle }
+  const nav = navigator as unknown as { storage: { getDirectory: unknown } }
+  nav.storage = nav.storage ?? ({} as StorageManager)
+  nav.storage.getDirectory = async () => root
+}
 
 // sessionPromise / activeDownload 为模块级缓存,每个用例重载模块以隔离
 const loadEngine = async () => await import('./piperEngine')
@@ -42,10 +67,10 @@ describe('preloadPiperModel', () => {
     vi.resetModules()
     vi.unstubAllGlobals()
     createMock.mockReset()
-    writeBlobMock.mockReset()
     storedMock.mockResolvedValue([])
     capacitorHttpGet.mockReset()
     createMock.mockResolvedValue(undefined)
+    installFakeOpfs()
   })
 
   it('触发会话创建并复用同一会话', async () => {
@@ -72,11 +97,7 @@ describe('preloadPiperModel', () => {
     const mod = await loadEngine()
     await mod.preloadPiperModel()
     // 两个文件：.onnx.json 配置 + .onnx 模型，均写入 OPFS
-    expect(writeBlobMock).toHaveBeenCalledTimes(2)
-    const urls = writeBlobMock.mock.calls.map((call) => String(call[0]))
-    expect(urls.every((url) => url.startsWith('https://huggingface.co/'))).toBe(true)
-    expect(urls.some((url) => url.endsWith('.onnx'))).toBe(true)
-    expect(urls.some((url) => url.endsWith('.onnx.json'))).toBe(true)
+    expect([...opfsFiles.keys()].sort()).toEqual(['zh_CN-huayan-medium.onnx', 'zh_CN-huayan-medium.onnx.json'])
   })
 
   it('主源失败自动切换镜像源（revision API 解析后直出），全部失败才报错', async () => {
@@ -93,7 +114,7 @@ describe('preloadPiperModel', () => {
     await expect(mod.preloadPiperModel()).resolves.toBeUndefined()
     // 2 个文件 ×（HF 1 次失败 + 镜像 revision API 1 次 + 镜像直出 1 次）= 6
     expect(fetchMock).toHaveBeenCalledTimes(6)
-    expect(writeBlobMock).toHaveBeenCalledTimes(2)
+    expect(opfsFiles.size).toBe(2)
     // 走的是 resolve-cache 直出（绕开 /resolve 的 307 CORS 失败点）
     const fetchedUrls = fetchMock.mock.calls.map((call) => String(call[0]))
     expect(fetchedUrls.filter((url) => url.includes('/api/resolve-cache/models/')).length).toBe(2)
@@ -118,7 +139,7 @@ describe('preloadPiperModel', () => {
     const nativeUrls = capacitorHttpGet.mock.calls.map((call) => String((call[0] as { url: string }).url))
     const mirrorUrls = nativeUrls.filter((url) => url.startsWith('https://hf-mirror.com/diffusionstudio/piper-voices/resolve/main/'))
     expect(mirrorUrls.length).toBe(2)
-    expect(writeBlobMock).toHaveBeenCalledTimes(2)
+    expect(opfsFiles.size).toBe(2)
   })
 
   it('全部源失败时下载失败，不写 OPFS', async () => {
@@ -126,7 +147,7 @@ describe('preloadPiperModel', () => {
     vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('fetch failed') }))
     const mod = await loadEngine()
     await expect(mod.preloadPiperModel()).rejects.toThrow()
-    expect(writeBlobMock).not.toHaveBeenCalled()
+    expect(opfsFiles.size).toBe(0)
     expect(createMock).not.toHaveBeenCalled()
   })
 
@@ -152,7 +173,7 @@ describe('preloadPiperModel', () => {
     expect(mod.isPiperDownloading()).toBe(true)
     release()
     await Promise.all([first, second])
-    expect(writeBlobMock).toHaveBeenCalledTimes(2)
+    expect(opfsFiles.size).toBe(2)
     expect(mod.isPiperDownloading()).toBe(false)
   })
 
@@ -175,7 +196,7 @@ describe('preloadPiperModel', () => {
     await mod.preloadPiperModel()
     // 两个文件各走一次原生兜底，均写入 OPFS
     expect(capacitorHttpGet).toHaveBeenCalledTimes(2)
-    expect(writeBlobMock).toHaveBeenCalledTimes(2)
+    expect(opfsFiles.size).toBe(2)
     expect(createMock).toHaveBeenCalledTimes(1)
   })
 
@@ -196,7 +217,7 @@ describe('preloadPiperModel', () => {
     vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('fetch failed') }))
     const mod = await loadEngine()
     await expect(mod.preloadPiperModel()).rejects.toThrow()
-    expect(writeBlobMock).not.toHaveBeenCalled()
+    expect(opfsFiles.size).toBe(0)
   })
 })
 
