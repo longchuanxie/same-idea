@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { Capacitor } from '@capacitor/core';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-import { APP_CONFIG } from '@/constants/config';
+import { APP_CONFIG, MAX_FILE_SIZE_MB } from '@/constants/config';
 import { COPY } from '@/constants/copy';
 import { ROUTES, bookDetailPath, customCloudPath, subLibraryPath } from '@/constants/routes';
 import { FilePicker } from '@/plugins/FilePickerPlugin';
@@ -122,14 +122,23 @@ export const ImportPage: React.FC = () => {
 
     if (files.length === 1) {
       const file = files[0];
-      if (file.size > APP_CONFIG.maxFileSize) return;
+      if (file.size > APP_CONFIG.maxFileSize) {
+        toast(COPY.importRejected.oversize(file.name, MAX_FILE_SIZE_MB));
+        return;
+      }
       const ext = getFileExtension(file.name);
-      if (!(SUPPORTED_EXTENSIONS as readonly string[]).includes(ext)) return;
+      if (!(SUPPORTED_EXTENSIONS as readonly string[]).includes(ext)) {
+        toast(COPY.importRejected.unsupported(file.name));
+        return;
+      }
       const book = await importFile(file, importOpts);
       if (book) setImportResult({ type: 'book', title: book.title, id: book.id });
     } else {
       const imageFiles = Array.from(files).filter((f) => isImageFile(f.name));
-      if (imageFiles.length === 0) return;
+      if (imageFiles.length === 0) {
+        toast(COPY.importRejected.pickNoValidFiles);
+        return;
+      }
       const folderName = imageFiles[0].webkitRelativePath?.split('/')[0] || '未命名文件夹';
       const book = await importFolder(imageFiles, folderName, importOpts);
       if (book) setImportResult({ type: 'book', title: book.title, id: book.id });
@@ -152,7 +161,11 @@ export const ImportPage: React.FC = () => {
 
     if (bookFiles.length > 0 && bookFiles.length >= imageFiles.length) {
       const validArchives = bookFiles.filter((f) => f.size <= APP_CONFIG.maxFileSize);
-      if (validArchives.length === 0) return;
+      if (validArchives.length === 0) {
+        const oversize = bookFiles[0];
+        toast(COPY.importRejected.oversize(oversize.name, MAX_FILE_SIZE_MB));
+        return;
+      }
 
       // 文件名全部命中章节模式（第01话.cbz…）→ 合并为一本书多章
       const mergeable =
@@ -175,7 +188,10 @@ export const ImportPage: React.FC = () => {
         });
       }
     } else {
-      if (imageFiles.length === 0) return;
+      if (imageFiles.length === 0) {
+        toast(COPY.importRejected.folderNoValidFiles);
+        return;
+      }
       const book = await importFolder(imageFiles, folderName, importOpts);
       if (book) setImportResult({ type: 'book', title: book.title, id: book.id });
     }
@@ -217,6 +233,7 @@ export const ImportPage: React.FC = () => {
       const file = await pathToFile(pickedFile.path, pickedFile.name, pickedFile.mimeType);
 
       if (file.size > APP_CONFIG.maxFileSize) {
+        toast(COPY.importRejected.oversize(file.name, MAX_FILE_SIZE_MB));
         return;
       }
 
@@ -254,6 +271,11 @@ export const ImportPage: React.FC = () => {
       const bookFiles = allFiles.filter((f) => isSupportedFile(f.name));
       const imageFiles = allFiles.filter((f) => isImageFile(f.name));
       const validArchives = bookFiles.filter((f) => f.size <= APP_CONFIG.maxFileSize);
+
+      if (validArchives.length === 0 && imageFiles.length === 0) {
+        toast(COPY.importRejected.folderNoValidFiles);
+        return;
+      }
 
       if (validArchives.length > 0) {
         const subLibrary = await importArchivesAsSubLibrary(validArchives, result.name, importOpts);

@@ -274,4 +274,11 @@ export const COPY = {
     emptyToast: '标题和正文都要有',
     failedToast: '入藏失败，请重试',
   },
+  /** 导入前置校验：失败必须出声，静默 return 会让用户以为点了没反应 */
+  importRejected: {
+    oversize: (name: string, limitMb: number) => `《${name}》超过 ${limitMb}MB 上限，没有导入`,
+    unsupported: (name: string) => `${name} 不是支持的格式（zip/cbz/rar/cbr/pdf/txt/md/epub），没有导入`,
+    folderNoValidFiles: '文件夹里没有找到可导入的书籍或图片',
+    pickNoValidFiles: '选择的文件都不是支持的格式，没有导入',
+  },
 } as const;
