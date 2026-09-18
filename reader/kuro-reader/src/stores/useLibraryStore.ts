@@ -797,28 +797,42 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
   },
 
   batchDelete: async (ids: string[]) => {
+    // 逐本记录成败：中途失败不让 UI 与数据库脱节（已删的从界面消失，失败的书原样保留）
+    const deletedIds: string[] = [];
+    let firstError: string | null = null;
     for (const id of ids) {
-      await bookRepo.deleteFully(id);
-      const coverUrl = get().coverUrls[id];
-      if (coverUrl) URL.revokeObjectURL(coverUrl);
+      try {
+        await bookRepo.deleteFully(id);
+        deletedIds.push(id);
+        const coverUrl = get().coverUrls[id];
+        if (coverUrl) URL.revokeObjectURL(coverUrl);
+      } catch (e) {
+        firstError = firstError ?? (e as Error).message;
+      }
     }
     // 持久化受影响的标签（移除已删除书籍的引用）
-    const affectedTags = get().tags.filter((t) => t.bookIds.some((bid) => ids.includes(bid)));
+    const affectedTags = get().tags.filter((t) => t.bookIds.some((bid) => deletedIds.includes(bid)));
     for (const tag of affectedTags) {
-      const updatedTag = { ...tag, bookIds: tag.bookIds.filter((bid) => !ids.includes(bid)) };
-      await tagRepo.save(updatedTag);
+      const updatedTag = { ...tag, bookIds: tag.bookIds.filter((bid) => !deletedIds.includes(bid)) };
+      try {
+        await tagRepo.save(updatedTag);
+      } catch (e) {
+        firstError = firstError ?? (e as Error).message;
+      }
     }
+    if (firstError) set({ error: firstError });
+    if (deletedIds.length === 0) return;
     set((state) => ({
-      books: state.books.filter((b) => !ids.includes(b.id)),
+      books: state.books.filter((b) => !deletedIds.includes(b.id)),
       coverUrls: Object.fromEntries(
-        Object.entries(state.coverUrls).filter(([k]) => !ids.includes(k))
+        Object.entries(state.coverUrls).filter(([k]) => !deletedIds.includes(k))
       ),
       readingProgress: Object.fromEntries(
-        Object.entries(state.readingProgress).filter(([k]) => !ids.includes(k))
+        Object.entries(state.readingProgress).filter(([k]) => !deletedIds.includes(k))
       ),
       tags: state.tags.map((t) => ({
         ...t,
-        bookIds: t.bookIds.filter((bid) => !ids.includes(bid)),
+        bookIds: t.bookIds.filter((bid) => !deletedIds.includes(bid)),
       })),
     }));
   },
