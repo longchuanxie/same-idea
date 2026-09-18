@@ -135,6 +135,9 @@ export const useReaderStore = create<ReaderState>()((set, get) => ({
 
   openBook: async (bookId, chapterId, startPage) => {
     const currentCall = ++openBookCounter;
+    // 换书使在途的 openChapter 一并失效：两个会话计数器必须同进退，
+    // 否则旧书的章节装载会在 await 期间把新书的 pageUrls 当旧页 revoke 掉（跨书竞态）
+    openChapterCounter += 1;
     set({ isLoading: true, isUiVisible: false });
     try {
       const cached = get().bookCache[bookId];
@@ -376,7 +379,8 @@ export const useReaderStore = create<ReaderState>()((set, get) => ({
       if (before >= 0 && before !== after && offset > 0) criticalPages.push(extractInto(before));
     }
     await Promise.all(criticalPages);
-    if (currentCall !== openChapterCounter) return;
+    // 换装前校验仍在同一本书：await 期间 openBook 可能已换书，旧书结果一律丢弃
+    if (currentCall !== openChapterCounter || get().currentBookId !== currentBookId) return;
 
     // 原子换装
     get().pageUrls.forEach((url) => {

@@ -244,6 +244,58 @@ describe('openChapter & closeReader', () => {
     expect(pageRepoMock.getPage).not.toHaveBeenCalled()
   })
 
+  it('openChapter in flight is discarded when openBook switches to another book', async () => {
+    // 书 A 已在阅读中，用户从目录点开 ch2（慢），期间经 openBook 打开书 B
+    useReaderStore.setState({
+      currentBookId: 'b1',
+      currentChapterId: 'ch1',
+      currentPage: 1,
+      totalPages: 2,
+      pageUrls: ['blob:old-a', 'blob:old-b'],
+      chapters: makeChapters(),
+    })
+
+    const slowBookBChapters = [{ id: 'bx1', title: 'B第一章', pages: ['bx-0.jpg', 'bx-1.jpg'] }]
+    libraryGetState.mockReturnValue({
+      getBookById: vi.fn().mockImplementation((id: string) =>
+        id === 'b2' ? { chapters: slowBookBChapters } : undefined
+      ),
+      readingProgress: {},
+    })
+
+    let releaseChapterLoad: (blob: Blob) => void = () => undefined
+    const chapterLoadGate = new Promise<Blob>((resolve) => {
+      releaseChapterLoad = resolve
+    })
+    pageRepoMock.getPage.mockImplementation((_bookId: string, chapterId: string) =>
+      chapterId === 'ch2' ? chapterLoadGate : Promise.resolve(new Blob(['img']))
+    )
+
+    const chapterSwitch = useReaderStore.getState().openChapter('ch2', 1)
+    // ch2 关键页提取卡在门控 promise 上时，切书已完成装载
+    const bookSwitch = useReaderStore.getState().openBook('b2', 'bx1', 1)
+    await bookSwitch
+    await flushMicrotasks()
+
+    releaseChapterLoad(new Blob(['late']))
+    await chapterSwitch
+    await flushMicrotasks()
+
+    const state = useReaderStore.getState()
+    // 新书的装载不被旧书的迟到结果覆盖：书/章/页保持一致，且新书 URL 未被误 revoke
+    expect(state.currentBookId).toBe('b2')
+    expect(state.currentChapterId).toBe('bx1')
+    expect(state.totalPages).toBe(2)
+    expect(state.currentPage).toBe(1)
+    const survivingUrls = state.pageUrls.filter(
+      (url) => url !== null && url.startsWith('blob:page-')
+    )
+    expect(survivingUrls.length).toBeGreaterThan(0)
+    for (const url of survivingUrls) {
+      expect(revokeObjectURLMock).not.toHaveBeenCalledWith(url)
+    }
+  })
+
   it('closeReader revokes all URLs and resets state', () => {
     useReaderStore.setState({
       currentBookId: 'b1',
