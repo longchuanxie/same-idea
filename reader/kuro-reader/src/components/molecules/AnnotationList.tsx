@@ -160,6 +160,11 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
                     key={ann.id}
                     className="relative overflow-hidden mx-3 my-1 rounded-card-lg"
                     onTouchStart={() => setSwipedId(ann.id)}
+                    // 桌面端无触摸：右键与书库卡片同一约定——呼出删除操作
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setSwipedId(ann.id);
+                    }}
                   >
                     {/* 删除按钮 */}
                     <div className="absolute right-0 top-0 bottom-0 w-20 bg-error flex items-center justify-center rounded-r-card">
