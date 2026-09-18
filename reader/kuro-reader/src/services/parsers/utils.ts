@@ -10,27 +10,24 @@ export function extractTitleFromFilename(filename: string): string {
 }
 
 /**
- * 章节标题匹配正则。
+ * 章节标题匹配正则（可信模式）。
  * 覆盖中英文小说常见格式：
  * - 第一章、第1章、第一章回、第壹章、第百二十三章
  * - 第1节、第1回、第1卷、第1集、第1篇、第1部、第1话
  * - Chapter 1、CHAPTER 1、Chapter One
- * - 1. xxx、1、xxx、1) xxx
  * - 序言、前言、后记、楔子、尾声、引子、番外、番外篇、终章、尾声
  * - Prologue、Epilogue、Preface、Afterword、Introduction
+ * 数字编号型（1. 标题 / 001 标题）易误伤正文（小数/年份/数量），单独由
+ * matchNumericChapterTitle 判定并经全文递增一致性验证后才承认。
  */
 const CN_NUM = '[一二三四五六七八九十百千万零壹贰叁肆伍陆柒捌玖拾佰仟\\d]+'
 const CHAPTER_WORD = '[章节回卷集篇部话话集]'
 
-const CHAPTER_PATTERNS: RegExp[] = [
+const TRUSTED_CHAPTER_PATTERNS: RegExp[] = [
   // 第X章/节/回/卷/集/篇/部/话
   new RegExp(`^\\s*第${CN_NUM}${CHAPTER_WORD}.*\\s*$`, 'i'),
   // Chapter X / CHAPTER X / Chapter One
   /^\s*chapter\s+[\dIVXLCDMoneTwoThreeFourFiveSixSevenEightNineTen]+\b.*\s*$/i,
-  // 数字+分隔符+标题（如 1. 标题、1、标题、1) 标题）
-  /^\s*\d{1,4}\s*[、.．)\uff09]\s*.{1,40}\s*$/,
-  // 纯数字+标题（如 001 标题）
-  /^\s*\d{3,4}\s+.{1,40}\s*$/,
 ]
 
 // 特殊独立章节名（序言、前言等）
@@ -42,11 +39,34 @@ const SPECIAL_CHAPTER_NAMES = new Set([
 ])
 
 /**
+ * 数字编号型标题判定（1. 标题 / 001 标题）。命中返回编号值，否则返回 null。
+ * 防误判设计：
+ * - 分隔符（.．)) 后紧跟数字视为小数（"3.5 星的评价"）→ 不算标题；
+ * - 纯数字+标题模式只认零填充编号（"001 标题"），裸数字（"1024 个读者"与
+ *   年份/数量无法区分）不再当标题。
+ */
+export function matchNumericChapterTitle(line: string): number | null {
+  const trimmed = line.trim()
+  if (!trimmed || trimmed.length > 60) return null
+  // 缩进行视为内容行（与 isChapterTitle 的缩进规则一致）
+  if (line !== trimmed && /^[\s\u3000]/.test(line)) return null
+
+  const separatorForm = trimmed.match(/^\s*(\d{1,4})\s*[、.．)\uff09](?!\d)\s*(.{1,40})\s*$/)
+  if (separatorForm) return Number.parseInt(separatorForm[1], 10)
+  const zeroPaddedForm = trimmed.match(/^\s*(0\d{2,3})\s+.{1,40}\s*$/)
+  if (zeroPaddedForm) return Number.parseInt(zeroPaddedForm[1], 10)
+  return null
+}
+
+/** 数字型候选参与递增一致性验证的门槛与增幅要求（低于即整批降级为正文） */
+const NUMERIC_SEQ_MIN_CANDIDATES = 2;
+const NUMERIC_SEQ_INCREASE_RATIO = 0.5;
+
+/**
  * 判断一行是否为章节标题。
  * 规则：
  * 1. 不能以全角空格或其他缩进开头（缩进行视为内容行）
- * 2. 匹配章节正则 或 特殊章节名
- * 3. 行长度不超过 60 字符
+ * 2. 匹配可信正则 / 特殊章节名 / 数字编号型
  */
 function isChapterTitle(line: string): boolean {
   const trimmed = line.trim()
@@ -62,12 +82,13 @@ function isChapterTitle(line: string): boolean {
   // 特殊章节名（精确匹配）
   if (SPECIAL_CHAPTER_NAMES.has(trimmed.toLowerCase())) return true
 
-  // 正则匹配
-  for (const pattern of CHAPTER_PATTERNS) {
+  // 可信正则
+  for (const pattern of TRUSTED_CHAPTER_PATTERNS) {
     if (pattern.test(trimmed)) return true
   }
 
-  return false
+  // 数字编号型（是否采纳由调用方的全文验证决定）
+  return matchNumericChapterTitle(line) != null
 }
 
 /**
@@ -79,19 +100,39 @@ function isChapterTitle(line: string): boolean {
  * 2. 章节标题之间的内容归入该章节
  * 3. 第一个标题之前的内容归入「前言」章节
  * 4. 若未找到任何章节，返回单章节
+ * 5. 数字编号型标题（1. 标题）需通过全文递增一致性验证：真章节的编号
+ *    沿文档顺序大致递增，正文里的年份/日期/杂录行则杂乱无序——增幅不足
+ *    时整批降级为内容行，避免日记体/杂录被拦腰拆成假章节
  */
 export function splitTextIntoChapters(text: string): ParsedTextChapter[] {
   const lines = text.split('\n')
+
+  // 数字型候选全文一致性验证（第一遍扫描）
+  const numericCandidates = lines
+    .map((line, index) => ({ index, value: matchNumericChapterTitle(line) }))
+    .filter((candidate): candidate is { index: number; value: number } => candidate.value != null)
+  const demotedNumericLines = new Set<number>()
+  if (numericCandidates.length >= NUMERIC_SEQ_MIN_CANDIDATES) {
+    let increasingPairs = 0;
+    for (let i = 1; i < numericCandidates.length; i++) {
+      if (numericCandidates[i].value > numericCandidates[i - 1].value) increasingPairs++;
+    }
+    if (increasingPairs / (numericCandidates.length - 1) < NUMERIC_SEQ_INCREASE_RATIO) {
+      for (const candidate of numericCandidates) demotedNumericLines.add(candidate.index);
+    }
+  }
+
   const chapters: ParsedTextChapter[] = []
   let currentContent: string[] = []
   let currentTitle = ''
   let foundFirstChapter = false
 
-  for (const line of lines) {
+  for (const [lineIndex, line] of lines.entries()) {
     const trimmed = line.trim()
 
-    // 传入原始行：isChapterTitle 内部依赖前导空白判断「缩进伪标题」
-    if (isChapterTitle(line)) {
+    // 传入原始行：isChapterTitle 内部依赖前导空白判断「缩进伪标题」；
+    // 被一致性验证降级的数字行视作正文
+    if (isChapterTitle(line) && !demotedNumericLines.has(lineIndex)) {
       // 保存之前的章节
       if (currentContent.length > 0 || foundFirstChapter) {
         const content = currentContent.join('\n').trim()
