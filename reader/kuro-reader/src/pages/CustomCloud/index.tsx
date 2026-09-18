@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 
 import { useNavigate } from 'react-router-dom';
 
@@ -123,17 +123,22 @@ export const CustomCloudPage: React.FC = () => {
     }
   }
 
+  // 目录加载会话序号：快速连点 A、B 目录时，A 的慢响应不再覆盖 B 的结果
+  const loadDirectorySeqRef = useRef(0);
   const loadDirectory = useCallback(async (target: CloudStorageClient, dir: string) => {
+    const seq = ++loadDirectorySeqRef.current;
     setIsLoadingFiles(true);
     setFilesError(null);
     try {
       const list = await target.listFiles(dir);
+      if (seq !== loadDirectorySeqRef.current) return;
       setFiles(sortCloudEntries(list.filter((f) => !f.name.startsWith('.'))));
       setCurrentPath(normalizeCloudPath(dir));
     } catch (e) {
+      if (seq !== loadDirectorySeqRef.current) return;
       setFilesError((e as Error).message || '目录读取失败');
     } finally {
-      setIsLoadingFiles(false);
+      if (seq === loadDirectorySeqRef.current) setIsLoadingFiles(false);
     }
   }, []);
 
