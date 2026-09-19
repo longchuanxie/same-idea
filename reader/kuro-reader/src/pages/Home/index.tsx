@@ -325,7 +325,9 @@ export const HomePage: React.FC = () => {
                         </div>
                         <p className="font-label text-label-sm text-on-surface-variant">
                           {chapter
-                            ? `第 ${chapter.number} ${seatBook.format === 'text' ? '章' : '话'}`
+                            ? chapter.number != null
+                              ? `第 ${chapter.number} ${seatBook.format === 'text' ? '章' : '话'}`
+                              : chapter.title
                             : `${seatBook.totalChapters} 话`}
                           <span className="font-mono ml-2">{pct}%</span>
                         </p>
