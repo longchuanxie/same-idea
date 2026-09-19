@@ -132,8 +132,12 @@ export async function chatCompletionJson<T>(
     )
   }
 
-  const payload = (await response.json()) as {
+  const payload = (await response.json().catch(() => null)) as {
     choices?: { message?: { content?: string } }[]
+  } | null
+  if (!payload) {
+    // 200 但响应体不是 JSON（网关错误页等）：语法错误冒泡用户看不懂
+    throw new AiRequestError('AI 服务返回了非 JSON 响应（可能被网关/代理拦截）')
   }
   const content = payload.choices?.[0]?.message?.content ?? ''
   const parsed = extractJsonPayload(content)
