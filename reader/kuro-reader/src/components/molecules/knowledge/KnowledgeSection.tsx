@@ -3,9 +3,9 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog'
-import { settingsPath, knowledgePath } from '@/constants/routes';
 import { GenerationOptionsSheet } from '@/components/molecules/knowledge/GenerationOptionsSheet'
 import { COPY } from '@/constants/copy'
+import { settingsPath, knowledgePath } from '@/constants/routes'
 import { isProviderConfigured } from '@/services/ai/aiClient'
 import { KNOWLEDGE_TASKS, getKnowledgeTasksForKind } from '@/services/ai/knowledgeTasks'
 import { getPdfPageTexts } from '@/services/pdfText'

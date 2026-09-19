@@ -41,6 +41,10 @@ import {
 import { getStorageUsage } from '@/utils/storage';
 import { toast } from '@/utils/toast';
 
+/** AI 未配置深链：滚动等待与高亮驻留时长 */
+const AI_FOCUS_SCROLL_DELAY_MS = 150;
+const AI_FOCUS_HIGHLIGHT_MS = 2500;
+
 /** 备份格式版本：v2 起包括书签与批注；v3 起包括阅读时长簿；v4 起包括知识库产物；v5 起包括生词本与复习卡。导入时兼容 v1-v4 */
 const BACKUP_VERSION = 5;
 // eslint-disable-next-line no-magic-numbers -- 历史备份版本号枚举，无业务阈值语义
@@ -137,8 +141,8 @@ export const SettingsPage: React.FC = () => {
     const timer = setTimeout(() => {
       aiSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       setAiSectionHighlighted(true);
-      setTimeout(() => setAiSectionHighlighted(false), 2500);
-    }, 150);
+      setTimeout(() => setAiSectionHighlighted(false), AI_FOCUS_HIGHLIGHT_MS);
+    }, AI_FOCUS_SCROLL_DELAY_MS);
     return () => clearTimeout(timer);
   }, [aiFocusRequested]);
   const [syncMessage, setSyncMessage] = useState<{ ok: boolean; text: string } | null>(null);

@@ -129,7 +129,7 @@ export const LibraryPage: React.FC = () => {
     });
   };
 
-  const selectAll = () => {
+  const selectAll = useCallback(() => {
     const allBookIds = new Set(displayedBooks.map((b) => b.id));
     const allSubLibIds = new Set(subLibraries.map((sl) => sl.id));
     const allSelected =
@@ -145,7 +145,7 @@ export const LibraryPage: React.FC = () => {
       setSelectedIds(allBookIds);
       setSelectedSubLibIds(allSubLibIds);
     }
-  };
+  }, [displayedBooks, subLibraries, selectedIds, selectedSubLibIds]);
 
   const exitSelectMode = () => {
     setIsSelectMode(false);
