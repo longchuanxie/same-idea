@@ -281,6 +281,9 @@ export const TextReaderPage: React.FC = () => {
   const pendingPageRequestRef = useRef<PageRequest | null>(null);
   // 最近一次完成分页的章节下标（判断现有 textPages 是否对当前章节有效）
   const paginatedChapterIndexRef = useRef(-1);
+  // 分页运行令牌：每次启动分页自增；旧运行在图片等待等挂起点恢复后若发现
+  // 令牌已换代，放弃落盘——防止旧章节迟到的分页结果覆盖新章节的页面
+  const paginationRunTokenRef = useRef(0);
   /** 页容量自校准收缩量：渲染自检发现溢出时增长，收敛到本机「绝不裁字」的容量 */
   const pageCapacityShrinkRef = useRef(0);
 
@@ -1093,6 +1096,9 @@ export const TextReaderPage: React.FC = () => {
       return;
     }
 
+    // 本次运行令牌：挂起点恢复后若已被更新的运行换代，直接放弃
+    const runToken = ++paginationRunTokenRef.current;
+
     const { contentWidth, pageHeight: layoutPageHeight } = getCurrentTextPageLayout(isColumnsLayoutActive);
     // 自校准收缩量：设备度量漂移经渲染后自检发现溢出时增长，使本机分页容量
     // 收敛到「绝不裁字」的水平（见下方渲染自检 effect）
@@ -1160,6 +1166,9 @@ export const TextReaderPage: React.FC = () => {
         });
         setTimeout(resolve, MEASURE_IMAGES_TIMEOUT_MS);
       });
+      // 图片等待期间用户可能已切章/换字号启动了新的分页运行；
+      // 令牌换代说明本次结果已过期，落盘会把旧章节的页错标给新章节
+      if (runToken !== paginationRunTokenRef.current) return;
     }
 
     measureEl.style.position = 'absolute';
