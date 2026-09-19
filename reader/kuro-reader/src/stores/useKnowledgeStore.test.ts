@@ -131,6 +131,24 @@ describe('useKnowledgeStore.generateArtifact', () => {
     expect(useKnowledgeStore.getState().generation['book-1:character-graph']).toBeUndefined()
   })
 
+  it('落库抛错不再永久卡 running——状态转 error 且可重试', async () => {
+    configureProvider()
+    mockedChat.mockResolvedValue(graphFixture(['张三', '李四'], '张三与李四比剑'))
+    const { knowledgeRepo } = await import('@/services/storage/knowledgeRepo')
+    const saveMock = vi.mocked(knowledgeRepo.save)
+    saveMock.mockRejectedValueOnce(new Error('IndexedDB 写入失败'))
+
+    const ok = await useKnowledgeStore.getState().generateArtifact(book, 'character-graph')
+    expect(ok).toBe(false)
+    const state = useKnowledgeStore.getState().generation['book-1:character-graph']
+    expect(state?.status).toBe('error')
+    expect(state?.error).toMatch('IndexedDB 写入失败')
+    // 未卡死：守卫放行下一次生成
+    saveMock.mockResolvedValueOnce(undefined)
+    const retry = await useKnowledgeStore.getState().generateArtifact(book, 'character-graph')
+    expect(retry).toBe(true)
+  })
+
   it('生成中暴露进度（running → done 递增）', async () => {
     configureProvider()
     let releaseSecond: (value: unknown) => void = () => {}

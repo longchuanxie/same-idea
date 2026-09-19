@@ -53,7 +53,11 @@ interface KnowledgeState {
    * options.incremental 在现有产物上并入新内容（旧证据坐标原样保留）；
    * options.detail 图谱详细度（仅 character-graph 消费）。
    */
-  generateArtifact: (book: Book, type: KnowledgeArtifactType, options?: KnowledgeGenerationOptions) => Promise<boolean>
+  generateArtifact: (
+    book: Book,
+    type: KnowledgeArtifactType,
+    options?: KnowledgeGenerationOptions
+  ) => Promise<boolean>
   cancelGeneration: (bookId: string, type: KnowledgeArtifactType) => void
   removeArtifact: (bookId: string, artifactId: string) => Promise<void>
   /**
@@ -99,9 +103,9 @@ export const useKnowledgeStore = create<KnowledgeState>()((set, get) => ({
   artifactsByBook: {},
   generation: {},
 
-  loadArtifacts: async (bookId) => {
+  loadArtifacts: async bookId => {
     const artifacts = await knowledgeRepo.getByBookId(bookId)
-    set((state) => ({ artifactsByBook: { ...state.artifactsByBook, [bookId]: artifacts } }))
+    set(state => ({ artifactsByBook: { ...state.artifactsByBook, [bookId]: artifacts } }))
   },
 
   generateArtifact: async (book, type, options) => {
@@ -110,19 +114,28 @@ export const useKnowledgeStore = create<KnowledgeState>()((set, get) => ({
 
     const config = providerConfigFromSettings()
     if (!isProviderConfigured(config)) {
-      set((state) => ({
-        generation: { ...state.generation, [key]: { status: 'error', done: 0, total: 0, error: '知识库 AI 服务未配置——先到设置里填好服务地址与模型' } },
+      set(state => ({
+        generation: {
+          ...state.generation,
+          [key]: {
+            status: 'error',
+            done: 0,
+            total: 0,
+            error: '知识库 AI 服务未配置——先到设置里填好服务地址与模型',
+          },
+        },
       }))
       return false
     }
 
     const task = getKnowledgeTask(type)
     // 增量补充的基底：现有同类型产物（旧节点/边先入列，新内容只是并进来）
-    const existing = (get().artifactsByBook[book.id] ?? []).filter((a) => a.type === type)
+    const existing = (get().artifactsByBook[book.id] ?? []).filter(a => a.type === type)
     const baseArtifact = options?.incremental ? existing[0] : undefined
     const baseData = baseArtifact?.data
     // 增量的默认范围 = 上次生成之后的章节（书还在长，结尾未知故 to 省略）
-    const range = options?.scope ??
+    const range =
+      options?.scope ??
       (baseArtifact
         ? { from: baseArtifact.meta?.bookChapterCount ?? baseArtifact.meta?.chapterCount ?? 0 }
         : undefined)
@@ -137,7 +150,12 @@ export const useKnowledgeStore = create<KnowledgeState>()((set, get) => ({
         : e instanceof BookCorpusError
           ? e.message
           : '读取书本内容失败'
-      set((state) => ({ generation: { ...state.generation, [key]: { status: 'error', done: 0, total: 0, error: message } } }))
+      set(state => ({
+        generation: {
+          ...state.generation,
+          [key]: { status: 'error', done: 0, total: 0, error: message },
+        },
+      }))
       return false
     }
     if (!corpus) return false
@@ -151,18 +169,26 @@ export const useKnowledgeStore = create<KnowledgeState>()((set, get) => ({
 
     const controller = new AbortController()
     generationControllers.set(key, controller)
-    set((state) => ({
-      generation: { ...state.generation, [key]: { status: 'running', done: 0, total: corpusSnapshot.chunks.length } },
+    set(state => ({
+      generation: {
+        ...state.generation,
+        [key]: { status: 'running', done: 0, total: corpusSnapshot.chunks.length },
+      },
     }))
 
     const fail = (error: string) => {
       generationControllers.delete(key)
-      set((state) => {
+      set(state => {
         const current = state.generation[key]
         return {
           generation: {
             ...state.generation,
-            [key]: { status: 'error', done: current?.done ?? 0, total: corpusSnapshot.chunks.length, error },
+            [key]: {
+              status: 'error',
+              done: current?.done ?? 0,
+              total: corpusSnapshot.chunks.length,
+              error,
+            },
           },
         }
       })
@@ -180,7 +206,8 @@ export const useKnowledgeStore = create<KnowledgeState>()((set, get) => ({
         chunkIndex: index,
         chunkTotal: corpusSnapshot.chunks.length,
         contentKind,
-        detail: type === 'character-graph' || type === 'concept-graph' ? options?.detail : undefined,
+        detail:
+          type === 'character-graph' || type === 'concept-graph' ? options?.detail : undefined,
         incremental: Boolean(baseArtifact),
       })
 
@@ -188,14 +215,17 @@ export const useKnowledgeStore = create<KnowledgeState>()((set, get) => ({
       let lastError: unknown = null
       for (let attempt = 0; attempt <= CHUNK_RETRIES; attempt++) {
         try {
-          const raw = await chatCompletionJson<unknown>(config, { messages, signal: controller.signal })
+          const raw = await chatCompletionJson<unknown>(config, {
+            messages,
+            signal: controller.signal,
+          })
           parsed = task.parsePartial(raw)
           lastError = null
           break
         } catch (e) {
           if (controller.signal.aborted) {
             generationControllers.delete(key)
-            set((state) => {
+            set(state => {
               const { [key]: _removed, ...rest } = state.generation
               return { generation: rest }
             })
@@ -227,7 +257,7 @@ export const useKnowledgeStore = create<KnowledgeState>()((set, get) => ({
 
       const current = get().generation[key]
       if (current?.status === 'running') {
-        set((state) => ({
+        set(state => ({
           generation: { ...state.generation, [key]: { ...current, done: index + 1 } },
         }))
       }
@@ -238,63 +268,70 @@ export const useKnowledgeStore = create<KnowledgeState>()((set, get) => ({
       return fail('AI 没有返回任何可用的分析结果')
     }
 
-    let data = task.merge(book.title, partials, baseData)
-    if (type === 'character-graph' || type === 'concept-graph') {
-      // 证据摘句在真实章节文本中校验定位（防幻觉引文），换成可跳转的章内坐标
-      data = resolveGraphEvidence(data as InterimGraphData, corpusSnapshot.chapterTexts)
-    } else if (type === 'glossary') {
-      data = resolveGlossaryEvidence(data as InterimGlossaryData, corpusSnapshot.chapterTexts)
-    } else if (type === 'paper-brief') {
-      data = resolveBriefEvidence(data as InterimBriefData, corpusSnapshot.chapterTexts)
-    }
-    if (task.isEmpty(data)) {
-      const emptyHint: Record<KnowledgeArtifactType, string> = {
-        'character-graph': '这本书提不出足够的人物关系（文本里可能没有明确的人物互动）',
-        'concept-graph': '这本书提不出足够的概念关系（学术性文本才有清晰的概念网络，可试试切换内容类型）',
-        mindmap: '这本书提不出可用的结构大纲',
-        glossary: '这本书提不出明确的概念术语（可能不是学术性文本，可试试切换内容类型）',
-        'paper-brief': '这篇文本提不出速览卡（贡献、局限与疑问都需要明确的论述文本）',
+    // 合并/证据定位/落库全程兜底：任一环抛错若不接住，generation[key] 会永久
+    // 卡在 running，重入守卫（入口 status==='running' 拦截）就此锁死该书该类型
+    try {
+      let data = task.merge(book.title, partials, baseData)
+      if (type === 'character-graph' || type === 'concept-graph') {
+        // 证据摘句在真实章节文本中校验定位（防幻觉引文），换成可跳转的章内坐标
+        data = resolveGraphEvidence(data as InterimGraphData, corpusSnapshot.chapterTexts)
+      } else if (type === 'glossary') {
+        data = resolveGlossaryEvidence(data as InterimGlossaryData, corpusSnapshot.chapterTexts)
+      } else if (type === 'paper-brief') {
+        data = resolveBriefEvidence(data as InterimBriefData, corpusSnapshot.chapterTexts)
       }
-      return fail(emptyHint[type])
-    }
+      if (task.isEmpty(data)) {
+        const emptyHint: Record<KnowledgeArtifactType, string> = {
+          'character-graph': '这本书提不出足够的人物关系（文本里可能没有明确的人物互动）',
+          'concept-graph':
+            '这本书提不出足够的概念关系（学术性文本才有清晰的概念网络，可试试切换内容类型）',
+          mindmap: '这本书提不出可用的结构大纲',
+          glossary: '这本书提不出明确的概念术语（可能不是学术性文本，可试试切换内容类型）',
+          'paper-brief': '这篇文本提不出速览卡（贡献、局限与疑问都需要明确的论述文本）',
+        }
+        return fail(emptyHint[type])
+      }
 
-    // 覆盖式落库：复用同类型旧件 id（保留引用稳定性），删除其余同类型件
-    const reusedId = existing[0]?.id ?? makeArtifactId()
-    for (const old of existing) {
-      if (old.id !== reusedId) await knowledgeRepo.remove(old.id)
-    }
+      // 覆盖式落库：复用同类型旧件 id（保留引用稳定性），删除其余同类型件
+      const reusedId = existing[0]?.id ?? makeArtifactId()
+      for (const old of existing) {
+        if (old.id !== reusedId) await knowledgeRepo.remove(old.id)
+      }
 
-    const now = new Date()
-    const artifact: KnowledgeArtifact = {
-      id: reusedId,
-      bookId: book.id,
-      type,
-      title: task.artifactTitle,
-      data,
-      meta: {
-        chapterCount: corpusSnapshot.coveredChapterCount,
-        contentFingerprint: corpusSnapshot.fingerprint,
-        contentKind,
-        bookChapterCount: corpusSnapshot.chapterCount,
-        analyzedChunkCount: corpusSnapshot.chunks.length,
-        totalChunkCount: corpusSnapshot.totalChunkCount,
-        ...(corpusSnapshot.coveredRange ? { scope: corpusSnapshot.coveredRange } : {}),
-        ...(type === 'character-graph' || type === 'concept-graph') && options?.detail
-          ? { detail: options.detail }
-          : {},
-      },
-      generator: 'ai',
-      createdAt: existing[0]?.createdAt ?? now,
-      updatedAt: now,
-    }
-    await knowledgeRepo.save(artifact)
-    await get().loadArtifacts(book.id)
+      const now = new Date()
+      const artifact: KnowledgeArtifact = {
+        id: reusedId,
+        bookId: book.id,
+        type,
+        title: task.artifactTitle,
+        data,
+        meta: {
+          chapterCount: corpusSnapshot.coveredChapterCount,
+          contentFingerprint: corpusSnapshot.fingerprint,
+          contentKind,
+          bookChapterCount: corpusSnapshot.chapterCount,
+          analyzedChunkCount: corpusSnapshot.chunks.length,
+          totalChunkCount: corpusSnapshot.totalChunkCount,
+          ...(corpusSnapshot.coveredRange ? { scope: corpusSnapshot.coveredRange } : {}),
+          ...((type === 'character-graph' || type === 'concept-graph') && options?.detail
+            ? { detail: options.detail }
+            : {}),
+        },
+        generator: 'ai',
+        createdAt: existing[0]?.createdAt ?? now,
+        updatedAt: now,
+      }
+      await knowledgeRepo.save(artifact)
+      await get().loadArtifacts(book.id)
 
-    set((state) => {
-      const { [key]: _removed, ...rest } = state.generation
-      return { generation: rest }
-    })
-    return true
+      set(state => {
+        const { [key]: _removed, ...rest } = state.generation
+        return { generation: rest }
+      })
+      return true
+    } catch (e) {
+      return fail(e instanceof Error ? e.message : '知识件生成失败')
+    }
   },
 
   cancelGeneration: (bookId, type) => {
