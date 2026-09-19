@@ -64,3 +64,18 @@ describe('progressRepo', () => {
     expect(await progressRepo.getAll()).toEqual([])
   })
 })
+
+describe('progressRepo.deleteAll', () => {
+  it('清空全部进度且不记墓碑（备份恢复覆盖语义）', async () => {
+    await progressRepo.save(makeProgress('b1', 2))
+    await progressRepo.save(makeProgress('b2', 4))
+
+    await progressRepo.deleteAll()
+
+    expect(await progressRepo.getAll()).toEqual([])
+    // 墓碑仓库无 progress 记录：若误走 remove 通道，下次云同步会把恢复的旧时间戳进度判死
+    const db = await getDB()
+    const tombstones = await db.getAll('tombstones')
+    expect(tombstones.filter((t) => t.kind === 'progress')).toEqual([])
+  })
+})

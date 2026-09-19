@@ -251,10 +251,11 @@ export const SettingsPage: React.FC = () => {
   /** 用户确认后执行覆盖恢复 */
   const restoreBackup = async (data: PendingBackup) => {
     try {
-      // 阅读进度：覆盖写入 IndexedDB 并刷新内存状态
+      // 阅读进度：覆盖写入 IndexedDB 并刷新内存状态。
+      // 用不记墓碑的 deleteAll 清库（与书签/批注同语义）——恢复的是旧快照，
+      // 逐条 remove 记下的墓碑会把快照里旧时间戳的进度在下次云同步连本地带远端一并判死
       const importedProgress: Record<string, ReadingProgress> = data.readingProgress || {};
-      const existingProgress = await progressRepo.getAll();
-      await Promise.all(existingProgress.map((p) => progressRepo.remove(p.bookId)));
+      await progressRepo.deleteAll();
       await Promise.all(
         Object.values(importedProgress)
           .filter((p) => p && typeof p.bookId === 'string')

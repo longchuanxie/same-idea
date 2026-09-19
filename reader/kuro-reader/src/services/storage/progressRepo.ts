@@ -21,4 +21,12 @@ export const progressRepo = {
     // 云同步墓碑：阻止远端副本在下次 LWW 合并时复活本条进度
     await tombstoneRepo.record('progress', bookId)
   },
+
+  /** 备份恢复整库覆盖用：清空全部进度、不记墓碑（与书签/批注 deleteAll 同语义）。
+   *  恢复的是旧快照，若逐条 remove 记墓碑，快照里旧时间戳的进度会在下次
+   *  云同步被自己的墓碑连本地带远端一并判死——刚恢复的进度无声蒸发 */
+  async deleteAll(): Promise<void> {
+    const db = await getDB()
+    await db.clear(STORE_NAMES.readingProgress)
+  },
 }
