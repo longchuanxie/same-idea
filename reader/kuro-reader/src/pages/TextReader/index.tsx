@@ -1864,7 +1864,9 @@ export const TextReaderPage: React.FC = () => {
     setBookmarks((prev) => prev.filter((b) => b.id !== id));
     if (deleted) {
       showToast('已删除书签', () => {
-        bookmarkRepo.add(deleted).then(() => {
+        // 撤销以新 createdAt 重存：云同步 LWW 里「晚于墓碑的记录胜出」，
+        // 原样写回会被自己的删除墓碑在下次同步再次删掉（同 Vocabulary 判例）
+        bookmarkRepo.add({ ...deleted, createdAt: new Date() }).then(() => {
           if (bookId) bookmarkRepo.getByBookId(bookId).then(setBookmarks);
         });
       });
@@ -2134,7 +2136,9 @@ export const TextReaderPage: React.FC = () => {
     setAnnotations((prev) => prev.filter((a) => a.id !== id));
     if (deleted) {
       showToast('已删除批注', () => {
-        annotationRepo.add(deleted).then(() => {
+        // 撤销以新 updatedAt 重存：原样写回会输给自身删除墓碑被云同步再次删除
+        // （同 Vocabulary/书签判例）；createdAt 保留原值，列表排序不漂移
+        annotationRepo.add({ ...deleted, updatedAt: new Date() }).then(() => {
           if (bookId) annotationRepo.getByBookId(bookId).then(setAnnotations);
         });
       });
