@@ -124,6 +124,7 @@ export const SettingsPage: React.FC = () => {
   const [syncUsername, setSyncUsername] = useState('');
   const [syncPassword, setSyncPassword] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
+  const syncInFlightRef = useRef(false);
   const [syncMessage, setSyncMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
 
@@ -414,6 +415,10 @@ export const SettingsPage: React.FC = () => {
       setSyncMessage({ ok: false, text: '请先填写 WebDAV 地址' });
       return;
     }
+    // 同步重入锁：setIsSyncing 异步生效，同一事件循环内的快速连点会双开
+    // 两次 GET-MERGE-PUT 互踩（后者整文件覆盖前者合并结果）
+    if (syncInFlightRef.current) return;
+    syncInFlightRef.current = true;
     persistSyncConfig(syncServer, syncUsername, syncPassword);
     setIsSyncing(true);
     setSyncMessage(null);
@@ -475,6 +480,7 @@ export const SettingsPage: React.FC = () => {
     } catch (e) {
       setSyncMessage({ ok: false, text: (e as Error).message || '同步失败' });
     } finally {
+      syncInFlightRef.current = false;
       setIsSyncing(false);
     }
   };
