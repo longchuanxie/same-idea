@@ -111,7 +111,19 @@ export const useStatsStore = create<StatsState>()(
 
         const date = getDateString(new Date());
         set((state) => {
-          const sessions = [...state.readingSessions, { date, minutes, bookId }];
+          // 会话按（日,书）本地聚合：与云同步 mergeSyncedStats 的合并粒度一致。
+          // 此前每分钟 append 一条、从不归并——重度用户年增数万条，逼近
+          // localStorage persist 配额；且同键两条在同步端按 max 去重会丢时长
+          const sessions = [...state.readingSessions];
+          const existingIndex = sessions.findIndex((s) => s.date === date && s.bookId === bookId);
+          if (existingIndex >= 0) {
+            sessions[existingIndex] = {
+              ...sessions[existingIndex],
+              minutes: sessions[existingIndex].minutes + minutes,
+            };
+          } else {
+            sessions.push({ date, minutes, bookId });
+          }
           const totalMinutes = sessions.reduce((sum, s) => sum + s.minutes, 0);
           const totalHours = Math.round((totalMinutes / 60) * 10) / 10;
 

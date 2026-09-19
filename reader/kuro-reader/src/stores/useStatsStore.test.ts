@@ -144,3 +144,26 @@ describe('getStats', () => {
     expect(useStatsStore.getState().stats.totalHours).toBe(0)
   })
 })
+
+describe('addReadingSession 会话按（日,书）本地聚合', () => {
+  it('同日同书多次计入合并为一条，不再无限追加', () => {
+    useStatsStore.getState().addReadingSession('b1', 1)
+    useStatsStore.getState().addReadingSession('b1', 2)
+    useStatsStore.getState().addReadingSession('b1', 3)
+    const sessions = useStatsStore.getState().readingSessions
+    const today = sessions.filter((s) => s.bookId === 'b1')
+    expect(today).toHaveLength(1)
+    expect(today[0].minutes).toBe(6)
+  })
+
+  it('同日不同书各自成条，互不吞并', () => {
+    useStatsStore.getState().addReadingSession('bx', 5)
+    useStatsStore.getState().addReadingSession('by', 7)
+    useStatsStore.getState().addReadingSession('bx', 1)
+    const sessions = useStatsStore.getState().readingSessions
+    expect(sessions.filter((s) => s.bookId === 'bx')).toHaveLength(1)
+    expect(sessions.filter((s) => s.bookId === 'by')).toHaveLength(1)
+    expect(sessions.find((s) => s.bookId === 'bx')!.minutes).toBe(6)
+    expect(sessions.find((s) => s.bookId === 'by')!.minutes).toBe(7)
+  })
+})
