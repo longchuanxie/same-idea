@@ -69,7 +69,10 @@ export class FTPClient implements CloudStorageClient {
   }
 
   private getAuthHeaders(): Record<string, string> {
-    const credentials = btoa(`${this.username}:${this.password}`);
+    // 中文/非 Latin1 凭据直接 btoa 抛 InvalidCharacterError：按 UTF-8 字节编码后再 base64
+    const credentials = btoa(
+      String.fromCharCode(...new TextEncoder().encode(`${this.username}:${this.password}`))
+    );
     return {
       Authorization: `Basic ${credentials}`,
       'X-FTP-Host': this.host,
