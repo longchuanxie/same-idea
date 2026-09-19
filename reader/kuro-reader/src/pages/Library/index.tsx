@@ -153,6 +153,20 @@ export const LibraryPage: React.FC = () => {
     setSelectedSubLibIds(new Set());
   };
 
+  // 批量管理模式下 Ctrl+A / Cmd+A 全选/取消（桌面键盘路径；焦点在输入框时不抢）
+  useEffect(() => {
+    if (!isSelectMode) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'a') return;
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+      e.preventDefault();
+      selectAll();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isSelectMode, selectAll]);
+
   const openConfirm = (
     title: string,
     message: string,
