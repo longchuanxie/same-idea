@@ -4,10 +4,11 @@ export function isWebSpeechSupported(): boolean {
   return typeof window !== 'undefined' && 'speechSynthesis' in window;
 }
 
-/** 系统 Web Speech 引擎:桌面浏览器默认路径,音色取决于操作系统/浏览器 */
+/** 浏览器 Web Speech 引擎:桌面浏览器默认路径,音色取决于操作系统/浏览器。
+ *  命名与安卓端区分:App 内「系统语音」专指系统 TTS 引擎（nativeTtsEngine）,此处的 WebView 版实测无声 */
 export class WebSpeechEngine implements TtsEngine {
   readonly id = 'system' as const;
-  readonly label = '系统语音';
+  readonly label = '浏览器语音';
   private tokenRef = 0;
 
   isAvailable(): boolean {
@@ -39,7 +40,7 @@ export class WebSpeechEngine implements TtsEngine {
       handlers.onError(
         cause === 'canceled' || cause === 'interrupted'
           ? new TtsCancelledError()
-          : new Error(`系统语音播报失败:${cause}`)
+          : new Error(`浏览器语音播报失败:${cause}`)
       );
     };
     // 先清空残留的播报队列(上一会话/其他来源),保持每次播报从干净状态开始

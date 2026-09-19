@@ -87,10 +87,11 @@ interface TtsEngineOptionView {
   unavailable?: boolean;
 }
 
+// 命名口径：App 内「系统语音」= Android 系统 TTS 引擎（native）；浏览器 Web Speech 叫「浏览器语音」
 const TTS_ENGINE_OPTIONS: TtsEngineOptionView[] = [
   { option: 'auto', label: '跟随系统', icon: 'auto_awesome' },
-  { option: 'system', label: '系统语音', icon: 'record_voice_over', unavailable: IS_NATIVE_PLATFORM },
-  ...(IS_NATIVE_PLATFORM ? [{ option: 'native' as const, label: '设备语音', icon: 'volume_up' }] : []),
+  ...(IS_NATIVE_PLATFORM ? [{ option: 'native' as const, label: '系统语音', icon: 'volume_up' }] : []),
+  { option: 'system', label: '浏览器语音', icon: 'record_voice_over', unavailable: IS_NATIVE_PLATFORM },
   { option: 'neural', label: '神经网络', icon: 'graphic_eq' },
   { option: 'server', label: '自定义服务', icon: 'dns' },
 ];
@@ -147,22 +148,22 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
   onClose,
 }) => {
   const paperTypes = getAllPaperTypes();
-  // 旧档位「系统语音」在 App 内实际按 auto 链（设备语音）运行，高亮随之归位
+  // 旧档位「系统语音」在 App 内实际按 auto 链（系统 TTS 引擎）运行，高亮随之归位
   const selectedEngine: TtsEngineOption = ttsEngine === 'system' && IS_NATIVE_PLATFORM ? 'auto' : ttsEngine;
   // 状态说明写「原因 + 出路」：当前选择在本机的实际走向与失败兜底
   const engineHint = (() => {
     switch (selectedEngine) {
       case 'system':
-        return '音色随操作系统/浏览器；无响应时自动改用神经网络离线语音';
+        return '浏览器/操作系统内置语音；无响应时自动改用神经网络离线语音';
       case 'native':
-        return '走 Android 系统语音，可在系统设置安装更高质量的中文音色；失败时自动改用神经网络';
+        return '使用 Android 系统语音引擎；可在系统设置安装更高质量的中文音色，引擎缺失时自动改用神经网络';
       case 'neural':
         return ''; // 下载状态由下方进度提示单独接管
       case 'server':
         return '兼容 OpenAI /v1/audio/speech 接口的自部署 TTS 服务';
       case 'auto':
       default:
-        return `优先使用${IS_NATIVE_PLATFORM ? '设备语音' : '系统语音'}；不可用时自动改用神经网络离线语音`;
+        return `优先使用${IS_NATIVE_PLATFORM ? '系统语音' : '浏览器语音'}；不可用时自动改用神经网络离线语音`;
     }
   })();
   // 记忆上次停留 tab：高频项（阅读模式/发音引擎在「更多」）不必每次重新走三层

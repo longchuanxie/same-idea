@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { isNeuralSupported, resolveEngine, type TtsEngineConfig } from '@/services/tts/engineSelector';
 import { isNativeTtsAvailable } from '@/services/tts/nativeTtsEngine';
-import { TtsCancelledError, type TtsEngine } from '@/services/tts/types';
+import { TtsCancelledError, TtsUnavailableError, type TtsEngine } from '@/services/tts/types';
 import { isWebSpeechSupported } from '@/services/tts/webSpeechEngine';
 import { useAppStore } from '@/stores/useAppStore';
 
@@ -225,6 +225,12 @@ export function useSpeech(
         clearVoiceWatchdog();
         setSynthesizing(false);
         if (error instanceof TtsCancelledError) return;
+        // 系统语音引擎终态不可用（设备未装/未启用 TTS 引擎）:出路文案换神经网络续播
+        if (error instanceof TtsUnavailableError) {
+          if (tryNeuralFallback('本机没有可用的系统语音引擎，已改用神经网络朗读；安装系统语音引擎后可在发音引擎设置切回')) return;
+          haltWithError(error.message);
+          return;
+        }
         if (tryNeuralFallback(`「${engine?.label ?? '当前引擎'}」朗读失败，已改用神经网络朗读`)) return;
         haltWithError(error.message || '语音播报失败');
       },

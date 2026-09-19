@@ -26,6 +26,17 @@ export class TtsCancelledError extends Error {
 }
 
 /**
+ * 系统语音引擎不可用（设备未装/未启用 TTS 引擎,经宽限重试仍初始化失败的终态）。
+ * 编排器据此给出「安装系统语音引擎」的出路文案,而不是按一般故障上报。
+ */
+export class TtsUnavailableError extends Error {
+  constructor(message = '本机没有可用的系统语音引擎') {
+    super(message);
+    this.name = 'TtsUnavailableError';
+  }
+}
+
+/**
  * 听书播报引擎统一接口。
  * 实现约定:
  * - 构造必须轻量(不得在构造器里加载 SDK/模型),重资源延迟到 speak 内动态 import

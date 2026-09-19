@@ -3,7 +3,7 @@ import React from 'react';
 interface SpeechBadgeProps {
   rate: number;
   paused: boolean;
-  /** 当前引擎显示名(如 系统语音/设备语音/神经网络/自定义服务) */
+  /** 当前引擎显示名(如 系统语音/浏览器语音/神经网络/自定义服务) */
   engineLabel?: string;
   /** 正在合成音频(神经网络/服务端引擎合成耗时可见) */
   synthesizing?: boolean;

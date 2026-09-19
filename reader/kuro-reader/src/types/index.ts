@@ -136,7 +136,7 @@ export interface UserSettings {
   textReadingMode: TextReadingMode
   /** 竖排书写（滚动模式下生效，日文/古典中文场景） */
   verticalWriting: boolean
-  /** 听书发音引擎;auto=原生环境走设备语音、桌面走系统语音 */
+  /** 听书发音引擎;auto=原生环境走系统语音引擎(Android 系统 TTS)、桌面走浏览器语音 */
   ttsEngine: TtsEngineOption
   /** 用户已取消过音色包下载确认,不再重复弹窗(再次主动选择神经网络视为同意) */
   ttsModelPromptDismissed: boolean

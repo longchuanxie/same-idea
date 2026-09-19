@@ -252,10 +252,10 @@ describe('useSpeech', () => {
       act(() => result.current.start('正文。'));
       expect(spoken).toHaveLength(1);
 
-      // 系统语音入队后始终不 onstart（部分内核静默哑火）：看门狗到点兜底换神经网络
+      // 浏览器语音入队后始终不 onstart（部分内核静默哑火）：看门狗到点兜底换神经网络
       act(() => vi.advanceTimersByTime(8000));
       expect(onNotice).toHaveBeenCalledTimes(1);
-      expect(onNotice).toHaveBeenCalledWith(expect.stringContaining('系统语音'));
+      expect(onNotice).toHaveBeenCalledWith(expect.stringContaining('浏览器语音'));
       expect(result.current.engineLabel).toBe('神经网络');
       expect(result.current.speaking).toBe(true);
 
@@ -279,28 +279,28 @@ describe('useSpeech', () => {
     const utterance = spoken[spoken.length - 1];
 
     act(() => utterance.onerror?.({ error: 'not-supported' }));
-    // 显式指定自定义服务（未配置地址时解析为系统语音）不兜底：调参场景失败应如实上报
+    // 显式指定自定义服务（未配置地址时解析为浏览器语音）不兜底：调参场景失败应如实上报
     expect(result.current.speaking).toBe(false);
     expect(result.current.currentChunkRange).toBeNull();
     expect(onError).toHaveBeenCalledTimes(1);
-    expect(onError).toHaveBeenCalledWith(expect.stringContaining('系统语音'));
+    expect(onError).toHaveBeenCalledWith(expect.stringContaining('浏览器语音'));
 
     act(() => {
       useAppStore.getState().updateSettings({ ttsEngine: 'auto' });
     });
   });
 
-  it('exposes the engine label and keeps fallback to system for unconfigured server', () => {
+  it('exposes the engine label and keeps fallback to browser voice for unconfigured server', () => {
     const { result } = renderHook(() => useSpeech());
     act(() => result.current.start('甲。乙。'));
-    expect(result.current.engineLabel).toBe('系统语音');
+    expect(result.current.engineLabel).toBe('浏览器语音');
 
-    // 切到未配置地址的自定义服务 → 回退系统语音(同一引擎),不打断当前播报
+    // 切到未配置地址的自定义服务 → 回退浏览器语音(同一引擎),不打断当前播报
     act(() => {
       useAppStore.getState().updateSettings({ ttsEngine: 'server' });
     });
     expect(spoken).toHaveLength(1);
-    expect(result.current.engineLabel).toBe('系统语音');
+    expect(result.current.engineLabel).toBe('浏览器语音');
 
     act(() => {
       useAppStore.getState().updateSettings({ ttsEngine: 'auto' });

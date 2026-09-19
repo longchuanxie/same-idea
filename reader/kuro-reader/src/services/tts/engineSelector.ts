@@ -38,7 +38,7 @@ export function isNeuralSupported(): boolean {
 }
 
 function getAutoEngine(): TtsEngine {
-  // 可用性链：App 内 WebView 无 Web Speech → 设备语音；
+  // 可用性链：App 内 WebView 无 Web Speech → 系统语音引擎（Android 系统 TTS）；
   // 浏览器连 speechSynthesis 都没有（少数国产内核）→ 神经网络离线语音兜底
   if (isNativeTtsAvailable()) return getNativeEngine();
   if (isWebSpeechSupported()) return getSystemEngine();
@@ -47,7 +47,7 @@ function getAutoEngine(): TtsEngine {
 
 /**
  * 解析可用的 TTS 引擎。
- * 不可用的设置(空服务地址、Web 端选设备语音等)静默降级到 auto 语义;
+ * 不可用的设置(空服务地址、Web 端选系统语音引擎等)静默降级到 auto 语义;
  * 引擎实例全部轻量构造,重资源由引擎内部在 speak 时动态加载。
  */
 export function resolveEngine(config: TtsEngineConfig): TtsEngine {
