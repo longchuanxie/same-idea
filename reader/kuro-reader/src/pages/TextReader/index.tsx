@@ -2949,17 +2949,34 @@ export const TextReaderPage: React.FC = () => {
           autoAdvanceTextChapter={autoAdvanceTextChapter}
           autoScrollSpeed={autoScrollSpeed}
           textReadingMode={textReadingMode}
-          onFontSizeChange={(size) => setLocalFontSize(size)}
-          onLineHeightChange={(lh) => setLocalLineHeight(lh)}
+          onFontSizeChange={(size) => {
+            // 排版变化重分页后按字符偏移回到正在读的位置（resize 同款待遇），
+            // 不再弹回本章第 0 页
+            preserveReadingPositionRef.current = true;
+            setLocalFontSize(size);
+          }}
+          onLineHeightChange={(lh) => {
+            preserveReadingPositionRef.current = true;
+            setLocalLineHeight(lh);
+          }}
           onPaperModeToggle={() => useAppStore.getState().togglePaperMode()}
           onPaperTypeChange={(type) => useAppStore.getState().updateSettings({ paperType: type })}
           onBrightnessChange={(v) => useAppStore.getState().updateSettings({ brightness: v })}
           textureIntensity={settings.textureIntensity}
           onTextureIntensityChange={(v) => useAppStore.getState().updateSettings({ textureIntensity: v })}
           onColorTemperatureChange={(v) => useAppStore.getState().updateSettings({ colorTemperature: v })}
-          onTextFontFamilyChange={(family) => useAppStore.getState().updateSettings({ textFontFamily: family })}
-          onTextAlignChange={(align) => useAppStore.getState().updateSettings({ textAlign: align })}
-          onFirstLineIndentToggle={() => useAppStore.getState().updateSettings({ firstLineIndent: !firstLineIndent })}
+          onTextFontFamilyChange={(family) => {
+            preserveReadingPositionRef.current = true;
+            useAppStore.getState().updateSettings({ textFontFamily: family });
+          }}
+          onTextAlignChange={(align) => {
+            preserveReadingPositionRef.current = true;
+            useAppStore.getState().updateSettings({ textAlign: align });
+          }}
+          onFirstLineIndentToggle={() => {
+            preserveReadingPositionRef.current = true;
+            useAppStore.getState().updateSettings({ firstLineIndent: !firstLineIndent });
+          }}
           verticalWriting={verticalWriting}
           onVerticalWritingToggle={() => useAppStore.getState().updateSettings({ verticalWriting: !settings.verticalWriting })}
           onTapZoneEnabledToggle={() => useAppStore.getState().updateSettings({ tapZoneEnabled: !tapZoneEnabled })}
