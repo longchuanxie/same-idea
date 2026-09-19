@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 
 import { useNavigate } from 'react-router-dom';
 
@@ -31,6 +31,12 @@ export const SearchPage: React.FC = () => {
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [artifacts, setArtifacts] = useState<KnowledgeArtifact[]>([]);
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  // 进检索台即聚焦：搜索页唯一的动作就是输入，省一次点击
+  useEffect(() => {
+    searchInputRef.current?.focus();
+  }, []);
 
   useEffect(() => {
     loadBooks();
@@ -75,6 +81,7 @@ export const SearchPage: React.FC = () => {
         <div className="relative w-full border-b border-outline-variant focus-within:border-primary transition-colors duration-300">
           <span className="material-symbols-outlined absolute left-0 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
           <input
+            ref={searchInputRef}
             className="w-full bg-transparent border-none py-4 pl-10 pr-4 font-body text-body-lg text-primary placeholder:text-on-surface-variant focus:ring-0 focus:outline-none"
             placeholder={COPY.globalSearch.placeholder}
             type="text"
