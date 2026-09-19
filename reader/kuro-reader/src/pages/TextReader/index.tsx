@@ -1297,7 +1297,34 @@ export const TextReaderPage: React.FC = () => {
             }
             if (fillLen != null) {
               pushPage(block.start + fillLen);
-              if (block.start + fillLen < block.end) pushPage(block.end);
+              // 残余不足一整页：留在新页与后续块继续累积；超高残余按行拆分续排——
+              // 整块封页会被 overflow-hidden 裁掉超出页高的部分，正文就读不到了
+              const residualStart = block.start + fillLen;
+              const residualText = markdownDocument.text.slice(residualStart, block.end);
+              const residualContext: SplitBlockContext = {
+                kind: block.type as SplitBlockContext['kind'],
+                listDepth: block.listDepth,
+                atBlockStart: false,
+              };
+              const residualHeight = measurePageHeight(residualText, false, residualContext);
+              if (residualHeight <= pageHeight) {
+                usedHeight = residualHeight;
+                return;
+              }
+              let cursor = residualStart;
+              while (cursor < block.end) {
+                const remainingText = markdownDocument.text.slice(cursor, block.end);
+                if (fitsPage(remainingText, false, residualContext)) break;
+                const best = findMaxFitLength(
+                  remainingText,
+                  (prefix) => fitsPage(prefix, false, residualContext),
+                  { maxPageLength: pageLengthUpperBound }
+                );
+                const splitLength = Math.max(MIN_TEXT_PAGE_LENGTH, findPreferredBreak(remainingText, best));
+                pushPage(cursor + splitLength);
+                cursor += splitLength;
+              }
+              if (pageStart < block.end) pushPage(block.end);
               return;
             }
             pushPage(block.start);
