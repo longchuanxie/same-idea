@@ -122,7 +122,7 @@ export class NativeTtsEngine implements TtsEngine {
     const current = this.current;
     this.tokenRef += 1;
     this.current = null;
-    void plugin.stop();
+    void plugin.stop().catch(() => undefined); // 桥接被拒也不能挂 unhandledrejection（对齐 cancel）
     if (current) this.current = current; // 保留供 resume 重播
   }
 
