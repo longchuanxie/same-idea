@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { NotesOutlineDialog, type NotesOutlineDialogState } from '@/components/molecules/NotesOutlineDialog';
 import { COPY } from '@/constants/copy';
-import { ROUTES, readerPathForBook, vocabularyPath } from '@/constants/routes';
+import { ROUTES, readerPathForBook, vocabularyPath , settingsPath } from '@/constants/routes';
 import { isProviderConfigured } from '@/services/ai/aiClient';
 import { buildOutlineSources, generateNotesOutline } from '@/services/ai/notesOutline';
 import { annotationRepo } from '@/services/storage/annotationRepo';
@@ -152,7 +152,7 @@ export const NotesPage: React.FC = () => {
     };
     if (!isProviderConfigured(config)) {
       toast(COPY.notesTheme.aiNotConfigured, {
-        action: { label: '去设置', onAction: () => navigate(ROUTES.SETTINGS) },
+        action: { label: '去设置', onAction: () => navigate(settingsPath('ai')) },
       });
       return;
     }

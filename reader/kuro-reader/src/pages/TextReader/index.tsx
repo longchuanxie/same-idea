@@ -21,7 +21,7 @@ import { TranslatePopup, type TranslateState } from '@/components/molecules/Tran
 import { UndoToast } from '@/components/molecules/UndoToast';
 import { VocabLookupPopup, type VocabLookupState } from '@/components/molecules/VocabLookupPopup';
 import { COPY } from '@/constants/copy';
-import { ANNOTATION_QUERY_PARAM, READER_GOTO_QUERY_PARAM, ROUTES, bookDetailPath, parseGotoParam } from '@/constants/routes';
+import { ANNOTATION_QUERY_PARAM, READER_GOTO_QUERY_PARAM, ROUTES, bookDetailPath, parseGotoParam , settingsPath } from '@/constants/routes';
 import { getTextReaderFontFamily } from '@/constants/textReaderFonts';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { useBackHandler } from '@/hooks/useBackHandler';
@@ -1979,7 +1979,7 @@ export const TextReaderPage: React.FC = () => {
     const { settings: s } = useAppStore.getState();
     const config = { baseUrl: s.knowledgeAiUrl, apiKey: s.knowledgeAiKey, model: s.knowledgeAiModel };
     if (!isProviderConfigured(config)) {
-      showToast(COPY.vocab.aiNotConfigured, () => navigate(ROUTES.SETTINGS), '去设置');
+      showToast(COPY.vocab.aiNotConfigured, () => navigate(settingsPath('ai')), '去设置');
       return;
     }
     const chapterIndex = resolveSelectionChapterIndex(sel);
@@ -2060,7 +2060,7 @@ export const TextReaderPage: React.FC = () => {
     const { settings: s } = useAppStore.getState();
     const config = { baseUrl: s.knowledgeAiUrl, apiKey: s.knowledgeAiKey, model: s.knowledgeAiModel };
     if (!isProviderConfigured(config)) {
-      showToast(COPY.translate.aiNotConfigured, () => navigate(ROUTES.SETTINGS), '去设置');
+      showToast(COPY.translate.aiNotConfigured, () => navigate(settingsPath('ai')), '去设置');
       return;
     }
     const position = {

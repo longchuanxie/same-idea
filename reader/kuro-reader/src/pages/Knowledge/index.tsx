@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
 import { Button } from '@/components/atoms/Button'
+import { settingsPath } from '@/constants/routes';
 import { TopAppBar } from '@/components/atoms/TopAppBar'
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog'
 import { CharacterGraphView } from '@/components/molecules/knowledge/CharacterGraphView'
@@ -229,7 +230,7 @@ export const KnowledgePage: React.FC = () => {
   const handleRegenerate = async () => {
     if (!aiReady) {
       toast('先到设置里配好知识库 AI 服务，再重新生成')
-      navigate(ROUTES.SETTINGS)
+      navigate(settingsPath('ai'))
       return
     }
     // 手工修订过 → 先确认再覆盖（修订是读者的劳动成果，不该被一键冲掉）

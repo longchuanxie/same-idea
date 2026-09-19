@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { COPY } from '@/constants/copy'
-import { ROUTES, knowledgeSourcePath } from '@/constants/routes'
+import { settingsPath, knowledgeSourcePath } from '@/constants/routes';
 import { isProviderConfigured } from '@/services/ai/aiClient'
 import { LibraryQaError, askLibrary, type QaResult } from '@/services/ai/libraryQA'
 import { useAppStore } from '@/stores/useAppStore'
@@ -205,7 +205,7 @@ export const AskLibraryPage: React.FC = () => {
                 {turn.error === COPY.askLibrary.notConfigured && (
                   <button
                     className="mt-2 font-label text-label-md text-primary hover:opacity-80"
-                    onClick={() => navigate(ROUTES.SETTINGS)}
+                    onClick={() => navigate(settingsPath('ai'))}
                   >
                     {COPY.askLibrary.goSettings} →
                   </button>

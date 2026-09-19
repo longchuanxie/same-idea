@@ -3,9 +3,9 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog'
+import { settingsPath, knowledgePath } from '@/constants/routes';
 import { GenerationOptionsSheet } from '@/components/molecules/knowledge/GenerationOptionsSheet'
 import { COPY } from '@/constants/copy'
-import { ROUTES, knowledgePath } from '@/constants/routes'
 import { isProviderConfigured } from '@/services/ai/aiClient'
 import { KNOWLEDGE_TASKS, getKnowledgeTasksForKind } from '@/services/ai/knowledgeTasks'
 import { getPdfPageTexts } from '@/services/pdfText'
@@ -50,7 +50,7 @@ function ensureAiConfiguredOrHint(navigate: (path: string) => void): boolean {
   })
   if (!ready) {
     toast('先到设置里配好知识库 AI 服务（服务地址 + 模型），再来点亮知识库')
-    navigate(ROUTES.SETTINGS)
+    navigate(settingsPath('ai'))
   }
   return ready
 }

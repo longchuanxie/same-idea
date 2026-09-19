@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { COPY } from '@/constants/copy'
-import { ROUTES, knowledgePath, readerPathForBook } from '@/constants/routes'
+import { settingsPath, readerPathForBook, knowledgePath } from '@/constants/routes';
 import { isProviderConfigured } from '@/services/ai/aiClient'
 import { generateRecap, recapUnitLabel, type RecapResult } from '@/services/ai/readingRecap'
 import { getPdfPageTexts } from '@/services/pdfText'
@@ -87,7 +87,7 @@ export const ReadingRecapSheet: React.FC<ReadingRecapSheetProps> = ({
     }
     if (!isProviderConfigured(config)) {
       toast(COPY.recap.aiNotConfigured, {
-        action: { label: '去设置', onAction: () => navigate(ROUTES.SETTINGS) },
+        action: { label: '去设置', onAction: () => navigate(settingsPath('ai')) },
       })
       return
     }

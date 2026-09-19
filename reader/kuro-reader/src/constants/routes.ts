@@ -139,3 +139,8 @@ export function knowledgePath(bookId: string, artifactId: string): string {
 export function customCloudPath(): string {
   return '/import/custom-cloud';
 }
+
+/** 设置页路径；focus='ai' 携带锚点参数——AI 未配置引导深链直达知识库组（Settings 消费后滚动+高亮） */
+export function settingsPath(focus?: 'ai'): string {
+  return focus ? `${ROUTES.SETTINGS}?focus=ai` : ROUTES.SETTINGS;
+}

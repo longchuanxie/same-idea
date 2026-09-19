@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useState, useRef } from 'react';
 
+import { useSearchParams } from 'react-router-dom';
+
 import { Collapsible } from '@/components/atoms/Collapsible';
 import { DropdownSelect } from '@/components/atoms/DropdownSelect';
 import { PasteButton } from '@/components/atoms/PasteButton';
@@ -125,6 +127,20 @@ export const SettingsPage: React.FC = () => {
   const [syncPassword, setSyncPassword] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   const syncInFlightRef = useRef(false);
+  // AI 未配置深链：?focus=ai 直达知识库组（滚动+瞬时高亮），配完少走「页顶找起」的弯路
+  const [searchParams] = useSearchParams();
+  const aiSectionRef = useRef<HTMLElement | null>(null);
+  const [aiSectionHighlighted, setAiSectionHighlighted] = useState(false);
+  const aiFocusRequested = searchParams.get('focus') === 'ai';
+  useEffect(() => {
+    if (!aiFocusRequested) return;
+    const timer = setTimeout(() => {
+      aiSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setAiSectionHighlighted(true);
+      setTimeout(() => setAiSectionHighlighted(false), 2500);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [aiFocusRequested]);
   const [syncMessage, setSyncMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
 
@@ -1069,7 +1085,10 @@ export const SettingsPage: React.FC = () => {
           </div>
         </section>
 
-        <section>
+        <section
+          ref={aiSectionRef}
+          className={aiSectionHighlighted ? 'outline outline-2 outline-primary outline-offset-4 rounded-lg' : undefined}
+        >
           <h2 className="font-label text-label-sm text-secondary uppercase tracking-widest mb-4 ml-2">知识库</h2>
           <div className="bg-surface rounded-lg border border-outline-variant overflow-hidden">
             <div className="p-6 bg-surface-container-lowest">
