@@ -5,7 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 import { APP_CONFIG, MAX_FILE_SIZE_MB } from '@/constants/config';
 import { COPY } from '@/constants/copy';
-import { ROUTES, bookDetailPath, customCloudPath, subLibraryPath } from '@/constants/routes';
+import { ROUTES, bookDetailPath, customCloudPath, readerPathForBook, subLibraryPath } from '@/constants/routes';
 import { FilePicker } from '@/plugins/FilePickerPlugin';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import { sanitizeFileName } from '@/utils/annotationExport';
@@ -45,6 +45,7 @@ export const ImportPage: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const {
+    books,
     importFile,
     importFolder,
     importArchivesAsBook,
@@ -429,8 +430,21 @@ export const ImportPage: React.FC = () => {
             <>
               <p className="font-body text-body-md text-on-surface-variant mb-4">{importResult.title}</p>
               <div className="flex gap-4">
+                {(() => {
+                  // 单书导入成功即给「立即开读」直开阅读器（对齐云端导入成功卡），
+                  // 书已被移走时按钮退场、只留详情/书架
+                  const importedBook = books.find((b) => b.id === importResult.id);
+                  return importedBook ? (
+                    <button
+                      className="btn-seal px-6 py-2"
+                      onClick={() => navigate(readerPathForBook(importedBook))}
+                    >
+                      立即开读
+                    </button>
+                  ) : null;
+                })()}
                 <button
-                  className="btn-seal px-6 py-2"
+                  className="border border-outline-variant text-primary font-label text-label-md px-6 py-2 rounded hover:bg-surface-variant transition-colors"
                   onClick={() => navigate(bookDetailPath(importResult.id))}
                 >
                   查看详情
