@@ -21,14 +21,15 @@ export function playBlob(
   isCancelled: () => boolean
 ): BlobPlaybackControls {
   const audio = new Audio();
-  audio.src = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(blob);
+  audio.src = url;
   // 神经网络合成无语速参数:用播放倍速实现(浏览器默认保音调)
   audio.playbackRate = Math.min(PLAYBACK_RATE_MAX, Math.max(PLAYBACK_RATE_MIN, ctx.rate));
   let settled = false;
   const finish = (done: boolean, error?: Error) => {
     if (settled || isCancelled()) return;
     settled = true;
-    URL.revokeObjectURL(audio.src);
+    URL.revokeObjectURL(url);
     if (done) handlers.onDone();
     else handlers.onError(error ?? new Error('音频播放失败'));
   };
@@ -43,7 +44,9 @@ export function playBlob(
     stop: () => {
       audio.pause();
       audio.removeAttribute('src');
-      URL.revokeObjectURL(audio.src);
+      // 先 removeAttribute 再读 audio.src 只会拿到空串——必须 revoke 建立时
+      // 捕获的 url，否则被中途 stop 的音频（切章/切引擎/停止听书）全部泄漏
+      URL.revokeObjectURL(url);
     },
   };
 }

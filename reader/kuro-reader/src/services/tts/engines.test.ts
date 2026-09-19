@@ -236,3 +236,28 @@ describe('resolveEngine', () => {
     expect(resolveEngine(baseConfig).id).toBe('neural');
   });
 })
+
+describe('playBlob', () => {
+  it('stop 也回收 ObjectURL——先 removeAttribute 再读 audio.src 只会拿到空串，须 revoke 建立时捕获的 url', async () => {
+    const { playBlob } = await import('./blobPlayback')
+    const createdUrls: string[] = []
+    const revokedUrls: string[] = []
+    vi.stubGlobal('URL', {
+      ...URL,
+      createObjectURL: vi.fn(() => {
+        const u = `blob:mock-${createdUrls.length}`
+        createdUrls.push(u)
+        return u
+      }),
+      revokeObjectURL: vi.fn((u: string) => revokedUrls.push(u)),
+    })
+    try {
+      const controls = playBlob(new Blob(['x']), { rate: 1, lang: 'zh-CN' }, { onStart: vi.fn(), onDone: vi.fn(), onError: vi.fn() }, () => false)
+      controls.stop()
+      expect(createdUrls).toHaveLength(1)
+      expect(revokedUrls).toEqual(createdUrls)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+})
