@@ -383,13 +383,31 @@ describe('importFile', () => {
       comicParsed.imagePages
     )
     expect(bookFileRepoMock.save).not.toHaveBeenCalled()
-
     const state = useLibraryStore.getState()
     expect(state.books.at(-1)?.id).toBe(result!.id)
     expect(state.coverUrls[result!.id]).toMatch(/^blob:/)
     expect(state.importProgress).toBe(100)
     expect(state.isImporting).toBe(false)
     expect(state.error).toBeNull()
+  })
+
+  it('导入进行中再触发导入被重入守卫拒绝，不产生重复书目', async () => {
+    getParserForFileMock.mockReturnValue({
+      canParse: () => true,
+      parse: vi.fn().mockResolvedValue(comicParsed),
+    })
+    bookRepoMock.saveCover.mockResolvedValue(undefined)
+    pageRepoMock.saveAllPages.mockResolvedValue(undefined)
+    bookRepoMock.save.mockResolvedValue(undefined)
+
+    // 不 await 第一次：入口同步置位 isImporting 后，紧随的第二次导入应被拒
+    const first = useLibraryStore.getState().importFile(new File(['x'], '新建.cbz'))
+    const second = await useLibraryStore.getState().importFile(new File(['x'], '新建.cbz'))
+
+    expect(second).toBeNull()
+    expect(useLibraryStore.getState().error).toMatch('已有导入正在进行中')
+    await first
+    expect(useLibraryStore.getState().isImporting).toBe(false)
   })
 
   it('imports text: saves original file via bookFileRepo and builds parsed chapters', async () => {

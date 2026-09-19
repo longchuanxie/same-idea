@@ -290,6 +290,12 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
   },
 
   importFile: async (file: File, opts?: ImportOptions) => {
+    // 导入重入守卫：并发导入会在 books 更新前读到旧列表、绕过按标题去重，
+    // 产生重复书目（双击/OPDS 下载与本地导入并行等场景）
+    if (get().isImporting) {
+      set({ error: '已有导入正在进行中，请等待完成后再导入' });
+      return null;
+    }
     set({ isImporting: true, importProgress: 0, error: null, importWarning: null });
     try {
       set({ importProgress: 10 });
@@ -392,6 +398,12 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
   },
 
   importFolder: async (files: File[], folderName: string, opts?: ImportOptions) => {
+    // 导入重入守卫：并发导入会在 books 更新前读到旧列表、绕过按标题去重，
+    // 产生重复书目（双击/OPDS 下载与本地导入并行等场景）
+    if (get().isImporting) {
+      set({ error: '已有导入正在进行中，请等待完成后再导入' });
+      return null;
+    }
     set({ isImporting: true, importProgress: 0, error: null, importWarning: null });
     try {
       set({ importProgress: IMPORT_PROGRESS_PARSING_BASE });
@@ -453,6 +465,12 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
   },
 
   importArchivesAsBook: async (files: File[], fallbackTitle: string, opts?: ImportOptions) => {
+    // 导入重入守卫：并发导入会在 books 更新前读到旧列表、绕过按标题去重，
+    // 产生重复书目（双击/OPDS 下载与本地导入并行等场景）
+    if (get().isImporting) {
+      set({ error: '已有导入正在进行中，请等待完成后再导入' });
+      return null;
+    }
     set({ isImporting: true, importProgress: 0, error: null, importWarning: null });
     try {
       // 按文件名中的章节序号排序（无序号的排最后）
@@ -572,6 +590,12 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
   },
 
   importArchivesAsSubLibrary: async (files: File[], folderName: string, opts?: ImportOptions) => {
+    // 导入重入守卫：并发导入会在 books 更新前读到旧列表、绕过按标题去重，
+    // 产生重复书目（双击/OPDS 下载与本地导入并行等场景）
+    if (get().isImporting) {
+      set({ error: '已有导入正在进行中，请等待完成后再导入' });
+      return null;
+    }
     set({
       isImporting: true,
       importProgress: 0,
