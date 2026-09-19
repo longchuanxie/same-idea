@@ -289,6 +289,17 @@ describe('runCloudSync', () => {
     expect((payload as SyncPayload).readingProgress.b1).toBeDefined()
   })
 
+  it('远端 200 但非同步载荷（如反代登录页 HTML）：报错且不 PUT 覆盖', async () => {
+    vi.mocked(axios.get).mockResolvedValue({ data: '<html>login</html>' })
+    vi.mocked(axios.put).mockResolvedValue({})
+    const local = makePayload({})
+
+    await expect(
+      runCloudSync({ serverAddress: 'http://nas/dav' }, local)
+    ).rejects.toThrow('不是有效的同步数据')
+    expect(axios.put).not.toHaveBeenCalled()
+  })
+
   it('remote exists: merges and writes back', async () => {
     const remote = makePayload({
       exportedAt: '2026-08-29T15:00:00Z',

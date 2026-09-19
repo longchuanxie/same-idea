@@ -327,6 +327,10 @@ export async function runCloudSync(
     if (remote && typeof remote === 'object' && Array.isArray(remote.annotations)) {
       merged = mergeSyncPayloads(local, remote);
       direction = 'merged';
+    } else {
+      // 远端 200 但不是本应用的同步载荷（反代登录页/错误页/无关文件）：
+      // 静默当「首次同步」PUT 覆盖会毁掉远端内容——停下来说清楚，不赌
+      throw new Error('远端已存在文件但不是有效的同步数据，已停止以防覆盖；请核对同步地址，或先手动备份远端文件');
     }
   } catch (e) {
     // 404 = 首次同步，直接上传；其他错误上抛
