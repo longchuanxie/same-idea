@@ -1132,6 +1132,10 @@ export const TextReaderPage: React.FC = () => {
     ].join('|');
     const cachedPages = paginationCacheRef.current.get(paginationCacheKey);
     if (cachedPages) {
+      // 命中重插维持最近使用序：只在写入时刷新插入序实为 FIFO，
+      // >8 章往返时最常访问的章会被最早写入序淘汰
+      paginationCacheRef.current.delete(paginationCacheKey);
+      paginationCacheRef.current.set(paginationCacheKey, cachedPages);
       applyPaginationResult(cachedPages);
       return;
     }
