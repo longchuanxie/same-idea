@@ -451,7 +451,7 @@ export const BookDetailPage: React.FC = () => {
                     <span className="w-1 h-4 bg-seal rounded-sm flex-shrink-0" aria-hidden="true" />
                     <span>
                       在读
-                      {continueChapter ? ` · 第 ${continueChapter.number} ${book.format === 'text' ? '章' : '话'}` : ''}
+                      {continueChapter ? continueChapter.number != null ? ` · 第 ${continueChapter.number} ${book.format === 'text' ? '章' : '话'}` : ` · ${continueChapter.title}` : ''}
                       <span className="font-mono ml-1.5">{Math.round(progress.percentage)}%</span>
                     </span>
                     {book.lastReadAt && (
@@ -519,9 +519,11 @@ export const BookDetailPage: React.FC = () => {
                       ) : (
                         <>
                           <h3 className="font-label text-label-md text-primary">
-                            第 {ch.number} {book.format === 'text' ? '章' : '话'}
+                            {ch.number != null ? <>第 {ch.number} {book.format === 'text' ? '章' : '话'}</> : ch.title}
                           </h3>
-                          <p className="font-label text-label-sm text-on-surface-variant">{ch.title}</p>
+                          {ch.number != null && (
+                            <p className="font-label text-label-sm text-on-surface-variant">{ch.title}</p>
+                          )}
                         </>
                       )}
                     </div>
