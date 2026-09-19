@@ -31,6 +31,8 @@ const NAV_ITEMS: NavItemConfig[] = [
     path: ROUTES.LIBRARY,
     match: (p) => p === '/library',
   },
+  // 桌面无底栏，导入需常驻入口（与移动底栏对齐；否则只能绕 Home「去采编」）
+  { label: '导入', icon: 'upload_file', path: ROUTES.IMPORT, match: (p) => p.startsWith('/import') },
   { label: '检索台', icon: 'search', path: ROUTES.SEARCH, match: (p) => p.startsWith('/search') },
   { label: '手记', icon: 'edit_note', path: ROUTES.NOTES, match: (p) => p.startsWith('/notes') },
   {
