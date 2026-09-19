@@ -216,6 +216,26 @@ describe('useSpeech', () => {
     expect(result.current.paused).toBe(false);
   });
 
+  it('暂停中切倍速不出声，resume 以新倍速重播当前块', () => {
+    const { result } = renderHook(() => useSpeech());
+    act(() => result.current.start('甲。乙。'));
+    const before = spoken.length;
+
+    act(() => result.current.pause());
+    act(() => result.current.cycleRate());
+    // 暂停中不出声：不重建 utterance、保持暂停态
+    expect(spoken.length).toBe(before);
+    expect(result.current.paused).toBe(true);
+    expect(result.current.rate).toBe(1.25);
+
+    act(() => result.current.resume());
+    // resume 以新倍速重播当前块：新 utterance 立即入队（cancel 内部的
+    // synth.resume 解冻不在此断言——那是 WebSpeech 的既有 workaround）
+    expect(spoken.length).toBe(before + 1);
+    expect(spoken[spoken.length - 1].rate).toBe(1.25);
+    expect(result.current.paused).toBe(false);
+  });
+
   it('cycleRate rotates rates and restarts current chunk', () => {
     const { result } = renderHook(() => useSpeech());
     act(() => result.current.start('甲。乙。'));

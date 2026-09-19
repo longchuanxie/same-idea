@@ -134,6 +134,8 @@ export function useSpeech(
   const watchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** 神经网络兜底每会话至多一次，防失败引擎与兜底引擎互相拉扯 */
   const fallbackTriedRef = useRef(false);
+  /** 暂停期间调过倍速：resume 时以新倍速重播当前块 */
+  const pendingRateRestartRef = useRef(false);
   const onFinishedRef = useRef(onFinished);
   onFinishedRef.current = onFinished;
   const onErrorRef = useRef(onError);
@@ -282,6 +284,7 @@ export function useSpeech(
     clearVoiceWatchdog();
     speakingRef.current = false;
     pausedRef.current = false;
+    pendingRateRestartRef.current = false;
     setSpeaking(false);
     setPaused(false);
     setCurrentIndex(null);
@@ -299,15 +302,30 @@ export function useSpeech(
 
   const resume = useCallback(() => {
     if (!supported || !pausedRef.current) return;
-    engineRef.current?.resume();
     pausedRef.current = false;
     setPaused(false);
-  }, [supported]);
+    if (pendingRateRestartRef.current) {
+      // 暂停期间调过倍速：以新倍速重播当前块（原生引擎 resume 本就会从头重播，
+      // 显式重建还能让 blob 引擎的旧倍速音频不再续播）
+      pendingRateRestartRef.current = false;
+      sessionRef.current += 1;
+      engineRef.current?.cancel();
+      speakNext();
+      return;
+    }
+    engineRef.current?.resume();
+  }, [supported, speakNext]);
 
   const cycleRate = useCallback(() => {
     const next = RATES[(RATES.indexOf(rateRef.current) + 1) % RATES.length];
     rateRef.current = next;
     setRate(next);
+    // 暂停中调倍速：不出声（原实现会立刻开播但 UI 仍显示暂停）；标记后由
+    // resume 以新倍速重播当前块
+    if (pausedRef.current) {
+      pendingRateRestartRef.current = true;
+      return;
+    }
     // 倍速对当前播报不生效：取消当前块并以新倍速重启
     if (speakingRef.current) {
       sessionRef.current += 1;
