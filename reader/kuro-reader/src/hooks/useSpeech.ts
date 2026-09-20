@@ -25,12 +25,8 @@ export interface SpeechChunk {
   end: number;
 }
 
-/**
- * 在原文上按句边界切分并合并为不超过上限的分块，同时记录每个分块在原文中的精确偏移。
- * 与 splitSpeechChunks 的差异：不做空白归一，保证 offset 与原文逐字符对应（供听书范围高亮定位）。
- */
-export function splitSpeechChunksWithOffsets(text: string, maxLength = CHUNK_MAX_LENGTH): SpeechChunk[] {
-  if (!text.trim()) return [];
+/** 在单段文本（无硬边界）上按句边界切分并合并为不超过上限的分块，偏移相对段首 */
+function splitSegmentWithOffsets(text: string, maxLength: number): SpeechChunk[] {
   const boundaries: number[] = [];
   SENTENCE_END_PATTERN.lastIndex = 0;
   let match: RegExpExecArray | null;
@@ -62,6 +58,38 @@ export function splitSpeechChunksWithOffsets(text: string, maxLength = CHUNK_MAX
     }
     cursor = boundary;
   }
+  return chunks;
+}
+
+/**
+ * 在原文上按句边界切分并合并为不超过上限的分块，同时记录每个分块在原文中的精确偏移。
+ * 与 splitSpeechChunks 的差异：不做空白归一，保证 offset 与原文逐字符对应（供听书范围高亮定位）。
+ * breakOffsets（相对本文本的偏移）是额外硬边界：分块永不横跨边界——分页阅读时传入各页起点，
+ * 使「分块起点所在页」随播报实时推进，跟读翻页恰在新页文字起读的瞬间触发。
+ */
+export function splitSpeechChunksWithOffsets(
+  text: string,
+  maxLength = CHUNK_MAX_LENGTH,
+  breakOffsets: number[] = []
+): SpeechChunk[] {
+  if (!text.trim()) return [];
+  const breaks = [...new Set(breakOffsets)]
+    .filter((offset) => Number.isInteger(offset) && offset > 0 && offset < text.length)
+    .sort((a, b) => a - b);
+
+  const chunks: SpeechChunk[] = [];
+  let segmentStart = 0;
+  for (const breakAt of breaks) {
+    if (breakAt > segmentStart) {
+      for (const chunk of splitSegmentWithOffsets(text.slice(segmentStart, breakAt), maxLength)) {
+        chunks.push({ text: chunk.text, start: segmentStart + chunk.start, end: segmentStart + chunk.end });
+      }
+      segmentStart = breakAt;
+    }
+  }
+  for (const chunk of splitSegmentWithOffsets(text.slice(segmentStart), maxLength)) {
+    chunks.push({ text: chunk.text, start: segmentStart + chunk.start, end: segmentStart + chunk.end });
+  }
   return chunks.filter((chunk) => chunk.text.trim());
 }
 
@@ -85,7 +113,9 @@ export interface SpeechController {
   engineLabel: string;
   /** 合成进行中（神经网络/服务端引擎的合成耗时可见） */
   synthesizing: boolean;
-  start: (text: string, baseOffset?: number) => void;
+  /** 从 text 起播；baseOffset 为 text 首字符在章节坐标系中的偏移；breakOffsets 为相对
+   *  text 的硬边界（分页模式下各页起点），分块不跨界以便跟读翻页即时触发 */
+  start: (text: string, baseOffset?: number, breakOffsets?: number[]) => void;
   stop: () => void;
   pause: () => void;
   resume: () => void;
@@ -244,7 +274,7 @@ export function useSpeech(
   speakNextRef.current = speakNext;
 
   const start = useCallback(
-    (text: string, baseOffset = 0) => {
+    (text: string, baseOffset = 0, breakOffsets?: number[]) => {
       if (!supported) return;
       sessionRef.current += 1;
       fallbackTriedRef.current = false;
@@ -257,7 +287,7 @@ export function useSpeech(
       engineRef.current?.cancel();
       engineRef.current = engine;
       setEngineLabel(engine.label);
-      chunksRef.current = splitSpeechChunksWithOffsets(text);
+      chunksRef.current = splitSpeechChunksWithOffsets(text, CHUNK_MAX_LENGTH, breakOffsets);
       indexRef.current = 0;
       baseOffsetRef.current = baseOffset;
       setChunkCount(chunksRef.current.length);

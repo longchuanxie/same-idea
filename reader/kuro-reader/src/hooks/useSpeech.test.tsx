@@ -103,6 +103,38 @@ describe('splitSpeechChunksWithOffsets', () => {
   it('returns empty for blank text', () => {
     expect(splitSpeechChunksWithOffsets('  \n  ')).toEqual([]);
   });
+
+  it('分块不跨硬边界：边界两侧各自合并，偏移仍逐字符对应', () => {
+    const text = '第一句。第二句。第三句。第四句。'; // 每句 4 字，句末边界 4/8/12/16
+    const clean = splitSpeechChunksWithOffsets(text, 200, [8]);
+    expect(clean.map((chunk) => [chunk.start, chunk.end])).toEqual([[0, 8], [8, 16]]);
+    const midSentence = splitSpeechChunksWithOffsets(text, 200, [10]);
+    expect(midSentence.map((chunk) => [chunk.start, chunk.end])).toEqual([[0, 10], [10, 16]]);
+    for (const chunk of [...clean, ...midSentence]) {
+      expect(chunk.text).toBe(text.slice(chunk.start, chunk.end));
+    }
+  });
+
+  it('硬边界落在无标点长句中：按边界硬切，不等满 maxLength', () => {
+    const text = '甲'.repeat(90) + '乙'.repeat(60); // 150 字无句读，无边界时本会是一整块
+    const chunks = splitSpeechChunksWithOffsets(text, 200, [90]);
+    expect(chunks.map((chunk) => [chunk.start, chunk.end])).toEqual([[0, 90], [90, 150]]);
+  });
+
+  it('零/负/越界/重复的硬边界被忽略，不产生空分块', () => {
+    const text = '第一句。第二句。第三句。'; // 12 字，句末边界 4/8/12
+    const chunks = splitSpeechChunksWithOffsets(text, 200, [0, -5, 4, 4, 999]);
+    expect(chunks.map((chunk) => [chunk.start, chunk.end])).toEqual([[0, 4], [4, 12]]);
+    for (const chunk of chunks) {
+      expect(chunk.text).toBe(text.slice(chunk.start, chunk.end));
+    }
+  });
+
+  it('不传硬边界时行为与旧版一致（按句合并）', () => {
+    const text = '第一句。第二句。第三句。';
+    expect(splitSpeechChunksWithOffsets(text, 200, [])).toEqual(splitSpeechChunksWithOffsets(text, 200));
+    expect(splitSpeechChunksWithOffsets(text, 200).map((chunk) => chunk.start)).toEqual([0]);
+  });
 })
 
 describe('splitSpeechChunks (compat wrapper)', () => {

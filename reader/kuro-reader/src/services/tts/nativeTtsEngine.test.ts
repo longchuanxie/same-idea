@@ -7,6 +7,7 @@ import { TtsUnavailableError } from './types';
 const pluginState = vi.hoisted(() => ({
   speakImpl: null as ((options: { text: string }) => Promise<void>) | null,
   speakCalls: 0,
+  stopCalls: 0,
 }));
 
 vi.mock('@capacitor-community/text-to-speech', () => ({
@@ -24,7 +25,13 @@ vi.mock('@capacitor-community/text-to-speech', () => ({
             pluginState.speakCalls += 1;
             return pluginState.speakImpl?.(options as { text: string }) ?? Promise.resolve();
           }
-          return Promise.resolve();
+          if (prop === 'stop') {
+            pluginState.stopCalls += 1;
+            return Promise.resolve();
+          }
+          // 与真机一致：插件未实现的方法在代理上照样可访问、调用即 reject
+          // （属性访问永远不会得到 undefined，运行时探测能力不可行）
+          return Promise.reject(new Error(`"TextToSpeech.${String(prop)}()" is not implemented on android`));
         };
       },
     }
@@ -42,6 +49,7 @@ describe('NativeTtsEngine（系统语音引擎）', () => {
     vi.useRealTimers();
     pluginState.speakImpl = null;
     pluginState.speakCalls = 0;
+    pluginState.stopCalls = 0;
   });
 
   it('Capacitor 代理经 Promise 链流转不挂死：speak 正常到达桥接并完成', async () => {
@@ -141,5 +149,51 @@ describe('NativeTtsEngine（系统语音引擎）', () => {
     expect(attempts).toBe(attemptsAtCancel);
     expect(onError).not.toHaveBeenCalled();
     expect(onDone).not.toHaveBeenCalled();
+  });
+
+  it('pause 走 stop 降级：挂起回调被令牌拦截，resume 整块重播', async () => {
+    vi.useFakeTimers();
+    const deferreds: Array<() => void> = [];
+    pluginState.speakImpl = () =>
+      new Promise<void>((resolve) => {
+        deferreds.push(resolve);
+      });
+    const onDone = vi.fn();
+    const onError = vi.fn();
+    const engine = new NativeTtsEngine();
+
+    engine.speak('你好。世界。', { rate: 1, lang: 'zh-CN' }, { onDone, onError });
+    await vi.advanceTimersByTimeAsync(0); // 越过 loadPlugin，进入「播报中」
+    engine.pause();
+    expect(pluginState.stopCalls).toBe(1);
+
+    deferreds[0]?.(); // 暂停后旧 speak 才决议：令牌已换代，不得推进队列
+    await vi.advanceTimersByTimeAsync(0);
+    expect(onDone).not.toHaveBeenCalled();
+    expect(onError).not.toHaveBeenCalled();
+
+    engine.resume();
+    await vi.advanceTimersByTimeAsync(0); // resume 的重播越过 loadPlugin 到达桥接
+    expect(pluginState.speakCalls).toBe(2); // 当前分块整块重播
+    deferreds[1]?.();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(onDone).toHaveBeenCalledTimes(1); // 重播完成后正常推进
+  });
+
+  it('插件尚未加载时 pause：挂起的 speakAsync 被中止，不会在暂停态播完整块', async () => {
+    vi.useFakeTimers();
+    pluginState.speakImpl = async () => undefined;
+    const onDone = vi.fn();
+    const onError = vi.fn();
+    const engine = new NativeTtsEngine();
+
+    engine.speak('你好。', { rate: 1, lang: 'zh-CN' }, { onDone, onError });
+    // 同步紧跟 pause：此刻 speakAsync 仍挂在 loadPlugin 上、this.plugin 还是 null
+    engine.pause();
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(pluginState.speakCalls).toBe(0); // 未到达桥接即被令牌拦截
+    expect(onDone).not.toHaveBeenCalled();
+    expect(onError).not.toHaveBeenCalled();
   });
 });

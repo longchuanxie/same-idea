@@ -5,8 +5,6 @@ import { TtsCancelledError, TtsUnavailableError, type TtsEngine, type TtsSpeakCo
 interface NativeTtsPlugin {
   speak(options: { text: string; lang?: string; rate?: number; pitch?: number; volume?: number }): Promise<void>;
   stop(): Promise<void>;
-  pause?: () => Promise<void>;
-  resume?: () => Promise<void>;
 }
 
 /** 引擎初始化中的拒绝特征：插件侧 TTS 引擎异步初始化未完成（App 冷启动后头几秒）或设备根本没有引擎 */
@@ -49,7 +47,9 @@ export function isNativeTtsAvailable(): boolean {
  * 系统语音引擎（Capacitor 插件,走 Android 系统 TTS 引擎）。
  * - speak 前的旧播报由插件 Flush 队列语义清空（等价于「新一轮先 stop」防抢话）
  * - 引擎初始化中的 speak 拒绝在宽限窗口内重试;窗口外仍不可用归一为 TtsUnavailableError
- * - 插件无 pause/resume API 时降级:暂停=停止并记住当前分块,恢复=整块重播(分块 ≤200 字,代价可接受)
+ * - 插件 v8 无 pause/resume 方法,且 Capacitor 代理对任意属性访问都返回桥接函数,
+ *   运行时探测能力不可行(探测恒真、调用即 reject)——暂停固定降级为
+ *   「令牌换代 + 停止并记住当前分块」,恢复 = 整块重播(分块 ≤200 字,代价可接受)
  */
 export class NativeTtsEngine implements TtsEngine {
   readonly id = 'native' as const;
@@ -113,26 +113,16 @@ export class NativeTtsEngine implements TtsEngine {
   }
 
   pause(): void {
-    const plugin = this.plugin;
-    if (!plugin) return;
-    if (plugin.pause) {
-      void plugin.pause();
-      return;
-    }
+    // 暂停 = 令牌换代拦截挂起回调 + 停止播报，当前分块留在 current 供 resume 整块重播。
+    // plugin 未加载（speakAsync 仍在等 loadPlugin）时同样换代：挂起的 speakAsync 自行中止，
+    // 不会在「已暂停」状态下把整块播完
     const current = this.current;
     this.tokenRef += 1;
-    this.current = null;
-    void plugin.stop().catch(() => undefined); // 桥接被拒也不能挂 unhandledrejection（对齐 cancel）
-    if (current) this.current = current; // 保留供 resume 重播
+    this.current = current;
+    void this.plugin?.stop().catch(() => undefined); // 桥接被拒也不能挂 unhandledrejection（对齐 cancel）
   }
 
   resume(): void {
-    const plugin = this.plugin;
-    if (!plugin) return;
-    if (plugin.resume) {
-      void plugin.resume();
-      return;
-    }
     const current = this.current;
     if (!current) return;
     this.current = null;

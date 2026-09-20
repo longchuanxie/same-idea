@@ -209,6 +209,9 @@ export const TextReaderPage: React.FC = () => {
   const [isProgressHintVisible, setIsProgressHintVisible] = useState(false);
   const [isChapterEndPromptVisible, setIsChapterEndPromptVisible] = useState(false);
   const [ttsActive, setTtsActive] = useState(false);
+  // 听书重锚定信号：手动翻页（非跟读跟随驱动）时 bump，起播 effect 据此从新页起点重启播报，
+  // 保证「所见即所读」；跟读自身驱动的翻页不 bump（否则会对当前页循环重播）
+  const [speechReanchorSeq, setSpeechReanchorSeq] = useState(0);
   const [isProgressDragging, setIsProgressDragging] = useState(false);
   const [dragPercent, setDragPercent] = useState(0);
   const isLandscapeViewport = useLandscapeViewport(TEXT_READER_COLUMNS_MEDIA_QUERY);
@@ -922,16 +925,25 @@ export const TextReaderPage: React.FC = () => {
   useEffect(() => {
     if (!ttsActive || !chapterSpeechText) return;
     let startChar = 0;
+    let pageStartOffsets: number[] | undefined;
     if (textReadingMode === 'scroll') {
       const ratio = scrollPercentRef.current / PERCENT_MULTIPLIER;
       if (ratio > 0 && ratio < 1) startChar = Math.floor(ratio * chapterSpeechText.length);
     } else if (paginatedChapterIndexRef.current === currentChapterIndexRef.current) {
-      // 分页/翻书模式：页文本是章节可读文本的顺序切片，起播点 = 当前页之前所有页的长度和
-      let offset = 0;
-      for (let i = 0; i < currentPageIndexRef.current && i < textPagesLengthRef.current; i++) {
-        offset += textPagesRef.current[i].length;
+      // 分页/翻书模式：页文本是章节可读文本的顺序切片，起播点 = 当前页之前所有页的长度和；
+      // 各页起点另作分块硬边界（换算成相对起播点的偏移）：分块永不跨页，
+      // 跟读翻页恰在新页文字起读的瞬间触发，不滞留到下一分块
+      const pageStarts: number[] = [];
+      let acc = 0;
+      for (let i = 0; i < textPagesLengthRef.current; i++) {
+        pageStarts.push(acc);
+        acc += textPagesRef.current[i].length;
       }
-      startChar = Math.min(offset, chapterSpeechText.length);
+      startChar = Math.min(
+        currentPageIndexRef.current < pageStarts.length ? pageStarts[currentPageIndexRef.current] : acc,
+        chapterSpeechText.length
+      );
+      pageStartOffsets = pageStarts;
     }
     let slice = chapterSpeechText.slice(startChar);
     let baseOffset = startChar;
@@ -939,10 +951,14 @@ export const TextReaderPage: React.FC = () => {
       slice = chapterSpeechText;
       baseOffset = 0;
     }
-    speechStart(slice, baseOffset);
+    speechStart(
+      slice,
+      baseOffset,
+      pageStartOffsets?.filter((offset) => offset > baseOffset).map((offset) => offset - baseOffset)
+    );
     return () => speechStop();
   // eslint-disable-next-line react-hooks/exhaustive-deps -- 分页镜像 ref 跨渲染稳定，列为依赖会引发听书期间无谓重建
-  }, [ttsActive, currentChapterIndex, chapterSpeechText, textReadingMode, speechStart, speechStop]);
+  }, [ttsActive, currentChapterIndex, chapterSpeechText, textReadingMode, speechStart, speechStop, speechReanchorSeq]);
 
   // 滚动模式跟读滚动：高亮目标越出视口舒适区时平滑滚到落点（听书时匀速自动滚动已挂起，不会互相打断）
   useEffect(() => {
@@ -984,9 +1000,15 @@ export const TextReaderPage: React.FC = () => {
       offset += textPages[i].length;
     }
     if (targetPage > currentPageIndex) {
-      goToPageRef.current?.(targetPage, 'left');
+      // 双页/多列跨页组：目标对齐组首——目标页在当前组内可见时不翻，避免一块跨组时连翻两组
+      const steppedTarget = targetPage - (targetPage % textPageStep);
+      if (steppedTarget > currentPageIndex) {
+        followDrivenTurnRef.current = true;
+        goToPageRef.current?.(steppedTarget, 'left');
+        followDrivenTurnRef.current = false;
+      }
     }
-  }, [ttsActive, speechRange, textReadingMode, textPages, currentPageIndex]);
+  }, [ttsActive, speechRange, textReadingMode, textPages, currentPageIndex, textPageStep]);
 
   // 点击区域翻页
   const handleTapZoneClick = useCallback((e: React.MouseEvent) => {
@@ -1500,6 +1522,8 @@ export const TextReaderPage: React.FC = () => {
   // 翻页
   // 连滚翻页：动画期间的后续翻页暂存，动画结束立即执行（建议书 B2，替代硬拦截的生硬感）
   const pendingPageRef = useRef<{ index: number; direction: 'left' | 'right' } | null>(null);
+  /** 跟读跟随驱动的翻页标记：goToPage 调用期间为 true，不触发听书重锚定（防当前页循环重播） */
+  const followDrivenTurnRef = useRef(false);
 
   const goToPage = useCallback((index: number, direction: 'left' | 'right') => {
     if (isPageAnimating) {
@@ -1521,6 +1545,11 @@ export const TextReaderPage: React.FC = () => {
 
     // 先设置新页索引，让 React 渲染新页
     setCurrentPageIndex(index);
+    // 手动翻页（点击/滑动/键盘/内链跳转/连滚续跳）在听书时重锚定：播报从新页起点重启，
+    // 保证所见即所读；仅向前跟随的跟读若不重锚定，用户前翻后音频在背后读、翻页长期失联
+    if (ttsActive && textReadingMode !== 'scroll' && !followDrivenTurnRef.current) {
+      setSpeechReanchorSeq((seq) => seq + 1);
+    }
 
     // 等待动画完成后清除状态；若有连滚请求则立即接续下一跳
     setTimeout(() => {
@@ -1533,7 +1562,7 @@ export const TextReaderPage: React.FC = () => {
         goToPageRef.current?.(pending.index, pending.direction);
       }
     }, animationDuration);
-  }, [textPages.length, isPageAnimating, currentPageIndex, textReadingMode]);
+  }, [textPages.length, isPageAnimating, currentPageIndex, textReadingMode, ttsActive]);
   goToPageRef.current = goToPage;
 
   // 翻书跟手交互（startFlip/completeFlip/snapbackFlip）已迁出至 useBookFlipAnimation hook
@@ -1543,6 +1572,8 @@ export const TextReaderPage: React.FC = () => {
       // 翻书模式：启动翻书动画 + 完成动画（用于点击/键盘触发）
       if (isPageAnimating) return;
       if (currentPageIndex < textPages.length - 1) {
+        // 翻书手动翻页不经 goToPage：听书时在此重锚定（startFlip 同步设新页索引，同批提交）
+        if (ttsActive) setSpeechReanchorSeq((seq) => seq + 1);
         startFlip(currentPageIndex + 1, 'left');
         requestAnimationFrame(() => completeFlip());
       } else if (hasMultipleChapters && currentChapterIndex < chapters.length - 1) {
@@ -1564,13 +1595,15 @@ export const TextReaderPage: React.FC = () => {
         setScrollPercent(0);
       }
     }
-  }, [textReadingMode, isPageAnimating, currentPageIndex, textPages.length, textPageStep, currentChapterIndex, chapters.length, hasMultipleChapters, startFlip, completeFlip, goToPage]);
+  }, [textReadingMode, isPageAnimating, currentPageIndex, textPages.length, textPageStep, currentChapterIndex, chapters.length, hasMultipleChapters, ttsActive, startFlip, completeFlip, goToPage]);
 
   const goToPrevPage = useCallback(() => {
     if (textReadingMode === 'book') {
       // 翻书模式：启动翻书动画 + 完成动画（用于点击/键盘触发）
       if (isPageAnimating) return;
       if (currentPageIndex > 0) {
+        // 翻书手动翻页不经 goToPage：听书时在此重锚定（startFlip 同步设新页索引，同批提交）
+        if (ttsActive) setSpeechReanchorSeq((seq) => seq + 1);
         startFlip(currentPageIndex - 1, 'right');
         requestAnimationFrame(() => completeFlip());
       } else if (hasMultipleChapters && currentChapterIndex > 0) {
@@ -1593,7 +1626,7 @@ export const TextReaderPage: React.FC = () => {
         setScrollPercent(0);
       }
     }
-  }, [textReadingMode, isPageAnimating, currentPageIndex, textPageStep, currentChapterIndex, hasMultipleChapters, startFlip, completeFlip, goToPage]);
+  }, [textReadingMode, isPageAnimating, currentPageIndex, textPageStep, currentChapterIndex, hasMultipleChapters, ttsActive, startFlip, completeFlip, goToPage]);
 
   // 触摸滑动处理
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
