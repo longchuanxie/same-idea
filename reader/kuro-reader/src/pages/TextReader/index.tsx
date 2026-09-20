@@ -153,6 +153,12 @@ const SPEECH_FOLLOW_ANCHOR_RATIO = 0.4;
 /** 高亮目标越出视口舒适区（顶部 25% 以上 / 底部 85% 以下）才触发跟随滚动，避免打扰手动浏览 */
 const SPEECH_FOLLOW_ZONE_START = 0.25;
 const SPEECH_FOLLOW_ZONE_END = 0.85;
+/** 听书起播等待本章分页就绪的轮询间隔：分页需 rAF+字体+测量，就绪前无法按当前页锚定 */
+const SPEECH_PAGINATION_POLL_MS = 50;
+/** 听书起播等待分页的上限：超时按现状从章首裸播（不带页边界），宁可起点不完美不可迟迟不出声 */
+const SPEECH_PAGINATION_WAIT_MS = 3000;
+/** 跨章预分页预热的兜底延迟（requestIdleCallback 不可用时） */
+const WARM_PAGINATION_DELAY_MS = 1500;
 // 书签 / 批注
 const BOOKMARK_MATCH_EPSILON = 0.02;
 const BOOKMARK_PREVIEW_BEFORE_CHARS = 20;
@@ -358,8 +364,15 @@ export const TextReaderPage: React.FC = () => {
         return;
       }
       setTextPages(pages);
+      // 消费了排队定位请求时（恢复/跳转的页码在本帧 setCurrentPageIndex，下一渲染才生效）：
+      // 守卫 ref 延一帧置位，避免「守卫已就绪而页码 ref 仍旧值」的窗口被听书起播 begin 撞上
+      if (consumePendingPageIndex(pages.length)) {
+        requestAnimationFrame(() => {
+          paginatedChapterIndexRef.current = currentChapterIndexRef.current;
+        });
+        return;
+      }
       paginatedChapterIndexRef.current = currentChapterIndexRef.current;
-      if (consumePendingPageIndex(pages.length)) return;
       if (preserveReadingPositionRef.current && sameChapterPaginated) {
         // 重切页后按字符偏移映射回「正在读的那段文字」所在新页（同下标会随切分漂移）；
         // 换章场景不沿用：旧章偏移对新章无意义
@@ -466,6 +479,119 @@ export const TextReaderPage: React.FC = () => {
     return getTextReaderFontFamily(textFontFamily);
   }, [textFontFamily]);
 
+  /** 版式签名（分页缓存键）：所有影响分页结果的输入都在 key 里（pageHeight 已含自校准收缩）。
+   *  主管线与跨章预热共用，保证预热产物能被主管线命中 */
+  const buildPaginationCacheKey = useCallback(
+    (chapterId: string, contentLength: number, contentWidth: number, pageHeight: number) => [
+      bookId,
+      chapterId,
+      contentLength,
+      fontSize,
+      lineHeight,
+      resolvedFontFamily,
+      textAlign,
+      firstLineIndent,
+      hasMultipleChapters,
+      isColumnsLayoutActive,
+      contentWidth,
+      pageHeight,
+    ].join('|'),
+    [bookId, fontSize, lineHeight, resolvedFontFamily, textAlign, firstLineIndent, hasMultipleChapters, isColumnsLayoutActive]
+  );
+
+  /** 预热进行中的分页缓存键：同键并发预热去重（失败后允许重试） */
+  const warmingPaginationKeysRef = useRef(new Set<string>());
+
+  /** 纯文本章的预分页预热：detached 容器按当前版式离屏测一遍并写入分页缓存。
+   *  听书播放中提前算好下一章，章末自动续播时缓存命中——起播等待归零且新章分块自带页边界。
+   *  markdown 章不预热（需独立渲染 MarkdownReaderContent 测块高，二期），由起播等待兜底 */
+  const warmChapterPagination = useCallback(
+    (chapter: TextChapter) => {
+      if (chapter.markdownDocument) return;
+      const { contentWidth, pageHeight: layoutPageHeight } = getCurrentTextPageLayout(isColumnsLayoutActive);
+      const pageHeight = Math.max(MIN_PAGE_CAPACITY_PX, layoutPageHeight - pageCapacityShrinkRef.current);
+      if (pageHeight <= 0 || contentWidth <= 0) return;
+      const cacheKey = buildPaginationCacheKey(chapter.id, chapter.content.length, contentWidth, pageHeight);
+      const cache = paginationCacheRef.current;
+      if (cache.has(cacheKey) || warmingPaginationKeysRef.current.has(cacheKey)) return;
+      warmingPaginationKeysRef.current.add(cacheKey);
+      void (async () => {
+        try {
+          // 与主管线同款字体就绪等待：webfont（font-display: swap）加载前后行宽不同，
+          // 先量后换字会把错误断页写进缓存
+          const fontsReady = document.fonts?.ready ?? Promise.resolve();
+          await Promise.race([
+            fontsReady,
+            new Promise<void>((resolve) => setTimeout(resolve, FONTS_READY_TIMEOUT_MS)),
+          ]);
+          if (cache.has(cacheKey)) return;
+          // detached 测量容器：样式与主管线 measureEl 逐项一致（不设 color，同主管线）
+          const el = document.createElement('div');
+          el.style.position = 'absolute';
+          el.style.left = '-99999px';
+          el.style.top = '0';
+          el.style.visibility = 'hidden';
+          el.style.pointerEvents = 'none';
+          el.style.width = `${contentWidth}px`;
+          el.style.fontSize = `${fontSize}px`;
+          el.style.lineHeight = String(lineHeight);
+          el.style.fontFamily = resolvedFontFamily;
+          el.style.whiteSpace = 'normal';
+          el.style.wordBreak = 'break-word';
+          el.style.boxSizing = 'border-box';
+          el.style.textAlign = textAlign === 'justify' ? 'justify' : 'left';
+          document.body.appendChild(el);
+          try {
+            const measurePageHeight = (pageText: string, includeChapterTitle: boolean): number => {
+              const wrapper = document.createElement('div');
+              if (includeChapterTitle && hasMultipleChapters) {
+                const titleEl = document.createElement('h2');
+                titleEl.textContent = chapter.title;
+                titleEl.style.textAlign = 'center';
+                titleEl.style.fontWeight = TEXT_PAGE_TITLE_FONT_WEIGHT;
+                titleEl.style.marginBottom = `${TEXT_PAGE_TITLE_MARGIN_BOTTOM}px`;
+                titleEl.style.opacity = TEXT_PAGE_TITLE_OPACITY;
+                wrapper.appendChild(titleEl);
+              }
+              const contentEl = document.createElement('div');
+              contentEl.textContent = pageText;
+              contentEl.style.whiteSpace = 'pre-wrap';
+              contentEl.style.wordBreak = 'break-word';
+              // 纯文本页恒带段首缩进（与主管线无块上下文的分支一致）
+              contentEl.style.textIndent = firstLineIndent ? '2em' : '0';
+              wrapper.appendChild(contentEl);
+              el.replaceChildren(wrapper);
+              return el.scrollHeight;
+            };
+            const linesPerPage = Math.max(1, Math.ceil(pageHeight / Math.max(1, fontSize * lineHeight)));
+            const charsPerLineUpper = Math.max(
+              MIN_CHARS_PER_LINE,
+              Math.ceil(contentWidth / Math.max(1, fontSize)) * PAGE_CHAR_DENSITY_FACTOR
+            );
+            const pages = splitTextIntoPages(
+              chapter.content,
+              (pageText, includeChapterTitle) => measurePageHeight(pageText, includeChapterTitle) <= pageHeight,
+              { maxPageLength: linesPerPage * charsPerLineUpper }
+            );
+            if (pages.length === 0) return;
+            // 与 finishPagination 同款 LRU 维护：先删再放维持插入序，超限淘汰最旧签名
+            cache.delete(cacheKey);
+            cache.set(cacheKey, pages);
+            if (cache.size > PAGINATION_CACHE_LIMIT) {
+              const oldestKey = cache.keys().next().value;
+              if (oldestKey != null) cache.delete(oldestKey);
+            }
+          } finally {
+            el.remove();
+          }
+        } finally {
+          warmingPaginationKeysRef.current.delete(cacheKey);
+        }
+      })();
+    },
+    [buildPaginationCacheKey, isColumnsLayoutActive, fontSize, lineHeight, resolvedFontFamily, textAlign, firstLineIndent, hasMultipleChapters]
+  );
+
   // 阅读外观 = 纸型（与漫画阅读同源）：底色恒纸型色、文字恒暖墨；
   // 纹理层 multiply 混入纸色（paperMode 关闭时仅无噪声，底色不变）
   const paperConfigForBg = getPaperConfig(settings.paperType);
@@ -540,10 +666,19 @@ export const TextReaderPage: React.FC = () => {
   // 按书偏好恢复每本书只执行一次：本 effect 依赖 textReadingMode，若每次依赖变化都覆盖，
   // 用户刚切换的模式会被书内旧值当场回滚（切换不立即落进度，旧值仍在 readingProgress 里）
   const restoredPrefsBookIdRef = useRef<string | null>(null);
+  /** 位置恢复 effect 已为本书完成决策（无进度/直达/常规恢复均置位）：听书起播等待的信号之一 */
+  const positionRestoredBookIdRef = useRef<string | null>(null);
 
   // 恢复阅读位置（增强：支持章节+分页恢复）
   useEffect(() => {
-    if (!bookId || isLoading) return;
+    if (!bookId || isLoading || chapters.length === 0) return;
+    // 位置恢复决策点：听书起播等待以此为「阅读位置已稳定」信号——reload 后本 effect
+    // （章节/页码恢复）晚于分页完成，不等它会把听书锚到章首而视觉已回到原页。
+    // 置位延到宏任务：本帧的 setCurrentChapterIndex/requestPageAfterPagination 提交后再放行，
+    // 起播 begin 读到的章/页 ref 才是恢复后的终值
+    setTimeout(() => {
+      positionRestoredBookIdRef.current = bookId;
+    }, 0);
     // 显式直达意图（?ann= / ?goto=）优先于进度/章节恢复：无缝滚动窗口就位会重放本 effect，
     // 其 scrollTo(0,0) 会把直达定位归零——有直达参数时整体让位（直达自行设置章节与位置）
     if (annTargetId || gotoTarget) return;
@@ -924,41 +1059,68 @@ export const TextReaderPage: React.FC = () => {
   const { start: speechStart, stop: speechStop } = speech;
   useEffect(() => {
     if (!ttsActive || !chapterSpeechText) return;
-    let startChar = 0;
-    let pageStartOffsets: number[] | undefined;
-    if (textReadingMode === 'scroll') {
-      const ratio = scrollPercentRef.current / PERCENT_MULTIPLIER;
-      if (ratio > 0 && ratio < 1) startChar = Math.floor(ratio * chapterSpeechText.length);
-    } else if (paginatedChapterIndexRef.current === currentChapterIndexRef.current) {
-      // 分页/翻书模式：页文本是章节可读文本的顺序切片，起播点 = 当前页之前所有页的长度和；
-      // 各页起点另作分块硬边界（换算成相对起播点的偏移）：分块永不跨页，
-      // 跟读翻页恰在新页文字起读的瞬间触发，不滞留到下一分块
-      const pageStarts: number[] = [];
-      let acc = 0;
-      for (let i = 0; i < textPagesLengthRef.current; i++) {
-        pageStarts.push(acc);
-        acc += textPagesRef.current[i].length;
+    let cancelled = false;
+    const begin = () => {
+      if (cancelled) return;
+      let startChar = 0;
+      let pageStartOffsets: number[] | undefined;
+      if (textReadingMode === 'scroll') {
+        const ratio = scrollPercentRef.current / PERCENT_MULTIPLIER;
+        if (ratio > 0 && ratio < 1) startChar = Math.floor(ratio * chapterSpeechText.length);
+      } else if (paginatedChapterIndexRef.current === currentChapterIndexRef.current) {
+        // 分页/翻书模式：页文本是章节可读文本的顺序切片，起播点 = 当前页之前所有页的长度和；
+        // 各页起点另作分块硬边界（换算成相对起播点的偏移）：分块永不跨页，
+        // 跟读翻页恰在新页文字起读的瞬间触发，不滞留到下一分块
+        const pageStarts: number[] = [];
+        let acc = 0;
+        for (let i = 0; i < textPagesLengthRef.current; i++) {
+          pageStarts.push(acc);
+          acc += textPagesRef.current[i].length;
+        }
+        startChar = Math.min(
+          currentPageIndexRef.current < pageStarts.length ? pageStarts[currentPageIndexRef.current] : acc,
+          chapterSpeechText.length
+        );
+        pageStartOffsets = pageStarts;
       }
-      startChar = Math.min(
-        currentPageIndexRef.current < pageStarts.length ? pageStarts[currentPageIndexRef.current] : acc,
-        chapterSpeechText.length
+      let slice = chapterSpeechText.slice(startChar);
+      let baseOffset = startChar;
+      if (!slice.trim()) {
+        slice = chapterSpeechText;
+        baseOffset = 0;
+      }
+      speechStart(
+        slice,
+        baseOffset,
+        pageStartOffsets?.filter((offset) => offset > baseOffset).map((offset) => offset - baseOffset)
       );
-      pageStartOffsets = pageStarts;
+    };
+    if (textReadingMode !== 'scroll'
+      && (positionRestoredBookIdRef.current !== bookId || paginatedChapterIndexRef.current !== currentChapterIndexRef.current)) {
+      // 阅读位置或本章分页未就绪（reload 后位置恢复晚于分页、开书立即点听书、章末自动续播）：
+      // 异步等待就绪后再按当前页锚定开播——立即开播只能从章首裸播、分块无页边界、
+      // 跟读翻页滞后。轮询用宏任务，保证守卫 ref 与页文本镜像同批一致
+      const deadline = Date.now() + SPEECH_PAGINATION_WAIT_MS;
+      const poll = () => {
+        if (cancelled) return;
+        const paginationReady = paginatedChapterIndexRef.current === currentChapterIndexRef.current;
+        const positionReady = positionRestoredBookIdRef.current === bookId;
+        if ((paginationReady && positionReady) || Date.now() >= deadline) {
+          begin();
+          return;
+        }
+        setTimeout(poll, SPEECH_PAGINATION_POLL_MS);
+      };
+      setTimeout(poll, SPEECH_PAGINATION_POLL_MS);
+    } else {
+      begin();
     }
-    let slice = chapterSpeechText.slice(startChar);
-    let baseOffset = startChar;
-    if (!slice.trim()) {
-      slice = chapterSpeechText;
-      baseOffset = 0;
-    }
-    speechStart(
-      slice,
-      baseOffset,
-      pageStartOffsets?.filter((offset) => offset > baseOffset).map((offset) => offset - baseOffset)
-    );
-    return () => speechStop();
+    return () => {
+      cancelled = true;
+      speechStop();
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps -- 分页镜像 ref 跨渲染稳定，列为依赖会引发听书期间无谓重建
-  }, [ttsActive, currentChapterIndex, chapterSpeechText, textReadingMode, speechStart, speechStop, speechReanchorSeq]);
+  }, [ttsActive, bookId, currentChapterIndex, chapterSpeechText, textReadingMode, speechStart, speechStop, speechReanchorSeq]);
 
   // 滚动模式跟读滚动：高亮目标越出视口舒适区时平滑滚到落点（听书时匀速自动滚动已挂起，不会互相打断）
   useEffect(() => {
@@ -1009,6 +1171,29 @@ export const TextReaderPage: React.FC = () => {
       }
     }
   }, [ttsActive, speechRange, textReadingMode, textPages, currentPageIndex, textPageStep]);
+
+  // 听书播放中预分页下一章（纯文本书）：idle 时机后台按当前版式把下一章切好页写入分页缓存，
+  // 章末自动续播时缓存命中——起播等待归零且新章分块自带页边界。版式输入变化时随
+  // warmChapterPagination 身份变化重排，旧签名预热产物自然废弃（LRU 淘汰）
+  useEffect(() => {
+    if (!ttsActive || textReadingMode === 'scroll') return;
+    const nextChapter = chapters[currentChapterIndex + 1];
+    if (!nextChapter || nextChapter.markdownDocument) return;
+    let cancelled = false;
+    const supportsIdle = typeof window.requestIdleCallback === 'function';
+    const handle = supportsIdle
+      ? window.requestIdleCallback(() => {
+          if (!cancelled) warmChapterPagination(nextChapter);
+        })
+      : window.setTimeout(() => {
+          if (!cancelled) warmChapterPagination(nextChapter);
+        }, WARM_PAGINATION_DELAY_MS);
+    return () => {
+      cancelled = true;
+      if (supportsIdle) window.cancelIdleCallback(handle);
+      else window.clearTimeout(handle);
+    };
+  }, [ttsActive, currentChapterIndex, chapters, textReadingMode, warmChapterPagination]);
 
   // 点击区域翻页
   const handleTapZoneClick = useCallback((e: React.MouseEvent) => {
@@ -1136,22 +1321,9 @@ export const TextReaderPage: React.FC = () => {
     const charsPerLineUpper = Math.max(MIN_CHARS_PER_LINE, Math.ceil(contentWidth / Math.max(1, fontSize)) * PAGE_CHAR_DENSITY_FACTOR);
     const pageLengthUpperBound = linesPerPage * charsPerLineUpper;
 
-    // 版式签名缓存：所有影响分页结果的输入都在 key 里（pageHeight 已含自校准收缩，
+    // 版式签名缓存：与跨章预热共用 buildPaginationCacheKey（pageHeight 已含自校准收缩，
     // 其变化自然换 key）。颜色不参与布局，特意不入 key——切主题直接命中缓存
-    const paginationCacheKey = [
-      bookId,
-      currentChapter.id,
-      currentChapter.content.length,
-      fontSize,
-      lineHeight,
-      resolvedFontFamily,
-      textAlign,
-      firstLineIndent,
-      hasMultipleChapters,
-      isColumnsLayoutActive,
-      contentWidth,
-      pageHeight,
-    ].join('|');
+    const paginationCacheKey = buildPaginationCacheKey(currentChapter.id, currentChapter.content.length, contentWidth, pageHeight);
     const cachedPages = paginationCacheRef.current.get(paginationCacheKey);
     if (cachedPages) {
       // 命中重插维持最近使用序：只在写入时刷新插入序实为 FIFO，
@@ -1421,9 +1593,9 @@ export const TextReaderPage: React.FC = () => {
 
     finishPagination(pages);
   }, [
-    bookId,
     currentChapter,
     textReadingMode,
+    buildPaginationCacheKey,
     fontSize,
     lineHeight,
     resolvedFontFamily,
