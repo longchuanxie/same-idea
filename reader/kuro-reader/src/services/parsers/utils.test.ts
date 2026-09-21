@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { splitMarkdownIntoChapters, splitTextIntoChapters } from './utils'
+import { splitMarkdownIntoChapters, splitTextIntoChapters, parseChineseNumeral } from './utils'
 
 describe('splitMarkdownIntoChapters', () => {
   it('splits markdown by level one and level two headings', () => {
@@ -75,5 +75,44 @@ describe('splitTextIntoChapters 数字行防误判', () => {
     expect(chapters).toHaveLength(1)
     expect(chapters[0].title).toBe('第一章 开端')
     expect(chapters[0].content).toContain('1997. 夏天的故事')
+  })
+})
+
+describe('splitTextIntoChapters 中文数字裸枚举', () => {
+  it('一、二、三、递增序列按章节拆分', () => {
+    const chapters = splitTextIntoChapters('一、开端\n内容一\n二、发展\n内容二\n三、终局\n内容三')
+    expect(chapters).toEqual([
+      { title: '一、开端', content: '内容一' },
+      { title: '二、发展', content: '内容二' },
+      { title: '三、终局', content: '内容三' },
+    ])
+  })
+
+  it('括号包裹形态（（一）标题）按章节拆分，十一以上编号正确', () => {
+    const text = Array.from({ length: 12 }, (_, i) => `（${['一','二','三','四','五','六','七','八','九','十','十一','十二'][i]}）第${i + 1}节\n内容${i + 1}`).join('\n')
+    const chapters = splitTextIntoChapters(text)
+    expect(chapters).toHaveLength(12)
+    expect(chapters[0].title).toBe('（一）第1节')
+    expect(chapters[10].title).toBe('（十一）第11节')
+    expect(chapters[11].title).toBe('（十二）第12节')
+  })
+
+  it('杂乱无序的中文数字行增幅不足整批降级为正文', () => {
+    const chapters = splitTextIntoChapters('开头\n三、乱入的列表项\n内容\n一、另一个列表项\n内容二\n二、再来一个\n内容三\n一、又一个重复\n内容四')
+    expect(chapters).toEqual([
+      { title: '正文', content: '开头\n三、乱入的列表项\n内容\n一、另一个列表项\n内容二\n二、再来一个\n内容三\n一、又一个重复\n内容四' },
+    ])
+  })
+
+  it('parseChineseNumeral 覆盖简写/零填充/大写形态', () => {
+    expect(parseChineseNumeral('十')).toBe(10)
+    expect(parseChineseNumeral('十五')).toBe(15)
+    expect(parseChineseNumeral('二十三')).toBe(23)
+    expect(parseChineseNumeral('一百零三')).toBe(103)
+    expect(parseChineseNumeral('一百二十三')).toBe(123)
+    expect(parseChineseNumeral('贰')).toBe(2)
+    expect(parseChineseNumeral('拾贰')).toBe(12)
+    expect(parseChineseNumeral('第')).toBeNull()
+    expect(parseChineseNumeral('')).toBeNull()
   })
 })

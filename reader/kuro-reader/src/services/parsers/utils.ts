@@ -39,11 +39,53 @@ const SPECIAL_CHAPTER_NAMES = new Set([
 ])
 
 /**
- * 数字编号型标题判定（1. 标题 / 001 标题）。命中返回编号值，否则返回 null。
+ * 中文数字串 → 数值（章节编号常见量级 ≤999）。解析不了的形态返回 null。
+ * 支持简写（十/十五/二十三）与带零填充（一百零三）；大写数字同形处理。
+ */
+const CN_NUMERAL_DIGITS: Record<string, number> = {
+  零: 0, 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9,
+  壹: 1, 贰: 2, 叁: 3, 肆: 4, 伍: 5, 陆: 6, 柒: 7, 捌: 8, 玖: 9,
+}
+const CN_NUMERAL_UNITS: Record<string, number> = { 十: 10, 百: 100, 拾: 10, 佰: 100 }
+const CN_NUMERAL_CHARS = '[零一二三四五六七八九十百壹贰叁肆伍陆柒捌玖拾佰]'
+
+export function parseChineseNumeral(text: string): number | null {
+  if (!new RegExp(`^${CN_NUMERAL_CHARS}{1,6}$`).test(text)) return null
+  let total = 0
+  let section = 0
+  let digit = 0
+  for (const ch of text) {
+    const d = CN_NUMERAL_DIGITS[ch]
+    if (d !== undefined) {
+      digit = d
+      continue
+    }
+    const unit = CN_NUMERAL_UNITS[ch]
+    if (unit === undefined) return null
+    // 裸「十」开头（十五/十里亭）视作 1×10
+    if (digit === 0 && section === 0 && unit === 10) {
+      section = 10
+    } else {
+      section += (digit || 1) * unit
+    }
+    if (unit === 100) {
+      total += section
+      section = 0
+    }
+    digit = 0
+  }
+  return total + section + digit
+}
+
+/**
+ * 数字编号型标题判定（1. 标题 / 001 标题 / 一、标题 / （十二）标题）。命中返回编号值，否则返回 null。
  * 防误判设计：
  * - 分隔符（.．)) 后紧跟数字视为小数（"3.5 星的评价"）→ 不算标题；
  * - 纯数字+标题模式只认零填充编号（"001 标题"），裸数字（"1024 个读者"与
- *   年份/数量无法区分）不再当标题。
+ *   年份/数量无法区分）不再当标题；
+ * - 中文数字裸枚举（一、/（一））同走本入口——是否采纳由调用方的
+ *   全文递增一致性验证统一把关（议论文小节枚举本就递增，拆分可辩护；
+ *   正文杂乱数字行会被闸门整批降级）。
  */
 export function matchNumericChapterTitle(line: string): number | null {
   const trimmed = line.trim()
@@ -55,6 +97,15 @@ export function matchNumericChapterTitle(line: string): number | null {
   if (separatorForm) return Number.parseInt(separatorForm[1], 10)
   const zeroPaddedForm = trimmed.match(/^\s*(0\d{2,3})\s+.{1,40}\s*$/)
   if (zeroPaddedForm) return Number.parseInt(zeroPaddedForm[1], 10)
+  // 中文数字裸枚举：顿号/句点分隔（一、开端）与括号包裹（（十二）谜团）
+  const cnSeparatorForm = trimmed.match(
+    new RegExp(`^\\s*(${CN_NUMERAL_CHARS}{1,6})\\s*[\u3001.\uff0e](?!\\d)\\s*(.{1,40})\\s*$`)
+  )
+  if (cnSeparatorForm) return parseChineseNumeral(cnSeparatorForm[1])
+  const cnParenForm = trimmed.match(
+    new RegExp(`^[\\uff08(]\\s*(${CN_NUMERAL_CHARS}{1,6})\\s*[\\uff09)]\\s*(.{1,40})\\s*$`)
+  )
+  if (cnParenForm) return parseChineseNumeral(cnParenForm[1])
   return null
 }
 
