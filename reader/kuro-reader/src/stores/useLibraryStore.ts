@@ -610,6 +610,8 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     const importedCovers: Record<string, string> = {};
     const importedBooks: Book[] = [];
     const skippedDuplicates: string[] = [];
+    // 批内解析失败记账：不静默吞——用户得知道少了哪几本（与 importArchivesAsBook 同口径）
+    const failedFiles: string[] = [];
 
     try {
       // 检查是否已存在同名子书库（避免重复导入）；指定特藏室目标时改为并入该特藏室，无需查重
@@ -650,7 +652,10 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
 
           // 根据文件类型选择合适的 parser
           const parser = getParserForFile(file);
-          if (!parser) continue;
+          if (!parser) {
+            failedFiles.push(file.name);
+            continue;
+          }
 
           const useStreaming = file.size > STREAMING_THRESHOLD_MB * BYTES_PER_MB;
 
@@ -663,7 +668,10 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
           }
 
           // Skip if no content
-          if (parsed.format === 'comic' && parsed.imagePages.length === 0) continue;
+          if (parsed.format === 'comic' && parsed.imagePages.length === 0) {
+            failedFiles.push(file.name);
+            continue;
+          }
 
           const { book } = buildBookFromParsed(parsed, bookId);
 
@@ -688,6 +696,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
           importedCovers[bookId] = URL.createObjectURL(parsed.coverBlob);
           existingTitles.add(book.title);
         } catch {
+          failedFiles.push(file.name);
           continue;
         }
       }
@@ -724,6 +733,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
           batchImportTotal: 0,
           batchImportCurrent: 0,
           batchImportCurrentFile: '',
+          importWarning: buildPartialImportWarning(failedFiles, []),
         }));
         return target ?? null;
       }
@@ -747,6 +757,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
         batchImportTotal: 0,
         batchImportCurrent: 0,
         batchImportCurrentFile: '',
+        importWarning: buildPartialImportWarning(failedFiles, []),
       }));
 
       return subLibrary;
