@@ -58,6 +58,11 @@ import { bookmarkRepo } from '@/services/storage/bookmarkRepo';
 import { vocabRepo, vocabEntryId } from '@/services/storage/vocabRepo';
 import { loadTextContent, resolveTextChapterIndex, type TextChapter } from '@/services/textContent';
 import { isPiperDownloading, normalizePiperDownloadPercent, piperModelStored, preloadPiperModel, PROGRESS_INDETERMINATE, subscribePiperDownloadProgress } from '@/services/tts/piperEngine';
+import {
+  clearTtsPlaybackNotification,
+  requestTtsPlaybackNotificationPermission,
+  syncTtsPlaybackNotification,
+} from '@/services/tts/ttsNotification';
 import { useAppStore } from '@/stores/useAppStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import type { Bookmark, Annotation, AnnotationStyle, TtsEngineOption, VocabEntry } from '@/types';
@@ -1008,8 +1013,26 @@ export const TextReaderPage: React.FC = () => {
       speech.stop();
     } else {
       setTtsActive(true);
+      // 借起播时机申请通知权限（Android 13+ 运行时权限）：被拒不阻断朗读，仅提示一次
+      void requestTtsPlaybackNotificationPermission(showToast);
     }
-  }, [ttsActive, speech]);
+  }, [ttsActive, speech, showToast]);
+
+  // 通知栏常驻播报提示（对齐主流阅读软件：应用内外均可见「书名/正在朗读·章节」，
+  // 暂停与换章原地更新；Web 平台模块内直接空操作）
+  useEffect(() => {
+    void syncTtsPlaybackNotification({
+      active: ttsActive && speech.supported,
+      bookTitle: title,
+      chapterTitle: currentChapter?.title ?? '',
+      paused: speech.paused,
+    });
+  }, [ttsActive, speech.supported, speech.paused, title, currentChapter?.title]);
+
+  // 退出阅读器即撤除常驻通知（useSpeech 卸载亦会停播，通知不悬空）
+  useEffect(() => () => {
+    void clearTtsPlaybackNotification();
+  }, []);
 
   // 听书引擎切换:神经网络首次启用前确认音色包下载体积
   const [pendingNeuralConfirm, setPendingNeuralConfirm] = useState(false);
