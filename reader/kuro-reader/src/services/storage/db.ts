@@ -1,5 +1,7 @@
 import { openDB, type IDBPDatabase } from 'idb'
 
+import { toast } from '@/utils/toast'
+
 /**
  * IndexedDB 数据库名称
  */
@@ -111,7 +113,7 @@ let dbPromise: Promise<IDBPDatabase> | null = null
  */
 export function getDB(): Promise<IDBPDatabase> {
   if (!dbPromise) {
-    dbPromise = openDB(DB_NAME, DB_VERSION, {
+    const promise: Promise<IDBPDatabase> = openDB(DB_NAME, DB_VERSION, {
       upgrade(db, oldVersion) {
         if (!db.objectStoreNames.contains(STORE_NAMES.books)) {
           db.createObjectStore(STORE_NAMES.books, { keyPath: 'id' })
@@ -157,7 +159,25 @@ export function getDB(): Promise<IDBPDatabase> {
           db.createObjectStore(STORE_NAMES.vocabEntries, { keyPath: 'id' })
         }
       },
+      // 本页升级被其他标签页的旧连接阻塞：如实告知（不 reject——旧标签页关闭后会自动完成升级）
+      blocked() {
+        toast('其他标签页正在使用旧版本数据，请关闭它们后刷新本页', { durationMs: 6000 })
+      },
+      // 其他标签页请求升级版本而本页连接在阻塞它：主动让位关闭，
+      // 否则对方永久 pending；置空单例，本页下次访问时懒重连（拿到新版本）
+      blocking() {
+        if (dbPromise !== promise) return
+        dbPromise = null
+        void promise.then((db) => db.close())
+        toast('数据已在其他标签页更新，本页稍后自动重连，建议尽快刷新', { durationMs: 6000 })
+      },
+      // 连接被浏览器异常终止（如存储被清）：置空单例允许下次访问重新打开
+      terminated() {
+        if (dbPromise !== promise) return
+        dbPromise = null
+      },
     })
+    dbPromise = promise
   }
   return dbPromise
 }
