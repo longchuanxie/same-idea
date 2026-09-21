@@ -327,7 +327,7 @@ export const SubLibraryPage: React.FC = () => {
       </main>
 
       {isSelectMode && (
-        <div className="fixed bottom-gutter left-1/2 -translate-x-1/2 w-[calc(100%-48px)] max-w-md bg-surface-container-highest border border-outline-variant rounded-full z-50 flex justify-around items-center p-2 gap-2">
+        <div className="fixed bottom-gutter left-1/2 -translate-x-1/2 w-[calc(100%-48px)] max-w-md bg-surface-container-highest border border-outline-variant rounded-full z-50 flex justify-around items-center p-2 gap-2 mb-20 lg:mb-0">
           <button
             className={`flex flex-col items-center justify-center rounded-full px-4 py-2 transition-all group ${
               selectedIds.size > 0 ? 'text-on-surface-variant hover:bg-surface-dim' : 'text-on-surface-variant/40 cursor-not-allowed'
