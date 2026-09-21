@@ -986,6 +986,9 @@ export const TextReaderPage: React.FC = () => {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps -- TTS 回调经 ref 中转（chaptersRef/goToNextChapterRef），保持零依赖避免播音中重建
   }, []), useCallback((message: string) => {
+    // haltWithError 已复位 hook 内部状态：ttsActive 同步落下，悬浮控制条不留「假活」
+    // （否则暂停/倍速键对着已死的会话空转，用户只能手动关）
+    setTtsActive(false);
     showToast(message);
   }, [showToast]), useCallback((message: string) => {
     // 引擎哑火自动换挡（如系统语音无响应→神经网络）的告知，非错误不打断朗读
