@@ -91,4 +91,19 @@ describe('fetchOpdsFeed', () => {
     )
     expect(feed.entries).toHaveLength(2)
   })
+
+  it('sends UTF-8 encoded basic auth for Chinese credentials instead of silently dropping auth', async () => {
+    vi.mocked(axios.get).mockResolvedValue({ data: CATALOG_XML })
+
+    await fetchOpdsFeed('http://nas:8083/opds', { username: '书友', password: '密码123' })
+
+    // 裸 btoa 会抛 InvalidCharacterError 被 catch 吞成无鉴权请求；UTF-8 字节编码后应带正确头
+    const expected = btoa(String.fromCharCode(...new TextEncoder().encode('书友:密码123')));
+    expect(axios.get).toHaveBeenCalledWith(
+      'http://nas:8083/opds',
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: `Basic ${expected}` }),
+      })
+    )
+  })
 })

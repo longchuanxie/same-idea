@@ -66,7 +66,11 @@ function resolveHref(href: string, baseUrl: string): string {
 function authHeader(credentials?: OpdsCredentials): Record<string, string> {
   if (!credentials?.username) return {};
   try {
-    const token = btoa(`${credentials.username}:${credentials.password ?? ''}`);
+    // 中文/非 Latin1 凭据直接 btoa 抛 InvalidCharacterError（被吞后变无鉴权请求→401 误导）：
+    // 按 UTF-8 字节编码后再 base64，与 ftpClient 同款防御
+    const token = btoa(
+      String.fromCharCode(...new TextEncoder().encode(`${credentials.username}:${credentials.password ?? ''}`))
+    );
     return { Authorization: `Basic ${token}` };
   } catch {
     return {};
