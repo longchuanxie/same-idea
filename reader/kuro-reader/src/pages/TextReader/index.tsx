@@ -218,6 +218,9 @@ export const TextReaderPage: React.FC = () => {
   // 听书重锚定信号：手动翻页（非跟读跟随驱动）时 bump，起播 effect 据此从新页起点重启播报，
   // 保证「所见即所读」；跟读自身驱动的翻页不 bump（否则会对当前页循环重播）
   const [speechReanchorSeq, setSpeechReanchorSeq] = useState(0);
+  /** 起播等待窗口（分页/位置恢复未就绪的轮询期）内按下的暂停意图：begin 后立即落实，
+   *  否则用户暂停的是尚未 start 的会话（空操作），等待结束就无视意图直接出声 */
+  const speechWaitPauseRef = useRef(false);
   const [isProgressDragging, setIsProgressDragging] = useState(false);
   const [dragPercent, setDragPercent] = useState(0);
   const isLandscapeViewport = useLandscapeViewport(TEXT_READER_COLUMNS_MEDIA_QUERY);
@@ -1097,6 +1100,12 @@ export const TextReaderPage: React.FC = () => {
         baseOffset,
         pageStartOffsets?.filter((offset) => offset > baseOffset).map((offset) => offset - baseOffset)
       );
+      // 等待窗口里的暂停意图在开播瞬间落实（此时 hook 已 speaking，pause 走真实路径）。
+      // speech.pause 经 useCallback 稳定，effect 不重跑也不会拿到失效引用
+      if (speechWaitPauseRef.current) {
+        speechWaitPauseRef.current = false;
+        speech.pause();
+      }
     };
     if (textReadingMode !== 'scroll'
       && (positionRestoredBookIdRef.current !== bookId || paginatedChapterIndexRef.current !== currentChapterIndexRef.current)) {
@@ -3066,9 +3075,18 @@ export const TextReaderPage: React.FC = () => {
           rate={speech.rate}
           paused={speech.paused}
           engineLabel={speech.engineLabel}
-          synthesizing={speech.synthesizing}
+          synthesizing={speech.synthesizing || (ttsActive && !speech.speaking)}
           onCycleRate={speech.cycleRate}
-          onPauseResume={() => (speech.paused ? speech.resume() : speech.pause())}
+          onPauseResume={() => {
+            if (speech.paused) {
+              speech.resume();
+            } else if (!speech.speaking) {
+              // 起播等待窗口：会话未 start，记下意图（badge 的合成中转圈同时解释了空窗）
+              speechWaitPauseRef.current = true;
+            } else {
+              speech.pause();
+            }
+          }}
           onStop={handleToggleTTS}
         />
       )}
