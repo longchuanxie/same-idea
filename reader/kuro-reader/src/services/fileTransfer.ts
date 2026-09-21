@@ -62,12 +62,24 @@ async function downloadNative(options: DownloadOptions): Promise<DownloadResult>
       path: filePath,
     });
 
-    await FileTransfer.downloadFile({
-      url: options.url,
-      path: fileInfo.uri,
-      headers: options.headers,
-      progress: false,
-    });
+    // 插件无自带超时/取消：挂起时调用方永久转圈（busyFile 无退出路径）。
+    // 与 web 路径同窗超时；超时后尽力清缓存残留，防下次同名下载读到半截文件
+    try {
+      await Promise.race([
+        FileTransfer.downloadFile({
+          url: options.url,
+          path: fileInfo.uri,
+          headers: options.headers,
+          progress: false,
+        }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('下载超时，请重试')), DOWNLOAD_TIMEOUT)
+        ),
+      ]);
+    } catch (e) {
+      void Filesystem.deleteFile({ directory: Directory.Cache, path: filePath }).catch(() => {});
+      throw e;
+    }
 
     const readResult = await Filesystem.readFile({
       directory: Directory.Cache,
@@ -77,10 +89,8 @@ async function downloadNative(options: DownloadOptions): Promise<DownloadResult>
     const base64Data = readResult.data as string;
     const blob = new Blob([base64ToUint8Array(base64Data)]);
 
-    await Filesystem.deleteFile({
-      directory: Directory.Cache,
-      path: filePath,
-    });
+    // 读到即成功：缓存清理失败不该回滚整个下载（best-effort，残留由系统缓存回收）
+    void Filesystem.deleteFile({ directory: Directory.Cache, path: filePath }).catch(() => {});
 
     return { blob, path: fileInfo.uri };
   } catch (error) {
