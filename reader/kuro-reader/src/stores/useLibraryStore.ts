@@ -908,7 +908,8 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     const { readingProgress } = get();
     if (!readingProgress[bookId]) return;
     const { [bookId]: _, ...rest } = readingProgress;
-    progressRepo.remove(bookId);
+    // DB 删除失败吞掉：内存已先行移除，别让 unhandled rejection 外溢（与 updateProgress 同约定）
+    progressRepo.remove(bookId).catch(() => {});
     set({ readingProgress: rest as Record<string, ReadingProgress> });
   },
 
