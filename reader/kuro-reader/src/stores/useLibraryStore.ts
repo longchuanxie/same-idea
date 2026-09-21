@@ -129,6 +129,17 @@ function summarizeFileNames(names: string[]): string {
 }
 
 /** 部分成功警示文案：整体导入成功但存在被跳过/解析失败的文件时非空 */
+/** 在役封面 object URL 登记处：loadBooks 整表置换时回收「不在新表」的 URL。
+ *  并发轮次（首页挂载 × 云同步落地）各自的进入快照看不到对方新建的 URL，
+ *  只靠快照回收会漏掉被后一轮整表覆盖掉的孤儿——登记处补齐这一路 */
+const liveCoverUrls = new Set<string>();
+
+/** 登记一个进入 coverUrls 状态的 object URL（创建处调用） */
+function trackCoverObjectUrl(url: string): string {
+  liveCoverUrls.add(url);
+  return url;
+}
+
 function buildPartialImportWarning(failedFiles: string[], unsupportedFiles: string[]): string | null {
   if (failedFiles.length === 0 && unsupportedFiles.length === 0) return null;
   if (failedFiles.length === 0) {
@@ -266,13 +277,19 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
         const blob = await bookRepo.getCover(book.id);
         // 空 blob（生成失败的残留）会产出加载失败的 URL，浏览器转而渲染 alt 大字
         if (blob && blob.size > 0) {
-          coverUrls[book.id] = URL.createObjectURL(blob);
+          coverUrls[book.id] = trackCoverObjectUrl(URL.createObjectURL(blob));
         }
       }
-      // 整体重载回收旧封面 URL：loadBooks 会被首页挂载/云同步反复触发，不回收即会话级泄漏
-      Object.values(previousCoverUrls).forEach((url) => {
-        if (url) URL.revokeObjectURL(url);
-      });
+      // 整体重载回收不再在役的封面 URL：loadBooks 会被首页挂载/云同步反复触发，不回收即会话级泄漏。
+      // 回收两路并集（快照兜底未登记存量 + 登记处抓并发轮孤儿）里不在新表的 URL
+      const retainedUrls = new Set(Object.values(coverUrls));
+      const retireUrl = (url?: string) => {
+        if (url && !retainedUrls.has(url)) URL.revokeObjectURL(url);
+      };
+      Object.values(previousCoverUrls).forEach(retireUrl);
+      liveCoverUrls.forEach(retireUrl);
+      liveCoverUrls.clear();
+      retainedUrls.forEach((url) => liveCoverUrls.add(url));
       const readingProgress = await loadProgressWithMigration();
 
       const subLibraries = await subLibraryRepo.getAll();
@@ -377,7 +394,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
 
       await bookRepo.save({ ...book, tags: [] });
 
-      const coverUrl = URL.createObjectURL(parsed.coverBlob);
+      const coverUrl = trackCoverObjectUrl(URL.createObjectURL(parsed.coverBlob));
 
       set((state) => ({
         books: [...state.books, { ...book, tags: [] }],
@@ -444,7 +461,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
 
       await bookRepo.save({ ...book, tags: [] });
 
-      const coverUrl = URL.createObjectURL(parsed.coverBlob);
+      const coverUrl = trackCoverObjectUrl(URL.createObjectURL(parsed.coverBlob));
 
       set((state) => ({
         books: [...state.books, { ...book, tags: [] }],
@@ -569,7 +586,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
 
       await bookRepo.save({ ...book, tags: [] });
 
-      const coverUrl = URL.createObjectURL(coverBlob);
+      const coverUrl = trackCoverObjectUrl(URL.createObjectURL(coverBlob));
       set((state) => ({
         books: [...state.books, { ...book, tags: [] }],
         coverUrls: { ...state.coverUrls, [bookId]: coverUrl },
@@ -693,7 +710,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
 
           importedBookIds.push(bookId);
           importedBooks.push({ ...book, tags: [] });
-          importedCovers[bookId] = URL.createObjectURL(parsed.coverBlob);
+          importedCovers[bookId] = trackCoverObjectUrl(URL.createObjectURL(parsed.coverBlob));
           existingTitles.add(book.title);
         } catch {
           failedFiles.push(file.name);

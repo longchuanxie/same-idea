@@ -231,6 +231,30 @@ describe('updateProgress & removeContinueReading', () => {
     expect(useLibraryStore.getState().readingProgress.b2.percentage).toBe(20)
   })
 
+  it('并发 loadBooks：后一轮整表置换掉的孤儿封面 URL 也会被回收', async () => {
+    bookRepoMock.getAll.mockResolvedValue([makeBook({ id: 'b1' })])
+    bookRepoMock.getCover.mockResolvedValue(new Blob(['cover']))
+    progressRepoMock.getAll.mockResolvedValue([])
+    tagRepoMock.getAll.mockResolvedValue([])
+    resetLibraryState({})
+    const createSpy = vi.spyOn(URL, 'createObjectURL')
+    const revokeSpy = vi.spyOn(URL, 'revokeObjectURL')
+
+    await Promise.all([useLibraryStore.getState().loadBooks(), useLibraryStore.getState().loadBooks()])
+
+    const created = createSpy.mock.results.map((r) => r.value as string)
+    expect(created.length).toBeGreaterThanOrEqual(2)
+    const retained = new Set(Object.values(useLibraryStore.getState().coverUrls))
+    const revoked = revokeSpy.mock.calls.map((c) => c[0] as string)
+    // 不在新表的 URL（被后一轮覆盖的孤儿）必须已被 revoke——快照方案会漏掉它
+    created.filter((u) => !retained.has(u)).forEach((orphan) => {
+      expect(revoked).toContain(orphan)
+    })
+
+    createSpy.mockRestore()
+    revokeSpy.mockRestore()
+  })
+
   it('loadBooks migrates legacy localStorage progress into IndexedDB once', async () => {
     bookRepoMock.getAll.mockResolvedValue([])
     bookRepoMock.getCover.mockResolvedValue(undefined)
