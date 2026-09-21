@@ -849,6 +849,22 @@ export const LibraryPage: React.FC = () => {
         })}
         </div>
         )
+      ) : books.length > 0 && (activeTagId !== null || showFavoritesOnly) ? (
+        <div className="text-center py-16">
+          <span className="material-symbols-outlined text-on-surface-variant text-5xl mb-4 block">filter_alt_off</span>
+          <p className="font-body text-body-md text-on-surface-variant mb-6">
+            该筛选下没有书——换个分类或清除筛选
+          </p>
+          <button
+            className="btn-secondary px-6 py-2"
+            onClick={() => {
+              setActiveTagId(null);
+              setShowFavoritesOnly(false);
+            }}
+          >
+            清除筛选
+          </button>
+        </div>
       ) : (
         <div className="text-center py-16">
           <span className="material-symbols-outlined text-on-surface-variant text-5xl mb-4 block">auto_stories</span>

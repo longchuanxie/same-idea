@@ -21,6 +21,7 @@ import {
 import {
   EMPTY_ANNOTATION_FILTER,
   filterAnnotations,
+  isEmptyAnnotationFilter,
   type AnnotationFilter,
   type AnnotationKind,
 } from '@/utils/annotationFilter';
@@ -330,6 +331,14 @@ export const NotesPage: React.FC = () => {
             <div className="flex flex-col items-center text-center py-12">
               <span className="material-symbols-outlined text-on-surface-faint text-4xl mb-3 block">filter_alt_off</span>
               <p className="font-body text-body-md text-on-surface-variant">{COPY.notesWall.emptyFiltered}</p>
+              {!isEmptyAnnotationFilter(filter) && (
+                <button
+                  className="btn-secondary px-6 py-2 mt-5"
+                  onClick={() => setFilter(EMPTY_ANNOTATION_FILTER)}
+                >
+                  清除筛选
+                </button>
+              )}
             </div>
           ) : (
             <div className="flex flex-col gap-3">
