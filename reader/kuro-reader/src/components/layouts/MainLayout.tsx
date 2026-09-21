@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import { BottomNavBar } from '@/components/atoms/BottomNavBar';
 import { TopAppBar } from '@/components/atoms/TopAppBar';
 import { DesktopSideBar } from '@/components/layouts/DesktopSideBar';
 import { getAppBarConfig, resolveNav } from '@/components/layouts/mainLayoutChrome';
+import { ROUTES } from '@/constants/routes';
 import { useStatusBar } from '@/hooks/useStatusBar';
 import { useAppStore } from '@/stores/useAppStore';
 import { cn } from '@/utils/cn';
@@ -17,6 +18,7 @@ const SIDEBAR_COLLAPSED_KEY = 'kuro-sidebar-collapsed';
 
 export const MainLayout: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { theme, settings } = useAppStore();
   const [systemPrefersDark, setSystemPrefersDark] = useState(() =>
     window.matchMedia(SYSTEM_DARK_QUERY).matches
@@ -43,6 +45,24 @@ export const MainLayout: React.FC = () => {
 
   const isDark = theme === 'dark' || (theme === 'auto' && systemPrefersDark);
   useStatusBar(isDark);
+
+  // 桌面全局 Ctrl/Cmd+K 直达检索台（阅读器在 MainLayout 之外，天然不与翻页键冲突）。
+  // 焦点在输入框时不抢（那是用户自己的编辑现场）；有弹层打开时不抢（Ctrl+K 不该压掉对话框流程）
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'k') return;
+      const target = e.target as HTMLElement | null;
+      if (target instanceof HTMLElement) {
+        const tag = target.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable) return;
+      }
+      if (document.querySelector('[role=dialog]')) return;
+      e.preventDefault();
+      navigate(ROUTES.SEARCH);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [navigate]);
 
   const currentNav = resolveNav(location.pathname);
   const { variant, title } = getAppBarConfig(location.pathname);
