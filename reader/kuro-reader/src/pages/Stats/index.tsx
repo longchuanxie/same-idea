@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 
+import { useNavigate } from 'react-router-dom';
+
 import { FormatBadge } from '@/components/atoms/FormatBadge';
+import { ROUTES, bookDetailPath } from '@/constants/routes';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import { useStatsStore } from '@/stores/useStatsStore';
 import { cn } from '@/utils/cn';
@@ -33,6 +36,7 @@ const narrateTotalHours = (hours: number): string => {
 };
 
 export const StatsPage: React.FC = () => {
+  const navigate = useNavigate();
   const { getStats, readingSessions, dailyGoalMinutes, setDailyGoalMinutes } = useStatsStore();
   const { books, loadBooks } = useLibraryStore();
   const stats = getStats();
@@ -169,7 +173,11 @@ export const StatsPage: React.FC = () => {
           </div>
           <div className="flex flex-col">
             {completedBooks.map((book) => (
-              <div key={book.id} className="py-4 border-b border-surface-variant flex justify-between items-center group cursor-pointer hover:pl-2 transition-all">
+              <button
+                key={book.id}
+                className="w-full text-left py-4 border-b border-surface-variant flex justify-between items-center group cursor-pointer hover:pl-2 transition-all"
+                onClick={() => navigate(bookDetailPath(book.id))}
+              >
                 <div className="flex flex-col">
                   <div className="flex items-center gap-1.5">
                     <span className="font-body text-body-lg text-primary group-hover:underline decoration-1 underline-offset-4">{book.title}</span>
@@ -182,7 +190,7 @@ export const StatsPage: React.FC = () => {
                 {book.genres.length > 0 && (
                   <span className="font-label text-label-sm border border-outline-variant px-2 py-1 rounded text-secondary">{book.genres[0]}</span>
                 )}
-              </div>
+              </button>
             ))}
           </div>
         </section>
@@ -254,6 +262,12 @@ export const StatsPage: React.FC = () => {
           <span className="material-symbols-outlined text-on-surface-variant text-6xl mb-4">query_stats</span>
           <p className="font-body text-body-md text-on-surface-variant">台账还是第一页</p>
           <p className="font-label text-label-sm text-on-surface-variant mt-2">开始阅读后，墨迹会自己长出来</p>
+          <button
+            className="btn-secondary px-6 py-2 mt-6"
+            onClick={() => navigate(ROUTES.LIBRARY)}
+          >
+            去书库挑一本
+          </button>
         </section>
       )}
     </div>
