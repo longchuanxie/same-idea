@@ -248,6 +248,37 @@ describe('useSpeech', () => {
     expect(result.current.paused).toBe(false);
   });
 
+  it('暂停挂起当前块，恢复后块结束仍续播下一块（onend 迟到不丢）', () => {
+    const { result } = renderHook(() => useSpeech());
+    // 405 字 → 拆为 3 个分块（与链式用例同款文本）
+    act(() => result.current.start('甲。乙。丙。'.repeat(81)));
+    expect(spoken).toHaveLength(1);
+    const first = spoken[0];
+
+    act(() => result.current.pause());
+    // 真实引擎语义：暂停期间 onend 不送达
+    act(() => result.current.resume());
+    // 恢复后当前块播完 → onend 迟到送达
+    act(() => first.onend?.());
+
+    expect(spoken).toHaveLength(2);
+    expect(result.current.speaking).toBe(true);
+  });
+
+  it('单块暂停恢复后播完仍触发 onFinished', () => {
+    const onFinished = vi.fn();
+    const { result } = renderHook(() => useSpeech(onFinished));
+    act(() => result.current.start('甲。'));
+    const first = spoken[0];
+
+    act(() => result.current.pause());
+    act(() => result.current.resume());
+    act(() => first.onend?.());
+
+    expect(onFinished).toHaveBeenCalledTimes(1);
+    expect(result.current.speaking).toBe(false);
+  });
+
   it('暂停中切倍速不出声，resume 以新倍速重播当前块', () => {
     const { result } = renderHook(() => useSpeech());
     act(() => result.current.start('甲。乙。'));
