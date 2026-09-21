@@ -492,7 +492,12 @@ export const SettingsPage: React.FC = () => {
         await useLibraryStore.getState().loadBooks();
       }
 
-      localStorage.setItem(STORAGE_KEYS.CLOUD_SYNC_LAST, result.exportedAt);
+      // 同步已成功：此刻的本地写失败（隐私模式/配额）不该把整轮 GET-MERGE-PUT 误报成失败
+      try {
+        localStorage.setItem(STORAGE_KEYS.CLOUD_SYNC_LAST, result.exportedAt);
+      } catch {
+        // 尽力而为，下次成功同步再补记
+      }
       setLastSyncedAt(result.exportedAt);
       setSyncMessage({
         ok: true,
