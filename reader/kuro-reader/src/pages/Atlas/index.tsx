@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { CharacterGraphView } from '@/components/molecules/knowledge/CharacterGraphView'
 import { VerifiedBadge } from '@/components/molecules/knowledge/ReviseControls'
 import { COPY } from '@/constants/copy'
-import { knowledgeSourcePath } from '@/constants/routes'
+import { ROUTES, knowledgeSourcePath } from '@/constants/routes'
 import { knowledgeRepo } from '@/services/storage/knowledgeRepo'
 import { useLibraryStore } from '@/stores/useLibraryStore'
 import type { KnowledgeArtifact } from '@/types'
@@ -134,6 +134,13 @@ export const AtlasPage: React.FC = () => {
           <p className="font-label text-label-sm text-on-surface-faint mt-1 max-w-sm mx-auto">
             {COPY.atlas.emptyHint}
           </p>
+          {/* 直链/书签落到空态时不给死路：原路返回聚合页 */}
+          <button
+            className="btn-secondary px-6 py-2 mt-6"
+            onClick={() => navigate(ROUTES.KNOWLEDGE_HUB)}
+          >
+            回知识库
+          </button>
         </div>
       ) : (
         <>
