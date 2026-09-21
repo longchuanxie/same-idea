@@ -38,7 +38,6 @@ import {
   getPaperBaseOpacity,
   getPaperConfig,
 } from '@/utils/paperTexture';
-import { getStorageUsage } from '@/utils/storage';
 import { toast } from '@/utils/toast';
 
 /** AI 未配置深链：滚动等待与高亮驻留时长 */
@@ -123,7 +122,6 @@ export const SettingsPage: React.FC = () => {
     setupGestureLock,
     disableGestureLock,
   } = useAppStore();
-  const [storageInfo, setStorageInfo] = useState<{ used: number; quota: number }>({ used: 0, quota: 0 });
 
   // 云端同步状态
   const [syncServer, setSyncServer] = useState('');
@@ -408,10 +406,6 @@ export const SettingsPage: React.FC = () => {
     { question: '', answer: '' },
   ]);
 
-  useEffect(() => {
-    getStorageUsage().then(setStorageInfo);
-  }, []);
-
   // 读取已保存的同步配置与上次同步时间
   useEffect(() => {
     setLastSyncedAt(localStorage.getItem(STORAGE_KEYS.CLOUD_SYNC_LAST));
@@ -512,14 +506,6 @@ export const SettingsPage: React.FC = () => {
       syncInFlightRef.current = false;
       setIsSyncing(false);
     }
-  };
-
-  const formatBytes = (bytes: number): string => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   };
 
   const directionLabel = settings.readingDirection === 'rtl' ? '从右至左 (日式传统)' : '从左至右';
@@ -1212,25 +1198,7 @@ export const SettingsPage: React.FC = () => {
         <section>
           <h2 className="font-label text-label-sm text-secondary uppercase tracking-widest mb-4 ml-2">系统管理</h2>
           <div className="bg-surface rounded-lg border border-outline-variant overflow-hidden">
-            <button
-              className="w-full p-6 flex justify-between items-center bg-surface-container-lowest text-left opacity-60 cursor-not-allowed"
-              disabled
-              aria-disabled="true"
-            >
-              <div className="flex items-center gap-4">
-                <div className="icon-tile">
-                  <span className="material-symbols-outlined">storage</span>
-                </div>
-                <div>
-                  <h3 className="font-display text-headline-xs text-on-surface">馆容量（筹备中）</h3>
-                  <p className="font-body text-body-xs text-on-surface-variant mt-1">
-                    已藏 {formatBytes(storageInfo.used)} / 馆舍 {formatBytes(storageInfo.quota)}
-                  </p>
-                </div>
-              </div>
-              <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">chevron_right</span>
-            </button>
-            <div className="border-t border-outline-variant" />
+            {/* 馆容量可视化由 Profile 页与桌面侧栏承载（真实进度条），此处不再摆禁用占位假入口 */}
             <div className="p-6 bg-surface-container-lowest">
               <div className="flex items-center gap-4 mb-4">
                 <div className="icon-tile">
