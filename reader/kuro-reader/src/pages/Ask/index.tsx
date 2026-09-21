@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { COPY } from '@/constants/copy'
-import { settingsPath, knowledgeSourcePath } from '@/constants/routes';
+import { ROUTES, settingsPath, knowledgeSourcePath } from '@/constants/routes';
 import { isProviderConfigured } from '@/services/ai/aiClient'
 import { LibraryQaError, askLibrary, type QaResult } from '@/services/ai/libraryQA'
 import { useAppStore } from '@/stores/useAppStore'
@@ -42,10 +42,18 @@ export const AskLibraryPage: React.FC = () => {
   const [turns, setTurns] = useState<AskTurn[]>([])
   const [input, setInput] = useState('')
   const [scopeBookId, setScopeBookId] = useState('')
+  const [booksLoaded, setBooksLoaded] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    loadBooks()
+    let cancelled = false
+    // Promise.resolve 包一层：容错 store mock/调用方未返回 Promise 的情形
+    void Promise.resolve(loadBooks()).finally(() => {
+      if (!cancelled) setBooksLoaded(true)
+    })
+    return () => {
+      cancelled = true
+    }
   }, [loadBooks])
 
   useEffect(() => {
@@ -115,6 +123,26 @@ export const AskLibraryPage: React.FC = () => {
         <p className="font-body text-body-md text-on-surface-variant mt-1">{COPY.askLibrary.pageHint}</p>
       </section>
 
+      {/* 无可问之书（纯漫画馆藏 / 藏书未加载完的零册）：不摆提问框，
+          直接指路——此时提问只会撞「馆藏里没有检索到相关内容」的误导性报错 */}
+      {booksLoaded && searchableBooks.length === 0 ? (
+        <div className="flex flex-col items-center text-center py-12">
+          <span className="material-symbols-outlined text-on-surface-faint text-5xl mb-4 block">psychology_off</span>
+          <p className="font-body text-body-md text-on-surface-variant mb-2">馆里还没有能问答的书</p>
+          <p className="font-label text-label-sm text-on-surface-faint mb-6 max-w-sm">
+            文本书和 PDF 才能问——漫画还没有文本层；导入一本，或者去书架翻开一本再回来
+          </p>
+          <div className="flex gap-3">
+            <button className="btn-secondary px-6 py-2" onClick={() => navigate(ROUTES.LIBRARY)}>
+              去书库
+            </button>
+            <button className="btn-primary px-6 py-2" onClick={() => navigate(ROUTES.IMPORT)}>
+              去导入
+            </button>
+          </div>
+        </div>
+      ) : (
+      <>
       {/* 范围 + 提问框 */}
       <section className="mb-6 flex flex-col gap-3">
         {searchableBooks.length > 1 && (
@@ -174,6 +202,8 @@ export const AskLibraryPage: React.FC = () => {
             ))}
           </div>
         </div>
+      )}
+      </>
       )}
 
       {/* 回合列表 */}
