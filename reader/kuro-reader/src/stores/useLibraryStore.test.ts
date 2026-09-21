@@ -170,6 +170,7 @@ describe('selectors', () => {
 
 describe('batchMarkAsRead', () => {
   it('marks all chapters of targeted books as read and leaves others untouched', () => {
+    bookRepoMock.save.mockResolvedValue(undefined)
     resetLibraryState({
       books: [makeBook({ id: 'b1' }), makeBook({ id: 'b2' })],
     })
@@ -179,6 +180,23 @@ describe('batchMarkAsRead', () => {
     const { books } = useLibraryStore.getState()
     expect(books[0].chapters.every((ch) => ch.status === 'read')).toBe(true)
     expect(books[1].chapters.every((ch) => ch.status === 'unread')).toBe(true)
+  })
+
+  it('persists marked books to IndexedDB so reload cannot revert them', async () => {
+    bookRepoMock.save.mockResolvedValue(undefined)
+    resetLibraryState({
+      books: [makeBook({ id: 'b1' }), makeBook({ id: 'b2' })],
+    })
+
+    useLibraryStore.getState().batchMarkAsRead(['b1'])
+
+    await vi.waitFor(() => expect(bookRepoMock.save).toHaveBeenCalledTimes(1))
+    expect(bookRepoMock.save).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'b1', chapters: [expect.objectContaining({ status: 'read' })] })
+    )
+    // 未选中的书不落库
+    const savedIds = bookRepoMock.save.mock.calls.map((c) => (c[0] as { id: string }).id)
+    expect(savedIds).toEqual(['b1'])
   })
 })
 

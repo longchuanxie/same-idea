@@ -862,6 +862,14 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
   },
 
   batchMarkAsRead: (ids: string[]) => {
+    // 先落库再改内存：只改内存会在下次 loadBooks（重启/回前台）后回退（fire-and-forget 与 updateProgress 同策略）
+    for (const id of ids) {
+      const book = get().books.find((b) => b.id === id);
+      if (!book) continue;
+      bookRepo
+        .save({ ...book, chapters: book.chapters.map((ch) => ({ ...ch, status: 'read' as const })) })
+        .catch(() => {});
+    }
     set((state) => ({
       books: state.books.map((b) =>
         ids.includes(b.id)
