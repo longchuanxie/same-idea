@@ -368,10 +368,14 @@ export const TextReaderPage: React.FC = () => {
       }
       setTextPages(pages);
       // 消费了排队定位请求时（恢复/跳转的页码在本帧 setCurrentPageIndex，下一渲染才生效）：
-      // 守卫 ref 延一帧置位，避免「守卫已就绪而页码 ref 仍旧值」的窗口被听书起播 begin 撞上
+      // 守卫 ref 延一帧置位，避免「守卫已就绪而页码 ref 仍旧值」的窗口被听书起播 begin 撞上。
+      // 置位值取分页完成时的捕获章索引——rAF 里读实时 ref 会在亚帧窗口撞上切章，
+      // 把新章索引配给旧章页集；同窗口内新排队的跳页请求也在此补消费（C-1/C-2）
       if (consumePendingPageIndex(pages.length)) {
+        const paginatedChapter = currentChapterIndexRef.current;
         requestAnimationFrame(() => {
-          paginatedChapterIndexRef.current = currentChapterIndexRef.current;
+          paginatedChapterIndexRef.current = paginatedChapter;
+          consumePendingPageIndex(pages.length);
         });
         return;
       }
