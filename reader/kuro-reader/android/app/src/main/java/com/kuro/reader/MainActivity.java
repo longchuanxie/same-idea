@@ -19,6 +19,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         registerPlugin(FilePickerPlugin.class);
+        registerPlugin(TextFocusPlugin.class);
         super.onCreate(savedInstanceState);
         // 沉浸阅读：JS 侧（StatusBar.hide）隐藏状态栏后，顶部下滑只临时呼出（浮层展示、自动收回，不挤压布局）
         WindowInsetsControllerCompat insetsController =
@@ -29,15 +30,21 @@ public class MainActivity extends BridgeActivity {
 
     /**
      * Intercept WebView text selection ActionMode.
-     * - TYPE_FLOATING（Chromium 选区浮动工具栏 Copy/Share/Select all）：直接 finish——
-     *   阅读器的划线/复制/批注动作条由 Web 层自绘，系统条与它叠屏；
-     *   finish 只收菜单，不收选区，原生拖拽手柄保留（扩选依赖手柄）。
+     * - TYPE_FLOATING（Chromium 浮动工具栏）按焦点信号分流（TextFocusPlugin）：
+     *   - 焦点在文本输入框：这是表单的复制/剪切/粘贴/全选工具栏，放行——
+     *     输入框与正文选区的浮动工具栏同为 TYPE_FLOATING，无差别 finish 会连根掐掉
+     *     所有表单的长按复制（编辑档案等，真机实测复现）。
+     *   - 其余视为阅读器正文选区工具栏（Copy/Share/Select all）：直接 finish——
+     *     阅读器的划线/复制/批注动作条由 Web 层自绘，系统条与它叠屏；
+     *     finish 只收菜单，不收选区，原生拖拽手柄保留（扩选依赖手柄）。
      * - 其余（主 ActionMode）沿用过滤：只留标准文本操作。
      */
     @Override
     public void onActionModeStarted(ActionMode mode) {
         if (mode.getType() == ActionMode.TYPE_FLOATING) {
-            mode.finish();
+            if (!TextFocusPlugin.isTextInputFocused()) {
+                mode.finish();
+            }
             super.onActionModeStarted(mode);
             return;
         }

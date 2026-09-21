@@ -3,6 +3,8 @@ import { Keyboard, KeyboardResize } from '@capacitor/keyboard';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { StatusBar, Style } from '@capacitor/status-bar';
 
+import { TextFocus } from '@/plugins/TextFocusPlugin';
+
 export const isNativePlatform = (): boolean => Capacitor.isNativePlatform();
 
 export const isAndroid = (): boolean => Capacitor.getPlatform() === 'android';
@@ -16,8 +18,39 @@ export const CHROME_COLORS = {
   dark: '#201D19',
 } as const;
 
+/** 非文本类 input（焦点落上不该放行系统选择工具栏） */
+const NON_TEXT_INPUT_TYPES = new Set([
+  'button', 'checkbox', 'color', 'file', 'image', 'radio', 'range', 'reset', 'submit', 'hidden',
+]);
+
+const isTextEditableElement = (target: EventTarget | null): boolean => {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable || target.tagName === 'TEXTAREA') return true;
+  return target instanceof HTMLInputElement && !NON_TEXT_INPUT_TYPES.has(target.type);
+};
+
+/** 焦点信号上报原生：焦点在可编辑元素时放行 Android 输入框的系统复制/粘贴工具栏。
+ *  输入框与阅读器正文的浮动工具栏同为 TYPE_FLOATING，原生靠本信号区分（TextFocusPlugin）。
+ *  焦点事件先于长按（约 500ms）触发，信号就位时工具栏尚未起播，无需考虑竞态。 */
+const notifyTextFocus = (focused: boolean): void => {
+  TextFocus.setFocused({ focused }).catch(() => {
+    // 原生插件缺席（平台不支持）：维持默认抑制策略
+  });
+};
+
+const installTextFocusReporter = (): void => {
+  // 仅 Android 原生有 TYPE_FLOATING 抑制逻辑；Web/iOS 不上报
+  if (!isAndroid()) return;
+  document.addEventListener('focusin', (e) => notifyTextFocus(isTextEditableElement(e.target)));
+  document.addEventListener('focusout', () => notifyTextFocus(false));
+  // WebView 重载后重置原生侧信号（新页面初始无焦点）
+  notifyTextFocus(false);
+};
+
 export async function initNativeFeatures(): Promise<void> {
   if (!isNativePlatform()) return;
+
+  installTextFocusReporter();
 
   try {
     await StatusBar.setStyle({ style: Style.Dark });
