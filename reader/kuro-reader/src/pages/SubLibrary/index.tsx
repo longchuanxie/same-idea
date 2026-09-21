@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 
 import { BookCoverImage } from '@/components/atoms/BookCoverImage';
 import { FormatBadge } from '@/components/atoms/FormatBadge';
+import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
 import { ROUTES, bookDetailPath } from '@/constants/routes';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 
@@ -29,6 +30,31 @@ export const SubLibraryPage: React.FC = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteBooksOnRemove, setDeleteBooksOnRemove] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant?: 'danger' | 'default';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
+
+  const openConfirm = (
+    title: string,
+    message: string,
+    onConfirm: () => void,
+    variant?: 'danger' | 'default'
+  ) => {
+    setConfirmDialog({ isOpen: true, title, message, onConfirm, variant });
+  };
+
+  const closeConfirm = () => {
+    setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+  };
 
   useEffect(() => {
     if (books.length === 0) {
@@ -85,14 +111,22 @@ export const SubLibraryPage: React.FC = () => {
 
   const handleBatchDelete = async () => {
     if (selectedIds.size === 0) return;
-    await batchDelete(Array.from(selectedIds));
-    if (subLibraryId) {
-      await removeBooksFromSubLibrary(subLibraryId, Array.from(selectedIds));
-    }
-    setSelectedIds(new Set());
-    if (subLibBooks.length <= selectedIds.size) {
-      setIsSelectMode(false);
-    }
+    openConfirm(
+      '批量删除',
+      `确定要删除选中的 ${selectedIds.size} 本书籍吗？此操作不可恢复。`,
+      async () => {
+        await batchDelete(Array.from(selectedIds));
+        if (subLibraryId) {
+          await removeBooksFromSubLibrary(subLibraryId, Array.from(selectedIds));
+        }
+        setSelectedIds(new Set());
+        if (subLibBooks.length <= selectedIds.size) {
+          setIsSelectMode(false);
+        }
+        closeConfirm();
+      },
+      'danger'
+    );
   };
 
   const handleBatchMarkAsRead = () => {
@@ -406,6 +440,17 @@ export const SubLibraryPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={closeConfirm}
+        variant={confirmDialog.variant}
+        confirmLabel="确认"
+        cancelLabel="取消"
+      />
     </div>
   );
 };
