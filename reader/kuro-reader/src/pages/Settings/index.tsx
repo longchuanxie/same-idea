@@ -274,9 +274,13 @@ export const SettingsPage: React.FC = () => {
     try {
       // 阅读进度：覆盖写入 IndexedDB 并刷新内存状态。
       // 用不记墓碑的 deleteAll 清库（与书签/批注同语义）——恢复的是旧快照，
-      // 逐条 remove 记下的墓碑会把快照里旧时间戳的进度在下次云同步连本地带远端一并判死
+      // 逐条 remove 记下的墓碑会把快照里旧时间戳的进度在下次云同步连本地带远端一并判死。
+      // 字段缺失的旧备份不清库（与书签/批注的存在性守卫对齐），避免恢复一个
+      // 无进度载荷却把本地全部进度静默清空
       const importedProgress: Record<string, ReadingProgress> = data.readingProgress || {};
-      await progressRepo.deleteAll();
+      if (data.readingProgress != null) {
+        await progressRepo.deleteAll();
+      }
       await Promise.all(
         Object.values(importedProgress)
           .filter((p) => p && typeof p.bookId === 'string')
