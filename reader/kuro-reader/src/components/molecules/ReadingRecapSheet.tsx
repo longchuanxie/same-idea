@@ -32,6 +32,7 @@ type RecapState =
   | { status: 'idle' }
   | { status: 'loading' }
   | { status: 'notice'; message: string }
+  | { status: 'config' }
   | { status: 'error'; message: string }
   | { status: 'done'; result: RecapResult; range: string }
 
@@ -86,6 +87,9 @@ export const ReadingRecapSheet: React.FC<ReadingRecapSheetProps> = ({
       model: settings.knowledgeAiModel,
     }
     if (!isProviderConfigured(config)) {
+      // 弹层内常驻出路（toast 5 秒即散，错过就只剩「点了没反应」的按钮）——
+      // 与问藏书/查词等 AI 未配置引导口径统一
+      setRecap({ status: 'config' })
       toast(COPY.recap.aiNotConfigured, {
         action: { label: '去设置', onAction: () => navigate(settingsPath('ai')) },
       })
@@ -211,7 +215,7 @@ export const ReadingRecapSheet: React.FC<ReadingRecapSheetProps> = ({
         <section className="mb-5">
           <div className="flex items-center justify-between mb-2">
             <p className="font-label text-label-xs text-on-surface-faint">{COPY.recap.recapLabel}</p>
-            {canAiRecap && recap.status === 'idle' && (
+            {canAiRecap && (recap.status === 'idle' || recap.status === 'config') && (
               <button
                 className="font-label text-label-sm text-primary hover:opacity-80 transition-opacity"
                 onClick={() => void handleGenerate()}
@@ -229,6 +233,17 @@ export const ReadingRecapSheet: React.FC<ReadingRecapSheetProps> = ({
           )}
           {recap.status === 'notice' && (
             <p className="font-label text-label-sm text-on-surface-faint py-1">{recap.message}</p>
+          )}
+          {recap.status === 'config' && (
+            <div className="flex items-center justify-between gap-2">
+              <p className="font-label text-label-sm text-on-surface-variant">{COPY.recap.aiNotConfigured}</p>
+              <button
+                className="shrink-0 font-label text-label-sm text-primary hover:opacity-80"
+                onClick={() => navigate(settingsPath('ai'))}
+              >
+                去配置
+              </button>
+            </div>
           )}
           {recap.status === 'error' && (
             <div className="flex items-center justify-between gap-2">

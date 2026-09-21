@@ -67,4 +67,17 @@ describe('ReadingRecapSheet', () => {
     fireEvent.click(screen.getByLabelText('关闭'))
     expect(onClose).toHaveBeenCalled()
   })
+
+  it('AI 未配置点生成：弹层内常驻「去配置」出路，动作按钮仍在可重试', () => {
+    render(
+      <MemoryRouter>
+        <ReadingRecapSheet book={makeBook()} annotations={[]} onContinue={vi.fn()} onClose={vi.fn()} />
+      </MemoryRouter>
+    )
+    fireEvent.click(screen.getByText('生成前情提要'))
+    expect(screen.getByText(/生成前情要用你自己的 AI 服务/)).toBeTruthy()
+    expect(screen.getByText('去配置')).toBeTruthy()
+    // 动作按钮保留（配置回来后免重开弹层）
+    expect(screen.getByText('生成前情提要')).toBeTruthy()
+  })
 })
