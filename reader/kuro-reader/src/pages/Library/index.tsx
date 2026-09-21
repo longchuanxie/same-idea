@@ -881,7 +881,7 @@ export const LibraryPage: React.FC = () => {
       )}
 
       {isSelectMode && (
-        <div className="fixed bottom-gutter md:bottom-gutter left-1/2 -translate-x-1/2 w-[calc(100%-48px)] max-w-md bg-surface-container-highest border border-outline-variant rounded-full z-50 flex justify-around items-center p-2 gap-2 md:mb-0 mb-20">
+        <div className="fixed bottom-gutter md:bottom-gutter left-1/2 -translate-x-1/2 w-[calc(100%-48px)] max-w-md bg-surface-container-highest border border-outline-variant rounded-full z-50 flex justify-around items-center p-2 gap-2 lg:mb-0 mb-20">
           {(selectedIds.size > 0 || selectedSubLibIds.size > 0) && (
             <button
               className="flex flex-col items-center justify-center rounded-full px-4 py-2 transition-all group text-on-surface-variant hover:bg-surface-dim"
