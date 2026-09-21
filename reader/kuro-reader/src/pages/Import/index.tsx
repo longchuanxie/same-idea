@@ -231,7 +231,14 @@ export const ImportPage: React.FC = () => {
       if (result.files.length === 0) return;
 
       const pickedFile = result.files[0];
-      const file = await pathToFile(pickedFile.path, pickedFile.name, pickedFile.mimeType);
+      let file: File;
+      try {
+        file = await pathToFile(pickedFile.path, pickedFile.name, pickedFile.mimeType);
+      } catch {
+        // 与用户取消分开：选完文件却读不出来（权限/过期 URI）是断点，必须让用户知道
+        toast(`读取所选文件失败：${pickedFile.name}`);
+        return;
+      }
 
       if (file.size > APP_CONFIG.maxFileSize) {
         toast(COPY.importRejected.oversize(file.name, MAX_FILE_SIZE_MB));
@@ -241,7 +248,7 @@ export const ImportPage: React.FC = () => {
       const book = await importFile(file, importOpts);
       if (book) setImportResult({ type: 'book', title: book.title, id: book.id });
     } catch {
-      // User cancelled or error
+      // 选择器取消/不可用：无事发生
     }
   }, [importFile, importOpts]);
 
@@ -267,7 +274,14 @@ export const ImportPage: React.FC = () => {
         .filter((r): r is PromiseFulfilledResult<File> => r.status === 'fulfilled')
         .map((r) => r.value);
 
-      if (allFiles.length === 0) return;
+      if (allFiles.length === 0) {
+        // 文件夹选到了条目但一条都读不出来：不是取消，是整包读取失败
+        toast('读取所选文件夹失败，请重试或换个位置');
+        return;
+      }
+      if (fileResults.some((r) => r.status === 'rejected')) {
+        toast(`有 ${fileResults.length - allFiles.length} 个文件读取失败，已跳过`);
+      }
 
       const bookFiles = allFiles.filter((f) => isSupportedFile(f.name));
       const imageFiles = allFiles.filter((f) => isImageFile(f.name));
