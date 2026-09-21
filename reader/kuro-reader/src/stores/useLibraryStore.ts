@@ -1000,51 +1000,66 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     const subLibrary = get().subLibraries.find((s) => s.id === id);
     if (!subLibrary) return;
 
+    // 逐本记账（与 batchDelete 同口径）：中途失败的书留在书架/UI 不脱节，不静默残留孤儿
+    const removedBookIds: string[] = [];
+    let firstError: string | null = null;
     if (deleteBooks && subLibrary.bookIds.length > 0) {
       // 删除子书库中的所有书籍
       for (const bookId of subLibrary.bookIds) {
-        await bookRepo.deleteFully(bookId);
-        const coverUrl = get().coverUrls[bookId];
-        if (coverUrl) URL.revokeObjectURL(coverUrl);
+        try {
+          await bookRepo.deleteFully(bookId);
+          removedBookIds.push(bookId);
+          const coverUrl = get().coverUrls[bookId];
+          if (coverUrl) URL.revokeObjectURL(coverUrl);
+        } catch (e) {
+          firstError = firstError ?? (e as Error).message;
+        }
       }
       // 持久化受影响的标签
       const affectedTags = get().tags.filter((t) =>
-        t.bookIds.some((bid) => subLibrary.bookIds.includes(bid))
+        t.bookIds.some((bid) => removedBookIds.includes(bid))
       );
       for (const tag of affectedTags) {
         const updatedTag = {
           ...tag,
-          bookIds: tag.bookIds.filter((bid) => !subLibrary.bookIds.includes(bid)),
+          bookIds: tag.bookIds.filter((bid) => !removedBookIds.includes(bid)),
         };
-        await tagRepo.save(updatedTag);
+        try {
+          await tagRepo.save(updatedTag);
+        } catch (e) {
+          firstError = firstError ?? (e as Error).message;
+        }
       }
     }
 
     await subLibraryRepo.delete(id);
 
-    const bookIdsToDelete = deleteBooks ? subLibrary.bookIds : [];
     set((state) => ({
       subLibraries: state.subLibraries.filter((s) => s.id !== id),
-      ...(deleteBooks
+      ...(removedBookIds.length > 0
         ? {
-            books: state.books.filter((b) => !bookIdsToDelete.includes(b.id)),
+            books: state.books.filter((b) => !removedBookIds.includes(b.id)),
             coverUrls: Object.fromEntries(
-              Object.entries(state.coverUrls).filter(([k]) => !bookIdsToDelete.includes(k))
+              Object.entries(state.coverUrls).filter(([k]) => !removedBookIds.includes(k))
             ),
             readingProgress: Object.fromEntries(
-              Object.entries(state.readingProgress).filter(([k]) => !bookIdsToDelete.includes(k))
+              Object.entries(state.readingProgress).filter(([k]) => !removedBookIds.includes(k))
             ),
             tags: state.tags.map((t) => ({
               ...t,
-              bookIds: t.bookIds.filter((bid) => !bookIdsToDelete.includes(bid)),
+              bookIds: t.bookIds.filter((bid) => !removedBookIds.includes(bid)),
             })),
           }
         : {}),
+      ...(firstError ? { error: firstError } : {}),
     }));
   },
 
   batchDeleteSubLibraries: async (ids: string[], deleteBooks = false) => {
     const allBookIdsToDelete: string[] = [];
+    // 逐项记账：删成功的子书库/书才从 UI 消失，失败的留原样且错误可见（与 batchDelete 同口径）
+    const deletedSubLibIds: string[] = [];
+    let firstError: string | null = null;
 
     for (const id of ids) {
       const subLibrary = get().subLibraries.find((s) => s.id === id);
@@ -1054,46 +1069,63 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
         allBookIdsToDelete.push(...subLibrary.bookIds);
       }
 
-      await subLibraryRepo.delete(id);
+      try {
+        await subLibraryRepo.delete(id);
+        deletedSubLibIds.push(id);
+      } catch (e) {
+        firstError = firstError ?? (e as Error).message;
+      }
     }
 
     // 如果需要删除书籍，执行书籍删除
+    const removedBookIds: string[] = [];
     if (deleteBooks && allBookIdsToDelete.length > 0) {
       const uniqueBookIds = [...new Set(allBookIdsToDelete)];
       for (const bookId of uniqueBookIds) {
-        await bookRepo.deleteFully(bookId);
-        const coverUrl = get().coverUrls[bookId];
-        if (coverUrl) URL.revokeObjectURL(coverUrl);
+        try {
+          await bookRepo.deleteFully(bookId);
+          removedBookIds.push(bookId);
+          const coverUrl = get().coverUrls[bookId];
+          if (coverUrl) URL.revokeObjectURL(coverUrl);
+        } catch (e) {
+          firstError = firstError ?? (e as Error).message;
+        }
       }
       // 持久化受影响的标签
       const affectedTags = get().tags.filter((t) =>
-        t.bookIds.some((bid) => uniqueBookIds.includes(bid))
+        t.bookIds.some((bid) => removedBookIds.includes(bid))
       );
       for (const tag of affectedTags) {
         const updatedTag = {
           ...tag,
-          bookIds: tag.bookIds.filter((bid) => !uniqueBookIds.includes(bid)),
+          bookIds: tag.bookIds.filter((bid) => !removedBookIds.includes(bid)),
         };
-        await tagRepo.save(updatedTag);
+        try {
+          await tagRepo.save(updatedTag);
+        } catch (e) {
+          firstError = firstError ?? (e as Error).message;
+        }
       }
 
       set((state) => ({
-        subLibraries: state.subLibraries.filter((s) => !ids.includes(s.id)),
-        books: state.books.filter((b) => !uniqueBookIds.includes(b.id)),
+        subLibraries: state.subLibraries.filter((s) => !deletedSubLibIds.includes(s.id)),
+        books: state.books.filter((b) => !removedBookIds.includes(b.id)),
         coverUrls: Object.fromEntries(
-          Object.entries(state.coverUrls).filter(([k]) => !uniqueBookIds.includes(k))
+          Object.entries(state.coverUrls).filter(([k]) => !removedBookIds.includes(k))
         ),
         readingProgress: Object.fromEntries(
-          Object.entries(state.readingProgress).filter(([k]) => !uniqueBookIds.includes(k))
+          Object.entries(state.readingProgress).filter(([k]) => !removedBookIds.includes(k))
         ),
         tags: state.tags.map((t) => ({
           ...t,
-          bookIds: t.bookIds.filter((bid) => !uniqueBookIds.includes(bid)),
+          bookIds: t.bookIds.filter((bid) => !removedBookIds.includes(bid)),
         })),
+        ...(firstError ? { error: firstError } : {}),
       }));
     } else {
       set((state) => ({
-        subLibraries: state.subLibraries.filter((s) => !ids.includes(s.id)),
+        subLibraries: state.subLibraries.filter((s) => !deletedSubLibIds.includes(s.id)),
+        ...(firstError ? { error: firstError } : {}),
       }));
     }
   },
