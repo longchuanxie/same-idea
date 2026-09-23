@@ -20,6 +20,9 @@ import type {
   KnowledgeEvidence,
   MindmapNodeData,
   PaperBriefData,
+  StoryBeat,
+  StoryBeatRole,
+  StoryBeatsData,
 } from '@/types'
 
 /** 人物名归一化：去空白与常见标点，作为节点稳定 id（merge 去重键） */
@@ -70,16 +73,33 @@ function clip(text: string | undefined, max: number): string | undefined {
 /**
  * 校验并规整 AI 返回的图谱片段。
  * 关系两端的 source/target 必须能对上本片段的人物名（防幻觉），
- * 对不上的人名尝试按归一化匹配回填，仍失败则丢弃该关系。
+ * 或对上「前文片段已确认的人物」knownNames（跨块关系回连——人物早前从真实
+ * 文本提过，不算幻觉）；两者都对不上则丢弃该关系。
  * 人物为空或形状不对返回 null（该块作废）。
  */
-export function parseGraphPartial(raw: unknown): GraphPartial | null {
+export function parseGraphPartial(raw: unknown, knownNames?: string[]): GraphPartial | null {
   if (raw == null || typeof raw !== 'object') return null
   const source = raw as { characters?: unknown; relationships?: unknown }
   if (!Array.isArray(source.characters) || source.characters.length === 0) return null
 
   const nameById = new Map<string, string>()
   const characters: GraphPartial['characters'] = []
+  /** 跨块已认人物：id → 展示名（仅在关系端点引用时补入 characters） */
+  const priorById = new Map<string, string>()
+  for (const name of knownNames ?? []) {
+    if (typeof name !== 'string') continue
+    const trimmed = name.trim()
+    const id = normalizeCharacterName(trimmed)
+    if (id && !priorById.has(id)) priorById.set(id, trimmed)
+  }
+  /** 引用到跨块人物时补一个占位角色（merge 按归一化名与早前片段并成同一节点） */
+  const admitPrior = (id: string): boolean => {
+    const name = priorById.get(id)
+    if (!name || nameById.has(id)) return false
+    nameById.set(id, name)
+    characters.push({ name })
+    return true
+  }
   for (const item of source.characters) {
     if (item == null || typeof item !== 'object') continue
     const record = item as { name?: unknown; role?: unknown; description?: unknown }
@@ -100,11 +120,13 @@ export function parseGraphPartial(raw: unknown): GraphPartial | null {
   if (characters.length === 0) return null
 
   const relationships: GraphPartial['relationships'] = []
-  const knownIds = new Set(nameById.keys())
   const resolveId = (value: string): string | null => {
     const id = normalizeCharacterName(value)
     if (!id) return null
-    if (knownIds.has(id)) return id
+    if (nameById.has(id) || priorById.has(id)) {
+      admitPrior(id)
+      return id
+    }
     return null
   }
   if (Array.isArray(source.relationships)) {
@@ -146,6 +168,52 @@ interface MergedNode {
   chapters: Set<number>
 }
 
+export interface MergeGraphOptions {
+  /**
+   * 别名归并（小说人物图谱开；概念图谱关——子集往往是上下位概念，
+   * 归并会把「强化学习」吃进「学习」，恰好丢掉图谱要表达的层级）。
+   */
+  mergeAliases?: boolean
+}
+
+/** 别名最短长度：单字称呼（「林」⊂「林冲」）信息太弱，不归并 */
+const ALIAS_MIN_CHARS = 2
+
+/**
+ * 构建别名 → 正名映射：别名是某更长名的严格前缀/后缀、且全图谱只有这一个
+ * 更长名认领它时才归并（「黛玉」→「林黛玉」）。两个长名同时认领（「小明」
+ * 同时是「王小明」「李小明」的后缀）视为歧义，不归并。映射按最长链收敛。
+ */
+function buildAliasMap(ids: string[]): Map<string, string> {
+  const alias = new Map<string, string>()
+  const sorted = [...ids].sort((a, b) => a.length - b.length || a.localeCompare(b))
+  for (const short of sorted) {
+    if (short.length < ALIAS_MIN_CHARS) continue
+    const claimants = new Set<string>()
+    for (const long of ids) {
+      if (long.length > short.length && (long.startsWith(short) || long.endsWith(short))) {
+        claimants.add(long)
+      }
+    }
+    if (claimants.size === 1) alias.set(short, [...claimants][0])
+  }
+  // 链式收敛：黛玉→林黛玉→（无） 。别名严格更短，向上必终止
+  const resolve = (id: string): string => {
+    const seen = new Set<string>([id])
+    let current = id
+    while (alias.has(current) && !seen.has(alias.get(current)!)) {
+      current = alias.get(current)!
+      seen.add(current)
+    }
+    return current
+  }
+  // 链式收敛：黛玉→林黛玉→（无）。别名严格更短，向上必终止；
+  // 收敛后的值不会再是映射键（映射值恒为链的最长端）
+  const resolved = new Map<string, string>()
+  for (const short of alias.keys()) resolved.set(short, resolve(short))
+  return resolved
+}
+
 /** 合并中间态边：evidenceQuote 是待校验的 AI 摘句；evidence 是已定位的坐标
  *  （增量合并时自基底产物直通，resolveGraphEvidence 不再重复校验） */
 export interface InterimGraphEdge extends Omit<CharacterEdge, 'evidence'> {
@@ -167,13 +235,18 @@ function unionChapters(target: Set<number>, source: number[] | undefined): void 
 /**
  * 合并多块图谱片段：同名节点合并（首个非空 role/description 胜出、章节并集），
  * 无向边按「端点对+关系」去重（章节并集、首个非空证据摘句胜出）；
- * 超上限时按连接度保留核心人物。
+ * 开 alias 时把「前缀/后缀子集称呼」并进唯一认领它的长名节点（黛玉并入林黛玉，
+ * 边端点改接正名、并集章节后重去重）；超上限时按连接度保留核心人物。
  * base 为增量合并的基底（现有图谱）：旧节点/边先入列，新片段只是并进来——
  * 旧边的 evidence 坐标原样直通（resolveGraphEvidence 跳过已定位边），不被新摘句改写。
  * 返回中间态图谱——新产生的 evidenceQuote 需经 resolveGraphEvidence 校验后才落库。
  */
-export function mergeCharacterGraphs(partials: GraphPartial[], base?: InterimGraphData): InterimGraphData {
-  const nodesById = new Map<string, MergedNode>()
+export function mergeCharacterGraphs(
+  partials: GraphPartial[],
+  base?: InterimGraphData,
+  options?: MergeGraphOptions
+): InterimGraphData {
+  let nodesById = new Map<string, MergedNode>()
   const edgeCount = new Map<string, InterimGraphEdge>()
 
   if (base) {
@@ -239,6 +312,49 @@ export function mergeCharacterGraphs(partials: GraphPartial[], base?: InterimGra
   }
 
   let edges = [...edgeCount.values()]
+
+  // 别名归并：子集称呼并进唯一认领它的长名节点；边端点改接正名后重去重
+  // （不同片段用「黛玉」「林黛玉」会产生两条平行边，归并后合成一条）
+  if (options?.mergeAliases && nodesById.size > 1) {
+    const aliasMap = buildAliasMap([...nodesById.keys()])
+    if (aliasMap.size > 0) {
+      // 两遍法：先收正名（aliasMap 的值经链式收敛，必不是别名），再把别名字段并入
+      const collapsedNodes = new Map<string, MergedNode>()
+      for (const [id, node] of nodesById) {
+        if (!aliasMap.has(id)) collapsedNodes.set(id, node)
+      }
+      for (const [id, node] of nodesById) {
+        const canonicalId = aliasMap.get(id)
+        if (!canonicalId) continue
+        const canonical = collapsedNodes.get(canonicalId)
+        if (!canonical) continue
+        canonical.role = canonical.role ?? node.role
+        canonical.description = canonical.description ?? node.description
+        for (const chapter of node.chapters) canonical.chapters.add(chapter)
+      }
+      // 边端点改接正名后重去重：不同片段用「黛玉」「林黛玉」产生的平行边合成一条
+      const dedupedEdges = new Map<string, InterimGraphEdge>()
+      for (const edge of edges) {
+        const source = aliasMap.get(edge.source) ?? edge.source
+        const target = aliasMap.get(edge.target) ?? edge.target
+        if (source === target) continue
+        const pairKey = [source, target].sort().join('→')
+        const edgeKey = `${pairKey}|${edge.relation.trim()}`
+        const existing = dedupedEdges.get(edgeKey)
+        if (existing) {
+          existing.description = existing.description ?? edge.description
+          existing.evidenceQuote = existing.evidenceQuote ?? edge.evidenceQuote
+          const mergedChapters = new Set([...(existing.chapters ?? []), ...(edge.chapters ?? [])])
+          if (mergedChapters.size > 0) existing.chapters = [...mergedChapters].sort((a, b) => a - b)
+        } else {
+          dedupedEdges.set(edgeKey, { ...edge, source, target })
+        }
+      }
+      nodesById = collapsedNodes
+      edges = [...dedupedEdges.values()]
+    }
+  }
+
   for (const edge of edges) {
     nodesById.get(edge.source)!.degree += 1
     nodesById.get(edge.target)!.degree += 1
@@ -719,4 +835,112 @@ export function resolveBriefEvidence(
 /** 论文速览是否为空 */
 export function isBriefEmpty(brief: PaperBriefData): boolean {
   return !brief.tldr && brief.contributions.length === 0 && brief.limitations.length === 0 && brief.questions.length === 0
+}
+
+// ---- 叙事节拍（全书骨架单轮：结构导航） ----
+
+/** 节拍安全上限：结构条放不下更多，多了就不是「导航」而是「目录复读」 */
+export const MAX_STORY_BEATS = 12
+
+const BEAT_TITLE_MAX_CHARS = 24
+const BEAT_DETAIL_MAX_CHARS = 60
+
+const BEAT_ROLES: readonly string[] = ['hook', 'inciting', 'rising', 'turn', 'midpoint', 'low', 'climax', 'resolution', 'custom']
+
+/** AI 单块（全书骨架）返回的节拍原始形态 */
+export interface BeatsPartial {
+  beats: { role: StoryBeatRole; title: string; detail?: string; chapterIndex: number; evidenceQuote?: string }[]
+}
+
+/** 节拍合并中间态：evidenceQuote 待校验，evidence 为增量基底直通的已定位坐标 */
+export interface InterimBeatsData {
+  beats: (StoryBeat & { evidenceQuote?: string })[]
+}
+
+/** 节拍稳定 id：role+章为槽位（同章同角色视为同一节拍），标题归一化防重生成后漂移 */
+function beatSlotId(role: StoryBeatRole, chapterIndex: number): string {
+  return `${role}:${chapterIndex}`
+}
+
+/** 校验并规整 AI 返回的节拍片段：role 未知兜底 custom、chapterIndex 必须是非负整数、同槽位去重；全空返回 null */
+export function parseBeatsPartial(raw: unknown): BeatsPartial | null {
+  if (raw == null || typeof raw !== 'object') return null
+  const source = raw as { beats?: unknown }
+  if (!Array.isArray(source.beats)) return null
+
+  const bySlot = new Map<string, BeatsPartial['beats'][number]>()
+  for (const item of source.beats) {
+    if (item == null || typeof item !== 'object') continue
+    const record = item as { role?: unknown; title?: unknown; detail?: unknown; chapterIndex?: unknown; evidence?: unknown }
+    if (typeof record.title !== 'string') continue
+    const title = record.title.trim().slice(0, BEAT_TITLE_MAX_CHARS)
+    const chapterIndex = record.chapterIndex
+    if (!title || typeof chapterIndex !== 'number' || !Number.isInteger(chapterIndex) || chapterIndex < 0) continue
+    const role: StoryBeatRole =
+      typeof record.role === 'string' && BEAT_ROLES.includes(record.role)
+        ? (record.role as StoryBeatRole)
+        : 'custom'
+    const slot = beatSlotId(role, chapterIndex)
+    if (bySlot.has(slot)) continue
+    bySlot.set(slot, {
+      role,
+      title,
+      detail: clip(String(record.detail ?? ''), BEAT_DETAIL_MAX_CHARS),
+      chapterIndex,
+      evidenceQuote: clip(String(record.evidence ?? ''), EVIDENCE_MAX_CHARS),
+    })
+  }
+  const beats = [...bySlot.values()].slice(0, MAX_STORY_BEATS)
+  return beats.length > 0 ? { beats } : null
+}
+
+/** 合并多块节拍：base 先入列（含已定位证据直通），新节拍按槽位（role:章）补缺不覆盖；
+ *  按章升序、同章按角色序排布后截断 */
+export function mergeBeats(partials: BeatsPartial[], base?: InterimBeatsData): InterimBeatsData {
+  const bySlot = new Map<string, InterimBeatsData['beats'][number]>()
+  for (const beat of base?.beats ?? []) {
+    bySlot.set(beatSlotId(beat.role, beat.chapterIndex), { ...beat })
+  }
+  for (const partial of partials) {
+    for (const beat of partial.beats) {
+      const slot = beatSlotId(beat.role, beat.chapterIndex)
+      if (bySlot.has(slot)) continue
+      bySlot.set(slot, {
+        id: slot,
+        role: beat.role,
+        title: beat.title,
+        detail: beat.detail,
+        chapterIndex: beat.chapterIndex,
+        ...(beat.evidenceQuote ? { evidenceQuote: beat.evidenceQuote } : {}),
+      })
+    }
+  }
+  const beats = [...bySlot.values()]
+    .sort((a, b) => a.chapterIndex - b.chapterIndex)
+    .slice(0, MAX_STORY_BEATS)
+  return { beats }
+}
+
+/** 节拍证据校验：优先在节拍自己的章里逐字定位（骨架摘句是真章子串，命中率天然高）；
+ *  未命中丢弃证据、仅留章级跳转。已带 evidence 的基底直通不重复校验 */
+export function resolveBeatsEvidence(
+  data: InterimBeatsData,
+  chapterTexts: readonly string[] = []
+): StoryBeatsData {
+  const beats = data.beats.map((beat) => {
+    if (beat.evidence) {
+      const { evidenceQuote: _stale, ...located } = beat
+      return located
+    }
+    const quote = beat.evidenceQuote?.trim()
+    const { evidenceQuote: _dropped, ...rest } = beat
+    const evidence = quote ? resolveEvidenceQuote(quote, [beat.chapterIndex], chapterTexts) : null
+    return evidence ? { ...rest, evidence } : rest
+  })
+  return { beats }
+}
+
+/** 节拍是否为空 */
+export function isBeatsEmpty(data: StoryBeatsData): boolean {
+  return data.beats.length === 0
 }

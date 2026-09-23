@@ -15,6 +15,8 @@ import type {
   GlossaryTerm,
   MindmapNodeData,
   PaperBriefData,
+  StoryBeat,
+  StoryBeatsData,
 } from '@/types'
 
 // ---------- 人物/概念图谱 ----------
@@ -201,4 +203,32 @@ export function setMindmapNodeVerified(
   verified: boolean
 ): MindmapNodeData {
   return mapMindmapAtPath(data, path, (node) => ({ ...node, verified: verified || undefined }))
+}
+
+// ---------- 叙事节拍 ----------
+
+export function patchStoryBeat(
+  data: StoryBeatsData,
+  beatId: string,
+  patch: Partial<Pick<StoryBeat, 'title' | 'detail'>>
+): StoryBeatsData {
+  return {
+    beats: data.beats.map((beat) => (beat.id === beatId ? { ...beat, ...patch } : beat)),
+  }
+}
+
+export function removeStoryBeat(data: StoryBeatsData, beatId: string): StoryBeatsData {
+  return { beats: data.beats.filter((beat) => beat.id !== beatId) }
+}
+
+export function setStoryBeatVerified(
+  data: StoryBeatsData,
+  beatId: string,
+  verified: boolean
+): StoryBeatsData {
+  return {
+    beats: data.beats.map((beat) =>
+      beat.id === beatId ? { ...beat, verified: verified || undefined } : beat
+    ),
+  }
 }

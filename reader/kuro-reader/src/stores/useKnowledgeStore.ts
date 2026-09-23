@@ -6,7 +6,7 @@ import {
   type AiProviderConfig,
 } from '@/services/ai/aiClient'
 import { getKnowledgeTask } from '@/services/ai/knowledgeTasks'
-import { BookCorpusError, buildBookCorpus, type BookCorpus } from '@/services/knowledge/bookCorpus'
+import { BookCorpusError, buildBookCorpus, buildDigestCorpus, type BookCorpus } from '@/services/knowledge/bookCorpus'
 import { knowledgeRepo } from '@/services/storage/knowledgeRepo'
 import { useAppStore } from '@/stores/useAppStore'
 import type {
@@ -18,6 +18,8 @@ import type {
 } from '@/types'
 import { detectContentKindFromChapters } from '@/utils/contentKind'
 import {
+  normalizeCharacterName,
+  resolveBeatsEvidence,
   resolveBriefEvidence,
   resolveGlossaryEvidence,
   resolveGraphEvidence,
@@ -26,6 +28,7 @@ import {
   stampPartialChapters,
   type GlossaryPartial,
   type GraphPartial,
+  type InterimBeatsData,
   type InterimBriefData,
   type InterimGlossaryData,
   type InterimGraphData,
@@ -74,6 +77,11 @@ interface KnowledgeState {
 
 /** 分块请求失败时的重试次数（单块一次重试，防瞬时抖动毁掉整轮生成） */
 const CHUNK_RETRIES = 1
+
+/** 图谱任务跨块称呼名单上限（提示词体积护栏：名字注入不喧宾夺主） */
+const KNOWN_NAMES_MAX = 40
+/** 图谱类任务（消费 knownNames + 关系回连已认人物） */
+const GRAPH_TASK_TYPES: readonly KnowledgeArtifactType[] = ['character-graph', 'concept-graph']
 
 const RANDOM_ID_RADIX = 36
 const RANDOM_ID_SLICE_START = 2
@@ -129,20 +137,25 @@ export const useKnowledgeStore = create<KnowledgeState>()((set, get) => ({
     }
 
     const task = getKnowledgeTask(type)
+    const digestMode = task.corpusMode === 'digest'
     // 增量补充的基底：现有同类型产物（旧节点/边先入列，新内容只是并进来）
     const existing = (get().artifactsByBook[book.id] ?? []).filter(a => a.type === type)
     const baseArtifact = options?.incremental ? existing[0] : undefined
     const baseData = baseArtifact?.data
-    // 增量的默认范围 = 上次生成之后的章节（书还在长，结尾未知故 to 省略）
+    // 增量的默认范围 = 上次生成之后的章节（书还在长，结尾未知故 to 省略）。
+    // digest 模式例外：骨架本来就是全本压缩视图、生成只要一次调用，
+    // 没有「只补新章」的收益——默认始终整书重梳（显式 scope 仍然尊重）
     const range =
       options?.scope ??
-      (baseArtifact
-        ? { from: baseArtifact.meta?.bookChapterCount ?? baseArtifact.meta?.chapterCount ?? 0 }
-        : undefined)
+      (digestMode
+        ? undefined
+        : baseArtifact
+          ? { from: baseArtifact.meta?.bookChapterCount ?? baseArtifact.meta?.chapterCount ?? 0 }
+          : undefined)
 
     let corpus: BookCorpus | null = null
     try {
-      corpus = await buildBookCorpus(book, range)
+      corpus = digestMode ? await buildDigestCorpus(book, range) : await buildBookCorpus(book, range)
     } catch (e) {
       const incrementalEmpty = e instanceof BookCorpusError && e.code === 'empty' && range != null
       const message = incrementalEmpty
@@ -196,6 +209,10 @@ export const useKnowledgeStore = create<KnowledgeState>()((set, get) => ({
     }
 
     const partials: { label: string; data: unknown }[] = []
+    // 跨块称呼一致性：已确认实体名随分块滚动累积，注入后续片段提示词
+    const isGraphTask = GRAPH_TASK_TYPES.includes(type)
+    const knownNames: string[] = []
+    const knownNameIds = new Set<string>()
     for (let index = 0; index < corpusSnapshot.chunks.length; index++) {
       const chunk = corpusSnapshot.chunks[index]
       const messages = task.buildMessages({
@@ -209,6 +226,7 @@ export const useKnowledgeStore = create<KnowledgeState>()((set, get) => ({
         detail:
           type === 'character-graph' || type === 'concept-graph' ? options?.detail : undefined,
         incremental: Boolean(baseArtifact),
+        knownNames: isGraphTask && knownNames.length > 0 ? [...knownNames] : undefined,
       })
 
       let parsed: unknown | null = null
@@ -219,7 +237,7 @@ export const useKnowledgeStore = create<KnowledgeState>()((set, get) => ({
             messages,
             signal: controller.signal,
           })
-          parsed = task.parsePartial(raw)
+          parsed = task.parsePartial(raw, isGraphTask ? [...knownNames] : undefined)
           lastError = null
           break
         } catch (e) {
@@ -238,6 +256,16 @@ export const useKnowledgeStore = create<KnowledgeState>()((set, get) => ({
         return fail((lastError as Error).message || 'AI 请求失败')
       }
       if (parsed != null) {
+        // 图谱任务滚动累积已确认称呼（跨块提示词 + 关系回连的依据）
+        if (isGraphTask) {
+          for (const character of (parsed as GraphPartial).characters) {
+            const id = normalizeCharacterName(character.name)
+            if (id && !knownNameIds.has(id) && knownNames.length < KNOWN_NAMES_MAX) {
+              knownNameIds.add(id)
+              knownNames.push(character.name)
+            }
+          }
+        }
         // 图谱/术语/速览片段盖上分块覆盖章节（回原文链路：条目的章节并集来源）
         const stamped =
           type === 'character-graph' || type === 'concept-graph'
@@ -279,6 +307,9 @@ export const useKnowledgeStore = create<KnowledgeState>()((set, get) => ({
         data = resolveGlossaryEvidence(data as InterimGlossaryData, corpusSnapshot.chapterTexts)
       } else if (type === 'paper-brief') {
         data = resolveBriefEvidence(data as InterimBriefData, corpusSnapshot.chapterTexts)
+      } else if (type === 'story-beats') {
+        // 骨架摘句是真章子串，优先在节拍自己的章里逐字定位
+        data = resolveBeatsEvidence(data as InterimBeatsData, corpusSnapshot.chapterTexts)
       }
       if (task.isEmpty(data)) {
         const emptyHint: Record<KnowledgeArtifactType, string> = {
@@ -288,6 +319,7 @@ export const useKnowledgeStore = create<KnowledgeState>()((set, get) => ({
           mindmap: '这本书提不出可用的结构大纲',
           glossary: '这本书提不出明确的概念术语（可能不是学术性文本，可试试切换内容类型）',
           'paper-brief': '这篇文本提不出速览卡（贡献、局限与疑问都需要明确的论述文本）',
+          'story-beats': '这本书提不出叙事节拍（节拍梳理适合多章长篇，短文看不出结构起伏）',
         }
         return fail(emptyHint[type])
       }

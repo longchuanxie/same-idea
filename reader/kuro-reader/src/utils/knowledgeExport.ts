@@ -9,8 +9,10 @@ import type {
   KnowledgeArtifact,
   MindmapNodeData,
   PaperBriefData,
+  StoryBeatsData,
 } from '@/types'
 import { downloadTextFile, sanitizeFileName } from '@/utils/annotationExport'
+import { beatRoleMeta } from '@/utils/beatRoles'
 import { hoistSingleBranchRoot } from '@/utils/mindmapLayout'
 
 /** Mermaid 节点 id：中文不可靠，统一映射为 n1/n2…（保持连接度排序） */
@@ -162,6 +164,18 @@ export function buildKnowledgeArtifactMarkdown(bookTitle: string, artifact: Know
       }
       lines.push('')
     }
+    return lines.join('\n')
+  }
+  if (artifact.type === 'story-beats') {
+    const { beats } = artifact.data as StoryBeatsData
+    const lines: string[] = [...header, '## 叙事节拍', '']
+    for (const beat of beats) {
+      const evidence = beat.evidence ? `「${beat.evidence.quote}」` : ''
+      lines.push(
+        `- **${beatRoleMeta(beat.role).label}** · 第${beat.chapterIndex + 1}章 —— ${beat.title}${beat.detail ? `：${beat.detail}` : ''}${evidence}`
+      )
+    }
+    lines.push('')
     return lines.join('\n')
   }
   return [...header, buildMindmapMarkdown(artifact.data as MindmapNodeData), ''].join('\n')

@@ -11,13 +11,15 @@ import { CitationDialog } from '@/components/molecules/CitationDialog';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
 import { KnowledgeSection } from '@/components/molecules/knowledge/KnowledgeSection';
 import { COPY } from '@/constants/copy';
-import { ROUTES, notesPath, readerPathForBook } from '@/constants/routes';
+import { ROUTES, knowledgePath, notesPath, readerPathForBook } from '@/constants/routes';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { useHistoryBack } from '@/hooks/useHistoryBack';
 import { annotationRepo } from '@/services/storage/annotationRepo';
+import { useKnowledgeStore } from '@/stores/useKnowledgeStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
-import type { Annotation, Book } from '@/types';
+import type { Annotation, Book, StoryBeatsData } from '@/types';
 import { exportAnnotationsToMarkdown } from '@/utils/annotationExport';
+import { beatRoleMeta, beatRulerRatio } from '@/utils/beatRoles';
 import { cn } from '@/utils/cn';
 import { describeLastRead } from '@/utils/readingProgress';
 import { toast } from '@/utils/toast';
@@ -28,6 +30,8 @@ const TITLE_HAS_NUMBER_PREFIX = /^第\s*\d+\s*[话章回]/;
 const TAG_INPUT_FOCUS_DELAY_MS = 50; // 等待弹窗渲染完成后聚焦
 /** 档案卡手记区块展示的最近条数 */
 const ANNOTATION_PREVIEW_COUNT = 3;
+/** 目录默认折叠的预览章数：超过即收起（章节多的书不再把知识库/手记顶出两屏外） */
+const TOC_PREVIEW_COUNT = 12;
 
 type BookStatus = Book['status'];
 
@@ -45,6 +49,8 @@ export const BookDetailPage: React.FC = () => {
     books, coverUrls, readingProgress, tags, loadBooks,
     toggleFavorite, updateBook, addTagToBook, removeTagFromBook, createTag, removeBook,
   } = useLibraryStore();
+  // 叙事节拍件（若有）：目录上方的结构导览条数据源（loadArtifacts 由知识库区块的挂载触发）
+  const knowledgeArtifacts = useKnowledgeStore((s) => s.artifactsByBook[id ?? '']);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
@@ -58,6 +64,7 @@ export const BookDetailPage: React.FC = () => {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showCitation, setShowCitation] = useState(false);
+  const [showAllChapters, setShowAllChapters] = useState(false);
   const moreMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -151,6 +158,62 @@ export const BookDetailPage: React.FC = () => {
       case 'reading': return '继续阅读';
       default: return '';
     }
+  };
+
+  // 长目录折叠：预览前 N 章；续读章落在预览之外时单独补一张（「继续阅读」入口不随折叠消失）
+  const continueChapterIndex = continueChapter
+    ? book.chapters.findIndex((ch) => ch.id === continueChapter.id)
+    : -1;
+  const tocCollapsed = book.chapters.length > TOC_PREVIEW_COUNT && !showAllChapters;
+  const visibleChapters = tocCollapsed ? book.chapters.slice(0, TOC_PREVIEW_COUNT) : book.chapters;
+  const overflowContinueChapter =
+    tocCollapsed && continueChapter != null && continueChapterIndex >= TOC_PREVIEW_COUNT
+      ? continueChapter
+      : null;
+
+  // 结构导览条：节拍尺比例坐标（与 BeatsView 同一留白算法）；章越界（书改版）的节拍跳过
+  const beatsArtifact = knowledgeArtifacts?.find((a) => a.type === 'story-beats');
+  const beatsData = beatsArtifact ? (beatsArtifact.data as StoryBeatsData) : null;
+  const beatsChapterCount = beatsArtifact?.meta?.bookChapterCount ?? book.chapters.length;
+  const visibleBeats = (beatsData?.beats ?? [])
+    .filter((beat) => book.chapters[beat.chapterIndex])
+    .map((beat, index) => ({
+      beat,
+      ratio: beatRulerRatio(beat.chapterIndex, beatsChapterCount),
+      labelAbove: index % 2 === 1,
+    }));
+
+  const renderChapterCard = (ch: Book['chapters'][number]) => {
+    const statusText = getChapterStatusText(ch.status);
+    return (
+      <button
+        key={ch.id}
+        className={`card-link p-4 flex justify-between items-center group ${
+          ch.status === 'reading' ? 'bg-surface-container-low' : ''
+        } ${ch.status === 'unread' ? 'opacity-70' : ''}`}
+        onClick={() => navigate(readerPathForBook(book, ch.id))}
+      >
+        <div>
+          {TITLE_HAS_NUMBER_PREFIX.test(ch.title) ? (
+            <h3 className="font-label text-label-md text-primary">{ch.title}</h3>
+          ) : (
+            <>
+              <h3 className="font-label text-label-md text-primary">
+                {ch.number != null ? <>第 {ch.number} {book.format === 'text' ? '章' : '话'}</> : ch.title}
+              </h3>
+              {ch.number != null && (
+                <p className="font-label text-label-sm text-on-surface-variant">{ch.title}</p>
+              )}
+            </>
+          )}
+        </div>
+        {statusText && (
+          <span className={`font-label text-label-sm ${ch.status === 'reading' ? 'text-primary' : 'text-on-surface-variant'}`}>
+            {statusText}
+          </span>
+        )}
+      </button>
+    );
   };
 
   const getStatusLabel = (status: BookStatus): string => {
@@ -492,8 +555,11 @@ export const BookDetailPage: React.FC = () => {
           </div>
         </section>
 
+        {/* 知识库区块：紧随档案卡（章节多的书不再被长目录顶出两屏外）；AI 通读生成的图谱/导图入口 */}
+        <KnowledgeSection book={book} />
+
         {book.chapters.length > 0 && (
-          <section className="py-8 border-t border-outline-variant animate-fade-in stagger-2">
+          <section className="py-8 border-t border-outline-variant animate-fade-in stagger-3">
             <div className="flex justify-between items-center mb-6">
               <h2 className="font-display text-headline-md text-primary">目录</h2>
               <span className="flex items-center gap-0.5">
@@ -502,45 +568,68 @@ export const BookDetailPage: React.FC = () => {
                 </span>
               </span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {book.chapters.map((ch) => {
-                const statusText = getChapterStatusText(ch.status);
-                return (
+            {/* 结构导览条：AI 梳理的叙事节拍按章距排布——点节拍直达该章（点距即节奏感） */}
+            {visibleBeats.length > 0 && beatsArtifact && (
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="font-label text-label-sm text-on-surface-variant">
+                    结构导览 · {visibleBeats.length} 个节拍
+                  </span>
                   <button
-                    key={ch.id}
-                    className={`card-link p-4 flex justify-between items-center group ${
-                      ch.status === 'reading' ? 'bg-surface-container-low' : ''
-                    } ${ch.status === 'unread' ? 'opacity-70' : ''}`}
-                    onClick={() => navigate(readerPathForBook(book, ch.id))}
+                    className="font-label text-label-sm text-primary hover:opacity-80 transition-opacity"
+                    onClick={() => navigate(knowledgePath(book.id, beatsArtifact.id))}
                   >
-                    <div>
-                      {TITLE_HAS_NUMBER_PREFIX.test(ch.title) ? (
-                        <h3 className="font-label text-label-md text-primary">{ch.title}</h3>
-                      ) : (
-                        <>
-                          <h3 className="font-label text-label-md text-primary">
-                            {ch.number != null ? <>第 {ch.number} {book.format === 'text' ? '章' : '话'}</> : ch.title}
-                          </h3>
-                          {ch.number != null && (
-                            <p className="font-label text-label-sm text-on-surface-variant">{ch.title}</p>
-                          )}
-                        </>
-                      )}
-                    </div>
-                    {statusText && (
-                      <span className={`font-label text-label-sm ${ch.status === 'reading' ? 'text-primary' : 'text-on-surface-variant'}`}>
-                        {statusText}
-                      </span>
-                    )}
+                    查看节拍详情
                   </button>
-                );
-              })}
+                </div>
+                <div className="relative h-14" role="list" aria-label="叙事节拍结构条">
+                  <div className="absolute left-0 right-0 top-1/2 border-t border-outline-variant" aria-hidden="true" />
+                  {visibleBeats.map(({ beat, ratio, labelAbove }) => {
+                    const meta = beatRoleMeta(beat.role);
+                    return (
+                      <button
+                        key={beat.id}
+                        role="listitem"
+                        className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center p-1.5 group"
+                        style={{ left: `${ratio * 100}%` }}
+                        onClick={() => navigate(readerPathForBook(book, book.chapters[beat.chapterIndex].id))}
+                        title={`${meta.label} · 第 ${beat.chapterIndex + 1} ${book.format === 'text' ? '章' : '话'}：${beat.title}`}
+                      >
+                        <span
+                          className="block w-2.5 h-2.5 rounded-full ring-2 ring-surface group-hover:scale-125 transition-transform"
+                          style={{ backgroundColor: meta.color }}
+                          aria-hidden="true"
+                        />
+                        <span
+                          className={`absolute whitespace-nowrap font-label text-label-xs text-on-surface-variant group-hover:text-on-surface transition-colors ${
+                            labelAbove ? 'bottom-full mb-0.5' : 'top-full mt-0.5'
+                          }`}
+                        >
+                          {meta.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {visibleChapters.map((ch) => renderChapterCard(ch))}
+              {overflowContinueChapter && renderChapterCard(overflowContinueChapter)}
             </div>
+            {book.chapters.length > TOC_PREVIEW_COUNT && (
+              <button
+                className="mt-4 font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1.5"
+                onClick={() => setShowAllChapters((v) => !v)}
+              >
+                {showAllChapters ? '收起目录' : `展开全部 ${book.chapters.length} ${book.format === 'text' ? '章' : '话'}`}
+                <span className="material-symbols-outlined text-icon-sm">
+                  {showAllChapters ? 'expand_less' : 'expand_more'}
+                </span>
+              </button>
+            )}
           </section>
         )}
-
-        {/* 知识库区块：AI 通读生成的图谱/导图入口 */}
-        <KnowledgeSection book={book} />
 
         {/* 手记区块（手记动线的书内聚合）：最近 3 条，点击回跳原文 */}
         {annotations.length > 0 && (

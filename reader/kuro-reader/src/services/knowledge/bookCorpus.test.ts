@@ -3,8 +3,11 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   BookCorpusError,
   buildBookCorpus,
+  buildDigestCorpus,
+  buildDigestEntries,
   computeCorpusFingerprint,
   packCorpusEntries,
+  selectDigestChapters,
 } from '@/services/knowledge/bookCorpus'
 import { getPdfPageTexts } from '@/services/pdfText'
 import { loadTextContent } from '@/services/textContent'
@@ -204,5 +207,65 @@ describe('buildBookCorpus', () => {
     expect(corpus.chapterTexts[0]).toBe('')
     expect(corpus.chapterTexts[1]).toContain('新内容一')
     expect(corpus.chapterTexts[2]).toContain('新内容二')
+  })
+})
+
+describe('全书骨架 digest', () => {
+  it('selectDigestChapters：章数少时全收；章数多时等距采样且首尾必保', () => {
+    expect(selectDigestChapters(5, 7600)).toEqual([0, 1, 2, 3, 4])
+    const sampled = selectDigestChapters(500, 7600)
+    expect(sampled[0]).toBe(0)
+    expect(sampled[sampled.length - 1]).toBe(499)
+    expect(sampled.length).toBeLessThan(500)
+    // 确定性：同一输入永远同一选章
+    expect(selectDigestChapters(500, 7600)).toEqual(sampled)
+  })
+
+  it('buildDigestEntries：骨架行含标题与首尾摘句，摘句是原文逐字子串', () => {
+    const chapters = [
+      { title: '风起', content: '夜雨绵绵入市井。他在屋檐下擦剑，听见远处钟响。三更天后，城中起了第一场雾。' },
+      { title: '云涌', content: '信使倒在门口，怀里的密函染了血。她拆开火漆，只看了一眼便吹熄了灯。' },
+    ]
+    const entries = buildDigestEntries(chapters, 7600)
+    expect(entries).toHaveLength(2)
+    expect(entries[0].line).toContain('风起')
+    expect(entries[0].line).toContain('第1章')
+    // 逐字子串（不做空白折叠），证据定位靠它命中
+    expect(chapters[0].content).toContain(entries[0].line.split('：')[1].split('……')[0])
+  })
+
+  it('buildDigestCorpus：单块语料 + 全文 chapterTexts（证据定位用）', async () => {
+    mockedLoadTextContent.mockResolvedValue({
+      chapters: [
+        { id: 'ch1', title: '第一章', content: '开局内容。'.repeat(30) },
+        { id: 'ch2', title: '第二章', content: '高潮内容。'.repeat(30) },
+      ],
+      isEpub: false,
+      isMarkdown: false,
+    })
+    const corpus = await buildDigestCorpus(makeTextBook())
+    expect(corpus.chunks).toHaveLength(1)
+    expect(corpus.chunks[0].label).toBe('全书骨架')
+    expect(corpus.chunks[0].chapterIndexes).toEqual([0, 1])
+    expect(corpus.chunks[0].text).toContain('第一章')
+    // 骨架是压缩视图，但 chapterTexts 必须是全文——节拍证据的逐字定位在真章上进行
+    expect(corpus.chapterTexts[1]).toContain('高潮内容。'.repeat(30))
+    expect(corpus.totalChunkCount).toBe(1)
+    expect(corpus.truncated).toBe(false)
+  })
+
+  it('buildDigestCorpus：范围限定生效（scope 起止章）', async () => {
+    mockedLoadTextContent.mockResolvedValue({
+      chapters: [
+        { id: 'ch1', title: '旧章', content: '旧。'.repeat(40) },
+        { id: 'ch2', title: '新章', content: '新。'.repeat(40) },
+      ],
+      isEpub: false,
+      isMarkdown: false,
+    })
+    const corpus = await buildDigestCorpus(makeTextBook(), { from: 1 })
+    expect(corpus.chunks[0].chapterIndexes).toEqual([1])
+    expect(corpus.chunks[0].text).toContain('新章')
+    expect(corpus.chunks[0].text).not.toContain('旧章')
   })
 })

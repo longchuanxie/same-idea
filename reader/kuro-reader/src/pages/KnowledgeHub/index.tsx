@@ -16,6 +16,7 @@ const KIND_LABELS: Record<KnowledgeArtifact['type'], string> = {
   mindmap: '思维导图',
   glossary: '术语卡',
   'paper-brief': '速览卡',
+  'story-beats': '叙事节拍',
 };
 
 function artifactMeta(artifact: KnowledgeArtifact): string {
@@ -30,6 +31,9 @@ function artifactMeta(artifact: KnowledgeArtifact): string {
   } else if (artifact.type === 'paper-brief') {
     const brief = artifact.data as { contributions?: unknown[]; limitations?: unknown[] }
     parts.push(`${brief.contributions?.length ?? 0} 贡献 · ${brief.limitations?.length ?? 0} 局限`)
+  } else if (artifact.type === 'story-beats') {
+    const beats = artifact.data as { beats?: unknown[] }
+    parts.push(`${beats.beats?.length ?? 0} 节拍`)
   }
   if (artifact.meta?.chapterCount) parts.push(`覆盖 ${artifact.meta.chapterCount} 章`)
   // 短日期（9/12）：移动端卡片元信息一行放得下，不再被截断

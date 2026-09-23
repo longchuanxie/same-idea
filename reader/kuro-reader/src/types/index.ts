@@ -286,11 +286,46 @@ export type ContentKind = 'fiction' | 'academic'
 /** 书籍的知识库内容类型偏好（'auto' 按文本启发式检测；存于书档案，随书记忆） */
 export type ContentKindPreference = ContentKind | 'auto'
 
-/** 知识产物类型：人物关系图谱 / 概念关系图谱 / 思维导图 / 概念术语卡 / 论文速览（注册表见 services/ai/knowledgeTasks） */
-export type KnowledgeArtifactType = 'character-graph' | 'concept-graph' | 'mindmap' | 'glossary' | 'paper-brief'
+/** 知识产物类型：人物关系图谱 / 概念关系图谱 / 思维导图 / 概念术语卡 / 论文速览 / 叙事节拍（注册表见 services/ai/knowledgeTasks） */
+export type KnowledgeArtifactType = 'character-graph' | 'concept-graph' | 'mindmap' | 'glossary' | 'paper-brief' | 'story-beats'
 
 /** 贡献点的证据强度（论文速览卡）：实验支撑 / 理论证明 / 部分支撑 / 仅声称 */
 export type ContributionStrength = 'experiment' | 'theory' | 'partial' | 'claim'
+
+/** 叙事节拍的角色（结构位置语义；UI 展示用去黑话短标，见 utils/beatRoles） */
+export type StoryBeatRole =
+  | 'hook' // 开局
+  | 'inciting' // 引子（打破日常的事件）
+  | 'rising' // 推进
+  | 'turn' // 转折
+  | 'midpoint' // 中点
+  | 'low' // 低谷
+  | 'climax' // 高潮
+  | 'resolution' // 结局
+  | 'custom' // 未归类的关键节点
+
+/** 叙事节拍条目：结构导航用——「高潮在哪一章，直接看」 */
+export interface StoryBeat {
+  /** 稳定 id（role+章+归一化标题，修订模式的定位键） */
+  id: string
+  role: StoryBeatRole
+  /** 节拍标记事件（具体事件名，如「毒酒夜宴」） */
+  title: string
+  detail?: string
+  /** 节拍所在章（0 起章索引；PDF 为页索引）——结构条与查看器的跳转目标 */
+  chapterIndex: number
+  /** 骨架原文摘句（本地逐字校验通过才有；失败时仅留章级跳转） */
+  evidence?: KnowledgeEvidence
+  /** 覆盖章节（0 起章索引；由分块盖章并入） */
+  chapters?: number[]
+  /** 读者人工校验过（修订模式的「已校验」章） */
+  verified?: boolean
+}
+
+/** 叙事节拍数据：全书骨架单轮定位，按章升序 */
+export interface StoryBeatsData {
+  beats: StoryBeat[]
+}
 
 /** 论文速览：研究型读者的读前分流与批判性阅读卡（全部条目可回原文） */
 export interface PaperBriefData {
@@ -403,7 +438,7 @@ export interface KnowledgeArtifact {
   bookId: string
   type: KnowledgeArtifactType
   title: string
-  data: CharacterGraphData | MindmapNodeData | GlossaryData | PaperBriefData
+  data: CharacterGraphData | MindmapNodeData | GlossaryData | PaperBriefData | StoryBeatsData
   /** 生成来源元信息：内容指纹用于书本内容变化后提示重新生成 */
   meta?: {
     /** 实际进入语料的章节数（范围生成时 < 原书总章数） */

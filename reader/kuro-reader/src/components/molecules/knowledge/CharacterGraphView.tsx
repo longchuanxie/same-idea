@@ -3,10 +3,13 @@ import React, { useMemo, useRef, useState } from 'react'
 import { PanZoom } from '@/components/molecules/knowledge/PanZoom'
 import type { CharacterGraphData, CharacterNode } from '@/types'
 import { computeForceLayout, graphNodeRadius } from '@/utils/graphLayout'
+import { knowledgeColor, PALETTE_TINT_ALPHA } from '@/utils/knowledgePalette'
 
 /**
  * 人物关系图谱视图：力导向布局 + 节点拖拽 + 点选人物。
  * 布局确定性计算（graphLayout 纯函数）；拖拽只改本地位置，不回写数据。
+ * 节点按数据序依次取知识件域色板（与思维导图分支色同源）——
+ * 多人物重叠时靠颜色追踪个体；选中态仍归朱砂（印章强调语义）。
  */
 
 const CANVAS_WIDTH = 960
@@ -167,10 +170,11 @@ export const CharacterGraphView: React.FC<CharacterGraphViewProps> = ({
           )
         })}
 
-        {/* 人物节点 */}
-        {nodes.map((node) => {
+        {/* 人物节点（按数据序取域色：连接度越高的实体越靠前拿到靠前的色） */}
+        {nodes.map((node, nodeIndex) => {
           const radius = graphNodeRadius(node.weight)
           const selected = node.id === selectedNodeId
+          const color = knowledgeColor(nodeIndex)
           return (
             <g
               key={node.id}
@@ -201,8 +205,8 @@ export const CharacterGraphView: React.FC<CharacterGraphViewProps> = ({
                 cx={node.x}
                 cy={node.y}
                 r={radius}
-                fill={selected ? 'rgb(var(--color-seal-soft))' : 'rgb(var(--color-surface-container-high))'}
-                stroke={selected ? 'rgb(var(--color-seal))' : 'rgb(var(--color-primary))'}
+                fill={selected ? 'rgb(var(--color-seal-soft))' : `${color}${PALETTE_TINT_ALPHA}`}
+                stroke={selected ? 'rgb(var(--color-seal))' : color}
                 strokeWidth={selected ? NODE_STROKE_WIDTH_SELECTED : NODE_STROKE_WIDTH}
                 style={{ pointerEvents: 'none' }}
               />

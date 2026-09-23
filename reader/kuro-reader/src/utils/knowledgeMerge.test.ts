@@ -12,6 +12,9 @@ import {
   parseMindmapPartial,
   mergeGlossary,
   parseGlossaryPartial,
+  parseBeatsPartial,
+  mergeBeats,
+  resolveBeatsEvidence,
   resolveGlossaryEvidence,
   resolveGraphEvidence,
   stampGlossaryChapters,
@@ -39,6 +42,43 @@ describe('parseGraphPartial', () => {
     expect(parseGraphPartial(null)).toBeNull()
     expect(parseGraphPartial({ characters: [] })).toBeNull()
     expect(parseGraphPartial({ relationships: [] })).toBeNull()
+  })
+
+  it('关系端点命中跨块已认人物时放行，并补占位人物入列', () => {
+    const partial = parseGraphPartial(
+      {
+        characters: [{ name: '宝玉' }],
+        relationships: [{ source: '林黛玉', target: '宝玉', relation: '恋人' }],
+      },
+      ['林黛玉']
+    )!
+    expect(partial!.characters.map((c) => c.name)).toEqual(['宝玉', '林黛玉'])
+    expect(partial!.relationships).toHaveLength(1)
+    expect(partial!.relationships[0].target).toBe('宝玉')
+  })
+
+  it('parse 层不做子串匹配：「黛玉」≠ 已认的「林黛玉」（归并交给 merge 别名收敛）', () => {
+    const partial = parseGraphPartial(
+      {
+        characters: [{ name: '宝玉' }],
+        relationships: [{ source: '黛玉', target: '宝玉', relation: '恋人' }],
+      },
+      ['林黛玉']
+    )!
+    expect(partial!.relationships).toEqual([])
+    // 占位人物只由真正命中的端点补入
+    expect(partial!.characters.map((c) => c.name)).toEqual(['宝玉'])
+  })
+
+  it('未在 characters 也未在已认名单里的人名仍被丢弃（防幻觉不放松）', () => {
+    const partial = parseGraphPartial(
+      {
+        characters: [{ name: '张三' }],
+        relationships: [{ source: '张三', target: '路人甲', relation: '敌对' }],
+      },
+      ['李四']
+    )!
+    expect(partial!.relationships).toEqual([])
   })
 })
 
@@ -120,6 +160,124 @@ describe('mergeCharacterGraphs', () => {
     const graph = mergeCharacterGraphs([])
     expect(graph.nodes).toEqual([])
     expect(graph.edges).toEqual([])
+  })
+})
+
+describe('mergeCharacterGraphs · 别名归并（mergeAliases）', () => {
+  it('子集称呼并进唯一认领它的长名节点，边端点改接正名', () => {
+    const partialA = {
+      characters: [
+        { name: '林黛玉', role: '女主角' },
+        { name: '贾宝玉' },
+        { name: '薛宝钗' },
+      ],
+      relationships: [
+        { source: '贾宝玉', target: '林黛玉', relation: '恋人', chapters: [0] },
+      ],
+    }
+    const partialB = {
+      characters: [{ name: '黛玉' }, { name: '宝钗' }],
+      relationships: [
+        // 端点须是已注册人物名（贾宝玉来自片段A；黛玉是本片段称呼）——
+        // 「同名异称」的两条恋人边在归并后合成一条并集章节
+        { source: '贾宝玉', target: '黛玉', relation: '恋人', chapters: [1] },
+        { source: '黛玉', target: '宝钗', relation: '知己', chapters: [1] },
+      ],
+    }
+    const graph = mergeCharacterGraphs([partialA, partialB], undefined, { mergeAliases: true })
+    const names = graph.nodes.map((n) => n.name).sort()
+    // 黛玉→林黛玉、宝钗→薛宝钗、宝玉→贾宝玉 全部收敛，无重复节点
+    expect(names).toEqual(['林黛玉', '薛宝钗', '贾宝玉'])
+    // 平行边（贾宝玉—林黛玉 恋人 ×2）合成一条，章节并集
+    const lovers = graph.edges.filter((e) => e.relation === '恋人')
+    expect(lovers).toHaveLength(1)
+    expect(lovers[0].chapters).toEqual([0, 1])
+    // 黛玉—宝钗 边端点改接正名（无向：林黛玉—薛宝钗）
+    expect(graph.edges.some((e) => e.relation === '知己')).toBe(true)
+    const zhiji = graph.edges.find((e) => e.relation === '知己')!
+    const endpoints = [zhiji.source, zhiji.target].sort()
+    expect(endpoints).toEqual(['林黛玉', '薛宝钗'])
+  })
+
+  it('正名与别名的插入顺序不影响归并（别名先入列时正名字段不丢）', () => {
+    const aliasFirst = {
+      characters: [{ name: '黛玉', role: '潇湘妃子' }],
+      relationships: [],
+    }
+    const canonicalLater = {
+      characters: [{ name: '林黛玉', description: '绛珠仙草转世' }],
+      relationships: [],
+    }
+    const graph = mergeCharacterGraphs([aliasFirst, canonicalLater], undefined, { mergeAliases: true })
+    expect(graph.nodes).toHaveLength(1)
+    expect(graph.nodes[0].name).toBe('林黛玉')
+    expect(graph.nodes[0].role).toBe('潇湘妃子')
+    expect(graph.nodes[0].description).toBe('绛珠仙草转世')
+  })
+
+  it('两个长名同时认领同一短名时视为歧义，不归并', () => {
+    const partial = {
+      characters: [{ name: '小明' }, { name: '王小明' }, { name: '李小明' }],
+      relationships: [
+        { source: '小明', target: '王小明', relation: '相关' },
+        { source: '小明', target: '李小明', relation: '相关' },
+      ],
+    }
+    const graph = mergeCharacterGraphs([partial], undefined, { mergeAliases: true })
+    expect(graph.nodes.map((n) => n.name).sort()).toEqual(['小明', '李小明', '王小明'])
+  })
+
+  it('单字称呼不归并（信息太弱），概念任务不开归并时子集各自成节点', () => {
+    const singleChar = {
+      characters: [{ name: '林' }, { name: '林冲' }],
+      relationships: [],
+    }
+    expect(mergeCharacterGraphs([singleChar], undefined, { mergeAliases: true }).nodes).toHaveLength(2)
+
+    const concepts = {
+      characters: [{ name: '学习' }, { name: '强化学习' }],
+      relationships: [{ source: '学习', target: '强化学习', relation: '上位' }],
+    }
+    const conceptGraph = mergeCharacterGraphs([concepts])
+    expect(conceptGraph.nodes.map((n) => n.name).sort()).toEqual(['学习', '强化学习'])
+    expect(conceptGraph.edges).toHaveLength(1)
+  })
+
+  it('归并后连接度重算：别名带来的边计入正名权重', () => {
+    const partialA = {
+      characters: [{ name: '林黛玉' }, { name: '贾宝玉' }, { name: '紫鹃' }],
+      relationships: [
+        { source: '贾宝玉', target: '林黛玉', relation: '恋人' },
+        { source: '紫鹃', target: '林黛玉', relation: '主仆' },
+      ],
+    }
+    const partialB = {
+      characters: [{ name: '黛玉' }, { name: '雪雁' }],
+      relationships: [{ source: '雪雁', target: '黛玉', relation: '主仆' }],
+    }
+    const graph = mergeCharacterGraphs([partialA, partialB], undefined, { mergeAliases: true })
+    const daiyu = graph.nodes.find((n) => n.name === '林黛玉')!
+    // 两条主仆边（紫鹃、雪雁）+ 恋人边都计入林黛玉
+    const maxWeight = Math.max(...graph.nodes.map((n) => n.weight ?? 0))
+    expect(daiyu.weight).toBe(maxWeight)
+  })
+
+  it('增量基底与新区块跨别名归并：基底里的正名继续存在，不另立节点', () => {
+    const base = {
+      nodes: [{ id: '林黛玉', name: '林黛玉', weight: 1, chapters: [0] }],
+      edges: [],
+    }
+    const fresh = [
+      {
+        characters: [{ name: '黛玉', chapters: [3] }, { name: '贾宝玉', chapters: [3] }],
+        relationships: [{ source: '黛玉', target: '贾宝玉', relation: '恋人', chapters: [3] }],
+      },
+    ]
+    const merged = mergeCharacterGraphs(fresh, base, { mergeAliases: true })
+    expect(merged.nodes.map((n) => n.name).sort()).toEqual(['林黛玉', '贾宝玉'])
+    expect(merged.edges).toHaveLength(1)
+    const daiyu = merged.nodes.find((n) => n.name === '林黛玉')!
+    expect(daiyu.chapters).toEqual([0, 3])
   })
 })
 
@@ -482,5 +640,70 @@ describe('paper-brief · 论文速览解析/合并/证据校验', () => {
     expect(resolved.questions[0].evidence?.chapterIndex).toBe(1)
     // 未命中的摘句被丢弃，无证据字段（章级回退仍在 chapters）
     expect(resolved.limitations[0].evidence).toBeUndefined()
+  })
+})
+
+describe('叙事节拍 · 解析/合并/证据校验', () => {
+  it('parseBeatsPartial：role 未知兜底 custom、非法章号剔除、同槽位去重、超上限截断', () => {
+    const partial = parseBeatsPartial({
+      beats: [
+        { role: 'climax', title: '毒酒夜宴', chapterIndex: 7, evidence: '酒里有毒' },
+        { role: '乱写的', title: '无角色', chapterIndex: 2 },
+        { role: 'hook', title: '缺章号' },
+        { role: 'hook', title: '开局', chapterIndex: -1 },
+        { role: 'turn', title: '密函', chapterIndex: 4 },
+        { role: 'turn', title: '重复槽位', chapterIndex: 4 },
+      ],
+    })
+    expect(partial).not.toBeNull()
+    const slots = partial!.beats.map((b) => `${b.role}:${b.chapterIndex}`)
+    expect(slots).toEqual(['climax:7', 'custom:2', 'turn:4'])
+    expect(partial!.beats[1].role).toBe('custom')
+    expect(partial!.beats[2].title).toBe('密函')
+  })
+
+  it('全空或形状不对返回 null', () => {
+    expect(parseBeatsPartial(null)).toBeNull()
+    expect(parseBeatsPartial({ beats: [] })).toBeNull()
+    expect(parseBeatsPartial({ beats: [{ title: '无章号' }] })).toBeNull()
+  })
+
+  it('mergeBeats：基底先入列、新节拍补缺不覆盖、按章升序', () => {
+    const base = {
+      beats: [
+        { id: 'hook:0', role: 'hook' as const, title: '夜雨入市', chapterIndex: 0, evidence: { quote: '夜雨绵绵', chapterIndex: 0, offsetRatio: 0.1 } },
+      ],
+    }
+    const fresh = {
+      beats: [
+        { role: 'climax' as const, title: '决战钟楼', chapterIndex: 7, evidenceQuote: '他登上钟楼' },
+        { role: 'hook' as const, title: '新开局', chapterIndex: 0, evidenceQuote: '另一场夜雨' },
+      ],
+    }
+    const merged = mergeBeats([fresh], base)
+    // 同槽位（hook:0）保留基底（含已定位证据直通），新槽位补进
+    expect(merged.beats.map((b) => b.title)).toEqual(['夜雨入市', '决战钟楼'])
+    expect(merged.beats[0].evidence).toEqual({ quote: '夜雨绵绵', chapterIndex: 0, offsetRatio: 0.1 })
+    expect(merged.beats[0].id).toBe('hook:0')
+    expect(merged.beats[1].id).toBe('climax:7')
+  })
+
+  it('resolveBeatsEvidence：骨架摘句逐字命中换坐标，未命中仅留章级跳转', () => {
+    const chapterTexts = [
+      '',
+      '他在屋檐下擦剑，听见远处钟响。三更天后，城中起了第一场雾。',
+    ]
+    const data = {
+      beats: [
+        { id: 'hook:1', role: 'hook' as const, title: '擦剑闻钟', chapterIndex: 1, evidenceQuote: '听见远处钟响' },
+        { id: 'low:1', role: 'low' as const, title: '幻觉引文', chapterIndex: 1, evidenceQuote: '这句原文里根本没有' },
+      ],
+    }
+    const resolved = resolveBeatsEvidence(data, chapterTexts)
+    expect(resolved.beats[0].evidence?.chapterIndex).toBe(1)
+    expect(resolved.beats[0].evidence?.quote).toBe('听见远处钟响')
+    expect(resolved.beats[0].evidence?.offsetRatio).toBeCloseTo(8 / 29, 3)
+    expect(resolved.beats[1].evidence).toBeUndefined()
+    expect('evidenceQuote' in resolved.beats[1]).toBe(false)
   })
 })

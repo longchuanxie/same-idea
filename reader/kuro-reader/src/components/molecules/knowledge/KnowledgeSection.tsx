@@ -312,7 +312,7 @@ export const KnowledgeSection: React.FC<{ book: Book }> = ({ book }) => {
   }, [effectiveKind, artifacts])
 
   return (
-    <section className="py-8 border-t border-outline-variant animate-fade-in stagger-3">
+    <section className="py-8 border-t border-outline-variant animate-fade-in stagger-2">
       <div className="flex justify-between items-baseline mb-2">
         <h2 className="font-display text-headline-md text-primary">知识库</h2>
         <span className="font-label text-label-sm text-on-surface-variant">

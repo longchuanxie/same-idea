@@ -14,19 +14,25 @@ import type {
   KnowledgeArtifactType,
   MindmapNodeData,
   PaperBriefData,
+  StoryBeatsData,
 } from '@/types'
 import {
+  isBeatsEmpty,
   isBriefEmpty,
+  mergeBeats,
   mergeBriefs,
   mergeCharacterGraphs,
   mergeGlossary,
   mergeMindmapBranches,
+  parseBeatsPartial,
   parseBriefPartial,
   parseGlossaryPartial,
   parseGraphPartial,
   parseMindmapPartial,
+  type BeatsPartial,
   type GlossaryPartial,
   type GraphPartial,
+  type InterimBeatsData,
   type InterimBriefData,
   type InterimGlossaryData,
   type InterimGraphData,
@@ -45,6 +51,12 @@ export interface KnowledgeTaskChunkInput {
   detail?: GraphDetailLevel
   /** 本片段是否为增量补充的新内容（提示词侧重"接续既有认知"） */
   incremental?: boolean
+  /**
+   * 前文片段已确认的实体称呼（仅图谱类任务消费）。
+   * 注入提示词让后续片段沿用同一称呼（防「黛玉/林黛玉」跨块分裂），
+   * 并允许关系端点回连这些早前实体（跨块关系不再因本块未列人物而被丢）。
+   */
+  knownNames?: string[]
 }
 
 export interface KnowledgeChatMessage {
@@ -68,13 +80,18 @@ export interface KnowledgeTask {
   kinds: ContentKind[]
   /** 产物默认标题 */
   artifactTitle: string
+  /**
+   * 语料模式：'chunks' 分块通读（默认，逐块分析后合并）；
+   * 'digest' 全书骨架单块（全书视野任务：骨架即唯一 chunk，一次调用出全书结论）
+   */
+  corpusMode?: 'chunks' | 'digest'
   buildMessages(input: KnowledgeTaskChunkInput): KnowledgeChatMessage[]
-  /** 解析单块回复；形状不对返回 null（该块作废但不中断） */
-  parsePartial(raw: unknown): unknown | null
+  /** 解析单块回复；形状不对返回 null（该块作废）。knownNames 供图谱类放行跨块实体 */
+  parsePartial(raw: unknown, knownNames?: string[]): unknown | null
   /** 合并全部有效片段为最终数据；base 为增量合并的基底（现有产物数据） */
-  merge(bookTitle: string, partials: { label: string; data: unknown }[], base?: unknown): CharacterGraphData | MindmapNodeData | GlossaryData | PaperBriefData
+  merge(bookTitle: string, partials: { label: string; data: unknown }[], base?: unknown): CharacterGraphData | MindmapNodeData | GlossaryData | PaperBriefData | StoryBeatsData
   /** 结果为空判断（空结果不落库，直接报「提不出」） */
-  isEmpty(data: CharacterGraphData | MindmapNodeData | GlossaryData | PaperBriefData): boolean
+  isEmpty(data: CharacterGraphData | MindmapNodeData | GlossaryData | PaperBriefData | StoryBeatsData): boolean
 }
 
 /** 提示词中分块正文注入上限（与 bookCorpus 分块粒度解耦：块 6k 字，注入 8k 余量） */
@@ -110,6 +127,16 @@ function detailRequirement(detail: KnowledgeTaskChunkInput['detail']): string {
   return '- 只提取本片段中出场、被提及且有明确信息的实体，至多 15 个'
 }
 
+/** 跨块称呼一致性提示：前文已确认的实体名单（保持全书同一实体同一叫法） */
+function knownNamesRequirement(knownNames: string[] | undefined, entityLabel: '人物' | '概念'): string[] {
+  if (!knownNames || knownNames.length === 0) return []
+  return [
+    `此前片段已确认的${entityLabel}：${knownNames.join('、')}。`,
+    `同一${entityLabel}再次出现时必须沿用上述称呼，不要换叫法、不要用简称或全称的另一种写法；`,
+    `本片段新出现的${entityLabel}与上述${entityLabel}有直接互动时，关系两端可以直接使用上述称呼。`,
+  ]
+}
+
 const characterGraphTask: KnowledgeTask = {
   type: 'character-graph',
   label: '人物关系图谱',
@@ -129,6 +156,7 @@ const characterGraphTask: KnowledgeTask = {
         '要求：',
         // 详细度决定人物取舍（用户对图谱"看主次"的核心诉求）
         detailRequirement(input.detail),
+        ...knownNamesRequirement(input.knownNames, '人物'),
         '- 关系只记录有直接互动或文本明确陈述的，两端人物必须在 characters 里',
         '- evidence 必须逐字摘自片段正文，不要改写、不要翻译、不要自行补全',
         '- 没有人物关系时 relationships 可为空数组，但 characters 给出出场人物',
@@ -138,11 +166,13 @@ const characterGraphTask: KnowledgeTask = {
       ].join('\n'),
     },
   ],
-  parsePartial: (raw) => parseGraphPartial(raw),
+  parsePartial: (raw, knownNames) => parseGraphPartial(raw, knownNames),
   merge: (_bookTitle, partials, base) =>
     mergeCharacterGraphs(
       partials.map((partial) => partial.data as GraphPartial),
-      base as InterimGraphData | undefined
+      base as InterimGraphData | undefined,
+      // 小说人物开别名归并：黛玉/林黛玉这类子集称呼收敛为同一节点
+      { mergeAliases: true }
     ),
   isEmpty: (data) => {
     const graph = data as CharacterGraphData
@@ -169,6 +199,7 @@ const conceptGraphTask: KnowledgeTask = {
         '{"characters":[{"name":"概念名（用书中原文用词）","role":"概念类别（机制/模型/度量/方法/现象等，≤12字）","description":"一句话解释（≤60字）"}],"relationships":[{"source":"概念A","target":"概念B","relation":"关系类型（上位/组成/依赖/对比/相关，2-4字）","description":"关系说明（≤40字）","evidence":"支撑该关系的原文短句（从片段正文逐字摘录，≤30字）"}]}',
         '要求：',
         detailRequirement(input.detail),
+        ...knownNamesRequirement(input.knownNames, '概念'),
         '- 关系必须有文本依据，两端概念必须在 characters 里；is-a 用「上位」、part-of 用「组成」、依赖/前提用「依赖」、对照用「对比」',
         '- evidence 必须逐字摘自片段正文，不要改写、不要翻译、不要自行补全',
         '- 没有明确概念关系时 relationships 可为空数组，但 characters 给出核心概念',
@@ -178,8 +209,9 @@ const conceptGraphTask: KnowledgeTask = {
       ].join('\n'),
     },
   ],
-  // 概念图与人物图同构：解析/合并直接复用图谱机械（人名归一化即概念名归一化）
-  parsePartial: (raw) => parseGraphPartial(raw),
+  // 概念图与人物图同构：解析/合并直接复用图谱机械（人名归一化即概念名归一化）；
+  // 跨块称呼一致性同样受益，但不开别名归并（子集概念是上下位层级，不是同一概念）
+  parsePartial: (raw, knownNames) => parseGraphPartial(raw, knownNames),
   merge: (_bookTitle, partials, base) =>
     mergeCharacterGraphs(
       partials.map((partial) => partial.data as GraphPartial),
@@ -315,6 +347,49 @@ const paperBriefTask: KnowledgeTask = {
   isEmpty: (data) => isBriefEmpty(data as PaperBriefData),
 }
 
+/** 叙事节拍：全书骨架单轮定位——「高潮在哪一章，直接看」的结构导航 */
+const BEATS_SYSTEM_PROMPT = [
+  '你是一位严谨的叙事结构分析助手，任务是从全书骨架中梳理叙事节拍。',
+  '只依据骨架文本中明确呈现的信息，不推测、不补充原作之外的知识。',
+  '严格只输出一个 JSON 对象，不要输出任何解释、前后缀或代码围栏。',
+].join('\n')
+
+const storyBeatsTask: KnowledgeTask = {
+  type: 'story-beats',
+  label: '叙事节拍',
+  icon: 'graphic_eq',
+  hint: '开篇、转折、高潮落在哪一章——长书的结构导航',
+  kinds: ['fiction'],
+  artifactTitle: '叙事节拍',
+  corpusMode: 'digest',
+  buildMessages: (input) => [
+    { role: 'system', content: BEATS_SYSTEM_PROMPT },
+    {
+      role: 'user',
+      content: [
+        `${bookLine(input)}（${input.chunkLabel}）`,
+        '',
+        '请从下面的全书骨架中梳理叙事节拍，输出 JSON：',
+        '{"beats":[{"role":"hook|inciting|rising|turn|midpoint|low|climax|resolution","title":"节拍标记事件（≤12字，具体事件名）","detail":"一句话说明（≤40字，可省略）","chapterIndex":0,"evidence":"支撑该节拍的骨架原文摘句（逐字摘录，≤30字，可省略）"}]}',
+        '要求：',
+        '- 每种 role 至多一条（rising 可至多 3 条），beats 总数 5-12 条',
+        // 骨架行首是 1 起展示序号，模型最易在此错位——显式折算规则
+        '- 骨架行首的「第N章」是 1 起展示序号；chapterIndex 一律填 N-1（0 起章序号）',
+        '- role 语义：hook=开局悬念、inciting=打破日常的事件、rising=推进铺垫、turn=重大转折、midpoint=中点反转、low=最低谷、climax=最高潮、resolution=结局收束',
+        '- 拿不准就用 rising；结构特殊套不进术语就选最接近的一档，不要硬套',
+        '- evidence 逐字摘自骨架文本，不要改写、不要拼接',
+        '',
+        '全书骨架：',
+        input.chunkText.slice(0, PROMPT_TEXT_LIMIT_CHARS),
+      ].join('\n'),
+    },
+  ],
+  parsePartial: (raw) => parseBeatsPartial(raw),
+  merge: (_bookTitle, partials, base) =>
+    mergeBeats(partials.map((partial) => partial.data as BeatsPartial), base as InterimBeatsData | undefined),
+  isEmpty: (data) => isBeatsEmpty(data as StoryBeatsData),
+}
+
 /** 注册表：新产物类型在此追加 */
 export const KNOWLEDGE_TASKS: Record<KnowledgeArtifactType, KnowledgeTask> = {
   'character-graph': characterGraphTask,
@@ -322,6 +397,7 @@ export const KNOWLEDGE_TASKS: Record<KnowledgeArtifactType, KnowledgeTask> = {
   'concept-graph': conceptGraphTask,
   mindmap: mindmapTask,
   glossary: glossaryTask,
+  'story-beats': storyBeatsTask,
 }
 
 export function getKnowledgeTask(type: KnowledgeArtifactType): KnowledgeTask {

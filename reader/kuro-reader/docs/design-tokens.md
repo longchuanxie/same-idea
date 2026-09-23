@@ -166,7 +166,7 @@
 |---|---|---|
 | `FullscreenViewer.tsx` | `bg-white/10 text-white` | 媒体之上恒用白，不随主题 |
 | 亮度/色温条（两 Reader 底栏） | `.temperature-ramp` 配方类（`linear-gradient(#ffffff, #ffcc80)` 渐变本体） | 色温功能演示渐变（光源本体）；2026-09 由两处内联复制沉淀为 index.css 配方类 |
-| `MindmapView.tsx` `BRANCH_COLORS` | 8 色域数组 | 思维导图分支分类色，域调色板 |
+| `src/utils/knowledgePalette.ts` `KNOWLEDGE_PALETTE`（消费方：`MindmapView.tsx` / `CharacterGraphView.tsx` / `beatRoles.ts`→节拍结构条与 `BeatsView`） | 8 色域数组 | 知识件多色域调色板：导图分支分类色 + 图谱实体识别色 + 节拍角色结构色（非交互色，选中/强调仍归 seal）；2026-09 由 MindmapView 内联数组沉淀为共享模块 |
 | `MarkdownReaderContent` mark | `bg-lamp/30` | 荧光标记=琥珀（lamp 立项豁免：非交互） |
 | `Home` 今日之灯 | `drop-shadow(lamp)` | lamp 光晕即元素本体 |
 | 阅读器全屏 chrome | 圆钮 FAB、白色浮层 | 沉浸层自有语言，不入馆内体系 |

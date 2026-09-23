@@ -4,6 +4,7 @@ import { MindmapOutlineEditor } from '@/components/molecules/knowledge/MindmapOu
 import { PanZoom } from '@/components/molecules/knowledge/PanZoom'
 import type { MindmapNodeData } from '@/types'
 import type { MindmapNodePath } from '@/utils/knowledgeEdit'
+import { knowledgeColor, PALETTE_TINT_ALPHA } from '@/utils/knowledgePalette'
 import {
   CANVAS_PADDING,
   computeMindmapLayout,
@@ -17,14 +18,6 @@ import {
  * 三级起退为彩线下划的纯文本）；点击有子节点的主题折叠/展开。
  */
 
-/** 分支主题色板：纸墨审美的八色（朱砂/黛蓝/松绿/藤黄/青碧/紫棠/棕/灰蓝） */
-const BRANCH_COLORS = [
-  '#B54529', '#35618E', '#3E7C59', '#C9862B',
-  '#2F8F83', '#7C5295', '#8D6E63', '#5C7A99',
-] as const
-
-/** 浅底色透明度（十六进制后缀） */
-const TINT_L2 = '2E'
 /** 各层级连线粗细（主干 → 深层递减，XMind 手感）；与连线不透明度为版式设计常量 */
 /* eslint-disable no-magic-numbers */
 const LINK_WIDTHS = [3.5, 2.2, 1.4, 1.2] as const
@@ -39,10 +32,6 @@ const COLLAPSE_BADGE_FONT_SIZE = 10
 const COLLAPSE_BADGE_MAX_COUNT = 99
 /** 深层纯文本主题的彩线下坠距离（相对节点中心） */
 const DEEP_UNDERLINE_OFFSET = 14
-
-function branchColor(branchIndex: number): string {
-  return BRANCH_COLORS[branchIndex % BRANCH_COLORS.length]
-}
 
 function linkWidth(depth: number): number {
   return LINK_WIDTHS[Math.min(depth, LINK_WIDTHS.length - 1)]
@@ -131,7 +120,7 @@ export const MindmapView: React.FC<MindmapViewProps> = ({
                 key={`link-${node.key}`}
                 d={branchPath(parent, node)}
                 fill="none"
-                stroke={branchColor(node.branchIndex)}
+                stroke={knowledgeColor(node.branchIndex)}
                 strokeWidth={linkWidth(node.depth - 1)}
                 strokeLinecap="round"
                 strokeOpacity={node.depth > 2 ? LINK_OPACITY_DEEP : LINK_OPACITY_TRUNK}
@@ -141,7 +130,7 @@ export const MindmapView: React.FC<MindmapViewProps> = ({
 
           {/* 主题 */}
           {layout.nodes.map((node) => {
-            const color = node.isRoot ? undefined : branchColor(node.branchIndex)
+            const color = node.isRoot ? undefined : knowledgeColor(node.branchIndex)
             const clickable = node.hasChildren
             const halfW = node.width / 2
             const halfH = node.height / 2
@@ -202,7 +191,7 @@ export const MindmapView: React.FC<MindmapViewProps> = ({
                     width={node.width}
                     height={node.height}
                     rx={halfH / 2}
-                    fill={`${color}${TINT_L2}`}
+                    fill={`${color}${PALETTE_TINT_ALPHA}`}
                   />
                   <text
                     textAnchor="middle"

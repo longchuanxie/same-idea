@@ -5,6 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/atoms/Button'
 import { TopAppBar } from '@/components/atoms/TopAppBar'
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog'
+import { BeatsView } from '@/components/molecules/knowledge/BeatsView'
 import { CharacterGraphView } from '@/components/molecules/knowledge/CharacterGraphView'
 import { GlossaryView } from '@/components/molecules/knowledge/GlossaryView'
 import { KnowledgeEntryEditDialog, type EditFieldDef } from '@/components/molecules/knowledge/KnowledgeEntryEditDialog'
@@ -29,6 +30,8 @@ import type {
   KnowledgeArtifact,
   MindmapNodeData,
   PaperBriefData,
+  StoryBeat,
+  StoryBeatsData,
 } from '@/types'
 import {
   patchBriefEntryText,
@@ -37,16 +40,19 @@ import {
   patchGraphEdge,
   patchGlossaryTerm,
   patchMindmapNode,
+  patchStoryBeat,
   removeBriefEntry,
   removeGraphEdge,
   removeGraphNode,
   removeGlossaryTerm,
   removeMindmapNode,
+  removeStoryBeat,
   setBriefEntryVerified,
   setGraphEdgeVerified,
   setGraphNodeVerified,
   setGlossaryTermVerified,
   setMindmapNodeVerified,
+  setStoryBeatVerified,
   type BriefSection,
   type MindmapNodePath,
 } from '@/utils/knowledgeEdit'
@@ -71,6 +77,7 @@ type EditState =
   | { kind: 'briefTldr' }
   | { kind: 'briefEntry'; section: BriefSection; index: number }
   | { kind: 'mindmap'; path: MindmapNodePath; node: MindmapNodeData }
+  | { kind: 'beat'; beat: StoryBeat }
 
 function formatTimestamp(value: Date | string): string {
   const date = new Date(value)
@@ -159,6 +166,10 @@ export const KnowledgePage: React.FC = () => {
   )
   const paperBrief = useMemo(
     () => (artifact?.type === 'paper-brief' ? (artifact.data as PaperBriefData) : null),
+    [artifact]
+  )
+  const storyBeats = useMemo(
+    () => (artifact?.type === 'story-beats' ? (artifact.data as StoryBeatsData) : null),
     [artifact]
   )
   const selectedNode = useMemo(
@@ -284,6 +295,14 @@ export const KnowledgePage: React.FC = () => {
           })
         )
         break
+      case 'beat':
+        revise((data) =>
+          patchStoryBeat(data as StoryBeatsData, target.beat.id, {
+            title: values.title,
+            detail: values.detail || undefined,
+          })
+        )
+        break
     }
     toast(COPY.knowledgeEdit.revisedToast)
   }
@@ -308,6 +327,9 @@ export const KnowledgePage: React.FC = () => {
         break
       case 'mindmap':
         revise((data) => removeMindmapNode(data as MindmapNodeData, target.path))
+        break
+      case 'beat':
+        revise((data) => removeStoryBeat(data as StoryBeatsData, target.beat.id))
         break
       case 'briefTldr':
         break
@@ -384,6 +406,16 @@ export const KnowledgePage: React.FC = () => {
             { key: 'detail', label: '补充', multiline: true },
           ],
           { title: editState.node.title, detail: editState.node.detail ?? '' },
+          true
+        )
+      case 'beat':
+        return editDialogInfo(
+          `修订节拍「${editState.beat.title}」`,
+          [
+            { key: 'title', label: '事件名', required: true },
+            { key: 'detail', label: '说明', multiline: true },
+          ],
+          { title: editState.beat.title, detail: editState.beat.detail ?? '' },
           true
         )
     }
@@ -593,6 +625,24 @@ export const KnowledgePage: React.FC = () => {
                 revise((data) => {
                   const list = (data as PaperBriefData)[section]
                   return setBriefEntryVerified(data as PaperBriefData, section, index, !list[index]?.verified)
+                })
+              }
+            />
+          ) : storyBeats ? (
+            <BeatsView
+              data={storyBeats}
+              book={book}
+              bookChapterCount={artifact.meta?.bookChapterCount ?? book.chapters.length}
+              revising={revising}
+              onEditBeat={(beat) => setEditState({ kind: 'beat', beat })}
+              onRemoveBeat={(beatId) => {
+                revise((data) => removeStoryBeat(data as StoryBeatsData, beatId))
+                toast(COPY.knowledgeEdit.removedToast)
+              }}
+              onToggleBeatVerified={(beatId) =>
+                revise((data) => {
+                  const current = (data as StoryBeatsData).beats.find((b) => b.id === beatId)
+                  return setStoryBeatVerified(data as StoryBeatsData, beatId, !current?.verified)
                 })
               }
             />
