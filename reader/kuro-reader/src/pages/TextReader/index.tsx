@@ -776,12 +776,8 @@ export const TextReaderPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookId, chapterId, isLoading, textReadingMode, chapters, book?.chapters, requestPageAfterPagination]);
 
-  // 直链/刷新进入时 store 尚无书目（顶栏书名会显示「未知书籍」）：挂载补一次聚合读取
-  useEffect(() => {
-    if (!useLibraryStore.getState().books.length) {
-      void useLibraryStore.getState().loadBooks();
-    }
-  }, []);
+  // 直链/刷新进入时 store 尚无书目（顶栏书名会显示「未知书籍」）：主加载 effect
+  // 开头的 loadBooks 补读已覆盖此场景（同条件判断），此处不再重复触发
 
   // 统计阅读时长（共享 Hook）
   useReadingStats(bookId);

@@ -135,3 +135,69 @@ describe('splitTextIntoPages', () => {
     for (const page of pages) expect(page.length).toBeLessThanOrEqual(4)
   })
 })
+
+describe('findMaxFitLength 容量播种', () => {
+  it('播种提示不改变结果：任意 hint 下仍返回精确最大值', () => {
+    const fits = (t: string) => t.length <= 37
+    const text = 'x'.repeat(200)
+    const noHint = findMaxFitLength(text, fits, { maxPageLength: 100 })
+    for (const hint of [1, 10, 36, 37, 38, 50, 99, 100]) {
+      expect(findMaxFitLength(text, fits, { maxPageLength: 100, searchHint: hint })).toBe(noHint)
+    }
+  })
+
+  it('提示低于真实容量时线性外探后收敛到精确值', () => {
+    const fits = (t: string) => t.length <= 43
+    const text = 'y'.repeat(120)
+    expect(findMaxFitLength(text, fits, { maxPageLength: 100, searchHint: 40 })).toBe(43)
+  })
+
+  it('提示高于真实容量时收缩窗口仍得精确值', () => {
+    const fits = (t: string) => t.length <= 25
+    const text = 'z'.repeat(120)
+    expect(findMaxFitLength(text, fits, { maxPageLength: 100, searchHint: 60 })).toBe(25)
+  })
+
+  it('越界/非法提示被忽略（与无提示一致）', () => {
+    const fits = (t: string) => t.length <= 7
+    const text = 'a'.repeat(50)
+    const expected = findMaxFitLength(text, fits, { maxPageLength: 20 })
+    expect(findMaxFitLength(text, fits, { maxPageLength: 20, searchHint: 0 })).toBe(expected)
+    expect(findMaxFitLength(text, fits, { maxPageLength: 20, searchHint: 21 })).toBe(expected)
+    expect(findMaxFitLength(text, fits, { maxPageLength: 20, searchHint: Number.NaN })).toBe(expected)
+  })
+})
+
+describe('splitTextIntoPages 页间容量播种', () => {
+  it('播种后产出与无播种逐字节一致（均匀容量）', () => {
+    const fits = (t: string) => t.length <= 23
+    const text = '句子。'.repeat(200)
+    expect(splitTextIntoPages(text, fits, { maxPageLength: 60, searchHint: 20 })).toEqual(
+      splitTextIntoPages(text, fits, { maxPageLength: 60 })
+    )
+  })
+
+  it('播种后产出与无播种逐字节一致（首页容量偏小）', () => {
+    const fits = (t: string, isFirst: boolean) => t.length <= (isFirst ? 12 : 30)
+    const text = '词，句。'.repeat(150)
+    expect(splitTextIntoPages(text, fits, { maxPageLength: 60, searchHint: 29 })).toEqual(
+      splitTextIntoPages(text, fits, { maxPageLength: 60 })
+    )
+  })
+
+  it('均匀文本下探针数显著下降（页间播种生效）', () => {
+    const text = '正文内容。'.repeat(400) // 2000 字符
+    const fits = (t: string) => t.length <= 40
+    const countProbes = () => {
+      let count = 0
+      splitTextIntoPages(text, (t) => { count += 1; return fits(t) }, { maxPageLength: 80 })
+      return count
+    }
+    const seeded = countProbes() // splitTextIntoPages 内部自动播种：第 2 页起命中提示
+    // 参照：禁用播种效果的方式不存在（播种是内部行为），用单页独立二分的下界估算：
+    // 每页纯二分 ≈ log2(80) ≈ 7 探针 + 句读验证；播种后应显著低于该量级
+    const perPageBinaryEstimate = 7
+    const pages = splitTextIntoPages(text, fits, { maxPageLength: 80 })
+    expect(seeded).toBeLessThan(perPageBinaryEstimate * pages.length)
+  })
+})

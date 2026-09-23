@@ -11,6 +11,7 @@ import { pageRepo } from '@/services/storage/pageRepo';
 import { progressRepo } from '@/services/storage/progressRepo';
 import { subLibraryRepo } from '@/services/storage/subLibraryRepo';
 import { tagRepo } from '@/services/storage/tagRepo';
+import { buildTextChapters, warmTextChapterCache } from '@/services/textContent';
 import type { Book, Chapter, ReadingProgress, SubLibrary, Tag } from '@/types';
 import { deriveMergedBookTitle, extractArchiveChapterInfo } from '@/utils/comicChapterSplit';
 import { extractTitleFromFileName } from '@/utils/extractTitle';
@@ -138,6 +139,16 @@ const liveCoverUrls = new Set<string>();
 function trackCoverObjectUrl(url: string): string {
   liveCoverUrls.add(url);
   return url;
+}
+
+/** 导入完成点预热文本书解析缓存：TXT 直接用导入时已拆好的章节落库，
+ *  首次开书即免整本重解析（长网文为秒级收益）。Markdown 的逐章 parseMarkdownDocument
+ *  成本较高，不在导入期跑——留待首次开书回填，此后同样命中缓存 */
+function warmTextCacheFromParsed(bookId: string, parsed: ParsedBook): void {
+  if (parsed.format !== 'text' || !parsed.chapters || parsed.chapters.length === 0) return;
+  const type = parsed.textFile.type;
+  if (type.startsWith('text/markdown') || type.startsWith('text/x-markdown')) return;
+  warmTextChapterCache(bookId, buildTextChapters(parsed.chapters, false), false);
 }
 
 function buildPartialImportWarning(failedFiles: string[], unsupportedFiles: string[]): string | null {
@@ -388,6 +399,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
         await bookFileRepo.save(bookId, parsed.pdfFile);
       } else if (parsed.format === 'text') {
         await bookFileRepo.save(bookId, parsed.textFile);
+        warmTextCacheFromParsed(bookId, parsed);
       }
 
       set({ importProgress: 80 });
@@ -704,6 +716,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
             }
           } else if (parsed.format === 'text') {
             await bookFileRepo.save(bookId, parsed.textFile);
+            warmTextCacheFromParsed(bookId, parsed);
           }
 
           await bookRepo.save({ ...book, tags: [] });

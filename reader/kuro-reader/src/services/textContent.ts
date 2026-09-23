@@ -1,9 +1,11 @@
 import { loadEpubChapters } from '@/services/epubContent';
+import type { ParsedTextChapter } from '@/services/parsers/types';
 import {
   splitMarkdownIntoChapters,
   splitTextIntoChapters,
 } from '@/services/parsers/utils';
 import { bookFileRepo } from '@/services/storage/bookFileRepo';
+import { textChapterCacheRepo } from '@/services/storage/textChapterCacheRepo';
 import type { Chapter } from '@/types';
 import { parseMarkdownDocument, type MarkdownDocument } from '@/utils/markdownDocument';
 
@@ -15,6 +17,52 @@ export interface TextChapter {
 }
 
 const NORMALIZE_CHAPTER_TITLE_PATTERN = /[\s\u3000:：,，.。!！?？;；、\-—_《》<>[\]【】()（）"'“”‘’]/g;
+
+/** 解析结果缓存的并发写去重：同书解析在途时跳过重复落库 */
+const pendingCacheWrites = new Set<string>();
+
+/** 把拆章产物映射为阅读器消费的 TextChapter（Markdown 章附带上解析文档） */
+export const buildTextChapters = (
+  parsedChapters: ParsedTextChapter[],
+  isMarkdown: boolean
+): TextChapter[] =>
+  parsedChapters.map((ch, idx) => {
+    const markdownDocument = isMarkdown ? parseMarkdownDocument(ch.content) : undefined;
+    return {
+      id: `ch${idx + 1}`,
+      title: ch.title || `第${idx + 1}章`,
+      content: markdownDocument?.text ?? ch.content,
+      markdownDocument,
+    };
+  });
+
+/**
+ * 异步预热解析结果缓存（不阻塞调用方；失败静默——下次开书重走解析路径再试）。
+ * 供导入完成点与 loadTextContent 未命中后的回填共用。
+ */
+export const warmTextChapterCache = (
+  bookId: string,
+  chapters: TextChapter[],
+  isMarkdown: boolean
+): void => {
+  if (chapters.length === 0 || pendingCacheWrites.has(bookId)) return;
+  pendingCacheWrites.add(bookId);
+  void textChapterCacheRepo
+    .save({
+      bookId,
+      isMarkdown,
+      totalChars: chapters.reduce((sum, ch) => sum + ch.content.length, 0),
+      chapters,
+      cachedAt: Date.now(),
+    })
+    .catch(() => {
+      // 存储配额不足等写入失败不致命：缓存仅是加速层
+    })
+    .finally(() => {
+      pendingCacheWrites.delete(bookId);
+    });
+};
+
 
 /**
  * 将 URL 中的 chapterId 解析为 textChapters 中的下标。
@@ -72,10 +120,21 @@ export const resolveTextChapterIndex = (
  * - text/plain blob → 直接读取（使用常见文本章节规则拆分）
  * - text/markdown blob → 直接读取（使用 Markdown 标题拆分）
  * - application/epub+zip blob → 提取 XHTML/HTML 章节
+ *
+ * TXT/Markdown 走解析结果缓存（textChapterCache）：命中即免整本解码+拆章+逐章
+ * Markdown 解析——长网文开书从秒级降到一次 IDB 结构化克隆。未命中（首次/旧数据）
+ * 走原解析路径并异步回填缓存。EPUB 不缓存（图片 object URL 跨会话失效）。
  */
 export async function loadTextContent(
   bookId: string
 ): Promise<{ chapters: TextChapter[]; isEpub: boolean; isMarkdown: boolean }> {
+  // 缓存探测先于 blob 读取：命中时连原始文件都不必读。书籍文件导入后不可变
+  // （重复导入按标题拦截、bookId 唯一），缓存记录与 blob 内容不存在漂移。
+  const cached = await textChapterCacheRepo.get(bookId).catch(() => undefined);
+  if (cached && cached.chapters.length > 0) {
+    return { chapters: cached.chapters, isEpub: false, isMarkdown: cached.isMarkdown };
+  }
+
   const blob = await bookFileRepo.get(bookId);
   if (!blob) return { chapters: [], isEpub: false, isMarkdown: false };
 
@@ -88,15 +147,8 @@ export async function loadTextContent(
     const parsedChapters = isMarkdown
       ? splitMarkdownIntoChapters(text)
       : splitTextIntoChapters(text);
-    const chapters = parsedChapters.map((ch, idx) => {
-      const markdownDocument = isMarkdown ? parseMarkdownDocument(ch.content) : undefined;
-      return {
-        id: `ch${idx + 1}`,
-        title: ch.title || `第${idx + 1}章`,
-        content: markdownDocument?.text ?? ch.content,
-        markdownDocument,
-      };
-    });
+    const chapters = buildTextChapters(parsedChapters, isMarkdown);
+    warmTextChapterCache(bookId, chapters, isMarkdown);
     return { chapters, isEpub: false, isMarkdown };
   }
 

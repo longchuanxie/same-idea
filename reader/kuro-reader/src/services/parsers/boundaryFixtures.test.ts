@@ -213,10 +213,17 @@ describe('TXT 编码与结构边界', () => {
     expect(parsed.chapters?.map((c) => c.title)).toEqual(['第一章 CRLF', '第二章 CRLF'])
   })
 
-  it('超长单段（约 220KB）：不崩溃且内容完整', async () => {
+  it('超长单段（约 220KB）：不崩溃、内容完整且按兜底阈值切块', async () => {
     const parsed = await parseText('text/long-paragraph.txt')
-    expect(parsed.chapters).toHaveLength(1)
-    expect(parsed.chapters?.[0].content.length).toBeGreaterThan(200_000)
+    // 超过 10 万字符的无标题整本触发兜底切分：巨型单章会让分页测量/整章 DOM 失去可用性
+    expect(parsed.chapters?.length).toBeGreaterThan(1)
+    expect(parsed.chapters?.[0].title).toBe('正文（一）')
+    const total = parsed.chapters?.reduce((sum, c) => sum + c.content.length, 0) ?? 0
+    expect(total).toBeGreaterThan(200_000)
+    for (const chapter of parsed.chapters ?? []) {
+      // 无换行的单段走字符硬切，每块收在目标大小（3 万字符）附近
+      expect(chapter.content.length).toBeLessThanOrEqual(30_000)
+    }
   })
 })
 

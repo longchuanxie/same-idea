@@ -116,3 +116,43 @@ describe('splitTextIntoChapters 中文数字裸枚举', () => {
     expect(parseChineseNumeral('')).toBeNull()
   })
 })
+
+describe('splitTextIntoChapters 超长无标题正文兜底切分', () => {
+  it('超过阈值的无标题整本按段落边界切成伪章节', () => {
+    const paragraph = '他缓缓抬起头，望向远处连绵起伏的山峦。'.repeat(90)
+    const text = Array.from({ length: 60 }, () => paragraph).join('\n')
+    expect(text.length).toBeGreaterThan(100_000)
+    const chapters = splitTextIntoChapters(text)
+    expect(chapters.length).toBeGreaterThan(1)
+    expect(chapters[0].title).toBe('正文（一）')
+    expect(chapters[1].title).toBe('正文（二）')
+    // 每章收在目标大小附近（段落粒度允许少量超出）
+    for (const chapter of chapters) {
+      expect(chapter.content.length).toBeLessThanOrEqual(32_000)
+    }
+    // 切分无损：全文逐字保留
+    expect(chapters.map((ch) => ch.content).join('\n')).toBe(text)
+  })
+
+  it('未超阈值的无标题整本仍为单章', () => {
+    const text = Array.from({ length: 10 }, () => '普通正文内容。'.repeat(50)).join('\n')
+    const chapters = splitTextIntoChapters(text)
+    expect(chapters).toEqual([{ title: '正文', content: text }])
+  })
+
+  it('有标题的超长书不受兜底切分影响', () => {
+    const paragraph = '长段落内容。'.repeat(20000)
+    const text = ['第一章 起风', paragraph, '第二章 落雨', paragraph].join('\n')
+    expect(text.length).toBeGreaterThan(100_000)
+    const chapters = splitTextIntoChapters(text)
+    expect(chapters.map((ch) => ch.title)).toEqual(['第一章 起风', '第二章 落雨'])
+  })
+
+  it('无换行的超长文本按字符硬切', () => {
+    const text = '字'.repeat(150_000)
+    const chapters = splitTextIntoChapters(text)
+    expect(chapters.length).toBeGreaterThanOrEqual(5)
+    expect(chapters.map((ch) => ch.content).join('')).toBe(text)
+    expect(chapters[0].title).toBe('正文（一）')
+  })
+})

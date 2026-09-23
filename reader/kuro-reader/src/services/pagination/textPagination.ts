@@ -20,6 +20,9 @@ export interface SplitTextIntoPagesOptions {
    *  从 O(整章剩余) 降到 O(单页)——十万字章节分页的强制回流字节量降两个数量级。
    *  上界偏小时只产生略松的页（每页仍经 fitsPage 验证，绝不溢出），不影响正确性。 */
   maxPageLength?: number;
+  /** 容量播种提示（上一页二分得到的最大可容纳长度）：同版式下相邻页容量几乎不变，
+   *  从提示值起步探测可跳过整窗二分的大半探针（结果仍为精确最大值，见 findMaxFitLength） */
+  searchHint?: number;
 }
 
 export interface BreakSearchWindow {
@@ -76,10 +79,15 @@ export function findPreferredBreak(text: string, best: number, search: BreakSear
   return best;
 }
 
+/** 播种起步后的指数外探：步长 1,2,4… 翻倍探测容量上界。容量与提示一致时 2 探针封顶；
+ *  漂移 k 个字符时 bracket 收在 O(log k)，交回二分精确定位（外探退出仅因越窗或
+ *  首次放不下，两种退出都不丢弃未探测区间，精确性不受影响） */
 /**
  * 二分查找文本的最大可容纳前缀长度（配合调用方的测量回调）。
  * 返回 0 表示连最短前缀都放不下。
  * maxPrefix 收窄二分窗口（单次测量的渲染量上界），语义见 splitTextIntoPages。
+ * searchHint 为上一页的实测容量：fits 对前缀单调，先探提示值再从命中侧继续，
+ * 结果与无提示的纯二分完全一致（仍是精确最大值），只是探针更少。
  */
 export function findMaxFitLength(
   text: string,
@@ -92,6 +100,25 @@ export function findMaxFitLength(
   let low = MIN_TEXT_PAGE_LENGTH;
   let high = Math.max(MIN_TEXT_PAGE_LENGTH, Math.min(text.length, bound));
   let best = 0;
+
+  const hint = options.searchHint;
+  if (hint != null && Number.isFinite(hint) && hint >= low && hint <= high) {
+    if (fits(text.slice(0, hint))) {
+      best = hint;
+      let step = 1;
+      let candidate = hint + 1;
+      while (candidate <= high && fits(text.slice(0, candidate))) {
+        best = candidate;
+        step *= 2;
+        candidate = best + step;
+      }
+      low = best + 1;
+      if (candidate <= high) high = candidate - 1;
+    } else {
+      high = hint - 1;
+    }
+  }
+
   while (low <= high) {
     const mid = Math.floor((low + high) / HALF_DIVISOR);
     if (fits(text.slice(0, mid))) {
@@ -123,6 +150,9 @@ export function splitTextIntoPages(
     : UNBOUNDED_PAGE_LENGTH;
   const pages: string[] = [];
   let remaining = content;
+  /** 页间容量播种：上一页二分得到的精确容量。同版式相邻页容量几乎恒定
+   *  （首页标题差一两行），播种后每页探针从整窗二分的 ~10 次降到 ~2-4 次 */
+  let capacityHint = options.searchHint;
 
   while (remaining.length > 0) {
     const isFirstPage = pages.length === 0;
@@ -134,7 +164,11 @@ export function splitTextIntoPages(
       break;
     }
 
-    const best = findMaxFitLength(remaining, (prefix) => fitsPage(prefix, isFirstPage), options);
+    const best = findMaxFitLength(remaining, (prefix) => fitsPage(prefix, isFirstPage), {
+      maxPageLength: options.maxPageLength,
+      searchHint: capacityHint,
+    });
+    if (best > 0) capacityHint = best;
 
     let splitAt = best > 0 ? findPreferredBreak(remaining, best) : MIN_TEXT_PAGE_LENGTH;
 

@@ -114,6 +114,69 @@ const NUMERIC_SEQ_MIN_CANDIDATES = 2;
 const NUMERIC_SEQ_INCREASE_RATIO = 0.5;
 
 /**
+ * 无标题整本的兜底切分阈值与目标块大小（字符）：
+ * 拆不出任何章节标题时整本会落成单个巨型章节——数 MB 正文在分页模式下
+ * 是分钟级测量、滚动模式下是巨 DOM，均不可用。超过触发阈值即按段落
+ * 边界切成目标大小的伪章节（正文（1）、正文（2）……）。
+ */
+const OVERSIZED_SINGLE_CHAPTER_SPLIT_TRIGGER = 100_000;
+const OVERSIZED_SINGLE_CHAPTER_TARGET = 30_000;
+
+/** 中文序号（伪章节标题用）；≥100 回退阿拉伯数字（无标题巨书切出百段以上时仍可读） */
+const CN_ORDINAL_TEENS_BOUND = 20;
+const CN_ORDINAL_HUNDRED_BOUND = 100;
+
+function toChineseOrdinal(n: number): string {
+  const digits = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+  if (n >= CN_ORDINAL_HUNDRED_BOUND) return String(n);
+  if (n <= 10) return n === 10 ? '十' : digits[n];
+  if (n < CN_ORDINAL_TEENS_BOUND) return '十' + digits[n % 10];
+  const tens = Math.floor(n / 10);
+  const ones = n % 10;
+  return digits[tens] + '十' + (ones > 0 ? digits[ones] : '');
+}
+
+/** 超长无标题正文的兜底切分：按行累积到目标大小封块（段落粒度允许少量超出）；
+ *  单行本身超过目标（无换行的整块文本）才按字符硬切 */
+function splitOversizedContent(content: string): ParsedTextChapter[] {
+  const chapters: ParsedTextChapter[] = [];
+  const pushChunk = (lines: string[]) => {
+    if (lines.length === 0) return;
+    const chunkContent = lines.join('\n').trim();
+    if (chunkContent.length === 0) return;
+    chapters.push({
+      title: `正文（${toChineseOrdinal(chapters.length + 1)}）`,
+      content: chunkContent,
+    })
+  }
+
+  let current: string[] = []
+  let currentLength = 0
+  for (const line of content.split('\n')) {
+    if (line.length >= OVERSIZED_SINGLE_CHAPTER_TARGET) {
+      // 单行即超目标：封存当前块，行内按字符硬切成连续片段
+      pushChunk(current)
+      current = []
+      currentLength = 0
+      for (let start = 0; start < line.length; start += OVERSIZED_SINGLE_CHAPTER_TARGET) {
+        pushChunk([line.slice(start, start + OVERSIZED_SINGLE_CHAPTER_TARGET)])
+      }
+      continue
+    }
+    current.push(line)
+    currentLength += line.length + 1
+    if (currentLength >= OVERSIZED_SINGLE_CHAPTER_TARGET) {
+      pushChunk(current)
+      current = []
+      currentLength = 0
+    }
+  }
+  pushChunk(current)
+
+  return chapters
+}
+
+/**
  * 判断一行是否为章节标题。
  * 规则：
  * 1. 不能以全角空格或其他缩进开头（缩进行视为内容行）
@@ -150,7 +213,8 @@ function isChapterTitle(line: string): boolean {
  * 1. 逐行扫描，识别章节标题行
  * 2. 章节标题之间的内容归入该章节
  * 3. 第一个标题之前的内容归入「前言」章节
- * 4. 若未找到任何章节，返回单章节
+ * 4. 若未找到任何章节：短文本整篇作为一个章节；超长文本（>10 万字符）按段落
+ *    边界兜底切分成伪章节，避免巨型单章把阅读器（分页测量/整章 DOM）拖死
  * 5. 数字编号型标题（1. 标题）需通过全文递增一致性验证：真章节的编号
  *    沿文档顺序大致递增，正文里的年份/日期/杂录行则杂乱无序——增幅不足
  *    时整批降级为内容行，避免日记体/杂录被拦腰拆成假章节
@@ -207,8 +271,12 @@ export function splitTextIntoChapters(text: string): ParsedTextChapter[] {
   if (foundFirstChapter) {
     chapters.push({ title: currentTitle, content: lastContent })
   } else if (lastContent) {
-    // 没有找到任何章节，整篇作为一个章节
-    chapters.push({ title: '正文', content: text })
+    // 没有找到任何章节：整篇作为一个章节；超长时兜底切分（见 OVERSIZED_* 注释）
+    if (lastContent.length > OVERSIZED_SINGLE_CHAPTER_SPLIT_TRIGGER) {
+      chapters.push(...splitOversizedContent(lastContent))
+    } else {
+      chapters.push({ title: '正文', content: text })
+    }
   }
 
   // 过滤掉空章节（内容为0字符的章节）

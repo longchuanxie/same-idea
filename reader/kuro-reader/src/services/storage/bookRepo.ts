@@ -8,6 +8,7 @@ import { knowledgeRepo } from './knowledgeRepo'
 import { pageRepo } from './pageRepo'
 import { progressRepo } from './progressRepo'
 import { reviewCardRepo } from './reviewCardRepo'
+import { textChapterCacheRepo } from './textChapterCacheRepo'
 import { vocabRepo } from './vocabRepo'
 
 export const bookRepo = {
@@ -46,7 +47,7 @@ export const bookRepo = {
     await db.delete(STORE_NAMES.covers, id)
   },
 
-  /** 删除一本书及其所有关联数据（页面、封面、原始文件、批注、书签、阅读进度、知识产物） */
+  /** 删除一本书及其所有关联数据（页面、封面、原始文件、批注、书签、阅读进度、知识产物、解析缓存） */
   async deleteFully(id: string): Promise<void> {
     await bookRepo.delete(id);
     await pageRepo.deleteAllPages(id);
@@ -58,5 +59,6 @@ export const bookRepo = {
     await knowledgeRepo.deleteByBookId(id);
     await vocabRepo.deleteByBookId(id);
     await reviewCardRepo.deleteByBookId(id);
+    await textChapterCacheRepo.delete(id);
   },
 }
