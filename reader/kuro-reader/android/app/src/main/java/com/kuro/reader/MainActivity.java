@@ -1,5 +1,6 @@
 package com.kuro.reader;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -20,12 +21,24 @@ public class MainActivity extends BridgeActivity {
     protected void onCreate(Bundle savedInstanceState) {
         registerPlugin(FilePickerPlugin.class);
         registerPlugin(TextFocusPlugin.class);
+        registerPlugin(GenerationKeepAlivePlugin.class);
+        registerPlugin(WidgetBridgePlugin.class);
         super.onCreate(savedInstanceState);
         // 沉浸阅读：JS 侧（StatusBar.hide）隐藏状态栏后，顶部下滑只临时呼出（浮层展示、自动收回，不挤压布局）
         WindowInsetsControllerCompat insetsController =
                 WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
         insetsController.setSystemBarsBehavior(
                 WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+    }
+
+    /**
+     * 小组件点击深链：BridgeActivity.load() 会用启动 Intent 回放本回调（冷启动），
+     * 热启动由系统直接回调——两条路都把路由交给 WidgetBridgePlugin（落盘 + 通知 JS）。
+     */
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        WidgetBridgePlugin.handleLaunchIntent(this, intent);
     }
 
     /**

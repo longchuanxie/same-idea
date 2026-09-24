@@ -1,46 +1,37 @@
 import { create } from 'zustand'
 
+import { isProviderConfigured, type AiProviderConfig } from '@/services/ai/aiClient'
+import { requestGenerationNotificationPermission } from '@/services/knowledge/generationNotification'
 import {
-  chatCompletionJson,
-  isProviderConfigured,
-  type AiProviderConfig,
-} from '@/services/ai/aiClient'
-import { getKnowledgeTask } from '@/services/ai/knowledgeTasks'
-import { BookCorpusError, buildBookCorpus, buildDigestCorpus, type BookCorpus } from '@/services/knowledge/bookCorpus'
+  cancelGenerationTask,
+  enqueueGenerationTask,
+  generationQueuePosition,
+  generationTaskKey,
+  initGenerationQueue,
+  subscribeGenerationQueue,
+  type GenerationExecutor,
+} from '@/services/knowledge/generationQueue'
+import { runKnowledgeGeneration } from '@/services/knowledge/generationRunner'
+import { bookRepo } from '@/services/storage/bookRepo'
 import { knowledgeRepo } from '@/services/storage/knowledgeRepo'
 import { useAppStore } from '@/stores/useAppStore'
+import { useLibraryStore } from '@/stores/useLibraryStore'
 import type {
   Book,
-  ContentKind,
   KnowledgeArtifact,
   KnowledgeArtifactType,
   KnowledgeGenerationOptions,
 } from '@/types'
-import { detectContentKindFromChapters } from '@/utils/contentKind'
-import {
-  normalizeCharacterName,
-  resolveBeatsEvidence,
-  resolveBriefEvidence,
-  resolveGlossaryEvidence,
-  resolveGraphEvidence,
-  stampBriefChapters,
-  stampGlossaryChapters,
-  stampPartialChapters,
-  type GlossaryPartial,
-  type GraphPartial,
-  type InterimBeatsData,
-  type InterimBriefData,
-  type InterimGlossaryData,
-  type InterimGraphData,
-} from '@/utils/knowledgeMerge'
 
-/** 生成任务状态；无条目 = 空闲 */
+/** 生成任务状态；无条目 = 空闲。queued = 已入队等待执行（可在任意页面取消） */
 export interface KnowledgeGenerationState {
-  status: 'running' | 'error'
+  status: 'queued' | 'running' | 'error'
   /** 已完成分块数 */
   done: number
   total: number
   error?: string
+  /** 排队位次（1 起；仅 queued 态有值） */
+  queuePosition?: number
 }
 
 interface KnowledgeState {
@@ -51,6 +42,8 @@ interface KnowledgeState {
   loadArtifacts: (bookId: string) => Promise<void>
   /**
    * 生成（或重新生成）一种知识产物。
+   * 请求进入持久化队列后台执行（串行），本调用在该任务终态时兑现：
+   * 成功 true；失败/取消/重复请求 false。可以离开当前页面，任务继续跑。
    * 覆盖式：同书同类型旧产物被替换（旧件删除记墓碑，新件复用旧 id）。
    * options.scope 限定章节范围（0 起闭区间，to 省略 = 到末尾）；
    * options.incremental 在现有产物上并入新内容（旧证据坐标原样保留）；
@@ -75,27 +68,18 @@ interface KnowledgeState {
   ) => Promise<void>
 }
 
-/** 分块请求失败时的重试次数（单块一次重试，防瞬时抖动毁掉整轮生成） */
-const CHUNK_RETRIES = 1
+const UNCONFIGURED_MESSAGE = '知识库 AI 服务未配置——先到设置里填好服务地址与模型'
 
-/** 图谱任务跨块称呼名单上限（提示词体积护栏：名字注入不喧宾夺主） */
-const KNOWN_NAMES_MAX = 40
-/** 图谱类任务（消费 knownNames + 关系回连已认人物） */
-const GRAPH_TASK_TYPES: readonly KnowledgeArtifactType[] = ['character-graph', 'concept-graph']
+/** 生成调用方传入的书对象（执行时优先用，绕过书架加载时序；终态即清） */
+const pendingBooks = new Map<string, Book>()
+/** generateArtifact 的兑现通道：执行体在任务终态时 resolve */
+const resolvers = new Map<string, (ok: boolean) => void>()
 
-const RANDOM_ID_RADIX = 36
-const RANDOM_ID_SLICE_START = 2
-const RANDOM_ID_SLICE_END = 10
-
-/** 进行中任务的取消句柄（模块级，不入 store 快照） */
-const generationControllers = new Map<string, AbortController>()
-
-function generationKey(bookId: string, type: KnowledgeArtifactType): string {
-  return `${bookId}:${type}`
-}
-
-function makeArtifactId(): string {
-  return `kn-${Date.now()}-${Math.random().toString(RANDOM_ID_RADIX).slice(RANDOM_ID_SLICE_START, RANDOM_ID_SLICE_END)}`
+function resolveTask(key: string, ok: boolean): void {
+  pendingBooks.delete(key)
+  const resolve = resolvers.get(key)
+  resolvers.delete(key)
+  resolve?.(ok)
 }
 
 function providerConfigFromSettings(): AiProviderConfig {
@@ -107,284 +91,225 @@ function providerConfigFromSettings(): AiProviderConfig {
   }
 }
 
-export const useKnowledgeStore = create<KnowledgeState>()((set, get) => ({
-  artifactsByBook: {},
-  generation: {},
+export const useKnowledgeStore = create<KnowledgeState>()((set, get) => {
+  const setGenerationState = (
+    key: string,
+    entry: KnowledgeGenerationState | undefined
+  ) => {
+    set(state => {
+      if (entry === undefined) {
+        const { [key]: _removed, ...rest } = state.generation
+        if (!state.generation[key]) return state
+        return { generation: rest }
+      }
+      return { generation: { ...state.generation, [key]: entry } }
+    })
+  }
 
-  loadArtifacts: async bookId => {
-    const artifacts = await knowledgeRepo.getByBookId(bookId)
-    set(state => ({ artifactsByBook: { ...state.artifactsByBook, [bookId]: artifacts } }))
-  },
-
-  generateArtifact: async (book, type, options) => {
-    const key = generationKey(book.id, type)
-    if (get().generation[key]?.status === 'running') return false
-
-    const config = providerConfigFromSettings()
-    if (!isProviderConfigured(config)) {
-      set(state => ({
+  const setGenerationError = (key: string, error: string) => {
+    set(state => {
+      const current = state.generation[key]
+      return {
         generation: {
           ...state.generation,
           [key]: {
             status: 'error',
-            done: 0,
-            total: 0,
-            error: '知识库 AI 服务未配置——先到设置里填好服务地址与模型',
+            done: current?.done ?? 0,
+            total: current?.total ?? 0,
+            error,
           },
         },
-      }))
-      return false
-    }
+      }
+    })
+  }
 
-    const task = getKnowledgeTask(type)
-    const digestMode = task.corpusMode === 'digest'
-    // 增量补充的基底：现有同类型产物（旧节点/边先入列，新内容只是并进来）
-    const existing = (get().artifactsByBook[book.id] ?? []).filter(a => a.type === type)
-    const baseArtifact = options?.incremental ? existing[0] : undefined
-    const baseData = baseArtifact?.data
-    // 增量的默认范围 = 上次生成之后的章节（书还在长，结尾未知故 to 省略）。
-    // digest 模式例外：骨架本来就是全本压缩视图、生成只要一次调用，
-    // 没有「只补新章」的收益——默认始终整书重梳（显式 scope 仍然尊重）
-    const range =
-      options?.scope ??
-      (digestMode
-        ? undefined
-        : baseArtifact
-          ? { from: baseArtifact.meta?.bookChapterCount ?? baseArtifact.meta?.chapterCount ?? 0 }
-          : undefined)
-
-    let corpus: BookCorpus | null = null
+  /** 取执行用书对象：调用方快照 → 书架内存 → IndexedDB（重启续跑时书架可能未加载完） */
+  const resolveBook = async (bookId: string): Promise<Book | undefined> => {
+    const shelfBook = useLibraryStore.getState().books.find((b) => b.id === bookId)
+    if (shelfBook) return shelfBook
     try {
-      corpus = digestMode ? await buildDigestCorpus(book, range) : await buildBookCorpus(book, range)
-    } catch (e) {
-      const incrementalEmpty = e instanceof BookCorpusError && e.code === 'empty' && range != null
-      const message = incrementalEmpty
-        ? '没有发现需要补充的新章节（书还没有更新）'
-        : e instanceof BookCorpusError
-          ? e.message
-          : '读取书本内容失败'
-      set(state => ({
-        generation: {
-          ...state.generation,
-          [key]: { status: 'error', done: 0, total: 0, error: message },
-        },
-      }))
-      return false
+      return await bookRepo.get(bookId)
+    } catch {
+      return undefined
     }
-    if (!corpus) return false
-    // let 的窄化不进闭包，绑 const 快照供后续回调使用
-    const corpusSnapshot = corpus
-    // 内容视角：用户显式指定优先，否则按文本启发式检测（小说/学术走不同提示词与任务集）
-    const contentKind: ContentKind =
-      book.contentKind && book.contentKind !== 'auto'
-        ? book.contentKind
-        : detectContentKindFromChapters(corpusSnapshot.chapterTexts)
+  }
 
-    const controller = new AbortController()
-    generationControllers.set(key, controller)
-    set(state => ({
-      generation: {
-        ...state.generation,
-        [key]: { status: 'running', done: 0, total: corpusSnapshot.chunks.length },
+  const executeGenerationTask: GenerationExecutor = async ctx => {
+    const key = ctx.record.id
+    const type = ctx.record.type
+    const book = pendingBooks.get(key) ?? (await resolveBook(ctx.record.bookId))
+    if (!book) {
+      const message = '这本书已不在书架上——任务已停止'
+      setGenerationError(key, message)
+      resolveTask(key, false)
+      return { ok: false, error: message }
+    }
+    const config = providerConfigFromSettings()
+    if (!isProviderConfigured(config)) {
+      setGenerationError(key, UNCONFIGURED_MESSAGE)
+      resolveTask(key, false)
+      return { ok: false, error: UNCONFIGURED_MESSAGE }
+    }
+
+    // 覆盖式落库的依据：必须基于库内真实产物（重启续跑时内存缓存未加载，
+    // 不读库会把旧件当不存在，生成出同类型重复产物）
+    if (get().artifactsByBook[book.id] === undefined) {
+      await get().loadArtifacts(book.id)
+    }
+    const existing = (get().artifactsByBook[book.id] ?? []).filter(a => a.type === type)
+    setGenerationState(key, { status: 'running', done: 0, total: 0 })
+
+    const result = await runKnowledgeGeneration({
+      book,
+      type,
+      options: ctx.record.options,
+      config,
+      signal: ctx.signal,
+      existing,
+      checkpoint: ctx.checkpoint,
+      onProgress: (done, total) => {
+        set(state => {
+          const current = state.generation[key]
+          if (current?.status !== 'running') return state
+          return {
+            generation: { ...state.generation, [key]: { ...current, done, total } },
+          }
+        })
+        ctx.onProgress(done, total)
       },
-    }))
+      onCheckpoint: checkpoint => ctx.onCheckpoint(checkpoint),
+    })
 
-    const fail = (error: string) => {
-      generationControllers.delete(key)
-      set(state => {
-        const current = state.generation[key]
-        return {
-          generation: {
-            ...state.generation,
-            [key]: {
-              status: 'error',
-              done: current?.done ?? 0,
-              total: corpusSnapshot.chunks.length,
-              error,
-            },
-          },
-        }
-      })
-      return false
+    if (!result.ok) {
+      if (result.cancelled) {
+        // 取消与原实现一致：状态清除，不落错误
+        setGenerationState(key, undefined)
+        resolveTask(key, false)
+        return { ok: false, cancelled: true }
+      }
+      setGenerationError(key, result.error)
+      resolveTask(key, false)
+      return { ok: false, error: result.error }
     }
 
-    const partials: { label: string; data: unknown }[] = []
-    // 跨块称呼一致性：已确认实体名随分块滚动累积，注入后续片段提示词
-    const isGraphTask = GRAPH_TASK_TYPES.includes(type)
-    const knownNames: string[] = []
-    const knownNameIds = new Set<string>()
-    for (let index = 0; index < corpusSnapshot.chunks.length; index++) {
-      const chunk = corpusSnapshot.chunks[index]
-      const messages = task.buildMessages({
-        bookTitle: book.title,
-        author: book.author || undefined,
-        chunkLabel: chunk.label,
-        chunkText: chunk.text,
-        chunkIndex: index,
-        chunkTotal: corpusSnapshot.chunks.length,
-        contentKind,
-        detail:
-          type === 'character-graph' || type === 'concept-graph' ? options?.detail : undefined,
-        incremental: Boolean(baseArtifact),
-        knownNames: isGraphTask && knownNames.length > 0 ? [...knownNames] : undefined,
-      })
-
-      let parsed: unknown | null = null
-      let lastError: unknown = null
-      for (let attempt = 0; attempt <= CHUNK_RETRIES; attempt++) {
-        try {
-          const raw = await chatCompletionJson<unknown>(config, {
-            messages,
-            signal: controller.signal,
-          })
-          parsed = task.parsePartial(raw, isGraphTask ? [...knownNames] : undefined)
-          lastError = null
-          break
-        } catch (e) {
-          if (controller.signal.aborted) {
-            generationControllers.delete(key)
-            set(state => {
-              const { [key]: _removed, ...rest } = state.generation
-              return { generation: rest }
-            })
-            return false
-          }
-          lastError = e
-        }
-      }
-      if (lastError != null) {
-        return fail((lastError as Error).message || 'AI 请求失败')
-      }
-      if (parsed != null) {
-        // 图谱任务滚动累积已确认称呼（跨块提示词 + 关系回连的依据）
-        if (isGraphTask) {
-          for (const character of (parsed as GraphPartial).characters) {
-            const id = normalizeCharacterName(character.name)
-            if (id && !knownNameIds.has(id) && knownNames.length < KNOWN_NAMES_MAX) {
-              knownNameIds.add(id)
-              knownNames.push(character.name)
-            }
-          }
-        }
-        // 图谱/术语/速览片段盖上分块覆盖章节（回原文链路：条目的章节并集来源）
-        const stamped =
-          type === 'character-graph' || type === 'concept-graph'
-            ? stampPartialChapters(parsed as GraphPartial, chunk.chapterIndexes)
-            : type === 'glossary'
-              ? stampGlossaryChapters(parsed as GlossaryPartial, chunk.chapterIndexes)
-              : type === 'paper-brief'
-                ? stampBriefChapters(parsed as InterimBriefData, chunk.chapterIndexes)
-                : parsed
-        // 增量的导图分支加前缀，避免与基底里的「片段N」撞名
-        const label =
-          baseArtifact && type === 'mindmap' && corpusSnapshot.coveredRange
-            ? `第${chunk.chapterIndexes[0] + 1}章起`
-            : chunk.label
-        partials.push({ label, data: stamped })
-      }
-
-      const current = get().generation[key]
-      if (current?.status === 'running') {
-        set(state => ({
-          generation: { ...state.generation, [key]: { ...current, done: index + 1 } },
-        }))
-      }
-    }
-    generationControllers.delete(key)
-
-    if (partials.length === 0) {
-      return fail('AI 没有返回任何可用的分析结果')
-    }
-
-    // 合并/证据定位/落库全程兜底：任一环抛错若不接住，generation[key] 会永久
+    // 落库全程兜底：任一环抛错若不接住，generation[key] 会永久
     // 卡在 running，重入守卫（入口 status==='running' 拦截）就此锁死该书该类型
     try {
-      let data = task.merge(book.title, partials, baseData)
-      if (type === 'character-graph' || type === 'concept-graph') {
-        // 证据摘句在真实章节文本中校验定位（防幻觉引文），换成可跳转的章内坐标
-        data = resolveGraphEvidence(data as InterimGraphData, corpusSnapshot.chapterTexts)
-      } else if (type === 'glossary') {
-        data = resolveGlossaryEvidence(data as InterimGlossaryData, corpusSnapshot.chapterTexts)
-      } else if (type === 'paper-brief') {
-        data = resolveBriefEvidence(data as InterimBriefData, corpusSnapshot.chapterTexts)
-      } else if (type === 'story-beats') {
-        // 骨架摘句是真章子串，优先在节拍自己的章里逐字定位
-        data = resolveBeatsEvidence(data as InterimBeatsData, corpusSnapshot.chapterTexts)
+      for (const staleId of result.staleArtifactIds) {
+        await knowledgeRepo.remove(staleId)
       }
-      if (task.isEmpty(data)) {
-        const emptyHint: Record<KnowledgeArtifactType, string> = {
-          'character-graph': '这本书提不出足够的人物关系（文本里可能没有明确的人物互动）',
-          'concept-graph':
-            '这本书提不出足够的概念关系（学术性文本才有清晰的概念网络，可试试切换内容类型）',
-          mindmap: '这本书提不出可用的结构大纲',
-          glossary: '这本书提不出明确的概念术语（可能不是学术性文本，可试试切换内容类型）',
-          'paper-brief': '这篇文本提不出速览卡（贡献、局限与疑问都需要明确的论述文本）',
-          'story-beats': '这本书提不出叙事节拍（节拍梳理适合多章长篇，短文看不出结构起伏）',
-        }
-        return fail(emptyHint[type])
-      }
-
-      // 覆盖式落库：复用同类型旧件 id（保留引用稳定性），删除其余同类型件
-      const reusedId = existing[0]?.id ?? makeArtifactId()
-      for (const old of existing) {
-        if (old.id !== reusedId) await knowledgeRepo.remove(old.id)
-      }
-
-      const now = new Date()
-      const artifact: KnowledgeArtifact = {
-        id: reusedId,
-        bookId: book.id,
-        type,
-        title: task.artifactTitle,
-        data,
-        meta: {
-          chapterCount: corpusSnapshot.coveredChapterCount,
-          contentFingerprint: corpusSnapshot.fingerprint,
-          contentKind,
-          bookChapterCount: corpusSnapshot.chapterCount,
-          analyzedChunkCount: corpusSnapshot.chunks.length,
-          totalChunkCount: corpusSnapshot.totalChunkCount,
-          ...(corpusSnapshot.coveredRange ? { scope: corpusSnapshot.coveredRange } : {}),
-          ...((type === 'character-graph' || type === 'concept-graph') && options?.detail
-            ? { detail: options.detail }
-            : {}),
-        },
-        generator: 'ai',
-        createdAt: existing[0]?.createdAt ?? now,
-        updatedAt: now,
-      }
-      await knowledgeRepo.save(artifact)
+      await knowledgeRepo.save(result.artifact)
       await get().loadArtifacts(book.id)
 
-      set(state => {
-        const { [key]: _removed, ...rest } = state.generation
-        return { generation: rest }
-      })
-      return true
+      setGenerationState(key, undefined)
+      resolveTask(key, true)
+      return { ok: true }
     } catch (e) {
-      return fail(e instanceof Error ? e.message : '知识件生成失败')
+      const message = e instanceof Error ? e.message : '知识件生成失败'
+      setGenerationError(key, message)
+      resolveTask(key, false)
+      return { ok: false, error: message }
     }
-  },
+  }
 
-  cancelGeneration: (bookId, type) => {
-    generationControllers.get(generationKey(bookId, type))?.abort()
-  },
+  // 队列状态 → generation 条目镜像：重启续跑的任务补挂排队条目（任意页面可见可取消）
+  subscribeGenerationQueue((_event, records) => {
+    set(state => {
+      let generation = state.generation
+      let changed = false
+      for (const record of records) {
+        if (!generation[record.id]) {
+          generation = {
+            ...generation,
+            [record.id]: { status: 'queued', done: record.done, total: record.total },
+          }
+          changed = true
+        }
+      }
+      for (const record of records) {
+        if (record.status !== 'queued') continue
+        const entry = generation[record.id]
+        if (entry?.status !== 'queued') continue
+        const position = generationQueuePosition(record.id)
+        if (entry.queuePosition !== position) {
+          generation = { ...generation, [record.id]: { ...entry, queuePosition: position } }
+          changed = true
+        }
+      }
+      return changed ? { generation } : state
+    })
+  })
 
-  removeArtifact: async (bookId, artifactId) => {
-    await knowledgeRepo.remove(artifactId)
-    await get().loadArtifacts(bookId)
-  },
+  initGenerationQueue(executeGenerationTask)
 
-  updateArtifactData: async (bookId, artifactId, mutate) => {
-    const artifact = await knowledgeRepo.get(artifactId)
-    if (!artifact || artifact.bookId !== bookId) return
-    const updated: KnowledgeArtifact = {
-      ...artifact,
-      data: mutate(artifact.data),
-      manualEditCount: (artifact.manualEditCount ?? 0) + 1,
-      updatedAt: new Date(),
-    }
-    await knowledgeRepo.save(updated)
-    await get().loadArtifacts(bookId)
-  },
-}))
+  return {
+    artifactsByBook: {},
+    generation: {},
+
+    loadArtifacts: async bookId => {
+      const artifacts = await knowledgeRepo.getByBookId(bookId)
+      set(state => ({ artifactsByBook: { ...state.artifactsByBook, [bookId]: artifacts } }))
+    },
+
+    generateArtifact: async (book, type, options) => {
+      const key = generationTaskKey(book.id, type)
+      const current = get().generation[key]
+      if (current?.status === 'running' || current?.status === 'queued') return false
+
+      const config = providerConfigFromSettings()
+      if (!isProviderConfigured(config)) {
+        setGenerationError(key, UNCONFIGURED_MESSAGE)
+        return false
+      }
+
+      // 通知权限（Android 13+）：首次生成时请求，未授权不拦生成
+      void requestGenerationNotificationPermission()
+
+      setGenerationState(key, { status: 'queued', done: 0, total: 0 })
+      pendingBooks.set(key, book)
+      const outcome = await enqueueGenerationTask({
+        bookId: book.id,
+        bookTitle: book.title,
+        type,
+        options,
+      })
+      if (outcome === 'exists') {
+        // 记录已在队列（如重启续跑挂起中）：入口守卫按重复请求处理
+        pendingBooks.delete(key)
+        return false
+      }
+      return await new Promise<boolean>(resolve => {
+        resolvers.set(key, resolve)
+      })
+    },
+
+    cancelGeneration: (bookId, type) => {
+      const key = generationTaskKey(bookId, type)
+      const outcome = cancelGenerationTask(key)
+      if (outcome === 'cancelled-queued') {
+        // 排队任务没有执行体收尾：这里直接清状态并兑现
+        setGenerationState(key, undefined)
+        resolveTask(key, false)
+      }
+      // running：执行体感知 abort 后自行清状态并兑现；not-found：与原实现一致为 no-op
+    },
+
+    removeArtifact: async (bookId, artifactId) => {
+      await knowledgeRepo.remove(artifactId)
+      await get().loadArtifacts(bookId)
+    },
+
+    updateArtifactData: async (bookId, artifactId, mutate) => {
+      const artifact = await knowledgeRepo.get(artifactId)
+      if (!artifact || artifact.bookId !== bookId) return
+      const updated: KnowledgeArtifact = {
+        ...artifact,
+        data: mutate(artifact.data),
+        manualEditCount: (artifact.manualEditCount ?? 0) + 1,
+        updatedAt: new Date(),
+      }
+      await knowledgeRepo.save(updated)
+      await get().loadArtifacts(bookId)
+    },
+  }
+})

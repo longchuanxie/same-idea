@@ -7,6 +7,7 @@ import { ToastHost } from '@/components/atoms/Toast';
 import { AuthGuard } from '@/components/layouts/AuthGuard';
 import { MainLayout } from '@/components/layouts/MainLayout';
 import { ROUTES } from '@/constants/routes';
+import { useDesktopWidgets } from '@/hooks/useDesktopWidgets';
 import { AskLibraryPage } from '@/pages/Ask';
 import { AtlasPage } from '@/pages/Atlas';
 import { AuthPage } from '@/pages/Auth';
@@ -29,6 +30,7 @@ import { TagsPage } from '@/pages/Tags';
 import { TextReaderPage } from '@/pages/TextReader';
 import { VocabularyPage } from '@/pages/Vocabulary';
 import { consumeBackPress } from '@/services/backHandler';
+import { initGenerationBackground } from '@/services/knowledge/generationBackground';
 import { useAppStore } from '@/stores/useAppStore';
 import { isNativePlatform, setStatusBarHidden } from '@/utils/capacitor';
 
@@ -41,8 +43,19 @@ const BODY_LARGE_SCALE = 1.125;
 const getBodyFontFamily = (fontFamily: 'literata' | 'inter'): string =>
   fontFamily === 'literata' ? "'Literata', serif" : "'Inter', sans-serif";
 
+/** Router 内部宿主：小组件深链导航与数据推送（useNavigate 需要路由上下文） */
+const WidgetRouteHost: React.FC = () => {
+  useDesktopWidgets();
+  return null;
+};
+
 const App: React.FC = () => {
   const { theme, settings } = useAppStore();
+
+  // 知识库生成后台运行：启动持久化队列、续跑上次中断的任务、联动通知与前台保活
+  useEffect(() => {
+    void initGenerationBackground();
+  }, []);
 
   // Android 硬件返回键：浮层优先关闭 → 路由后退 → 退出应用
   useEffect(() => {
@@ -120,6 +133,8 @@ const App: React.FC = () => {
 
   return (
     <BrowserRouter>
+      {/* 小组件深链导航依赖 useNavigate，必须在 Router 内部挂载 */}
+      <WidgetRouteHost />
       <ToastHost />
       <Routes>
         <Route path={ROUTES.AUTH} element={<AuthPage />} />

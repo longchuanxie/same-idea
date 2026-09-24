@@ -21,8 +21,10 @@ const DB_NAME = 'kuro-reader-db'
  * - v9: 新增 reviewCards store（复习席：术语卡/批注派生复习卡的排期状态）
  * - v10: 新增 vocabEntries store（生词本：划词查过的词，进复习队列）
  * - v11: 新增 textChapterCache store（文本书解析结果缓存：开书免整本重解析）
+ * - v12: 新增 generationTasks store（知识库生成任务队列：分块 checkpoint 持久化，
+ *        App 被杀/重启后自动续跑，后台运行的基础）
  */
-const DB_VERSION = 11
+const DB_VERSION = 12
 
 /**
  * v3 版本号常量（用于 upgrade 回调中的 oldVersion 比较）
@@ -83,6 +85,15 @@ const V10_VOCAB_ENTRIES = 10
 const V11_TEXT_CHAPTER_CACHE = 11
 
 /**
+ * v12 版本常量
+ *
+ * 当 oldVersion < V12_GENERATION_TASKS 时表示数据库尚未包含 generationTasks store。
+ * 知识库生成任务的持久化队列：任务记录携带分块 checkpoint，
+ * 进程被杀后下次启动按记录续跑。
+ */
+const V12_GENERATION_TASKS = 12
+
+/**
  * 对象存储（object store）名称常量
  *
  * 所有 storage 子模块应通过此对象引用 store 名称，
@@ -106,6 +117,7 @@ export const STORE_NAMES = {
   reviewCards: 'reviewCards',
   vocabEntries: 'vocabEntries',
   textChapterCache: 'textChapterCache',
+  generationTasks: 'generationTasks',
 } as const
 
 /**
@@ -170,6 +182,9 @@ export function getDB(): Promise<IDBPDatabase> {
         }
         if (oldVersion < V11_TEXT_CHAPTER_CACHE && !db.objectStoreNames.contains(STORE_NAMES.textChapterCache)) {
           db.createObjectStore(STORE_NAMES.textChapterCache, { keyPath: 'bookId' })
+        }
+        if (oldVersion < V12_GENERATION_TASKS && !db.objectStoreNames.contains(STORE_NAMES.generationTasks)) {
+          db.createObjectStore(STORE_NAMES.generationTasks, { keyPath: 'id' })
         }
       },
       // 本页升级被其他标签页的旧连接阻塞：如实告知（不 reject——旧标签页关闭后会自动完成升级）

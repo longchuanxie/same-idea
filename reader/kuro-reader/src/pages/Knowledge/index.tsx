@@ -218,6 +218,7 @@ export const KnowledgePage: React.FC = () => {
   const task = getKnowledgeTask(artifact.type)
   const generationState = generation[`${book.id}:${artifact.type}`]
   const isRunning = generationState?.status === 'running'
+  const isQueued = generationState?.status === 'queued'
   const aiReady = isProviderConfigured({
     baseUrl: settings.knowledgeAiUrl,
     apiKey: settings.knowledgeAiKey,
@@ -444,7 +445,7 @@ export const KnowledgePage: React.FC = () => {
           </button>
           <button
             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-container transition-colors text-on-surface-variant hover:text-primary disabled:opacity-40"
-            disabled={isRunning}
+            disabled={isRunning || isQueued}
             onClick={() => {
               setShowMoreMenu(false)
               void handleRegenerate()
@@ -523,6 +524,25 @@ export const KnowledgePage: React.FC = () => {
                 {revising ? 'task_alt' : 'edit_note'}
               </span>
               {revising ? '完成修订' : COPY.knowledgeEdit.revise}
+            </button>
+          </div>
+        )}
+
+        {/* 排队中：任务已进后台队列（串行执行，可离开页面） */}
+        {isQueued && (
+          <div className="mb-3 flex items-center justify-between rounded-card border border-outline-variant bg-surface-container-low p-4">
+            <span className="font-label text-label-md text-on-surface-variant">
+              排队中
+              {generationState?.queuePosition != null && generationState.queuePosition > 1
+                ? ` · 第 ${generationState.queuePosition} 位`
+                : ''}
+              <span className="text-on-surface-faint"> · 退出页面也会继续</span>
+            </span>
+            <button
+              className="font-label text-label-sm text-on-surface-variant hover:text-seal transition-colors"
+              onClick={() => cancelGeneration(book.id, artifact.type)}
+            >
+              取消
             </button>
           </div>
         )}

@@ -29,10 +29,8 @@ export interface BookCorpus {
   coveredChapterCount: number
   /** 实际覆盖的章索引区间（未限范围时为 null）——meta.scope 的落库依据 */
   coveredRange: { from: number; to: number } | null
-  /** 切块总数（截断前的完整块数；分析完整性的对账依据） */
+  /** 切块总数（与 chunks.length 一致；字段保留供产物 meta 对账兼容） */
   totalChunkCount: number
-  /** 体量护栏是否截断了块（true = 分析不完整，UI 必须显性告警） */
-  truncated: boolean
   totalChars: number
   /** 内容指纹：章节量+分块长度+块头部的确定性哈希，内容变化后提示重生成 */
   fingerprint: string
@@ -45,8 +43,6 @@ export interface BookCorpus {
 export const CHUNK_TARGET_CHARS = 6000
 /** 单章超长时的切分上限 */
 export const CHUNK_SPLIT_CHARS = 9000
-/** 分块总数上限（成本护栏：超长书取前 N 块，指纹记录真实块数） */
-export const MAX_CHUNKS = 60
 
 /** 全书骨架（digest）总预算：压在单块提示词注入上限（8k）之内，任何模型都吃得下 */
 export const DIGEST_BUDGET_CHARS = 7600
@@ -198,8 +194,9 @@ export async function buildBookCorpus(
     throw new BookCorpusError('这本书提不出可分析的文本（可能没有文字层）', 'empty')
   }
 
-  const allChunks = packCorpusEntries(entries)
-  const chunks = allChunks.slice(0, MAX_CHUNKS)
+  // 分块数由全书字数自然决定（字数/6k 目标块），不设硬上限——
+  // 长书全本覆盖靠分块并发控制耗时，不再以「取前 N 块」截断分析
+  const chunks = packCorpusEntries(entries)
   const totalChars = chunks.reduce((sum, chunk) => sum + chunk.text.length, 0)
   const coveredIndexes = [...new Set(chunks.flatMap((chunk) => chunk.chapterIndexes))]
   const coveredRange =
@@ -212,8 +209,7 @@ export async function buildBookCorpus(
     chapterCount,
     coveredChapterCount: coveredIndexes.length,
     coveredRange,
-    totalChunkCount: allChunks.length,
-    truncated: allChunks.length > chunks.length,
+    totalChunkCount: chunks.length,
     totalChars,
     chapterTexts,
     fingerprint: computeCorpusFingerprint(chunks, coveredIndexes.length),
@@ -329,7 +325,6 @@ export async function buildDigestCorpus(
     coveredChapterCount: coveredIndexes.length,
     coveredRange,
     totalChunkCount: 1,
-    truncated: false,
     totalChars: text.length,
     chapterTexts,
     fingerprint: computeCorpusFingerprint([chunk], chapterCount),

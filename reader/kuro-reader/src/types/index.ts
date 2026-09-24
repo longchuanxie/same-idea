@@ -454,7 +454,7 @@ export interface KnowledgeArtifact {
     detail?: GraphDetailLevel
     /** 实际分析的分块数（与 totalChunkCount 对账：分析完整性的凭据） */
     analyzedChunkCount?: number
-    /** 截断前的完整分块数（> analyzedChunkCount 即分析被体量护栏截断） */
+    /** 分块总数（分块数由全书字数决定；字段保留供旧产物 meta 兼容） */
     totalChunkCount?: number
   }
   generator: 'ai' | 'manual'

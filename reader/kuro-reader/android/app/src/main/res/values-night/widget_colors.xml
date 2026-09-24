@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 夜间模式小组件配色：与 .dark 色板一致（暖黑纸面 + 暖白墨字） -->
+<resources>
+    <color name="widget_card_bg">#24211D</color>
+    <color name="widget_ink">#EDE7DB</color>
+    <color name="widget_ink_soft">#B5AD9E</color>
+    <color name="widget_ink_faint">#807A6D</color>
+    <color name="widget_progress_track">#3A362D</color>
+    <color name="widget_cover_placeholder">#322E27</color>
+    <color name="widget_seal">#BC4529</color>
+</resources>

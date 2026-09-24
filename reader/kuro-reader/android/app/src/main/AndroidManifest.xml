@@ -38,6 +38,34 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- 知识库生成前台保活：进程前台优先级防 Doze 限网/回收，通知独家持有生成进度 -->
+        <service
+            android:name=".GenerationKeepAliveService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <!-- 桌面小组件：继续阅读 / 阅读统计（数据由 JS 侧 WidgetBridge 推送） -->
+        <receiver
+            android:name=".widget.ContinueReadingWidgetProvider"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/continue_reading_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".widget.ReadingStatsWidgetProvider"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/reading_stats_widget_info" />
+        </receiver>
     </application>
 
     <!-- Network -->
@@ -53,5 +81,10 @@
 
     <!-- Keep screen on while reading -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- 知识库生成后台运行：前台服务（dataSync）保活进程 + 进度通知 -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
 </manifest>

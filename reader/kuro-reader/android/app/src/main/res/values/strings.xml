@@ -4,4 +4,6 @@
     <string name="title_activity_main">Kuro Reader</string>
     <string name="package_name">com.kuro.reader</string>
     <string name="custom_url_scheme">com.kuro.reader</string>
+    <string name="widget_continue_description">继续阅读</string>
+    <string name="widget_stats_description">阅读统计</string>
 </resources>

@@ -66,6 +66,11 @@ export interface ChatJsonOptions {
   signal?: AbortSignal
   /** 采样温度；提取类任务用低值 */
   temperature?: number
+  /**
+   * 流式接收（stream:true）：响应持续有数据，长生成不再被网关/代理按
+   * 「空闲连接」掐断，也不用等完整响应一次性到达。默认 false 保持轻量请求原样。
+   */
+  stream?: boolean
 }
 
 const DEFAULT_TIMEOUT_MS = 120_000
@@ -89,6 +94,7 @@ export async function chatCompletionJson<T>(
   if (!base) throw new AiRequestError('AI 服务地址未配置')
   if (!config.model.trim()) throw new AiRequestError('AI 模型未配置')
 
+  // 超时守护覆盖请求 + 响应体读取全程：掐的不只是连接建立，还有慢慢吞吞的读流
   const timeoutController = new AbortController()
   const timeoutId = window.setTimeout(() => timeoutController.abort(), options.timeoutMs ?? DEFAULT_TIMEOUT_MS)
   // 外部取消信号（生成任务的 AbortController）联动到超时控制器
@@ -99,52 +105,116 @@ export async function chatCompletionJson<T>(
     else externalSignal.addEventListener('abort', linkAbort, { once: true })
   }
 
-  let response: Response
   try {
-    response = await fetch(chatCompletionsUrl(base), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(config.apiKey.trim() ? { Authorization: `Bearer ${config.apiKey.trim()}` } : {}),
-      },
-      body: JSON.stringify({
-        model: config.model.trim(),
-        messages: options.messages,
-        temperature: options.temperature ?? EXTRACT_TEMPERATURE,
-        stream: false,
-      }),
-      signal: timeoutController.signal,
-    })
-  } catch (e) {
-    if (externalSignal?.aborted) throw new AiRequestError('已取消')
-    if (timeoutController.signal.aborted) throw new AiRequestError('AI 服务响应超时')
-    throw new AiRequestError(`无法连接 AI 服务：${(e as Error).message}`)
+    let response: Response
+    try {
+      response = await fetch(chatCompletionsUrl(base), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(config.apiKey.trim() ? { Authorization: `Bearer ${config.apiKey.trim()}` } : {}),
+        },
+        body: JSON.stringify({
+          model: config.model.trim(),
+          messages: options.messages,
+          temperature: options.temperature ?? EXTRACT_TEMPERATURE,
+          stream: options.stream === true,
+        }),
+        signal: timeoutController.signal,
+      })
+    } catch (e) {
+      if (externalSignal?.aborted) throw new AiRequestError('已取消')
+      if (timeoutController.signal.aborted) throw new AiRequestError('AI 服务响应超时')
+      throw new AiRequestError(`无法连接 AI 服务：${(e as Error).message}`)
+    }
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => '')
+      throw new AiRequestError(
+        `AI 服务返回 ${response.status}${body ? `：${body.slice(0, ERROR_BODY_PREVIEW_CHARS)}` : ''}`,
+        response.status
+      )
+    }
+
+    const contentType = response.headers.get('Content-Type') ?? ''
+    let content: string
+    if (options.stream === true && contentType.includes('text/event-stream')) {
+      content = await readStreamContent(response, timeoutController, externalSignal)
+    } else {
+      // 非流式路径（含端点不支持 stream、按普通 JSON 一次性返回的情况）
+      const payload = (await response.json().catch(() => null)) as {
+        choices?: { message?: { content?: string } }[]
+      } | null
+      if (!payload) {
+        // 200 但响应体不是 JSON（网关错误页等）：语法错误冒泡用户看不懂
+        throw new AiRequestError('AI 服务返回了非 JSON 响应（可能被网关/代理拦截）')
+      }
+      content = payload.choices?.[0]?.message?.content ?? ''
+    }
+
+    const parsed = extractJsonPayload(content)
+    if (parsed == null) {
+      throw new AiRequestError('AI 没有返回可解析的 JSON 结果')
+    }
+    return parsed as T
   } finally {
     window.clearTimeout(timeoutId)
     externalSignal?.removeEventListener('abort', linkAbort)
   }
+}
 
-  if (!response.ok) {
-    const body = await response.text().catch(() => '')
-    throw new AiRequestError(
-      `AI 服务返回 ${response.status}${body ? `：${body.slice(0, ERROR_BODY_PREVIEW_CHARS)}` : ''}`,
-      response.status
-    )
+/**
+ * 流式响应聚合：按 SSE `data:` 行累积 delta.content，[DONE] 收尾。
+ * 读流中途的断连/取消/超时统一翻译成与请求阶段一致的错误文案；
+ * 单行解析失败（心跳行等）跳过不致命。
+ */
+async function readStreamContent(
+  response: Response,
+  timeoutController: AbortController,
+  externalSignal?: AbortSignal
+): Promise<string> {
+  const parts: string[] = []
+  const consumeLine = (line: string): void => {
+    if (!line.startsWith('data:')) return
+    const data = line.slice('data:'.length).trim()
+    if (!data || data === '[DONE]') return
+    try {
+      const chunk = JSON.parse(data) as {
+        choices?: { delta?: { content?: string }; message?: { content?: string } }[]
+      }
+      const delta = chunk.choices?.[0]?.delta?.content ?? chunk.choices?.[0]?.message?.content ?? ''
+      if (delta) parts.push(delta)
+    } catch {
+      // 非 JSON 行（网关心跳等）：跳过
+    }
   }
 
-  const payload = (await response.json().catch(() => null)) as {
-    choices?: { message?: { content?: string } }[]
-  } | null
-  if (!payload) {
-    // 200 但响应体不是 JSON（网关错误页等）：语法错误冒泡用户看不懂
-    throw new AiRequestError('AI 服务返回了非 JSON 响应（可能被网关/代理拦截）')
+  try {
+    const reader = response.body?.getReader() ?? null
+    if (!reader) {
+      // 环境不提供流式读取（罕见）：退化为整段文本按行解析
+      const text = await response.text()
+      for (const line of text.split(/\r?\n/)) consumeLine(line)
+    } else {
+      const decoder = new TextDecoder()
+      let buffer = ''
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split(/\r?\n/)
+        buffer = lines.pop() ?? ''
+        for (const line of lines) consumeLine(line)
+      }
+      buffer += decoder.decode()
+      if (buffer) consumeLine(buffer)
+    }
+  } catch (e) {
+    if (externalSignal?.aborted) throw new AiRequestError('已取消')
+    if (timeoutController.signal.aborted) throw new AiRequestError('AI 服务响应超时')
+    throw new AiRequestError(`AI 服务响应中断：${(e as Error).message}`)
   }
-  const content = payload.choices?.[0]?.message?.content ?? ''
-  const parsed = extractJsonPayload(content)
-  if (parsed == null) {
-    throw new AiRequestError('AI 没有返回可解析的 JSON 结果')
-  }
-  return parsed as T
+  return parts.join('')
 }
 
 /**

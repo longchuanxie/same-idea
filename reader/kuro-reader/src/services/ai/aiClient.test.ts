@@ -17,6 +17,18 @@ function mockFetchOnce(body: unknown, status = 200) {
   return vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status }))
 }
 
+/** 构造 SSE 流式响应：逐行下发后正常收尾 */
+function sseResponse(lines: string[]): Response {
+  const encoder = new TextEncoder()
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      for (const line of lines) controller.enqueue(encoder.encode(line))
+      controller.close()
+    },
+  })
+  return new Response(stream, { status: 200, headers: { 'Content-Type': 'text/event-stream' } })
+}
+
 afterEach(() => {
   vi.unstubAllGlobals()
 })
@@ -103,6 +115,51 @@ describe('chatCompletionJson', () => {
     await expect(
       chatCompletionJson(baseConfig, { messages: [{ role: 'user', content: 'x' }] })
     ).rejects.toMatchObject({ status: 401 })
+  })
+
+  it('流式：SSE delta 逐段累积成完整 JSON（请求体带 stream:true）', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      sseResponse([
+        'data: {"choices":[{"delta":{"content":"{\\"chara"}}]}\n\n',
+        ': keep-alive\n\n',
+        'data: {"choices":[{"delta":{"content":"cters\\":[]}"}}]}\n\n',
+        'data: {"choices":[{"delta":{"reasoning_content":"思考中"}}]}\n\n',
+        'data: [DONE]\n\n',
+      ])
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await chatCompletionJson(baseConfig, {
+      messages: [{ role: 'user', content: 'x' }],
+      stream: true,
+    })
+    expect(result).toEqual({ characters: [] })
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).stream).toBe(true)
+  })
+
+  it('流式请求但端点按普通 JSON 返回时照常解析（不支持 stream 的端点回退）', async () => {
+    const fetchMock = mockFetchOnce({ choices: [{ message: { content: '{"ok":1}' } }] })
+    vi.stubGlobal('fetch', fetchMock)
+    const result = await chatCompletionJson(baseConfig, {
+      messages: [{ role: 'user', content: 'x' }],
+      stream: true,
+    })
+    expect(result).toEqual({ ok: 1 })
+  })
+
+  it('流式读中途断连报「响应中断」，不静默当成功', async () => {
+    const broken = new Response(
+      new ReadableStream<Uint8Array>({
+        pull(controller) {
+          controller.error(new Error('connection reset'))
+        },
+      }),
+      { status: 200, headers: { 'Content-Type': 'text/event-stream' } }
+    )
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(broken))
+    await expect(
+      chatCompletionJson(baseConfig, { messages: [{ role: 'user', content: 'x' }], stream: true })
+    ).rejects.toThrow('AI 服务响应中断')
   })
 })
 

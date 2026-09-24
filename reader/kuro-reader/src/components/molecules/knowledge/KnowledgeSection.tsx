@@ -63,6 +63,9 @@ interface TaskCardProps {
   hint: string
   artifact?: KnowledgeArtifact
   running: boolean
+  /** 已入队等待执行（后台队列串行，排队任务可取消、可离开页面） */
+  queued: boolean
+  queuePosition?: number
   done: number
   total: number
   error?: string
@@ -78,6 +81,8 @@ const TaskCard: React.FC<TaskCardProps> = ({
   hint,
   artifact,
   running,
+  queued,
+  queuePosition,
   done,
   total,
   error,
@@ -90,9 +95,11 @@ const TaskCard: React.FC<TaskCardProps> = ({
   /** 覆盖式生成前的「盖掉手工修订」确认（增量补充不需要——旧件数据是合并基底） */
   const [pendingOptions, setPendingOptions] = useState<KnowledgeGenerationOptions | null>(null)
   const manualEdits = artifact?.manualEditCount ?? 0
+  /** 任务不在推进（可点入查看/重新生成/自定义） */
+  const idle = !running && !queued
 
   const handleCardClick = () => {
-    if (running) return
+    if (running || queued) return
     if (artifact) {
       navigate(knowledgePath(book.id, artifact.id))
       return
@@ -136,7 +143,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
       <div className="flex items-center gap-3 mb-1.5">
         <span className="material-symbols-outlined text-icon-md text-primary">{icon}</span>
         <span className="font-label text-label-md text-primary flex-1">{label}</span>
-        {artifact && !running && (
+        {artifact && idle && (
           <button
             aria-label={`重新生成${label}`}
             className="w-8 h-8 flex items-center justify-center rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-variant transition-colors"
@@ -148,7 +155,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
             <span className="material-symbols-outlined text-icon-sm">refresh</span>
           </button>
         )}
-        {!running && (
+        {idle && (
           <button
             aria-label={`自定义生成${label}`}
             title="自定义范围与详细度"
@@ -165,14 +172,14 @@ const TaskCard: React.FC<TaskCardProps> = ({
       <p className="font-label text-label-sm text-on-surface-variant">{hint}</p>
 
       {/* 范围/增量的产物态摘要：让"这份图谱覆盖了什么"一眼可见 */}
-      {artifact && !running && artifact.meta?.scope && (
+      {artifact && idle && artifact.meta?.scope && (
         <p className="font-label text-label-xs text-on-surface-faint mt-1">
           覆盖第 {(artifact.meta.scope.from ?? 0) + 1}-{(artifact.meta.scope.to ?? 0) + 1} 章
           {artifact.meta.detail === 'core' ? ' · 核心版' : artifact.meta.detail === 'rich' ? ' · 详尽版' : ''}
         </p>
       )}
       {/* 分析完整性对账：块被体量护栏截断时必须显性告警，不能静默丢章节 */}
-      {artifact && !running &&
+      {artifact && idle &&
         artifact.meta?.totalChunkCount != null &&
         artifact.meta.totalChunkCount > (artifact.meta.analyzedChunkCount ?? 0) && (
           <p className="font-label text-label-xs text-seal mt-1">
@@ -180,16 +187,33 @@ const TaskCard: React.FC<TaskCardProps> = ({
             可用 tune 按起止章分批生成完整分析
           </p>
         )}
-      {artifact && !running && !artifact.meta?.scope && hasNewChaptersHint(totalChapters, artifact) && (
+      {artifact && idle && !artifact.meta?.scope && hasNewChaptersHint(totalChapters, artifact) && (
         <p className="font-label text-label-xs text-seal mt-1">
           书有更新——点 tune 图标可只补新章节
         </p>
       )}
 
-      {artifact && !running && !error && (
+      {artifact && idle && !error && (
         <p className="font-label text-label-sm text-on-surface-faint mt-2">
           已生成 · {formatTimestamp(artifact.updatedAt)}
         </p>
+      )}
+
+      {queued && (
+        <div className="mt-3" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-between">
+            <span className="font-label text-label-sm text-on-surface-variant">
+              {queuePosition != null && queuePosition > 1 ? `排队中 · 第 ${queuePosition} 位` : '排队中'}
+              <span className="text-on-surface-faint"> · 退出页面也会继续</span>
+            </span>
+            <button
+              className="font-label text-label-sm text-on-surface-variant hover:text-seal transition-colors"
+              onClick={() => cancelGeneration(book.id, type)}
+            >
+              取消
+            </button>
+          </div>
+        </div>
       )}
 
       {running && (
@@ -358,6 +382,8 @@ export const KnowledgeSection: React.FC<{ book: Book }> = ({ book }) => {
                 hint={task.hint}
                 artifact={artifacts.find((a) => a.type === task.type)}
                 running={state?.status === 'running'}
+                queued={state?.status === 'queued'}
+                queuePosition={state?.queuePosition}
                 done={state?.done ?? 0}
                 total={state?.total ?? 0}
                 error={state?.status === 'error' ? state.error : undefined}

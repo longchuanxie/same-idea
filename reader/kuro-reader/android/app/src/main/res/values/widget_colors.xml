@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 小组件配色：与「墨·纸·光·印」色板一致（浅色取 surface-container-low 系）；
+     暗色由 values-night 覆盖，跟随系统夜间模式 -->
+<resources>
+    <color name="widget_card_bg">#F1EDE5</color>
+    <color name="widget_ink">#211E1B</color>
+    <color name="widget_ink_soft">#5C574F</color>
+    <color name="widget_ink_faint">#8A8478</color>
+    <color name="widget_progress_track">#D8D2C5</color>
+    <color name="widget_cover_placeholder">#E2DCD0</color>
+    <color name="widget_seal">#BC4529</color>
+</resources>

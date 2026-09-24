@@ -157,8 +157,8 @@ describe('buildBookCorpus', () => {
     expect(corpus.chapterTexts[2]).toContain('王五守城')
   })
 
-  it('体量护栏截断显性化：totalChunkCount 对账 + truncated 标记', async () => {
-    // 61 章 × 7k 字 → 每章独立成块 → 超出 MAX_CHUNKS(60)
+  it('分块数由书长决定：61 章超长书全本入列，不再截断前 60 块', async () => {
+    // 61 章 × 7k 字 → 每章独立成块 → 全部保留（分块数随长度增长，无硬上限）
     mockedLoadTextContent.mockResolvedValue({
       chapters: Array.from({ length: 61 }, (_, i) => ({
         id: `ch${i + 1}`,
@@ -171,13 +171,12 @@ describe('buildBookCorpus', () => {
 
     const corpus = await buildBookCorpus(makeTextBook())
     expect(corpus.chapterCount).toBe(61)
-    expect(corpus.totalChunkCount).toBeGreaterThan(60)
-    expect(corpus.truncated).toBe(true)
-    expect(corpus.chunks.length).toBe(60)
-    expect(corpus.coveredChapterCount).toBeLessThan(61)
+    expect(corpus.chunks.length).toBe(61)
+    expect(corpus.totalChunkCount).toBe(61)
+    expect(corpus.coveredChapterCount).toBe(61)
   })
 
-  it('未触护栏时 truncated 为 false', async () => {
+  it('分块总数与块数一致（对账字段保留）', async () => {
     mockedLoadTextContent.mockResolvedValue({
       chapters: [
         { id: 'ch1', title: '第一章', content: '内容。'.repeat(100) },
@@ -187,7 +186,6 @@ describe('buildBookCorpus', () => {
       isMarkdown: false,
     })
     const corpus = await buildBookCorpus(makeTextBook())
-    expect(corpus.truncated).toBe(false)
     expect(corpus.totalChunkCount).toBe(corpus.chunks.length)
   })
 
@@ -251,7 +249,6 @@ describe('全书骨架 digest', () => {
     // 骨架是压缩视图，但 chapterTexts 必须是全文——节拍证据的逐字定位在真章上进行
     expect(corpus.chapterTexts[1]).toContain('高潮内容。'.repeat(30))
     expect(corpus.totalChunkCount).toBe(1)
-    expect(corpus.truncated).toBe(false)
   })
 
   it('buildDigestCorpus：范围限定生效（scope 起止章）', async () => {
