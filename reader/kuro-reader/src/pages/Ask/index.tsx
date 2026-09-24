@@ -6,6 +6,7 @@ import { COPY } from '@/constants/copy'
 import { ROUTES, settingsPath, knowledgeSourcePath } from '@/constants/routes';
 import { isProviderConfigured } from '@/services/ai/aiClient'
 import { LibraryQaError, askLibrary, type QaResult } from '@/services/ai/libraryQA'
+import { recordUsageSignal } from '@/services/telemetry/usageSignals';
 import { useAppStore } from '@/stores/useAppStore'
 import { useLibraryStore } from '@/stores/useLibraryStore'
 import type { Book } from '@/types'
@@ -271,7 +272,11 @@ export const AskLibraryPage: React.FC = () => {
                               {citation.location ? (
                                 <button
                                   className="shrink-0 flex items-center gap-1 font-label text-label-sm text-primary hover:opacity-80 transition-opacity"
-                                  onClick={() => target && navigate(target)}
+                                  onClick={() => {
+                                    if (!target) return;
+                                    recordUsageSignal('knowledge-back-to-source', { bookId: book?.id });
+                                    navigate(target);
+                                  }}
                                 >
                                   <span className="material-symbols-outlined text-icon-sm">book_open</span>
                                   {COPY.askLibrary.backToSource}

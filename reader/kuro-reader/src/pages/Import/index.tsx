@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { Capacitor } from '@capacitor/core';
 import { useLocation, useNavigate } from 'react-router-dom';
 
+import { ReplaceConfirmDialog } from '@/components/molecules/ReplaceConfirmDialog';
 import { APP_CONFIG, MAX_FILE_SIZE_MB } from '@/constants/config';
 import { COPY } from '@/constants/copy';
 import { ROUTES, bookDetailPath, customCloudPath, readerPathForBook, subLibraryPath } from '@/constants/routes';
@@ -54,6 +55,8 @@ export const ImportPage: React.FC = () => {
     importProgress,
     error,
     importWarning,
+    pendingReplace,
+    resolvePendingReplace,
     batchImportTotal,
     batchImportCurrent,
     batchImportCurrentFile,
@@ -105,6 +108,8 @@ export const ImportPage: React.FC = () => {
         setClipTitle('');
         setClipContent('');
         toast(`《${book.title}》已入藏`);
+      } else if (useLibraryStore.getState().pendingReplace) {
+        // 同书换新文件：替换确认弹窗已开，等用户裁定后由弹窗收口，不算失败
       } else {
         toast(COPY.clip.failedToast);
       }
@@ -112,6 +117,14 @@ export const ImportPage: React.FC = () => {
       toast(COPY.clip.failedToast);
     } finally {
       setIsClipping(false);
+    }
+  };
+
+  /** 替换确认弹窗裁定收口：成功给出可见反馈（挂起不算失败，弹窗本身就是进行态） */
+  const handleResolveReplace = async (decision: 'replace' | 'keep-both' | 'cancel') => {
+    const book = await resolvePendingReplace(decision);
+    if (book) {
+      toast(decision === 'replace' ? `《${book.title}》已更新到新文件内容` : `《${book.title}》已另藏一本`);
     }
   };
 
@@ -568,6 +581,8 @@ export const ImportPage: React.FC = () => {
           </p>
         </section>
       </div>
+
+      <ReplaceConfirmDialog pending={pendingReplace} onResolve={handleResolveReplace} />
     </div>
   );
 };

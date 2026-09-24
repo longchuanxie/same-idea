@@ -3,6 +3,7 @@ import React, { useCallback, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { OpdsBrowser } from '@/components/molecules/OpdsBrowser';
+import { ReplaceConfirmDialog } from '@/components/molecules/ReplaceConfirmDialog';
 import { ROUTES, bookDetailPath, readerPathForBook } from '@/constants/routes';
 import { useHistoryBack } from '@/hooks/useHistoryBack';
 import { createCloudClient, type CloudFile, type CloudStorageClient } from '@/services/cloudStorage';
@@ -17,6 +18,7 @@ import {
 } from '@/utils/cloudPath';
 import { cn } from '@/utils/cn';
 import { isSupportedBookFile, guessBookMimeType } from '@/utils/fileType';
+import { toast } from '@/utils/toast';
 
 interface ProtocolOption {
   id: 'webdav' | 'smb' | 'ftp' | 'onedrive' | 'nas' | 'opds';
@@ -59,7 +61,7 @@ const getFileIcon = (name: string): string => {
 export const CustomCloudPage: React.FC = () => {
   const navigate = useNavigate();
   const historyBack = useHistoryBack();
-  const { importFile } = useLibraryStore();
+  const { importFile, pendingReplace, resolvePendingReplace } = useLibraryStore();
 
   const [protocol, setProtocol] = useState<ProtocolOption['id']>('webdav');
   const [serverAddress, setServerAddress] = useState('');
@@ -94,6 +96,8 @@ export const CustomCloudPage: React.FC = () => {
         setImportedBook({ id: book.id, title: book.title, format: book.format });
         return book;
       }
+      // 同书换新文件：替换确认弹窗已开，等裁定收口，不算导入失败
+      if (useLibraryStore.getState().pendingReplace) return null;
       setActionError(useLibraryStore.getState().error || '导入失败');
       return null;
     },
@@ -211,7 +215,8 @@ export const CustomCloudPage: React.FC = () => {
       const book = await importFile(bookFile);
       if (book) {
         setImportedBook({ id: book.id, title: book.title, format: book.format });
-      } else {
+      } else if (!useLibraryStore.getState().pendingReplace) {
+        // 挂起等替换裁定时不算失败（弹窗已开），其余照旧报错
         setActionError(useLibraryStore.getState().error || '导入失败');
       }
     } catch (e) {
@@ -222,6 +227,14 @@ export const CustomCloudPage: React.FC = () => {
   };
 
   const isFormValid = serverAddress.trim().length > 0 && username.trim().length > 0;
+
+  /** 替换确认弹窗裁定收口：成功给可见反馈（挂起由弹窗承载，不算失败） */
+  const handleResolveReplace = async (decision: 'replace' | 'keep-both' | 'cancel') => {
+    const book = await resolvePendingReplace(decision);
+    if (book) {
+      toast(decision === 'replace' ? `《${book.title}》已更新到新文件内容` : `《${book.title}》已另藏一本`);
+    }
+  };
   const canBrowse = BROWSABLE_PROTOCOLS.has(protocol);
   const breadcrumbs = cloudPathBreadcrumbs(currentPath);
 
@@ -639,6 +652,8 @@ export const CustomCloudPage: React.FC = () => {
       ) : (
         renderForm()
       )}
+
+      <ReplaceConfirmDialog pending={pendingReplace} onResolve={handleResolveReplace} />
     </div>
   );
 };

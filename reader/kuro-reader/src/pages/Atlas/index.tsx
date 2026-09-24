@@ -7,6 +7,7 @@ import { VerifiedBadge } from '@/components/molecules/knowledge/ReviseControls'
 import { COPY } from '@/constants/copy'
 import { ROUTES, knowledgeSourcePath } from '@/constants/routes'
 import { knowledgeRepo } from '@/services/storage/knowledgeRepo'
+import { recordUsageSignal } from '@/services/telemetry/usageSignals'
 import { useLibraryStore } from '@/stores/useLibraryStore'
 import type { KnowledgeArtifact } from '@/types'
 import { booksHavingKind, mergeGlossaries, mergeGraphs } from '@/utils/crossBookGraph'
@@ -228,7 +229,10 @@ export const AtlasPage: React.FC = () => {
                                 <button
                                   key={chapterIndex}
                                   className="chip px-2 py-0.5 text-label-xs hover:text-primary"
-                                  onClick={() => navigate(knowledgeSourcePath(book, chapterIndex))}
+                                  onClick={() => {
+                                    recordUsageSignal('knowledge-back-to-source', { bookId: book.id })
+                                    navigate(knowledgeSourcePath(book, chapterIndex))
+                                  }}
                                 >
                                   {book.format === 'pdf' ? `第${chapterIndex + 1}页` : `第${chapterIndex + 1}章`}
                                 </button>
@@ -282,11 +286,12 @@ export const AtlasPage: React.FC = () => {
                             {entry.evidence && book && (
                               <button
                                 className="mt-1.5 flex items-center gap-1 font-label text-label-sm text-on-surface-variant hover:text-primary transition-colors"
-                                onClick={() =>
+                                onClick={() => {
+                                  recordUsageSignal('knowledge-back-to-source', { bookId: book.id })
                                   navigate(
                                     knowledgeSourcePath(book, entry.evidence!.chapterIndex, entry.evidence!.offsetRatio)
                                   )
-                                }
+                                }}
                               >
                                 <span className="material-symbols-outlined text-icon-sm">book_open</span>
                                 回到原文

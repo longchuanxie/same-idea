@@ -15,6 +15,7 @@ import { ROUTES, knowledgePath, notesPath, readerPathForBook } from '@/constants
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { useHistoryBack } from '@/hooks/useHistoryBack';
 import { annotationRepo } from '@/services/storage/annotationRepo';
+import { recordUsageSignal } from '@/services/telemetry/usageSignals';
 import { useKnowledgeStore } from '@/stores/useKnowledgeStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import type { Annotation, Book, StoryBeatsData } from '@/types';
@@ -592,7 +593,10 @@ export const BookDetailPage: React.FC = () => {
                         role="listitem"
                         className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center p-1.5 group"
                         style={{ left: `${ratio * 100}%` }}
-                        onClick={() => navigate(readerPathForBook(book, book.chapters[beat.chapterIndex].id))}
+                        onClick={() => {
+                          recordUsageSignal('knowledge-beat-tap', { bookId: book.id });
+                          navigate(readerPathForBook(book, book.chapters[beat.chapterIndex].id));
+                        }}
                         title={`${meta.label} · 第 ${beat.chapterIndex + 1} ${book.format === 'text' ? '章' : '话'}：${beat.title}`}
                       >
                         <span

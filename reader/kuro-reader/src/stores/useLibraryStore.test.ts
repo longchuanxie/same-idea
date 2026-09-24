@@ -31,17 +31,39 @@ vi.mock('@/services/storage/progressRepo', () => ({
 vi.mock('@/services/storage/tagRepo', () => ({
   tagRepo: { getAll: vi.fn(), save: vi.fn(), delete: vi.fn() },
 }))
+vi.mock('@/services/storage/knowledgeRepo', () => ({
+  knowledgeRepo: {
+    getAll: vi.fn(),
+    getByBookId: vi.fn().mockResolvedValue([]),
+    get: vi.fn(),
+    save: vi.fn(),
+    remove: vi.fn(),
+  },
+}))
+vi.mock('@/services/storage/textChapterCacheRepo', () => ({
+  textChapterCacheRepo: {
+    get: vi.fn().mockResolvedValue(undefined),
+    save: vi.fn().mockResolvedValue(undefined),
+    delete: vi.fn().mockResolvedValue(undefined),
+  },
+}))
+vi.mock('@/services/telemetry/usageSignals', () => ({
+  recordUsageSignal: vi.fn(),
+}))
 
 import { STORAGE_KEYS } from '@/constants/storage'
 import { getParserForFile } from '@/services/parsers'
 import type { ParsedBook } from '@/services/parsers/types'
 import { bookFileRepo } from '@/services/storage/bookFileRepo'
 import { bookRepo } from '@/services/storage/bookRepo'
+import { knowledgeRepo } from '@/services/storage/knowledgeRepo'
 import { pageRepo } from '@/services/storage/pageRepo'
 import { progressRepo } from '@/services/storage/progressRepo'
 import { tagRepo } from '@/services/storage/tagRepo'
+import { textChapterCacheRepo } from '@/services/storage/textChapterCacheRepo'
+import { recordUsageSignal } from '@/services/telemetry/usageSignals'
 import { useLibraryStore } from '@/stores/useLibraryStore'
-import type { Book, ReadingProgress, Tag } from '@/types'
+import type { Book, KnowledgeArtifact, ReadingProgress, Tag } from '@/types'
 import { extractTitleFromFileName } from '@/utils/extractTitle'
 
 const getParserForFileMock = vi.mocked(getParserForFile)
@@ -50,6 +72,9 @@ const pageRepoMock = vi.mocked(pageRepo, true)
 const bookFileRepoMock = vi.mocked(bookFileRepo, true)
 const progressRepoMock = vi.mocked(progressRepo, true)
 const tagRepoMock = vi.mocked(tagRepo, true)
+const knowledgeRepoMock = vi.mocked(knowledgeRepo, true)
+const textChapterCacheRepoMock = vi.mocked(textChapterCacheRepo, true)
+const recordUsageSignalMock = vi.mocked(recordUsageSignal)
 
 const makeBook = (overrides: Partial<Book> & { id: string }): Book => ({
   title: overrides.id,
@@ -89,6 +114,7 @@ const resetLibraryState = (overrides: Partial<ReturnType<typeof useLibraryStore.
     isImporting: false,
     importProgress: 0,
     error: null,
+    pendingReplace: null,
     batchImportTotal: 0,
     batchImportCurrent: 0,
     batchImportCurrentFile: '',
@@ -685,5 +711,134 @@ describe('importFile', () => {
     expect(state.error).toBe('压缩包损坏')
     expect(state.isImporting).toBe(false)
     expect(state.importProgress).toBe(0)
+  })
+})
+
+describe('importFile 同书换新文件（M1.8 替换更新流）', () => {
+  const newTextParsed: ParsedBook = {
+    format: 'text',
+    title: '测试小说',
+    coverBlob: new Blob(['cover']),
+    textFile: new Blob(['第一章 新增内容 第二章 新增内容']),
+    textEncoding: 'utf-8',
+    author: '原作者',
+    chapters: [
+      { title: '第一章', content: '新增内容甲' },
+      { title: '第二章', content: '新增内容乙' },
+    ],
+  }
+
+  const makeTextParser = (overrides: Partial<ParsedBook> = {}) => ({
+    canParse: () => true,
+    parse: vi.fn().mockResolvedValue({ ...newTextParsed, ...overrides }),
+  })
+
+  const txtFile = (name = '测试小说.txt') => new File(['新内容'], name, { type: 'text/plain' })
+
+  it('同标题文本书命中不再报错，挂起 pendingReplace 等待弹窗裁定', async () => {
+    resetLibraryState({ books: [makeBook({ id: 'b1', title: '测试小说', format: 'text', totalChapters: 1 })] })
+    getParserForFileMock.mockReturnValue(makeTextParser())
+
+    const result = await useLibraryStore.getState().importFile(txtFile())
+
+    expect(result).toBeNull()
+    const state = useLibraryStore.getState()
+    expect(state.error).toBeNull()
+    expect(state.pendingReplace?.existingBookId).toBe('b1')
+    expect(state.pendingReplace?.incomingChapters).toBe(2)
+    expect(state.pendingReplace?.incomingFileName).toBe('测试小说.txt')
+    // 挂起期间不落任何库
+    expect(bookRepoMock.save).not.toHaveBeenCalled()
+    expect(bookFileRepoMock.save).not.toHaveBeenCalled()
+  })
+
+  it('EPUB 换文件不进替换流（object URL 不跨会话），维持已存在拦截', async () => {
+    resetLibraryState({ books: [makeBook({ id: 'b1', title: '测试小说', format: 'text' })] })
+    getParserForFileMock.mockReturnValue(makeTextParser())
+
+    const result = await useLibraryStore.getState().importFile(txtFile('测试小说.epub'))
+
+    expect(result).toBeNull()
+    expect(useLibraryStore.getState().error).toContain('已存在于书架中')
+    expect(useLibraryStore.getState().pendingReplace).toBeNull()
+  })
+
+  it('resolve(replace)：同 bookId 换文件+删章节缓存+知识件标过期+记信号，标签进度保留', async () => {
+    const existing = makeBook({ id: 'b1', title: '测试小说', format: 'text', totalChapters: 1, tags: ['追更'] })
+    resetLibraryState({
+      books: [existing],
+      readingProgress: { b1: makeProgress('b1', 42) },
+    })
+    getParserForFileMock.mockReturnValue(makeTextParser())
+    const staleArtifact: KnowledgeArtifact = {
+      id: 'ka1',
+      bookId: 'b1',
+      type: 'character-graph',
+      title: '人物图谱',
+      data: { nodes: [], edges: [] } as KnowledgeArtifact['data'],
+      meta: { chapterCount: 1, contentFingerprint: 'old-fp' },
+      generator: 'ai',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+    knowledgeRepoMock.getByBookId.mockResolvedValue([staleArtifact])
+
+    await useLibraryStore.getState().importFile(txtFile())
+    const replaced = await useLibraryStore.getState().resolvePendingReplace('replace')
+
+    expect(replaced?.id).toBe('b1')
+    expect(replaced?.totalChapters).toBe(2)
+    expect(replaced?.title).toBe('测试小说')
+    // 同 bookId 覆盖内容文件；旧章节缓存必删
+    expect(bookFileRepoMock.save).toHaveBeenCalledWith('b1', newTextParsed.textFile)
+    expect(textChapterCacheRepoMock.delete).toHaveBeenCalledWith('b1')
+    // 书本体覆盖保存：标签与入库时间保留，章节数取新文件
+    expect(bookRepoMock.save).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'b1', tags: ['追更'], totalChapters: 2 })
+    )
+    // 知识件标过期不删除；替换信号入账
+    expect(knowledgeRepoMock.save).toHaveBeenCalledWith(expect.objectContaining({ id: 'ka1', stale: true }))
+    expect(recordUsageSignalMock).toHaveBeenCalledWith('book-replace', { bookId: 'b1' })
+    // 状态收口：进度原样保留
+    const state = useLibraryStore.getState()
+    expect(state.pendingReplace).toBeNull()
+    expect(state.isImporting).toBe(false)
+    expect(state.books).toHaveLength(1)
+    expect(state.readingProgress.b1?.percentage).toBe(42)
+  })
+
+  it('resolve(keep-both)：以去重标题《测试小说（2）》新建第二本', async () => {
+    resetLibraryState({ books: [makeBook({ id: 'b1', title: '测试小说', format: 'text' })] })
+    getParserForFileMock.mockReturnValue(makeTextParser())
+
+    await useLibraryStore.getState().importFile(txtFile())
+    const created = await useLibraryStore.getState().resolvePendingReplace('keep-both')
+
+    expect(created).not.toBeNull()
+    expect(created?.id).not.toBe('b1')
+    expect(created?.title).toBe('测试小说（2）')
+    const state = useLibraryStore.getState()
+    expect(state.books.map((b) => b.title)).toEqual(['测试小说', '测试小说（2）'])
+    expect(state.pendingReplace).toBeNull()
+    expect(state.isImporting).toBe(false)
+    // 保留两本不触碰原书与缓存
+    expect(textChapterCacheRepoMock.delete).not.toHaveBeenCalled()
+    expect(recordUsageSignalMock).not.toHaveBeenCalled()
+  })
+
+  it('resolve(cancel)：清挂起，书架与库零改动', async () => {
+    resetLibraryState({ books: [makeBook({ id: 'b1', title: '测试小说', format: 'text' })] })
+    getParserForFileMock.mockReturnValue(makeTextParser())
+
+    await useLibraryStore.getState().importFile(txtFile())
+    const result = await useLibraryStore.getState().resolvePendingReplace('cancel')
+
+    expect(result).toBeNull()
+    const state = useLibraryStore.getState()
+    expect(state.pendingReplace).toBeNull()
+    expect(state.isImporting).toBe(false)
+    expect(state.books).toHaveLength(1)
+    expect(bookRepoMock.save).not.toHaveBeenCalled()
+    expect(bookFileRepoMock.save).not.toHaveBeenCalled()
   })
 })

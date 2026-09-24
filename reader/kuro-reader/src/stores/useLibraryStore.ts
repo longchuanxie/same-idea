@@ -1,20 +1,35 @@
-import { create } from 'zustand';
+import { create, type StoreApi } from 'zustand';
 
 import { getRandomCatalogColor, migrateTagColor } from '@/constants/catalogColors';
 import { STORAGE_KEYS } from '@/constants/storage';
 import { getParserForFile } from '@/services/parsers';
 import { ComicArchiveParser } from '@/services/parsers/comicArchiveParser';
-import type { ParsedBook } from '@/services/parsers/types';
+import type { ParsedBook, ParsedTextBook } from '@/services/parsers/types';
 import { bookFileRepo } from '@/services/storage/bookFileRepo';
 import { bookRepo } from '@/services/storage/bookRepo';
+import { knowledgeRepo } from '@/services/storage/knowledgeRepo';
 import { pageRepo } from '@/services/storage/pageRepo';
 import { progressRepo } from '@/services/storage/progressRepo';
 import { subLibraryRepo } from '@/services/storage/subLibraryRepo';
 import { tagRepo } from '@/services/storage/tagRepo';
+import { textChapterCacheRepo } from '@/services/storage/textChapterCacheRepo';
+import { recordUsageSignal } from '@/services/telemetry/usageSignals';
 import { buildTextChapters, warmTextChapterCache } from '@/services/textContent';
 import type { Book, Chapter, ReadingProgress, SubLibrary, Tag } from '@/types';
 import { deriveMergedBookTitle, extractArchiveChapterInfo } from '@/utils/comicChapterSplit';
 import { extractTitleFromFileName } from '@/utils/extractTitle';
+
+/** 替换确认弹窗的对照数据：书架现存 vs 新文件 */
+export interface PendingBookReplace {
+  existingBookId: string;
+  existingTitle: string;
+  existingAuthor: string;
+  existingChapters: number;
+  incomingTitle: string;
+  incomingAuthor: string;
+  incomingChapters: number;
+  incomingFileName: string;
+}
 
 export interface LibraryState {
   books: Book[];
@@ -30,12 +45,15 @@ export interface LibraryState {
   error: string | null;
   /** 部分成功警示：导入整体成功但个别文件被跳过/失败时的汇总说明（供页面 toast） */
   importWarning: string | null;
+  /** 同标题文本导入的替换确认（importFile 解析后暂停在此，UI 弹「替换/保留两本/取消」） */
+  pendingReplace: PendingBookReplace | null;
   batchImportTotal: number;
   batchImportCurrent: number;
   batchImportCurrentFile: string;
 
   loadBooks: () => Promise<void>;
   importFile: (file: File, opts?: ImportOptions) => Promise<Book | null>;
+  resolvePendingReplace: (decision: 'replace' | 'keep-both' | 'cancel') => Promise<Book | null>;
   importFolder: (files: File[], folderName: string, opts?: ImportOptions) => Promise<Book | null>;
   importArchivesAsSubLibrary: (files: File[], folderName: string, opts?: ImportOptions) => Promise<SubLibrary | null>;
   importArchivesAsBook: (files: File[], fallbackTitle: string, opts?: ImportOptions) => Promise<Book | null>;
@@ -149,6 +167,79 @@ function warmTextCacheFromParsed(bookId: string, parsed: ParsedBook): void {
   const type = parsed.textFile.type;
   if (type.startsWith('text/markdown') || type.startsWith('text/x-markdown')) return;
   warmTextChapterCache(bookId, buildTextChapters(parsed.chapters, false), false);
+}
+
+/** 替换更新流资格：书架上的书与导入文件都是 TXT/MD 文本（EPUB 章节带运行期 object URL 不跨会话，不接） */
+const TEXT_REPLACE_FILE_PATTERN = /\.(txt|md|markdown)$/i;
+
+function isTextReplaceCandidate(existing: Book, file: File): boolean {
+  return existing.format === 'text' && TEXT_REPLACE_FILE_PATTERN.test(file.name);
+}
+
+/** 保留两本时的去重标题：书名（2）、书名（3）…… */
+function uniqueImportTitle(base: string, books: Book[]): string {
+  const titles = new Set(books.map((b) => b.title));
+  if (!titles.has(base)) return base;
+  for (let n = 2; ; n++) {
+    const candidate = `${base}（${n}）`;
+    if (!titles.has(candidate)) return candidate;
+  }
+}
+
+/** 替换确认挂起期间的载荷（含大体积解析产物，不入 zustand 状态避免无谓订阅） */
+let pendingReplacePayload: { parsed: ParsedTextBook; file: File; opts?: ImportOptions } | null = null;
+
+type LibraryStoreApi = Pick<StoreApi<LibraryState>, 'setState' | 'getState'>;
+
+/** 导入落库尾段：封面/格式内容/repo 持久化 + 书架状态更新（importFile 与「保留两本」共用） */
+async function persistParsedAsNewBook(
+  parsed: ParsedBook,
+  opts: ImportOptions | undefined,
+  api: LibraryStoreApi,
+  titleOverride?: string,
+): Promise<Book> {
+  const bookId = `book-${Date.now()}-${Math.random().toString(RANDOM_ID_RADIX).substring(RANDOM_ID_SUBSTRING_START, RANDOM_ID_SUBSTRING_LENGTH)}`;
+  const chapterId = `${bookId}-ch1`;
+
+  const { book } = buildBookFromParsed(parsed, bookId);
+  const titled = titleOverride ? { ...book, title: titleOverride } : book;
+
+  await bookRepo.saveCover(bookId, parsed.coverBlob);
+
+  if (parsed.format === 'comic') {
+    if (parsed.chapters && parsed.chapters.length > 0) {
+      for (let i = 0; i < parsed.chapters.length; i++) {
+        await pageRepo.saveAllPages(bookId, `${bookId}-ch${i + 1}`, parsed.chapters[i].imagePages);
+      }
+    } else {
+      await pageRepo.saveAllPages(bookId, chapterId, parsed.imagePages);
+    }
+  } else if (parsed.format === 'pdf') {
+    await pageRepo.saveAllPages(bookId, chapterId, parsed.imagePages);
+    await bookFileRepo.save(bookId, parsed.pdfFile);
+  } else if (parsed.format === 'text') {
+    await bookFileRepo.save(bookId, parsed.textFile);
+    warmTextCacheFromParsed(bookId, parsed);
+  }
+
+  api.setState({ importProgress: 80 });
+
+  await bookRepo.save({ ...titled, tags: [] });
+
+  const coverUrl = trackCoverObjectUrl(URL.createObjectURL(parsed.coverBlob));
+
+  api.setState((state) => ({
+    books: [...state.books, { ...titled, tags: [] }],
+    coverUrls: { ...state.coverUrls, [bookId]: coverUrl },
+    isImporting: false,
+    importProgress: 100,
+  }));
+
+  if (opts?.subLibraryId) {
+    await api.getState().addBooksToSubLibrary(opts.subLibraryId, [titled.id]);
+  }
+
+  return { ...titled, tags: [] };
 }
 
 function buildPartialImportWarning(failedFiles: string[], unsupportedFiles: string[]): string | null {
@@ -269,6 +360,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
   importProgress: 0,
   error: null,
   importWarning: null,
+  pendingReplace: null,
   batchImportTotal: 0,
   batchImportCurrent: 0,
   batchImportCurrentFile: '',
@@ -328,14 +420,15 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     try {
       set({ importProgress: 10 });
 
-      // 检查是否已存在相同标题的书籍（避免重复导入）
+      // 同标题命中不再一律拦截：文本书换新文件（追更主路径）放行到解析后再弹替换确认，
+      // 其余格式（漫画/PDF/EPUB）维持「已存在」报错
       const fileTitle = extractTitleFromFileName(file.name);
-      const existingBook = get().books.find(b => b.title === fileTitle || b.title === file.name);
-      if (existingBook) {
-        set({ 
-          error: `「${existingBook.title}」已存在于书架中`, 
-          isImporting: false, 
-          importProgress: 0 
+      const existingByFileTitle = get().books.find(b => b.title === fileTitle || b.title === file.name);
+      if (existingByFileTitle && !isTextReplaceCandidate(existingByFileTitle, file)) {
+        set({
+          error: `「${existingByFileTitle.title}」已存在于书架中`,
+          isImporting: false,
+          importProgress: 0
         });
         return null;
       }
@@ -348,9 +441,6 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
       }
 
       set({ importProgress: IMPORT_PROGRESS_PARSING_BASE });
-
-      const bookId = `book-${Date.now()}-${Math.random().toString(RANDOM_ID_RADIX).substring(RANDOM_ID_SUBSTRING_START, RANDOM_ID_SUBSTRING_LENGTH)}`;
-      const chapterId = `${bookId}-ch1`;
 
       const useStreaming = file.size > STREAMING_THRESHOLD_MB * BYTES_PER_MB;
 
@@ -368,60 +458,104 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
 
       set({ importProgress: 60 });
 
-      // 再次检查解析后的实际标题是否已存在（如 EPUB 内置标题）
+      // 解析后再查碰撞：真实标题（EPUB/MD 内置标题）优先，文件名标题兜底
       const existingByParsedTitle = get().books.find(b => b.title === parsed.title);
-      if (existingByParsedTitle) {
-        set({ 
-          error: `「${parsed.title}」已存在于书架中`, 
-          isImporting: false, 
-          importProgress: 0 
+      const collisionBook = existingByParsedTitle ?? existingByFileTitle;
+      if (collisionBook) {
+        if (parsed.format !== 'text' || !isTextReplaceCandidate(collisionBook, file)) {
+          set({
+            error: `「${collisionBook.title}」已存在于书架中`,
+            isImporting: false,
+            importProgress: 0
+          });
+          return null;
+        }
+        // 同书换新文件：导入暂停，弹「替换内容 / 保留两本 / 取消」确认（进度/标签/收藏全保留）
+        pendingReplacePayload = { parsed, file, opts: opts ?? undefined };
+        set({
+          pendingReplace: {
+            existingBookId: collisionBook.id,
+            existingTitle: collisionBook.title,
+            existingAuthor: collisionBook.author,
+            existingChapters: collisionBook.totalChapters,
+            incomingTitle: parsed.title,
+            incomingAuthor: parsed.author ?? '',
+            incomingChapters: parsed.chapters?.length ?? 0,
+            incomingFileName: file.name,
+          },
+          importProgress: 0,
         });
         return null;
       }
 
-      const { book } = buildBookFromParsed(parsed, bookId);
+      return await persistParsedAsNewBook(parsed, opts, { setState: set, getState: get });
+    } catch (e) {
+      set({ error: (e as Error).message, isImporting: false, importProgress: 0 });
+      return null;
+    }
+  },
 
-      // Save cover
-      await bookRepo.saveCover(bookId, parsed.coverBlob);
+  resolvePendingReplace: async (decision) => {
+    const pending = get().pendingReplace;
+    const payload = pendingReplacePayload;
+    if (!pending || !payload) {
+      set({ pendingReplace: null, isImporting: false });
+      return null;
+    }
+    pendingReplacePayload = null;
 
-      // Save format-specific content
-      if (parsed.format === 'comic') {
-        if (parsed.chapters && parsed.chapters.length > 0) {
-          for (let i = 0; i < parsed.chapters.length; i++) {
-            await pageRepo.saveAllPages(bookId, `${bookId}-ch${i + 1}`, parsed.chapters[i].imagePages);
-          }
-        } else {
-          await pageRepo.saveAllPages(bookId, chapterId, parsed.imagePages);
-        }
-      } else if (parsed.format === 'pdf') {
-        // 渲染页供阅读器使用；原始 PDF 一并保留
-        await pageRepo.saveAllPages(bookId, chapterId, parsed.imagePages);
-        await bookFileRepo.save(bookId, parsed.pdfFile);
-      } else if (parsed.format === 'text') {
-        await bookFileRepo.save(bookId, parsed.textFile);
-        warmTextCacheFromParsed(bookId, parsed);
+    if (decision === 'cancel') {
+      set({ pendingReplace: null, isImporting: false, importProgress: 0 });
+      return null;
+    }
+
+    try {
+      if (decision === 'keep-both') {
+        const title = uniqueImportTitle(payload.parsed.title, get().books);
+        set({ pendingReplace: null });
+        return await persistParsedAsNewBook(payload.parsed, payload.opts, { setState: set, getState: get }, title);
       }
 
-      set({ importProgress: 80 });
+      const existing = get().books.find(b => b.id === pending.existingBookId);
+      if (!existing) {
+        set({ error: '原书已不在书架中，替换未执行', pendingReplace: null, isImporting: false, importProgress: 0 });
+        return null;
+      }
 
-      await bookRepo.save({ ...book, tags: [] });
+      // 替换：同 bookId 换内容——进度锚/标签/收藏/入库时间全保留，标题作者与章节数取新文件
+      const { book: rebuilt } = buildBookFromParsed(payload.parsed, existing.id);
+      const replaced: Book = {
+        ...existing,
+        title: payload.parsed.title,
+        author: payload.parsed.author || existing.author,
+        totalChapters: rebuilt.totalChapters,
+        chapters: rebuilt.chapters,
+      };
 
-      const coverUrl = trackCoverObjectUrl(URL.createObjectURL(parsed.coverBlob));
+      await bookFileRepo.save(existing.id, payload.parsed.textFile);
+      // 旧章节缓存必删（否则开书读到替换前的章）；在途旧预热与本次写入的理论竞态接受
+      // ——预热写只在导入/开书瞬间发出，替换隔着数秒的人机确认
+      await textChapterCacheRepo.delete(existing.id);
+      warmTextCacheFromParsed(existing.id, payload.parsed);
+
+      await bookRepo.save(replaced);
+
+      // 知识件标过期不删除（生成花费在册）：重跑覆盖落库后随新件消失
+      const artifacts = await knowledgeRepo.getByBookId(existing.id);
+      for (const artifact of artifacts) {
+        if (!artifact.stale) await knowledgeRepo.save({ ...artifact, stale: true });
+      }
+      recordUsageSignal('book-replace', { bookId: existing.id });
 
       set((state) => ({
-        books: [...state.books, { ...book, tags: [] }],
-        coverUrls: { ...state.coverUrls, [bookId]: coverUrl },
+        books: state.books.map((b) => (b.id === replaced.id ? replaced : b)),
+        pendingReplace: null,
         isImporting: false,
         importProgress: 100,
       }));
-
-      if (opts?.subLibraryId) {
-        await get().addBooksToSubLibrary(opts.subLibraryId, [book.id]);
-      }
-
-      return { ...book, tags: [] };
+      return replaced;
     } catch (e) {
-      set({ error: (e as Error).message, isImporting: false, importProgress: 0 });
+      set({ error: (e as Error).message, pendingReplace: null, isImporting: false, importProgress: 0 });
       return null;
     }
   },

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { EntryReviseActions, VerifiedBadge } from '@/components/molecules/knowledge/ReviseControls'
 import { knowledgeSourcePath } from '@/constants/routes'
+import { recordUsageSignal } from '@/services/telemetry/usageSignals'
 import type { Book, StoryBeat, StoryBeatsData } from '@/types'
 import { beatRoleMeta, beatRoleTint, beatRulerRatio } from '@/utils/beatRoles'
 
@@ -73,7 +74,10 @@ export const BeatsView: React.FC<BeatsViewProps> = ({
               role="listitem"
               className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center p-1.5 group"
               style={{ left: `${ratio * 100}%` }}
-              onClick={() => navigate(knowledgeSourcePath(book, beat.chapterIndex))}
+              onClick={() => {
+                recordUsageSignal('knowledge-beat-tap', { bookId: book.id })
+                navigate(knowledgeSourcePath(book, beat.chapterIndex))
+              }}
               title={`${meta.label}·${beat.title} · ${chapterLabelOf(book, beat.chapterIndex)}（点击回原文）`}
             >
               <span
@@ -131,7 +135,10 @@ export const BeatsView: React.FC<BeatsViewProps> = ({
                       aria-label={`回到${beat.title}相关原文`}
                       title="回到原文"
                       className="shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors"
-                      onClick={() => navigate(knowledgeSourcePath(book, beat.chapterIndex))}
+                      onClick={() => {
+                        recordUsageSignal('knowledge-beat-tap', { bookId: book.id })
+                        navigate(knowledgeSourcePath(book, beat.chapterIndex))
+                      }}
                     >
                       <span className="material-symbols-outlined text-icon-sm">book_open</span>
                     </button>
@@ -144,7 +151,10 @@ export const BeatsView: React.FC<BeatsViewProps> = ({
               {beat.evidence && (
                 <button
                   className="mt-1.5 block max-w-full text-left px-2.5 py-1 rounded-card border-l-2 border-seal bg-surface-container-low font-body text-label-md text-on-surface-variant italic truncate hover:text-on-surface transition-colors"
-                  onClick={() => navigate(knowledgeSourcePath(book, beat.evidence!.chapterIndex, beat.evidence!.offsetRatio))}
+                  onClick={() => {
+                    recordUsageSignal('knowledge-back-to-source', { bookId: book.id })
+                    navigate(knowledgeSourcePath(book, beat.evidence!.chapterIndex, beat.evidence!.offsetRatio))
+                  }}
                   title={beat.evidence.quote}
                 >
                   「{beat.evidence.quote}」

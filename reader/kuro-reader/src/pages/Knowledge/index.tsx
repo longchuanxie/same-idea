@@ -17,6 +17,7 @@ import { ROUTES, bookDetailPath, knowledgeSourcePath, settingsPath } from '@/con
 import { useHistoryBack } from '@/hooks/useHistoryBack'
 import { isProviderConfigured } from '@/services/ai/aiClient'
 import { getKnowledgeTask } from '@/services/ai/knowledgeTasks'
+import { recordUsageSignal } from '@/services/telemetry/usageSignals'
 import { useAppStore } from '@/stores/useAppStore'
 import { useKnowledgeStore } from '@/stores/useKnowledgeStore'
 import { useLibraryStore } from '@/stores/useLibraryStore'
@@ -723,7 +724,10 @@ export const KnowledgePage: React.FC = () => {
                   <button
                     key={chapterIndex}
                     className="px-2 py-0.5 rounded-full border border-outline-variant font-label text-label-sm text-on-surface-variant hover:text-primary hover:border-primary transition-colors"
-                    onClick={() => navigate(knowledgeSourcePath(book, chapterIndex))}
+                    onClick={() => {
+                      recordUsageSignal('knowledge-back-to-source', { bookId: book.id })
+                      navigate(knowledgeSourcePath(book, chapterIndex))
+                    }}
                   >
                     {chapterLabelOf(book, chapterIndex)}
                   </button>
@@ -806,7 +810,10 @@ export const KnowledgePage: React.FC = () => {
                             aria-label={`回到${relation.counterpart}相关原文`}
                             title="回到原文"
                             className="shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors"
-                            onClick={() => navigate(target)}
+                            onClick={() => {
+                              recordUsageSignal('knowledge-back-to-source', { bookId: book.id })
+                              navigate(target)
+                            }}
                           >
                             <span className="material-symbols-outlined text-icon-sm">book_open</span>
                           </button>
@@ -815,7 +822,11 @@ export const KnowledgePage: React.FC = () => {
                       {relation.evidence && (
                         <button
                           className="self-start text-left max-w-full px-2.5 py-1 rounded-card border-l-2 border-seal bg-surface-container-low font-body text-label-md text-on-surface-variant italic truncate hover:text-on-surface transition-colors"
-                          onClick={() => target && navigate(target)}
+                          onClick={() => {
+                            if (!target) return
+                            recordUsageSignal('knowledge-back-to-source', { bookId: book.id })
+                            navigate(target)
+                          }}
                           title={relation.evidence.quote}
                         >
                           「{relation.evidence.quote}」

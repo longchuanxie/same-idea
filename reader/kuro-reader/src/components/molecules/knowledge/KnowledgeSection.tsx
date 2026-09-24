@@ -192,6 +192,12 @@ const TaskCard: React.FC<TaskCardProps> = ({
           书有更新——点 tune 图标可只补新章节
         </p>
       )}
+      {/* 替换更新流落点：书内容已被新文件替换，这份卡还是旧内容生成的 */}
+      {artifact?.stale && idle && (
+        <p className="font-label text-label-xs text-seal mt-1">
+          ⚠ 书内容已替换——这份卡基于旧版文件，点 ↻ 按当前内容重新生成
+        </p>
+      )}
 
       {artifact && idle && !error && (
         <p className="font-label text-label-sm text-on-surface-faint mt-2">

@@ -25,6 +25,7 @@ import { progressRepo } from '@/services/storage/progressRepo';
 import { reviewCardRepo } from '@/services/storage/reviewCardRepo';
 import { tombstoneRepo } from '@/services/storage/tombstoneRepo';
 import { vocabRepo } from '@/services/storage/vocabRepo';
+import { exportUsageSignalsJson } from '@/services/telemetry/usageSignals';
 import { useAppStore } from '@/stores/useAppStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import { useStatsStore } from '@/stores/useStatsStore';
@@ -261,6 +262,17 @@ export const SettingsPage: React.FC = () => {
     const a = document.createElement('a');
     a.href = url;
     a.download = `kuro-reader-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  /** 使用信号导出：本地计数（回原文/节拍/替换），给路线图验证信号用的诊断文件 */
+  const handleExportUsageSignals = () => {
+    const blob = new Blob([exportUsageSignalsJson()], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `kuro-reader-usage-signals-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -1297,6 +1309,20 @@ export const SettingsPage: React.FC = () => {
                   className="hidden"
                   onChange={handleImportData}
                 />
+              </div>
+              <div className="flex items-center justify-between gap-4 mt-4 pt-4 border-t border-outline-variant/50">
+                <div className="min-w-0">
+                  <p className="font-label text-label-md text-on-surface">使用数据</p>
+                  <p className="font-body text-body-xs text-on-surface-variant mt-0.5">
+                    回原文/节拍点击与替换次数的本地计数——不上报，导出用于产品验证信号
+                  </p>
+                </div>
+                <button
+                  className="btn-ghost shrink-0 py-2 px-3"
+                  onClick={handleExportUsageSignals}
+                >
+                  导出使用数据
+                </button>
               </div>
             </div>
           </div>

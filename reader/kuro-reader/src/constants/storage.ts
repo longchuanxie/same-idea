@@ -15,4 +15,6 @@ export const STORAGE_KEYS = {
   HIDDEN_REVISITS: 'kuro-reader-hidden-revisits',
   /** 阅读器底部设置面板上次停留的 tab（排版/外观/更多） */
   READER_SETTINGS_TAB: 'kuro-reader-settings-tab',
+  /** 使用信号本地计数（不上报；设置页可导出） */
+  USAGE_SIGNALS: 'kuro-reader-usage-signals',
 } as const;

@@ -460,6 +460,8 @@ export interface KnowledgeArtifact {
   generator: 'ai' | 'manual'
   /** 手工修订次数（修订模式里的编辑/删除/校验都计 1）——重新生成前的覆盖警告依据 */
   manualEditCount?: number
+  /** 书籍内容经替换更新后置位：UI 提示「内容已更新·待重跑」，重新生成覆盖落库即随新件消失 */
+  stale?: boolean
   createdAt: Date
   updatedAt: Date
 }

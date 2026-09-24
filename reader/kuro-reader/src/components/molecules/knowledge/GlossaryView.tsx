@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { EntryReviseActions, VerifiedBadge } from '@/components/molecules/knowledge/ReviseControls'
 import { knowledgeSourcePath } from '@/constants/routes'
+import { recordUsageSignal } from '@/services/telemetry/usageSignals'
 import type { Book, GlossaryData, GlossaryTerm } from '@/types'
 
 /**
@@ -85,7 +86,11 @@ export const GlossaryView: React.FC<GlossaryViewProps> = ({
           {term.evidence && (
             <button
               className="mt-2 block max-w-full text-left px-2.5 py-1 rounded-card border-l-2 border-seal bg-surface-container-low font-body text-label-md text-on-surface-variant italic truncate hover:text-on-surface transition-colors"
-              onClick={() => term.evidence && navigate(knowledgeSourcePath(book, term.evidence.chapterIndex, term.evidence.offsetRatio))}
+              onClick={() => {
+                if (!term.evidence) return
+                recordUsageSignal('knowledge-back-to-source', { bookId: book.id })
+                navigate(knowledgeSourcePath(book, term.evidence.chapterIndex, term.evidence.offsetRatio))
+              }}
               title={term.evidence.quote}
             >
               「{term.evidence.quote}」
@@ -95,7 +100,10 @@ export const GlossaryView: React.FC<GlossaryViewProps> = ({
             {term.sourcePath && (
               <button
                 className="mt-2 flex items-center gap-1 font-label text-label-sm text-on-surface-variant hover:text-primary transition-colors"
-                onClick={() => navigate(term.sourcePath ?? '')}
+                onClick={() => {
+                  recordUsageSignal('knowledge-back-to-source', { bookId: book.id })
+                  navigate(term.sourcePath ?? '')
+                }}
               >
                 <span className="material-symbols-outlined text-icon-sm">book_open</span>
                 回到原文

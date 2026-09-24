@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { EntryReviseActions, VerifiedBadge } from '@/components/molecules/knowledge/ReviseControls';
 import { knowledgeSourcePath } from '@/constants/routes';
+import { recordUsageSignal } from '@/services/telemetry/usageSignals';
 import type { Book, ContributionStrength, KnowledgeEvidence, PaperBriefData } from '@/types';
 import type { BriefSection } from '@/utils/knowledgeEdit';
 
@@ -42,7 +43,10 @@ const EvidenceJump: React.FC<EvidenceJumpProps> = ({ book, evidence, title }) =>
     <button
       type="button"
       className="self-start text-left max-w-full px-2.5 py-1 rounded-card border-l-2 border-seal bg-surface-container-low font-body text-label-md text-on-surface-variant italic truncate hover:text-on-surface transition-colors"
-      onClick={() => navigate(knowledgeSourcePath(book, evidence.chapterIndex, evidence.offsetRatio))}
+      onClick={() => {
+        recordUsageSignal('knowledge-back-to-source', { bookId: book.id });
+        navigate(knowledgeSourcePath(book, evidence.chapterIndex, evidence.offsetRatio));
+      }}
       title={title}
     >
       「{evidence.quote}」
