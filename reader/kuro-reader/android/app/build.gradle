@@ -41,6 +41,12 @@ android {
             signingConfig signingConfigs.release
         }
     }
+    // 产物名带版本：下载页直链与用户侧文件名一眼可辨（app-release.apk → kuro-reader-v<版本>.apk）
+    applicationVariants.all { variant ->
+        variant.outputs.all {
+            outputFileName = "kuro-reader-v${variant.versionName}.apk"
+        }
+    }
 }
 
 repositories {

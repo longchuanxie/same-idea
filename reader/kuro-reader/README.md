@@ -186,7 +186,7 @@ cd android
 cd android
 ./gradlew assembleRelease
 ```
-构建产物位于 `android/app/build/outputs/apk/release/app-release.apk`。
+构建产物位于 `android/app/build/outputs/apk/release/kuro-reader-v<版本>.apk`（如 `kuro-reader-v1.25.apk`）。
 ### 使用 Android Studio 调试
 ```bash
 npx cap open android
