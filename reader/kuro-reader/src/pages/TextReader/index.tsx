@@ -242,6 +242,14 @@ export const TextReaderPage: React.FC = () => {
 
   // 分页模式状态
   const [textPages, setTextPages] = useState<string[]>([]);
+  /** 渲染用视口尺寸（入 state）：分页测量读实时 window 没问题，但渲染容器的
+   *  inline maxWidth 若在瞬态小视口帧（面板展开动画/键盘弹出/分屏过渡）烘进 article，
+   *  之后视口恢复触发的重分页在页集不变时会跳过 re-render，窄幅排版就永久留场
+   *  （实测形态：正文 1 字/行堆成 9000px 纵塔）。resize 落 state 强制重渲染兜底 */
+  const [readerViewport, setReaderViewport] = useState(() => ({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  }));
   /** 分页引擎收尾用的上一版页面镜像（声明位置在 useTextProgressSaving 之前，就近自建） */
   const previousPagesRef = useRef<string[]>([]);
   previousPagesRef.current = textPages;
@@ -458,6 +466,15 @@ export const TextReaderPage: React.FC = () => {
   const verticalWriting = settings.verticalWriting && textReadingMode === 'scroll';
   const isColumnsLayoutActive = isColumnsReadingMode && isLandscapeViewport;
   const textPageStep = isColumnsLayoutActive ? TEXT_COLUMNS_PAGE_STEP : 1;
+  /** 分页页容器版式：跟随 readerViewport（而非渲染瞬间的 window.innerWidth） */
+  const renderPageLayout = useMemo(() => getTextPageLayout({
+    viewportWidth: readerViewport.width,
+    viewportHeight: readerViewport.height,
+    isColumnsLayoutActive,
+    isLandscapeViewport: window.matchMedia(TEXT_READER_COLUMNS_MEDIA_QUERY).matches,
+    isDesktopViewport: window.matchMedia(TEXT_READER_DESKTOP_MEDIA_QUERY).matches,
+    isLargeViewport: window.matchMedia(TEXT_READER_COLUMNS_LG_MEDIA_QUERY).matches,
+  }), [readerViewport, isColumnsLayoutActive]);
 
   // 模拟翻书（book 模式）跟手动画收敛于 hook；与 goToPage 滑动动画共用下方分页状态
   const {
@@ -1410,24 +1427,30 @@ export const TextReaderPage: React.FC = () => {
       applyPaginationResult(cachedPages);
       return;
     }
-    const finishPagination = (pages: string[]) => {
+    // cacheable=false：本次测量带有已知不可信的几何（图片等待超时仍用占位高度），
+    // 结果照常上屏但绝不入缓存——坏页会被后续图片就绪/字体就绪的重排修正，
+    // 入了缓存重排会命中坏页空转，坏页就永久留在那（用户实测过的整行被裁）
+    const finishPagination = (pages: string[], cacheable = true) => {
       const cache = paginationCacheRef.current;
-      // 先删再放维持插入序：超限时淘汰最旧签名
-      cache.delete(paginationCacheKey);
-      cache.set(paginationCacheKey, pages);
-      if (cache.size > PAGINATION_CACHE_LIMIT) {
-        const oldestKey = cache.keys().next().value;
-        if (oldestKey != null) cache.delete(oldestKey);
+      if (cacheable) {
+        // 先删再放维持插入序：超限时淘汰最旧签名
+        cache.delete(paginationCacheKey);
+        cache.set(paginationCacheKey, pages);
+        if (cache.size > PAGINATION_CACHE_LIMIT) {
+          const oldestKey = cache.keys().next().value;
+          if (oldestKey != null) cache.delete(oldestKey);
+        }
       }
       applyPaginationResult(pages);
     };
 
     // 等测量容器内的图片完成加载（含失败）再量：图片未就绪时高度是占位值，
     // 会把带图页排得过满，渲染时被 overflow-hidden 裁掉尾部内容。
-    // 超时兜底保证分页最终总会执行。
+    // 超时兜底保证分页最终总会执行（结果不入缓存，见 finishPagination）
     const pendingMeasureImages = markdownMeasureRef.current
       ? Array.from(markdownMeasureRef.current.querySelectorAll('img')).filter((img) => !img.complete)
       : [];
+    let measuredWithPendingImages = false;
     if (pendingMeasureImages.length > 0) {
       await new Promise<void>((resolve) => {
         let remaining = pendingMeasureImages.length;
@@ -1439,7 +1462,10 @@ export const TextReaderPage: React.FC = () => {
           img.addEventListener('load', done, { once: true });
           img.addEventListener('error', done, { once: true });
         });
-        setTimeout(resolve, MEASURE_IMAGES_TIMEOUT_MS);
+        setTimeout(() => {
+          measuredWithPendingImages = true;
+          resolve();
+        }, MEASURE_IMAGES_TIMEOUT_MS);
       });
       // 图片等待期间用户可能已切章/换字号启动了新的分页运行；
       // 令牌换代说明本次结果已过期，落盘会把旧章节的页错标给新章节
@@ -1551,7 +1577,7 @@ export const TextReaderPage: React.FC = () => {
           Math.floor((pageHeight / Math.max(1, fontSize * lineHeight)) * (contentWidth / Math.max(1, fontSize)))
         );
         if (pages.length > 1 || markdownDocument.text.length <= capacityChars * SINGLE_PAGE_SANITY_FACTOR) {
-          finishPagination(pages.length > 0 ? pages : ['']);
+          finishPagination(pages.length > 0 ? pages : [''], !measuredWithPendingImages);
           return;
         }
       }
@@ -1564,7 +1590,7 @@ export const TextReaderPage: React.FC = () => {
     measureEl.removeAttribute('style');
     measureEl.replaceChildren();
 
-    finishPagination(pages);
+    finishPagination(pages, !measuredWithPendingImages);
   }, [
     currentChapter,
     textReadingMode,
@@ -1622,6 +1648,9 @@ export const TextReaderPage: React.FC = () => {
   useEffect(() => {
     if (textReadingMode === 'scroll') return;
     const handleResize = () => {
+      // 视口落 state：渲染容器的版式（maxWidth 等）随真实视口重算——纯重分页在页集
+      // 不变时不会触发 re-render，瞬态小视口烘进去的窄 maxWidth 就摘不掉
+      setReaderViewport({ width: window.innerWidth, height: window.innerHeight });
       // 旋转/分屏等布局变化重切页后，按字符偏移回到正在读的位置而不是弹回第 0 页
       // 视口变了，旧的自校准收缩不再可信，随之重置
       pageCapacityShrinkRef.current = 0;
@@ -1629,14 +1658,25 @@ export const TextReaderPage: React.FC = () => {
       requestAnimationFrame(() => void paginateMeasuredContent());
     };
     const handleMarkdownMediaLoad = () => {
+      // 图片就绪改变了块高度：本章分页缓存全部作废——可能是在图片未就绪时
+      // （或被设备端 complete 谎报骗过等待时）量的。不失效的话重分页会命中
+      // 坏缓存空转，带图页的末行就一直被裁（用户实测过的形态）
+      if (currentChapter) {
+        const prefix = `${bookId}|${currentChapter.id}|`;
+        for (const key of paginationCacheRef.current.keys()) {
+          if (key.startsWith(prefix)) paginationCacheRef.current.delete(key);
+        }
+      }
       preserveReadingPositionRef.current = true;
       requestAnimationFrame(() => void paginateMeasuredContent());
     };
     window.addEventListener('resize', handleResize);
     window.addEventListener('markdown-media-load', handleMarkdownMediaLoad);
     // webfont 晚于首次分页完成加载（unicode-range 子集随翻页按需拉取）时重排；
+    // 字体改变全部已测行宽，缓存整表作废（首测若赶在换字前，坏断页同样会被缓存钉死）；
     // 与现有分页一致时 applyPaginationResult 原地跳过，分页变化时按偏移保留位置
     const handleFontsLoadingDone = () => {
+      paginationCacheRef.current.clear();
       preserveReadingPositionRef.current = true;
       requestAnimationFrame(() => void paginateMeasuredContent());
     };
@@ -1646,7 +1686,7 @@ export const TextReaderPage: React.FC = () => {
       window.removeEventListener('markdown-media-load', handleMarkdownMediaLoad);
       document.fonts?.removeEventListener('loadingdone', handleFontsLoadingDone);
     };
-  }, [textReadingMode, paginateMeasuredContent]);
+  }, [textReadingMode, currentChapter, bookId, paginateMeasuredContent]);
 
   // 渲染自检（页容量自校准，双向）：分页度量与真机渲染之间存在无法逐项消除的漂移
   // （字体回退行盒/textZoom/子像素取整）。当前页渲染后：
@@ -2729,7 +2769,7 @@ export const TextReaderPage: React.FC = () => {
   };
 
   const renderPagedArticle = (pageIndex: number) => {
-    const pageLayout = getCurrentTextPageLayout(isColumnsLayoutActive);
+    const pageLayout = renderPageLayout;
     const articleStyle = {
       fontSize: `${fontSize}px`,
       lineHeight,

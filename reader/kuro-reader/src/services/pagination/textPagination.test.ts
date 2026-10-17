@@ -35,6 +35,13 @@ describe('findPreferredBreak', () => {
     expect(findPreferredBreak(text, 7)).toBe(3)
   })
 
+  it('半角 CJK 标点（EPUB 转换产物）也算句末/子句断点', () => {
+    const sentence = '甲乙丙丁｡戊己庚辛'
+    expect(findPreferredBreak(sentence, sentence.length)).toBe(5)
+    const clause = '甲乙丙丁､戊己庚辛'
+    expect(findPreferredBreak(clause, clause.length)).toBe(5)
+  })
+
   it('句末超出牺牲上限时回退子句断点——不为等句号留出近整页空白', () => {
     // 句号在回退 280 字符处（超 max 200），逗号在回退 30 字符处（子句窗口 120 内）
     const text = 'x'.repeat(199) + '。' + 'y'.repeat(249) + '，' + 'z'.repeat(30)
