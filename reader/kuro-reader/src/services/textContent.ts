@@ -52,14 +52,18 @@ export const buildTextChapters = (
  * 异步预热解析结果缓存（不阻塞调用方；失败静默——下次开书重走解析路径再试）。
  * 供导入完成点与 loadTextContent 未命中后的回填共用。
  * TXT 预热应传净化信息（rev+summary）：净后章节与摘要一并物化，首次开书即命中。
+ * fileType：源文件 MIME 指纹——非 text/* 一律不缓存（EPUB 章节带运行期 object URL
+ * 本就不可缓存；判例：EPUB 曾借导入预热落库无图纯文本，开书命中后图片永久消失）。
  */
 export const warmTextChapterCache = (
   bookId: string,
   chapters: TextChapter[],
   isMarkdown: boolean,
-  sanitize?: { rev: string; summary?: SanitizeSummary }
+  sanitize?: { rev: string; summary?: SanitizeSummary },
+  fileType?: string
 ): void => {
   if (chapters.length === 0 || pendingCacheWrites.has(bookId)) return;
+  if (!fileType || !fileType.startsWith('text/')) return;
   pendingCacheWrites.add(bookId);
   void textChapterCacheRepo
     .save({
@@ -68,6 +72,7 @@ export const warmTextChapterCache = (
       totalChars: chapters.reduce((sum, ch) => sum + ch.content.length, 0),
       chapters,
       cachedAt: Date.now(),
+      fileType,
       ...(sanitize ? { sanitizeRev: sanitize.rev, sanitizeSummary: sanitize.summary } : {}),
     })
     .catch(() => {
@@ -126,8 +131,13 @@ export async function loadTextContentDetailed(bookId: string): Promise<TextConte
   // 缓存探测先于 blob 读取：命中时连原始文件都不必读。书籍文件导入后不可变
   // （重复导入按标题拦截/替换流、bookId 唯一），缓存漂移的唯一来源是净化配置——
   // 以 sanitizeRev 判等：旧记录无 rev 或 rev 不匹配都重算。
+  // fileType 指纹缺失的记录（历史全部 + 曾被 EPUB 导入预热投毒的无图纯文本）
+  // 一律不信任：忽略后从原件重算，EPUB 书就此回到保真管线（图片恢复）。
   const cached = await textChapterCacheRepo.get(bookId).catch(() => undefined);
-  if (cached && cached.chapters.length > 0) {
+  const cacheTrusted = !!cached
+    && cached.chapters.length > 0
+    && !!cached.fileType?.startsWith('text/');
+  if (cacheTrusted && cached) {
     const revMatched = cached.isMarkdown ? cached.sanitizeRev === MARKDOWN_SANITIZE_REV : cached.sanitizeRev === rev;
     if (revMatched) {
       const summary = cached.sanitizeSummary;
@@ -146,7 +156,7 @@ export async function loadTextContentDetailed(bookId: string): Promise<TextConte
   const blob = await bookFileRepo.get(bookId);
   if (!blob) {
     // blob 缺失但缓存还在（理论不该发生）：退回缓存内容，不把用户晾在空书里
-    if (cached && cached.chapters.length > 0) {
+    if (cacheTrusted && cached) {
       return { chapters: cached.chapters, isEpub: false, isMarkdown: cached.isMarkdown, sanitize: EMPTY_SANITIZE_STATUS };
     }
     return { chapters: [], isEpub: false, isMarkdown: false, sanitize: EMPTY_SANITIZE_STATUS };
@@ -167,13 +177,13 @@ export async function loadTextContentDetailed(bookId: string): Promise<TextConte
 
     if (isMarkdown) {
       // MD 不净化：rev 固定，缓存稳定
-      warmTextChapterCache(bookId, built, true, { rev: MARKDOWN_SANITIZE_REV });
+      warmTextChapterCache(bookId, built, true, { rev: MARKDOWN_SANITIZE_REV }, blobType);
       return { chapters: built, isEpub: false, isMarkdown: true, sanitize: EMPTY_SANITIZE_STATUS };
     }
 
     // TXT：净化在唯一出口应用——渲染/TTS/搜索/知识语料/分页全部吃这里的产物
     const { chapters, summary } = sanitizeBookChapters(built, options);
-    warmTextChapterCache(bookId, chapters, false, { rev, summary });
+    warmTextChapterCache(bookId, chapters, false, { rev, summary }, blobType);
     return {
       chapters,
       isEpub: false,

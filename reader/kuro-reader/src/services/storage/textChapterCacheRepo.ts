@@ -18,6 +18,10 @@ import { getDB, STORE_NAMES } from './db'
  *   配置/规则变化 → rev 不匹配 → textContent 重算整本并覆盖回写；
  * - Markdown 记录 sanitizeRev 固定为 'md'（净化不接 MD：章节另有结构文档渲染管线）；
  * - 旧记录无 sanitizeRev 字段 = 视为不匹配，下次开书自动重算一次（一次性迁移成本）。
+ *
+ * 来源指纹（2026-10-17 判例：EPUB 曾借导入预热把无图纯文本写进缓存，开书命中后
+ * 图片永久消失）：记录必须携带 fileType（text/* 才可信）；无 fileType 的旧记录
+ * 一律不信任——含历史上被 EPUB 投毒的记录，忽略后下次开书从原件重算自愈。
  */
 export interface TextChapterCacheRecord {
   bookId: string
@@ -30,6 +34,8 @@ export interface TextChapterCacheRecord {
   sanitizeRev?: string
   /** 该 rev 下的净化命中摘要（确认门样例与已净化计数） */
   sanitizeSummary?: SanitizeSummary
+  /** 源文件 MIME（text/* 可信；EPUB 等其他类型禁止入缓存） */
+  fileType?: string
 }
 
 export const textChapterCacheRepo = {

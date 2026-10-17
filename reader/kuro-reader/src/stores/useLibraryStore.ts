@@ -173,15 +173,18 @@ function trackCoverObjectUrl(url: string): string {
 /** 导入完成点预热文本书解析缓存：TXT 直接用导入时已拆好的章节落库（含 A/B 类净化——
  *  新书广告门槛按 'pending' 走 detect：排版即净化、广告只检测进摘要，确认门在首开时弹），
  *  首次开书即免整本重解析（长网文为秒级收益）。Markdown 的逐章 parseMarkdownDocument
- *  成本较高，不在导入期跑——留待首次开书回填，此后同样命中缓存 */
+ *  成本较高，不在导入期跑——留待首次开书回填，此后同样命中缓存。
+ *  只跟 text/plain：EPUB 的 parsed.format 同为 'text'，但导入期章节是 cleanHtmlToText
+ *  的无图纯文本（图片 object URL 只在开书时的保真管线里生成）——落库会投毒缓存，
+ *  开书命中后图片永久消失（2026-10-17 判例）；MD 留给首开回填 */
 function warmTextCacheFromParsed(bookId: string, parsed: ParsedBook): void {
   if (parsed.format !== 'text' || !parsed.chapters || parsed.chapters.length === 0) return;
   const type = parsed.textFile.type;
-  if (type.startsWith('text/markdown') || type.startsWith('text/x-markdown')) return;
+  if (type !== 'text/plain') return;
   const options = resolveSanitizeOptions(useAppStore.getState().settings.contentSanitize, 'pending');
   const built = buildTextChapters(parsed.chapters, false);
   const { chapters, summary } = sanitizeBookChapters(built, options);
-  warmTextChapterCache(bookId, chapters, false, { rev: computeSanitizeRev(options), summary });
+  warmTextChapterCache(bookId, chapters, false, { rev: computeSanitizeRev(options), summary }, type);
 }
 
 /** 替换更新流资格：书架上的书与导入文件都是 TXT/MD 文本（EPUB 章节带运行期 object URL 不跨会话，不接） */

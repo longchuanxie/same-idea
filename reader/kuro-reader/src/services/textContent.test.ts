@@ -102,6 +102,55 @@ describe('loadTextContent 解析缓存', () => {
     const record = await waitForCacheWrite('book-4')
     expect(record).toBeUndefined()
   })
+
+  it('无 fileType 指纹的旧缓存记录不信任：重读原件重算并回填指纹（历史投毒记录自愈）', async () => {
+    const text = '第一章 初见\n山雨欲来。'
+    blobGetMock.mockResolvedValue(new Blob([text], { type: 'text/plain' }))
+    await loadTextContent('book-legacy')
+    const record = await waitForCacheWrite('book-legacy') as { fileType?: string; sanitizeRev?: string } | undefined
+    expect(record?.fileType).toBe('text/plain')
+
+    // 剥掉指纹模拟旧记录（含曾被 EPUB 导入预热投毒的形态），重存
+    if (record) delete record.fileType
+    cacheStore.set('book-legacy', record)
+    blobGetMock.mockClear()
+
+    const second = await loadTextContent('book-legacy')
+    expect(blobGetMock).toHaveBeenCalled() // 不再吃缓存，重读原件
+    expect(second.chapters[0]?.title).toBe('第一章 初见')
+
+    // 回填后的记录带指纹，再次开书恢复命中
+    const rewritten = await waitForCacheWrite('book-legacy') as { fileType?: string } | undefined
+    expect(rewritten?.fileType).toBe('text/plain')
+    blobGetMock.mockClear()
+    await loadTextContent('book-legacy')
+    expect(blobGetMock).not.toHaveBeenCalled()
+  })
+
+  it('EPUB 投毒记录（旧形态）被无视：开书回到 EPUB 保真管线', async () => {
+    // 模拟历史投毒：EPUB 书下挂着无指纹的「纯文本章节」缓存
+    cacheStore.set('book-poisoned', {
+      bookId: 'book-poisoned',
+      isMarkdown: false,
+      totalChars: 6,
+      chapters: [{ id: 'ch1', title: '正文', content: '无图纯文本' }],
+      cachedAt: Date.now(),
+    })
+    blobGetMock.mockResolvedValue(new Blob([new Uint8Array([1])], { type: 'application/epub+zip' }))
+
+    const result = await loadTextContent('book-poisoned')
+    expect(blobGetMock).toHaveBeenCalled() // 缓存被无视，读了原始 EPUB
+    expect(result.isEpub).toBe(true) // 走 EPUB 管线（非法 zip 落「解析失败」兜底，但管线正确）
+  })
+})
+
+describe('warmTextChapterCache 源类型门禁', () => {
+  it('非 text/* 源不写缓存（EPUB 导入预热直接跳过）', async () => {
+    const { warmTextChapterCache } = await import('@/services/textContent')
+    warmTextChapterCache('book-epub-warm', [{ id: 'ch1', title: 'T', content: 'x' }], false, undefined, 'application/epub+zip')
+    await new Promise((resolve) => setTimeout(resolve, 30))
+    expect(cacheStore.has('book-epub-warm')).toBe(false)
+  })
 })
 
 describe('buildTextChapters', () => {
