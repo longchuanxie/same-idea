@@ -50,8 +50,10 @@ import { translateSelection } from '@/services/ai/translation';
 import { lookupWord, type VocabLookupResult } from '@/services/ai/vocabLookup';
 import { revokeEpubObjectUrls } from '@/services/epubContent';
 import {
-  findMaxFitLength,
-  findPreferredBreak,
+  paginateMarkdownBlocks,
+  type SplitMeasureContext,
+} from '@/services/pagination/markdownBlockPagination';
+import {
   paginatePlainText,
   splitTextIntoPages,
 } from '@/services/pagination/textPagination';
@@ -99,7 +101,6 @@ const SWIPE_THRESHOLD = 50;
 const TEXT_READER_DESKTOP_MEDIA_QUERY = '(min-width: 768px)';
 const TEXT_READER_COLUMNS_LG_MEDIA_QUERY = '(min-width: 1024px)';
 const TEXT_READER_COLUMNS_MEDIA_QUERY = '(orientation: landscape)';
-const MIN_TEXT_PAGE_LENGTH = 1;
 const TEXT_PAGE_RESET_INDEX = 0;
 const TEXT_COLUMNS_PAGE_STEP = 2;
 const UNDO_TOAST_AUTO_HIDE_MS = 5000;
@@ -143,15 +144,21 @@ const PAGE_SLIDE_ANIMATION_MS = 650;
 const FONTS_READY_TIMEOUT_MS = 1500;
 /** 测量容器图片加载等待上限：超时按当前状态先分页 */
 const MEASURE_IMAGES_TIMEOUT_MS = 3000;
-/** 页容量自校准：单次收缩步长（约半行）与累计上限，防病态循环 */
+/** 页容量自校准：单次收缩步长（约半行）与累计上限，防病态循环。
+ *  上限 120：自校准修的是设备度量漂移（textZoom/字体回退），十几像素量级；
+ *  瞬时溢出（图片加载时序/webfont 换装）由图片就绪门禁与版式重置拦在门外，
+ *  不该靠大额收缩兜底——240 的旧上限在 800px 视口上会吃掉近 1/3 版面 */
 const CAPACITY_SHRINK_STEP_PX = 12;
-const MAX_CAPACITY_SHRINK_PX = 240;
+const MAX_CAPACITY_SHRINK_PX = 120;
+/** 容量回收迟滞带：整页富余超过两行才释放收缩步长，与增长步长（≥14px）拉开死区防振荡 */
+const CAPACITY_RELEASE_MIN_SLACK_PX = 48;
+/** 句读式页尾（句末/子句/收尾引号括号）：这类页的留白来自断句偏好而非容量富余，
+ *  不作为释放收缩量的证据 */
+const SENTENCE_ISH_TAIL_PATTERN = /[。！？；….,!?;，、：:\u3000\s"'「」『』（）【】《》〈〉()[\]{}]/;
 /** 页容量收缩下限：低于此值不再收缩（正常阅读不可能触达） */
 const MIN_PAGE_CAPACITY_PX = 240;
 /** 分页结果缓存上限（章）：签名命中直接复用，章节往返不再全章重排 */
 const PAGINATION_CACHE_LIMIT = 8;
-/** Markdown 块填充当前页的最小前缀量（字符，约一行）：低于此值整块搬移，避免碎页 */
-const MIN_FILL_SPLIT_CHARS = 40;
 /** 整章一页自检阈值：单页文本量超过页面理论容量的倍数即判定测量不可信 */
 const SINGLE_PAGE_SANITY_FACTOR = 1.5;
 const SINGLE_PAGE_MIN_CAPACITY_CHARS = 400;
@@ -1455,16 +1462,10 @@ export const TextReaderPage: React.FC = () => {
     measureEl.style.boxSizing = 'border-box';
     measureEl.style.textAlign = textAlign === 'justify' ? 'justify' : 'left';
 
-    /** 块内拆页的测量上下文：拆分发生在段内时，渲染宽度受块样式（左内边距/缩进）影响，
+    /** 块内拆页的测量上下文（定义与策略见 markdownBlockPagination）：
+     *  拆分发生在段内时，渲染宽度受块样式（左内边距/缩进）影响，
      *  裸文本测量会比真实渲染更宽更矮 → 页被塞得过满、底部正文被 overflow-hidden 裁掉 */
-    interface SplitBlockContext {
-      kind: 'paragraph' | 'blockquote' | 'list-item';
-      listDepth?: number;
-      /** 切片是否从块首开始（段首缩进只在块首出现，与渲染侧 visibleStart === block.start 对齐） */
-      atBlockStart: boolean;
-    }
-
-    const measurePageHeight = (pageText: string, includeChapterTitle: boolean, block?: SplitBlockContext): number => {
+    const measurePageHeight = (pageText: string, includeChapterTitle: boolean, block?: SplitMeasureContext): number => {
       const wrapper = document.createElement('div');
 
       if (includeChapterTitle && hasMultipleChapters && currentChapter) {
@@ -1497,7 +1498,7 @@ export const TextReaderPage: React.FC = () => {
       return measureEl.scrollHeight;
     };
 
-    const fitsPage = (pageText: string, includeChapterTitle: boolean, block?: SplitBlockContext): boolean =>
+    const fitsPage = (pageText: string, includeChapterTitle: boolean, block?: SplitMeasureContext): boolean =>
       measurePageHeight(pageText, includeChapterTitle, block) <= pageHeight;
 
     const markdownDocument = currentChapter.markdownDocument;
@@ -1522,124 +1523,26 @@ export const TextReaderPage: React.FC = () => {
             + Number.parseFloat(titleStyle?.marginTop || '0')
             + Number.parseFloat(titleStyle?.marginBottom || '0')
           : 0;
-        const pages: string[] = [];
-        let pageStart = 0;
-        let usedHeight = 0;
 
-        const pushPage = (end: number) => {
-          if (end <= pageStart) return;
-          pages.push(markdownDocument.text.slice(pageStart, end));
-          pageStart = end;
-          usedHeight = 0;
-        };
-
-        markdownDocument.blocks
-          .filter((block) => block.start < paginationEnd)
-          .forEach((block, blockIndex) => {
-          const element = measuredBlocks[blockIndex];
-          const computedStyle = window.getComputedStyle(element);
-          const blockHeight = element.getBoundingClientRect().height
-            + Number.parseFloat(computedStyle.marginTop || '0')
-            + Number.parseFloat(computedStyle.marginBottom || '0');
-          const availableHeight = pageHeight - (pages.length === 0 ? titleHeight : 0);
-          const containsImage = markdownDocument.spans.some(
-            (span) => span.type === 'image' && span.start < block.end && span.end > block.start
-          );
-          const canSplitInside = !containsImage && (
-            block.type === 'paragraph'
-            || block.type === 'blockquote'
-            || block.type === 'list-item'
-          );
-
-          // 块放不进当前页剩余空间：可拆块先用前段填满（老行为整块搬移，块越高留白越大），
-          // 填充量不足最小行文量时退回整块搬移；残余与后续块在新页正常累积
-          if (usedHeight > 0 && usedHeight + blockHeight > availableHeight) {
-            let fillLen: number | null = null;
-            if (canSplitInside) {
-              const remainingSpace = availableHeight - usedHeight;
-              const blockText = markdownDocument.text.slice(block.start, block.end);
-              const fitLen = findMaxFitLength(
-                blockText,
-                (prefix) => measurePageHeight(
-                  prefix,
-                  false,
-                  { kind: block.type as SplitBlockContext['kind'], listDepth: block.listDepth, atBlockStart: true }
-                ) <= remainingSpace,
-                { maxPageLength: pageLengthUpperBound }
-              );
-              if (fitLen >= MIN_FILL_SPLIT_CHARS) {
-                const breakAt = findPreferredBreak(blockText, fitLen);
-                fillLen = breakAt >= MIN_FILL_SPLIT_CHARS ? breakAt : null;
-              }
-            }
-            if (fillLen != null) {
-              pushPage(block.start + fillLen);
-              // 残余不足一整页：留在新页与后续块继续累积；超高残余按行拆分续排——
-              // 整块封页会被 overflow-hidden 裁掉超出页高的部分，正文就读不到了
-              const residualStart = block.start + fillLen;
-              const residualText = markdownDocument.text.slice(residualStart, block.end);
-              const residualContext: SplitBlockContext = {
-                kind: block.type as SplitBlockContext['kind'],
-                listDepth: block.listDepth,
-                atBlockStart: false,
-              };
-              const residualHeight = measurePageHeight(residualText, false, residualContext);
-              if (residualHeight <= pageHeight) {
-                usedHeight = residualHeight;
-                return;
-              }
-              let cursor = residualStart;
-              while (cursor < block.end) {
-                const remainingText = markdownDocument.text.slice(cursor, block.end);
-                if (fitsPage(remainingText, false, residualContext)) break;
-                const best = findMaxFitLength(
-                  remainingText,
-                  (prefix) => fitsPage(prefix, false, residualContext),
-                  { maxPageLength: pageLengthUpperBound }
-                );
-                const splitLength = Math.max(MIN_TEXT_PAGE_LENGTH, findPreferredBreak(remainingText, best));
-                pushPage(cursor + splitLength);
-                cursor += splitLength;
-              }
-              if (pageStart < block.end) pushPage(block.end);
-              return;
-            }
-            pushPage(block.start);
-          }
-
-          const freshAvailableHeight = pageHeight - (pages.length === 0 ? titleHeight : 0);
-
-          if (blockHeight > freshAvailableHeight && canSplitInside) {
-            if (pageStart < block.start) pushPage(block.start);
-            let cursor = block.start;
-            while (cursor < block.end) {
-              const includeChapterTitle = pages.length === 0;
-              const remainingText = markdownDocument.text.slice(cursor, block.end);
-              // 拆分测量带上块上下文：切片是否块首决定段首缩进，块类型决定渲染宽度
-              const blockContext: SplitBlockContext = {
-                kind: block.type as SplitBlockContext['kind'],
-                listDepth: block.listDepth,
-                atBlockStart: cursor === block.start,
-              };
-              if (fitsPage(remainingText, includeChapterTitle, blockContext)) break;
-
-              const best = findMaxFitLength(
-                remainingText,
-                (prefix) => fitsPage(prefix, includeChapterTitle, blockContext),
-                { maxPageLength: pageLengthUpperBound }
-              );
-              const splitLength = Math.max(MIN_TEXT_PAGE_LENGTH, findPreferredBreak(remainingText, best));
-              pushPage(cursor + splitLength);
-              cursor += splitLength;
-            }
-            if (pageStart < block.end) pushPage(block.end);
-            return;
-          }
-
-          usedHeight += blockHeight;
+        // 块级切页策略（填满/搬移/超高续排/孤尾均衡/段间空白不成页）在纯函数模块里，
+        // 这里只注入逐块实测高度与块内切片测量
+        const pages = paginateMarkdownBlocks({
+          text: markdownDocument.text,
+          blocks: markdownDocument.blocks.filter((block) => block.start < paginationEnd),
+          spans: markdownDocument.spans,
+          pageHeight,
+          titleHeight,
+          pageLengthUpperBound,
+          endOffset: paginationEnd,
+          measureBlockHeight: (blockIndex) => {
+            const element = measuredBlocks[blockIndex];
+            const computedStyle = window.getComputedStyle(element);
+            return element.getBoundingClientRect().height
+              + Number.parseFloat(computedStyle.marginTop || '0')
+              + Number.parseFloat(computedStyle.marginBottom || '0');
+          },
+          measureSplitHeight: measurePageHeight,
         });
-
-        pushPage(paginationEnd);
         // 设备端自检：整章被收进一页说明测量高度不可信（个别 WebView 对屏外
         // 固定定位容器的高度返回异常），转投独立测量通道（scrollHeight）重切，
         // 宁可切分点不完美，不可整章一页导致后半章不可达
@@ -1677,6 +1580,19 @@ export const TextReaderPage: React.FC = () => {
     applyPaginationResult,
   ]);
 
+  // 版式变更重置自校准收缩：收缩量是按「当前版式+设备」的度量漂移学的，
+  // 换字号/字体/对齐/双栏后旧收缩不再是这条版式的答案，从零重学——
+  // 瞬时溢出（webfont 换装窗口等）留下的疤痕不跨版式携带
+  const layoutSignatureRef = useRef('');
+  useEffect(() => {
+    const signature = [
+      fontSize, lineHeight, resolvedFontFamily, textAlign, firstLineIndent, isColumnsLayoutActive,
+    ].join('|');
+    if (layoutSignatureRef.current === signature) return;
+    layoutSignatureRef.current = signature;
+    pageCapacityShrinkRef.current = 0;
+  }, [fontSize, lineHeight, resolvedFontFamily, textAlign, firstLineIndent, isColumnsLayoutActive]);
+
   // 当章节或模式变化时重新分页
   useEffect(() => {
     if (textReadingMode !== 'scroll' && currentChapter) {
@@ -1707,6 +1623,8 @@ export const TextReaderPage: React.FC = () => {
     if (textReadingMode === 'scroll') return;
     const handleResize = () => {
       // 旋转/分屏等布局变化重切页后，按字符偏移回到正在读的位置而不是弹回第 0 页
+      // 视口变了，旧的自校准收缩不再可信，随之重置
+      pageCapacityShrinkRef.current = 0;
       preserveReadingPositionRef.current = true;
       requestAnimationFrame(() => void paginateMeasuredContent());
     };
@@ -1730,31 +1648,67 @@ export const TextReaderPage: React.FC = () => {
     };
   }, [textReadingMode, paginateMeasuredContent]);
 
-  // 渲染自检（页容量自校准）：分页度量与真机渲染之间存在无法逐项消除的漂移
-  // （字体回退行盒/textZoom/子像素取整）。当前页渲染后若文字越过裁切边界，
-  // 增长页容量收缩量并重分页（按字符偏移保留位置），直到本机收敛到不裁字。
+  // 渲染自检（页容量自校准，双向）：分页度量与真机渲染之间存在无法逐项消除的漂移
+  // （字体回退行盒/textZoom/子像素取整）。当前页渲染后：
+  // - 文字越过裁切边界 → 增长收缩量并重分页（按字符偏移保留位置）；
+  // - 整页仍有大块富余且断点不在块尾 → 回收一步收缩量（旧实现只增不减，
+  //   瞬时溢出的疤痕会永久吃掉页容量，页底留白随会话越攒越大）。
+  // 两者间留出迟滞死区（增长 ≥ 一行余量、回收需两行富余）防振荡。
   useEffect(() => {
     if (textReadingMode === 'scroll' || !currentChapter || textPages.length === 0) return;
     const frame = requestAnimationFrame(() => {
-      const content = document.querySelector('[data-reader-content]');
-      const article = document.querySelector('[data-reader-article]');
-      if (!content || !article) return;
-      const articleRect = article.getBoundingClientRect();
-      const padBottom = parseFloat(getComputedStyle(article).paddingBottom) || 0;
-      const boundary = articleRect.bottom - padBottom;
+      // 逐个 article 校验（双栏左右页各有一枚）；动画期退出页在前也一并测，
+      // 退出页此前已收敛，不会误报溢出，但其小富余会压低 slack 阻止回收
+      const articles = Array.from(document.querySelectorAll<HTMLElement>('[data-reader-article]'));
+      if (articles.length === 0) return;
+      // 图片未就绪时渲染高度是暂态：等 markdown-media-load 重排，不用暂态几何喂自校准
+      const hasPendingImage = articles.some((article) =>
+        Array.from(article.querySelectorAll('img')).some((img) => !img.complete)
+      );
+      if (hasPendingImage) return;
       let overflow = 0;
-      const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
-      let node;
-      while ((node = walker.nextNode())) {
-        const range = document.createRange();
-        range.selectNodeContents(node);
-        const rect = range.getBoundingClientRect();
-        if (rect.bottom > boundary) overflow = Math.max(overflow, rect.bottom - boundary);
+      let slack = Number.POSITIVE_INFINITY;
+      articles.forEach((article) => {
+        const articleRect = article.getBoundingClientRect();
+        const padBottom = parseFloat(getComputedStyle(article).paddingBottom) || 0;
+        const boundary = articleRect.bottom - padBottom;
+        let articleMaxBottom = 0;
+        article.querySelectorAll('[data-reader-content]').forEach((content) => {
+          const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
+          let node;
+          while ((node = walker.nextNode())) {
+            const range = document.createRange();
+            range.selectNodeContents(node);
+            const rect = range.getBoundingClientRect();
+            if (rect.height <= 0) continue;
+            articleMaxBottom = Math.max(articleMaxBottom, rect.bottom);
+          }
+        });
+        if (articleMaxBottom <= 0) return;
+        overflow = Math.max(overflow, articleMaxBottom - boundary);
+        slack = Math.min(slack, boundary - articleMaxBottom);
+      });
+      if (overflow > 1) {
+        const nextShrink = pageCapacityShrinkRef.current + Math.ceil(overflow) + CAPACITY_SHRINK_STEP_PX;
+        if (nextShrink > MAX_CAPACITY_SHRINK_PX) return; // 已到上限，放弃继续收缩避免循环
+        pageCapacityShrinkRef.current = nextShrink;
+        preserveReadingPositionRef.current = true;
+        void paginateMeasuredContent();
+        return;
       }
-      if (overflow <= 1) return;
-      const nextShrink = pageCapacityShrinkRef.current + Math.ceil(overflow) + CAPACITY_SHRINK_STEP_PX;
-      if (nextShrink > MAX_CAPACITY_SHRINK_PX) return; // 已到上限，放弃继续收缩避免循环
-      pageCapacityShrinkRef.current = nextShrink;
+      if (slack < CAPACITY_RELEASE_MIN_SLACK_PX) return;
+      // 块尾断点（孤尾短页/整块搬移页）与章末页天然留白，句读回找页（页尾停在
+      // 句读/收尾符）的留白是断句偏好给的——都不算容量富余的证据，回收它们会把
+      // 学到的设备漂移冲掉，陷入「释放到 0 → 整页裁字 → 再增长」的振荡。
+      // 只有容量截断页（断在行文中、后面还有内容）的富余才说明收缩过量
+      const shrink = pageCapacityShrinkRef.current;
+      if (shrink <= 0 || currentPageIndex >= textPages.length - 1) return;
+      const pageText = textPages[currentPageIndex] ?? '';
+      const pageStartOffset = textPages.slice(0, currentPageIndex).reduce((sum, page) => sum + page.length, 0);
+      const nextChar = currentChapter.content[pageStartOffset + pageText.length];
+      if (/\n\s*$/.test(pageText) || nextChar === '\n' || nextChar === undefined) return;
+      if (SENTENCE_ISH_TAIL_PATTERN.test(pageText.trimEnd().slice(-1))) return;
+      pageCapacityShrinkRef.current = Math.max(0, shrink - CAPACITY_SHRINK_STEP_PX);
       preserveReadingPositionRef.current = true;
       void paginateMeasuredContent();
     });

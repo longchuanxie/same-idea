@@ -53,7 +53,7 @@ function findBlockSpans(spans: MarkdownSpan[], block: MarkdownBlock): MarkdownSp
   return matches
 }
 
-const MarkdownImage: FC<{ span: MarkdownSpan; measurementMode?: boolean }> = ({ span, measurementMode }) => {
+const MarkdownImage: FC<{ span: MarkdownSpan; measurementMode?: boolean; paginated?: boolean }> = ({ span, measurementMode, paginated }) => {
   const [failed, setFailed] = useState(false)
   const source = span.href?.trim() ?? ''
   const alt = span.alt || t('Markdown 图片')
@@ -73,8 +73,9 @@ const MarkdownImage: FC<{ span: MarkdownSpan; measurementMode?: boolean }> = ({ 
       title={span.title ?? undefined}
       // 测量容器常驻屏幕外，lazy 图永远不会进入视口也就永远不会加载，
       // 分页测量只能拿到占位高度 → 渲染页被真实图高撑爆、底部正文被裁；
-      // 测量时必须 eager 拿真实尺寸，加载完成后经 markdown-media-load 触发重分页
-      loading={measurementMode ? 'eager' : 'lazy'}
+      // 分页阅读的渲染页同样 eager：翻页即出图，且图高在页容量自检前就绪，
+      // 懒加载的加载时序差会把暂态溢出喂给自校准（lazy 只留给滚动模式）
+      loading={measurementMode || paginated ? 'eager' : 'lazy'}
       decoding="async"
       referrerPolicy="no-referrer"
       className="my-3 inline-block max-h-[70vh] max-w-full rounded-lg object-contain align-middle"
@@ -90,7 +91,8 @@ function wrapWithMarkdownSpan(
   span: MarkdownSpan,
   key: string,
   onInternalLink?: (href: string) => void,
-  measurementMode?: boolean
+  measurementMode?: boolean,
+  paginated?: boolean
 ): ReactNode {
   switch (span.type) {
     case 'strong':
@@ -122,7 +124,7 @@ function wrapWithMarkdownSpan(
         </a>
       ) : node
     case 'image':
-      return <MarkdownImage key={key} span={span} measurementMode={measurementMode} />
+      return <MarkdownImage key={key} span={span} measurementMode={measurementMode} paginated={paginated} />
     case 'math':
       return (
         <MarkdownMath
@@ -236,17 +238,18 @@ export const MarkdownReaderContent: FC<MarkdownReaderContentProps> = ({
             <span data-source-start={segmentStart}>{segmentText}</span>
           )
 
-          rangeSpans
-            .filter((span) => span.start <= segmentStart && span.end >= segmentEnd)
-            .forEach((span, spanIndex) => {
-              node = wrapWithMarkdownSpan(
-                node,
-                span,
-                `${segmentStart}-${span.type}-${spanIndex}`,
-                onInternalLink,
-                measurementMode
-              )
-            })
+              rangeSpans
+                .filter((span) => span.start <= segmentStart && span.end >= segmentEnd)
+                .forEach((span, spanIndex) => {
+                  node = wrapWithMarkdownSpan(
+                    node,
+                    span,
+                    `${segmentStart}-${span.type}-${spanIndex}`,
+                    onInternalLink,
+                    measurementMode,
+                    paginated
+                  )
+                })
 
           const annotation = rangeAnnotations.find(
             (item) => item.startOffset <= segmentStart && item.endOffset >= segmentEnd
