@@ -1,10 +1,12 @@
+import pkg from '../../package.json';
+
 export const MAX_FILE_SIZE_MB = 2000;
 const LOCK_DURATION_ON_MAX_FAIL_SECONDS = 30;
 const DEFAULT_LOCK_TIMEOUT_MINUTES = 5;
 
 export const APP_CONFIG = {
   name: 'Kuro Reader',
-  version: '1.0.0',
+  version: pkg.version,
   maxFileSize: MAX_FILE_SIZE_MB * 1024 * 1024,
   supportedFormats: ['.zip', '.cbz', '.rar', '.cbr', '.pdf', '.txt', '.md', '.markdown', '.epub'] as const,
   defaultTheme: 'light' as const,

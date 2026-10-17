@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { APP_CONFIG } from '@/constants/config';
 import { ROUTES } from '@/constants/routes';
 import { useClickOutside } from '@/hooks/useClickOutside';
+import { t } from '@/i18n';
 import { cn } from '@/utils/cn';
 
 export interface TopAppBarProps {
@@ -23,7 +24,7 @@ const ProfileSealButton: React.FC = () => {
     <button
       className="flex-shrink-0"
       onClick={() => navigate(ROUTES.PROFILE)}
-      aria-label="个人中心"
+      aria-label={t('个人中心')}
     >
       <div className="w-11 h-11 rounded-card border border-seal/60 flex items-center justify-center hover:bg-seal-soft/60 transition-colors">
         <span className="material-symbols-outlined text-seal text-icon-md">
@@ -79,14 +80,14 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
           </div>
           <div className="flex-shrink-0 flex items-center gap-1">
             <button
-              aria-label="搜索"
+              aria-label={t('搜索')}
               className="w-11 h-11 flex items-center justify-center hover:bg-surface-variant rounded-full transition-colors text-seal hover:text-seal-deep"
               onClick={onSearch ?? (() => navigate(ROUTES.SEARCH))}
             >
               <span className="material-symbols-outlined text-icon-lg">search</span>
             </button>
             <button
-              aria-label="阅读统计"
+              aria-label={t('阅读统计')}
               className="w-11 h-11 flex items-center justify-center hover:bg-surface-variant rounded-full transition-colors text-seal hover:text-seal-deep relative"
               onClick={() => navigate(ROUTES.STATS)}
             >
@@ -94,7 +95,7 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
             </button>
             <div className="relative" ref={menuRef}>
               <button
-                aria-label="更多"
+                aria-label={t('更多')}
                 className="w-11 h-11 flex items-center justify-center hover:bg-surface-variant rounded-full transition-colors text-seal hover:text-seal-deep"
                 onClick={() => setMenuOpen(!menuOpen)}
               >
@@ -108,21 +109,21 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
                     onClick={() => handleMenuAction(() => navigate(ROUTES.NOTES))}
                   >
                     <span className="material-symbols-outlined text-icon-md">edit_note</span>
-                    <span className="font-label text-label-md">手记</span>
+                    <span className="font-label text-label-md">{t('手记')}</span>
                   </button>
                   <button
                     className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-variant transition-colors text-seal hover:text-seal-deep"
                     onClick={() => handleMenuAction(() => navigate(ROUTES.VOCABULARY))}
                   >
                     <span className="material-symbols-outlined text-icon-md">translate</span>
-                    <span className="font-label text-label-md">生词本</span>
+                    <span className="font-label text-label-md">{t('生词本')}</span>
                   </button>
                   <button
                     className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-variant transition-colors text-seal hover:text-seal-deep"
                     onClick={() => handleMenuAction(() => navigate(ROUTES.REVIEW))}
                   >
                     <span className="material-symbols-outlined text-icon-md">style</span>
-                    <span className="font-label text-label-md">复习席</span>
+                    <span className="font-label text-label-md">{t('复习席')}</span>
                   </button>
                   {/* 阅读统计入口收敛为顶栏图表 icon（建议书 5.3：删除重复项）；
                       批量管理统一走书库页「管理」按钮，不再绕道菜单 */}
@@ -132,7 +133,7 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
                     onClick={() => handleMenuAction(() => navigate(ROUTES.SETTINGS))}
                   >
                     <span className="material-symbols-outlined text-icon-md">settings</span>
-                    <span className="font-label text-label-md">设置</span>
+                    <span className="font-label text-label-md">{t('设置')}</span>
                   </button>
                 </div>
               )}

@@ -1,12 +1,12 @@
 {
   "name": "kuro-reader",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.27.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0 && node scripts/check-tokens.mjs",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0 && node scripts/check-tokens.mjs && node scripts/check-i18n.mjs",
     "lint:tokens": "node scripts/check-tokens.mjs",
     "fixtures:generate": "node scripts/generate-test-fixtures.mjs",
     "preview": "vite preview",
@@ -31,6 +31,7 @@
     "axios": "^1.16.1",
     "clsx": "^2.1.1",
     "highlight.js": "^11.11.1",
+    "i18next": "^26.4.4",
     "idb": "^8.0.3",
     "jszip": "^3.10.1",
     "katex": "^0.16.47",
@@ -40,6 +41,7 @@
     "pdfjs-dist": "^6.2.108",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-i18next": "^17.0.16",
     "react-router-dom": "6.20",
     "tailwind-merge": "^3.6.0",
     "tesseract.js": "^7.0.0",
@@ -68,6 +70,7 @@
     "prettier": "^3.8.3",
     "sharp": "^0.34.5",
     "tailwindcss": "3.4",
+    "ts-morph": "^28.0.0",
     "typescript": "5.3",
     "vite": "5.0",
     "vitest": "^4.1.8"

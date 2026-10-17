@@ -5,6 +5,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { NotesOutlineDialog, type NotesOutlineDialogState } from '@/components/molecules/NotesOutlineDialog';
 import { COPY } from '@/constants/copy';
 import { ROUTES, readerPathForBook, vocabularyPath , settingsPath } from '@/constants/routes';
+import { t } from '@/i18n';
 import { isProviderConfigured } from '@/services/ai/aiClient';
 import { buildOutlineSources, generateNotesOutline } from '@/services/ai/notesOutline';
 import { annotationRepo } from '@/services/storage/annotationRepo';
@@ -92,7 +93,7 @@ export const NotesPage: React.FC = () => {
       toast(COPY.toast.noAnnotations);
       return;
     }
-    const orphanTitle = '已移出的书';
+    const orphanTitle = t('已移出的书');
     const entries: MultiBookEntry[] = [...bookById.values()]
       .map((book) => ({
         bookTitle: book.title,
@@ -133,7 +134,7 @@ export const NotesPage: React.FC = () => {
       COPY.notesTheme.untagged
     );
     const stamp = new Date().toISOString().slice(0, 10).replaceAll('-', '');
-    downloadTextFile(`摘抄墙-按主题-${stamp}.md`, markdown);
+    downloadTextFile(t('摘抄墙-按主题-{{stamp}}.md', { stamp: stamp }), markdown);
   };
 
   /** 生成提纲：以当前筛选结果为原料（按标签筛一组 → 提一份可动笔的骨架） */
@@ -153,14 +154,14 @@ export const NotesPage: React.FC = () => {
     };
     if (!isProviderConfigured(config)) {
       toast(COPY.notesTheme.aiNotConfigured, {
-        action: { label: '去设置', onAction: () => navigate(settingsPath('ai')) },
+        action: { label: t('去设置'), onAction: () => navigate(settingsPath('ai')) },
       });
       return;
     }
     const focusLabel = filter.tagId
       ? `#${tagById.get(filter.tagId)?.name ?? ''}`
       : filter.query.trim()
-        ? `关键词「${filter.query.trim()}」`
+        ? t('关键词「{{arg1}}」', { arg1: filter.query.trim() })
         : undefined;
     setOutline({ status: 'loading', sourceCount: sources.length });
     try {
@@ -187,7 +188,7 @@ export const NotesPage: React.FC = () => {
     <div className="max-w-max-width-content mx-auto px-margin-mobile md:px-0 pt-8 pb-8">
       <section className="flex flex-col gap-2 border-b border-outline-variant pb-6 mb-8">
         <div className="flex items-start justify-between gap-4">
-          <h2 className="font-display text-display-lg-mobile md:text-display-lg text-primary">摘抄墙</h2>
+          <h2 className="font-display text-display-lg-mobile md:text-display-lg text-primary">{t('摘抄墙')}</h2>
           <div className="flex items-center gap-3 flex-shrink-0">
             <button
               className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1"
@@ -214,13 +215,11 @@ export const NotesPage: React.FC = () => {
                   onClick={() => setExportMenuOpen((v) => !v)}
                   title={COPY.notesWall.exportAll}
                 >
-                  <span className="material-symbols-outlined text-icon-md">ios_share</span>
-                  导出
-                </button>
+                  <span className="material-symbols-outlined text-icon-md">ios_share</span>{t('导出')}</button>
                 {exportMenuOpen && (
                   <>
                     <button
-                      aria-label="收起导出菜单"
+                      aria-label={t('收起导出菜单')}
                       className="fixed inset-0 z-menu cursor-default"
                       onClick={() => setExportMenuOpen(false)}
                     />
@@ -247,24 +246,19 @@ export const NotesPage: React.FC = () => {
             )}
           </div>
         </div>
-        <p className="font-body text-body-md text-on-surface-variant">
-          读过的句子都贴在这里——{sorted.length > 0 ? `共 ${sorted.length} 条手记` : '等你贴上第一张'}。
+        <p className="font-body text-body-md text-on-surface-variant">{t('读过的句子都贴在这里——')}{sorted.length > 0 ? t('共 {{length}} 条手记', { length: sorted.length }) : t('等你贴上第一张')}。
         </p>
       </section>
 
       {sorted.length === 0 ? (
         <div className="flex flex-col items-center text-center py-16">
           <span className="material-symbols-outlined text-on-surface-faint text-5xl mb-4 block">edit_note</span>
-          <p className="font-body text-body-md text-on-surface-variant mb-2">墙上还没有手记</p>
-          <p className="font-label text-label-sm text-on-surface-faint mb-8">
-            阅读时长按一句话，就能把它贴上墙
-          </p>
+          <p className="font-body text-body-md text-on-surface-variant mb-2">{t('墙上还没有手记')}</p>
+          <p className="font-label text-label-sm text-on-surface-faint mb-8">{t('阅读时长按一句话，就能把它贴上墙')}</p>
           <button
             className="btn-secondary px-6 py-2"
             onClick={() => navigate(ROUTES.LIBRARY)}
-          >
-            去书库挑一本
-          </button>
+          >{t('去书库挑一本')}</button>
         </div>
       ) : (
         <>
@@ -282,7 +276,7 @@ export const NotesPage: React.FC = () => {
                 <button
                   className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-surface-variant transition-colors"
                   onClick={() => setFilterPart({ query: '' })}
-                  aria-label="清空"
+                  aria-label={t('清空')}
                 >
                   <span className="material-symbols-outlined text-on-surface-variant text-icon-sm">close</span>
                 </button>
@@ -335,9 +329,7 @@ export const NotesPage: React.FC = () => {
                 <button
                   className="btn-secondary px-6 py-2 mt-5"
                   onClick={() => setFilter(EMPTY_ANNOTATION_FILTER)}
-                >
-                  清除筛选
-                </button>
+                >{t('清除筛选')}</button>
               )}
             </div>
           ) : (
@@ -378,7 +370,7 @@ export const NotesPage: React.FC = () => {
                       </div>
                     )}
                     <p className="font-label text-label-sm text-on-surface-faint mt-2.5 truncate">
-                      ——《{book?.title ?? '已移出的书'}》· {ann.chapterTitle}
+                      ——《{book?.title ?? t('已移出的书')}》· {ann.chapterTitle}
                     </p>
                   </button>
                 );

@@ -1,5 +1,6 @@
 import { Fragment, useState, type FC, type ReactNode } from 'react'
 
+import { t } from '@/i18n';
 import type { Annotation } from '@/types'
 import { getAnnotationPresentation } from '@/utils/annotationHighlight'
 import { cn } from '@/utils/cn'
@@ -55,12 +56,12 @@ function findBlockSpans(spans: MarkdownSpan[], block: MarkdownBlock): MarkdownSp
 const MarkdownImage: FC<{ span: MarkdownSpan; measurementMode?: boolean }> = ({ span, measurementMode }) => {
   const [failed, setFailed] = useState(false)
   const source = span.href?.trim() ?? ''
-  const alt = span.alt || 'Markdown 图片'
+  const alt = span.alt || t('Markdown 图片')
 
   if (failed || !isSafeMarkdownImageSource(source)) {
     return (
       <span className="inline-flex rounded border border-current/15 bg-current/[0.05] px-2 py-1 text-[0.9em] opacity-70">
-        {failed ? `图片加载失败：${alt}` : alt}
+        {failed ? t('图片加载失败：{{alt}}', { alt: alt }) : alt}
       </span>
     )
   }
@@ -349,11 +350,11 @@ export const MarkdownReaderContent: FC<MarkdownReaderContentProps> = ({
               data-reader-horizontal-scroll
               data-ui-control
               role="region"
-              aria-label="Markdown 表格，可横向滚动"
+              aria-label={t('Markdown 表格，可横向滚动')}
               tabIndex={0}
               className={cn(getBlockClassName(block), paginated && 'max-h-[65vh] overflow-auto overscroll-contain')}
             >
-              <table aria-label="Markdown 数据表" className="w-full min-w-max border-collapse text-[0.92em]">
+              <table aria-label={t('Markdown 数据表')} className="w-full min-w-max border-collapse text-[0.92em]">
                 <thead>{headerRow ? renderRow(headerRow, true, 0) : null}</thead>
                 <tbody>{visibleBodyRows.map((row, rowIndex) => renderRow(row, false, rowIndex))}</tbody>
               </table>
@@ -379,7 +380,7 @@ export const MarkdownReaderContent: FC<MarkdownReaderContentProps> = ({
               <a
                 href={`#${block.id?.replace('footnote-', 'footnote-ref-') ?? ''}`}
                 className="ml-2 inline-flex rounded px-1 align-middle no-underline hover:bg-current/10"
-                aria-label="返回脚注引用位置"
+                aria-label={t('返回脚注引用位置')}
                 onClick={(event) => {
                   event.stopPropagation()
                   if (onInternalLink) {
@@ -415,7 +416,7 @@ export const MarkdownReaderContent: FC<MarkdownReaderContentProps> = ({
                 checked={block.listChecked === true}
                 readOnly
                 tabIndex={-1}
-                aria-label={block.listChecked ? '已完成任务' : '未完成任务'}
+                aria-label={block.listChecked ? t('已完成任务') : t('未完成任务')}
                 className="mt-[0.35em] size-4 shrink-0 accent-current"
               />
               <span className="min-w-0">

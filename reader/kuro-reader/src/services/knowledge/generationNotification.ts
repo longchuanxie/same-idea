@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 import { LocalNotifications, type Importance } from '@capacitor/local-notifications';
 
+import { t } from '@/i18n';
 import { GenerationKeepAlive } from '@/plugins/GenerationKeepAlivePlugin';
 
 /**
@@ -13,14 +14,14 @@ import { GenerationKeepAlive } from '@/plugins/GenerationKeepAlivePlugin';
  */
 
 const CHANNEL_ID = 'kuro-generation';
-const CHANNEL_NAME = '知识库生成';
+const CHANNEL_NAME = t('知识库生成');
 /** Importance 枚举值 1 = LOW（无声、无横幅，不打断阅读） */
 const CHANNEL_IMPORTANCE_LOW: Importance = 1;
 /** 非平台回落路径的常驻通知 id（Android 主路径由服务持有，不用此通道） */
 const FALLBACK_NOTIFICATION_ID = 2;
 /** schedule.at 取 1s 前的过去时间：走 notify() 立即上屏路径（同听书通知的做法） */
 const IMMEDIATE_PAST_MS = 1000;
-const PERMISSION_DENIED_NOTICE = '未授权通知权限，退出应用后通知栏将不显示生成进度';
+const PERMISSION_DENIED_NOTICE = t('未授权通知权限，退出应用后通知栏将不显示生成进度');
 
 /** 生成期间常驻通知/服务的驱动状态 */
 export interface GenerationNotificationState {
@@ -43,11 +44,11 @@ export function buildGenerationNotificationContent(
   state: GenerationNotificationState
 ): GenerationNotificationContent | null {
   if (!state.active) return null;
-  const book = state.bookTitle.trim() || '未命名书';
-  const progress = state.total > 0 ? `${state.done}/${state.total} 段` : '准备中';
-  const pending = state.pendingCount > 0 ? `，还有 ${state.pendingCount} 项排队` : '';
+  const book = state.bookTitle.trim() || t('未命名书');
+  const progress = state.total > 0 ? t('{{done}}/{{total}} 段', { done: state.done, total: state.total }) : t('准备中');
+  const pending = state.pendingCount > 0 ? t('，还有 {{pendingCount}} 项排队', { pendingCount: state.pendingCount }) : '';
   return {
-    title: `正在生成${state.taskLabel}`,
+    title: t('正在生成{{taskLabel}}', { taskLabel: state.taskLabel }),
     body: `《${book}》· ${progress}${pending}`,
   };
 }
@@ -58,11 +59,11 @@ export function buildGenerationFinishedContent(
   taskLabel: string,
   error?: string
 ): GenerationNotificationContent {
-  const book = bookTitle.trim() || '未命名书';
+  const book = bookTitle.trim() || t('未命名书');
   if (error) {
-    return { title: `${taskLabel}生成失败`, body: `《${book}》· ${error}` };
+    return { title: t('{{taskLabel}}生成失败', { taskLabel: taskLabel }), body: `《${book}》· ${error}` };
   }
-  return { title: `${taskLabel}已生成`, body: `《${book}》· 打开档案卡知识库查看` };
+  return { title: t('{{taskLabel}}已生成', { taskLabel: taskLabel }), body: t('《{{book}}》· 打开档案卡知识库查看', { book: book }) };
 }
 
 const isAndroidNative = (): boolean => Capacitor.getPlatform() === 'android';

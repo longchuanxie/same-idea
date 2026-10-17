@@ -1,12 +1,13 @@
 import React from 'react';
 
+import { t } from '@/i18n';
 import type { BookFormat } from '@/types';
 
 /* 格式章色只用令牌对（容器底 + 墨字），随明暗主题自动换档；禁用 Tailwind 原生色板 */
 const FORMAT_CONFIG: Record<BookFormat, { label: string; color: string }> = {
-  comic: { label: '漫画', color: 'bg-seal/12 text-seal-deep' },
+  comic: { label: t('漫画'), color: 'bg-seal/12 text-seal-deep' },
   pdf:   { label: 'PDF',  color: 'bg-error-container text-on-error-container' },
-  text:  { label: '文本', color: 'bg-secondary-container text-secondary' },
+  text:  { label: t('文本'), color: 'bg-secondary-container text-secondary' },
 };
 
 interface FormatBadgeProps {

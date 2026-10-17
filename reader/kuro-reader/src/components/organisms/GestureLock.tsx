@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef } from 'react';
 
 import { APP_CONFIG } from '@/constants/config';
+import { t } from '@/i18n';
 import { cn } from '@/utils/cn';
 
 const ERROR_MIN_POINTS_RESET_DELAY_MS = 600;
@@ -140,7 +141,7 @@ export const GestureLock: React.FC<GestureLockProps> = ({
 
     if (selectedPoints.length < APP_CONFIG.auth.minGesturePoints) {
       showFeedback('error');
-      onError?.(`至少需要连接 ${APP_CONFIG.auth.minGesturePoints} 个点`);
+      onError?.(t('至少需要连接 {{arg1}} 个点', { arg1: APP_CONFIG.auth.minGesturePoints }));
       setTimeout(resetPattern, ERROR_MIN_POINTS_RESET_DELAY_MS);
       return;
     }
@@ -173,7 +174,7 @@ export const GestureLock: React.FC<GestureLockProps> = ({
           }, SETUP_SUCCESS_RESET_DELAY_MS);
         } else {
           showFeedback('error');
-          onError?.('两次手势不一致，请重新设置');
+          onError?.(t('两次手势不一致，请重新设置'));
           setTimeout(() => {
             resetPattern();
             setSetupStep('first');
@@ -187,21 +188,21 @@ export const GestureLock: React.FC<GestureLockProps> = ({
   const getSubtitle = (): string => {
     if (isLocked) {
       const seconds = Math.ceil(lockRemainingMs / 1000);
-      return `已锁定，请 ${seconds} 秒后重试`;
+      return t('已锁定，请 {{seconds}} 秒后重试', { seconds: seconds });
     }
     if (feedback === 'error') {
-      return mode === 'verify' ? '手势错误，请重试' : '手势不一致，请重试';
+      return mode === 'verify' ? t('手势错误，请重试') : t('手势不一致，请重试');
     }
     if (feedback === 'success') {
-      return mode === 'verify' ? '验证成功' : '设置成功';
+      return mode === 'verify' ? t('验证成功') : t('设置成功');
     }
     if (mode === 'verify') {
-      return '请输入手势密码';
+      return t('请输入手势密码');
     }
     if (mode === 'setup' || mode === 'change') {
-      return setupStep === 'first' ? '请绘制手势密码' : '请再次绘制以确认';
+      return setupStep === 'first' ? t('请绘制手势密码') : t('请再次绘制以确认');
     }
-    return '请输入手势密码';
+    return t('请输入手势密码');
   };
 
   // 状态色走「印」语义：错误=朱红警示，成功=钤印朱砂（seal 为激活/完成唯一强调色），绘制中=墨
@@ -214,7 +215,7 @@ export const GestureLock: React.FC<GestureLockProps> = ({
     <div className="flex flex-col items-center gap-8 w-full">
       <div className="flex flex-col items-center text-center gap-2">
         <h2 className="font-display text-headline-md text-primary">
-          {mode === 'verify' ? '验证手势' : mode === 'change' ? '修改手势' : '设置手势'}
+          {mode === 'verify' ? t('验证手势') : mode === 'change' ? t('修改手势') : t('设置手势')}
         </h2>
         <p className={cn(
           'font-body text-body-md transition-colors',
@@ -223,8 +224,7 @@ export const GestureLock: React.FC<GestureLockProps> = ({
           {getSubtitle()}
         </p>
         {mode === 'verify' && failedAttempts > 0 && !isLocked && (
-          <p className="font-label text-label-sm text-on-surface-variant">
-            剩余尝试次数：{maxAttempts - failedAttempts}
+          <p className="font-label text-label-sm text-on-surface-variant">{t('剩余尝试次数：')}{maxAttempts - failedAttempts}
           </p>
         )}
       </div>
@@ -296,9 +296,7 @@ export const GestureLock: React.FC<GestureLockProps> = ({
           <button
             className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors"
             onClick={onBack}
-          >
-            返回
-          </button>
+          >{t('返回')}</button>
         ) : (
           <div />
         )}
@@ -310,9 +308,7 @@ export const GestureLock: React.FC<GestureLockProps> = ({
               setFirstPattern(null);
               resetPattern();
             }}
-          >
-            重新绘制
-          </button>
+          >{t('重新绘制')}</button>
         ) : (
           <div />
         )}

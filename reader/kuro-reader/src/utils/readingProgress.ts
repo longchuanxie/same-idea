@@ -1,3 +1,4 @@
+import { t } from '@/i18n';
 const PERCENT_MULTIPLIER = 100
 
 export function clampProgressRatio(ratio: number): number {
@@ -37,8 +38,8 @@ const WEEK_DAYS = 7; // 「N 周前」的换算基数
 export function describeLastRead(lastReadAt?: Date | string): string {
   if (!lastReadAt) return '';
   const days = Math.floor((Date.now() - new Date(lastReadAt).getTime()) / DAY_MS);
-  if (days <= 0) return '今天';
-  if (days === 1) return '昨天';
-  if (days < WEEK_DAYS) return `${days} 天前`;
-  return `${Math.floor(days / WEEK_DAYS)} 周前`;
+  if (days <= 0) return t('今天');
+  if (days === 1) return t('昨天');
+  if (days < WEEK_DAYS) return t('{{days}} 天前', { days: days });
+  return t('{{arg1}} 周前', { arg1: Math.floor(days / WEEK_DAYS) });
 }

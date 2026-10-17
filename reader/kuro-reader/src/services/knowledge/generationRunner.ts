@@ -10,6 +10,7 @@
  * - 合并/证据定位/空结果判定 → 产出待落库的完整产物
  */
 
+import { t } from '@/i18n';
 import { chatCompletionJson, type AiProviderConfig } from '@/services/ai/aiClient'
 import { getKnowledgeTask } from '@/services/ai/knowledgeTasks'
 import {
@@ -36,12 +37,14 @@ import {
   stampBriefChapters,
   stampGlossaryChapters,
   stampPartialChapters,
+  stampSummaryChapters,
   type GlossaryPartial,
   type GraphPartial,
   type InterimBeatsData,
   type InterimBriefData,
   type InterimGlossaryData,
   type InterimGraphData,
+  type SummaryPartial,
 } from '@/utils/knowledgeMerge'
 
 /** 分块请求失败时的重试次数（单块两次重试：长书几十上百块，瞬时抖动不该毁掉整轮生成） */
@@ -108,12 +111,13 @@ function makeArtifactId(): string {
 }
 
 const EMPTY_RESULT_HINT: Record<KnowledgeArtifactType, string> = {
-  'character-graph': '这本书提不出足够的人物关系（文本里可能没有明确的人物互动）',
-  'concept-graph': '这本书提不出足够的概念关系（学术性文本才有清晰的概念网络，可试试切换内容类型）',
-  mindmap: '这本书提不出可用的结构大纲',
-  glossary: '这本书提不出明确的概念术语（可能不是学术性文本，可试试切换内容类型）',
-  'paper-brief': '这篇文本提不出速览卡（贡献、局限与疑问都需要明确的论述文本）',
-  'story-beats': '这本书提不出叙事节拍（节拍梳理适合多章长篇，短文看不出结构起伏）',
+  'character-graph': t('这本书提不出足够的人物关系（文本里可能没有明确的人物互动）'),
+  'concept-graph': t('这本书提不出足够的概念关系（学术性文本才有清晰的概念网络，可试试切换内容类型）'),
+  mindmap: t('这本书提不出可用的结构大纲'),
+  glossary: t('这本书提不出明确的概念术语（可能不是学术性文本，可试试切换内容类型）'),
+  'paper-brief': t('这篇文本提不出速览卡（贡献、局限与疑问都需要明确的论述文本）'),
+  'story-beats': t('这本书提不出叙事节拍（节拍梳理适合多章长篇，短文看不出结构起伏）'),
+  'chapter-summary': t('这段文本提不出可用的总结（换个章节范围试试）'),
 }
 
 /** 校验 checkpoint 与当前语料仍对齐：书内容变了或块数不一致就整体作废重跑。
@@ -173,10 +177,10 @@ export async function runKnowledgeGeneration(input: KnowledgeGenerationInput): P
   } catch (e) {
     const incrementalEmpty = e instanceof BookCorpusError && e.code === 'empty' && range != null
     const message = incrementalEmpty
-      ? '没有发现需要补充的新章节（书还没有更新）'
+      ? t('没有发现需要补充的新章节（书还没有更新）')
       : e instanceof BookCorpusError
         ? e.message
-        : '读取书本内容失败'
+        : t('读取书本内容失败')
     return { ok: false, error: message }
   }
   // 内容视角：用户显式指定优先，否则按文本启发式检测（小说/学术走不同提示词与任务集）
@@ -240,9 +244,9 @@ export async function runKnowledgeGeneration(input: KnowledgeGenerationInput): P
       }
     }
     if (lastError != null) {
-      const reason = (lastError as Error).message || 'AI 请求失败'
+      const reason = (lastError as Error).message || t('AI 请求失败')
       // 断点已随 checkpoint 落库：重试只补未完成块，长书不必从头再来
-      failureMessage = `片段 ${index + 1}/${total} 请求失败：${reason}（稍后重新生成会从该片段继续，已完成部分不重跑）`
+      failureMessage = t('片段 {{index}}/{{total}} 请求失败：{{reason}}（稍后重新生成会从该片段继续，已完成部分不重跑）', { index: index + 1, total, reason })
       return 'failed'
     }
 
@@ -257,7 +261,7 @@ export async function runKnowledgeGeneration(input: KnowledgeGenerationInput): P
           }
         }
       }
-      // 图谱/术语/速览片段盖上分块覆盖章节（回原文链路：条目的章节并集来源）
+      // 图谱/术语/速览/总结片段盖上分块覆盖章节（回原文链路：条目的章节并集来源）
       const stamped =
         type === 'character-graph' || type === 'concept-graph'
           ? stampPartialChapters(parsed as GraphPartial, chunk.chapterIndexes)
@@ -265,7 +269,9 @@ export async function runKnowledgeGeneration(input: KnowledgeGenerationInput): P
             ? stampGlossaryChapters(parsed as GlossaryPartial, chunk.chapterIndexes)
             : type === 'paper-brief'
               ? stampBriefChapters(parsed as InterimBriefData, chunk.chapterIndexes)
-              : parsed
+              : type === 'chapter-summary'
+                ? stampSummaryChapters(parsed as SummaryPartial, chunk.chapterIndexes)
+                : parsed
       // 增量的导图分支加前缀，避免与基底里的「片段N」撞名
       const label =
         baseArtifact && type === 'mindmap' && corpus.coveredRange
@@ -304,7 +310,7 @@ export async function runKnowledgeGeneration(input: KnowledgeGenerationInput): P
   await Promise.all(Array.from({ length: workerCount }, () => worker()))
 
   if (cancelled) {
-    return { ok: false, cancelled: true, error: '已取消' }
+    return { ok: false, cancelled: true, error: t('已取消') }
   }
   if (failureMessage != null) {
     return { ok: false, error: failureMessage }
@@ -313,7 +319,7 @@ export async function runKnowledgeGeneration(input: KnowledgeGenerationInput): P
   // 续跑时 slots 前段来自 checkpoint（可能含占位 null）：合并前统一收窄
   const partials = slots.slice(0, corpus.chunks.length).filter((slot): slot is { label: string; data: unknown } => slot?.data != null)
   if (partials.length === 0) {
-    return { ok: false, error: 'AI 没有返回任何可用的分析结果' }
+    return { ok: false, error: t('AI 没有返回任何可用的分析结果') }
   }
 
   // 合并/证据定位/组装全程兜底：任一环抛错必须转成错误结果，
@@ -366,6 +372,6 @@ export async function runKnowledgeGeneration(input: KnowledgeGenerationInput): P
       staleArtifactIds: existing.filter((old) => old.id !== reusedId).map((old) => old.id),
     }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : '知识件生成失败' }
+    return { ok: false, error: e instanceof Error ? e.message : t('知识件生成失败') }
   }
 }

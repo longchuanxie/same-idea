@@ -1,6 +1,11 @@
 import '@testing-library/jest-dom/vitest'
 import 'fake-indexeddb/auto'
 
+// 测试环境强制中文（zh 无资源文件、key 即文案），组件渲染与既有断言保持中文
+import i18next from '@/i18n'
+
+void i18next.changeLanguage('zh')
+
 // jsdom 未实现 Blob URL API，store 与组件测试会用到，统一提供确定性 stub
 let blobUrlCounter = 0
 

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { APP_CONFIG } from '@/constants/config';
 import { ROUTES } from '@/constants/routes';
+import { t } from '@/i18n';
 import { annotationRepo } from '@/services/storage/annotationRepo';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import { useStatsStore } from '@/stores/useStatsStore';
@@ -37,10 +38,10 @@ export const ProfilePage: React.FC = () => {
   const usedPercent = storageInfo.quota > 0 ? Math.round((storageInfo.used / storageInfo.quota) * 100) : 0;
 
   const cardFields: { label: string; value: string; onClick?: () => void }[] = [
-    { label: '藏书', value: `${books.length} 本`, onClick: () => navigate(ROUTES.LIBRARY) },
-    { label: '已归架', value: `${completedCount} 部` },
-    { label: '手记', value: `${annotationCount} 条`, onClick: () => navigate(ROUTES.NOTES) },
-    { label: '连续开馆', value: `${stats.currentStreak} 天`, onClick: () => navigate(ROUTES.STATS) },
+    { label: t('藏书'), value: t('{{length}} 本', { length: books.length }), onClick: () => navigate(ROUTES.LIBRARY) },
+    { label: t('已归架'), value: t('{{completedCount}} 部', { completedCount: completedCount }) },
+    { label: t('手记'), value: t('{{annotationCount}} 条', { annotationCount: annotationCount }), onClick: () => navigate(ROUTES.NOTES) },
+    { label: t('连续开馆'), value: t('{{currentStreak}} 天', { currentStreak: stats.currentStreak }), onClick: () => navigate(ROUTES.STATS) },
   ];
 
   return (
@@ -56,8 +57,8 @@ export const ProfilePage: React.FC = () => {
                 <span className="material-symbols-outlined text-on-surface-variant text-icon-lg">person</span>
               </div>
               <div>
-                <h2 className="font-display text-headline-sm text-primary">{APP_CONFIG.name} 读者</h2>
-                <p className="font-label text-label-sm text-on-surface-faint mt-0.5">本地模式 · 馆藏与手记只存在这台设备</p>
+                <h2 className="font-display text-headline-sm text-primary">{t('{{name}} 读者', { name: APP_CONFIG.name })}</h2>
+                <p className="font-label text-label-sm text-on-surface-faint mt-0.5">{t('本地模式 · 馆藏与手记只存在这台设备')}</p>
               </div>
             </div>
             <span className="font-mono text-label-sm text-on-surface-faint hidden md:block">
@@ -83,7 +84,7 @@ export const ProfilePage: React.FC = () => {
       {/* 馆容量 */}
       <section className="flex flex-col gap-2">
         <div className="flex justify-between items-baseline">
-          <span className="font-label text-label-md text-primary">馆容量</span>
+          <span className="font-label text-label-md text-primary">{t('馆容量')}</span>
           <span className="font-mono text-label-sm text-on-surface-variant">
             {formatBytes(storageInfo.used)} / {formatBytes(storageInfo.quota)}
           </span>
@@ -91,9 +92,7 @@ export const ProfilePage: React.FC = () => {
         <div className="w-full h-2 bg-surface-container-high rounded-full overflow-hidden border border-outline-variant relative">
           <div className="absolute top-0 left-0 h-full bg-wood rounded-full transition-all duration-500 ease-out" style={{ width: `${usedPercent}%` }} />
         </div>
-        <p className="font-body text-body-md text-on-surface-variant text-sm mt-1">
-          已藏 {books.length} 本书籍
-        </p>
+        <p className="font-body text-body-md text-on-surface-variant text-sm mt-1">{t('已藏 {{length}} 本书籍', { length: books.length })}</p>
       </section>
 
       {/* 真实功能入口（死卡片已清除：离线缓存/意见反馈无对应功能，不造假入口） */}
@@ -104,7 +103,7 @@ export const ProfilePage: React.FC = () => {
         >
           <span className="flex items-center gap-3">
             <span className="material-symbols-outlined text-on-surface-variant">edit_note</span>
-            <span className="font-label text-label-md text-primary">我的手记</span>
+            <span className="font-label text-label-md text-primary">{t('我的手记')}</span>
           </span>
           <span className="font-mono text-label-sm text-on-surface-variant">{annotationCount}</span>
         </button>
@@ -114,13 +113,12 @@ export const ProfilePage: React.FC = () => {
         >
           <span className="flex items-center gap-3">
             <span className="material-symbols-outlined text-on-surface-variant">query_stats</span>
-            <span className="font-label text-label-md text-primary">阅读台账</span>
+            <span className="font-label text-label-md text-primary">{t('阅读台账')}</span>
           </span>
           <span className="material-symbols-outlined text-icon-md text-on-surface-variant">chevron_right</span>
         </button>
         <p className="font-label text-label-sm text-on-surface-faint mt-6 px-1">
-          {APP_CONFIG.name} · 版本 {APP_CONFIG.version} · 本地优先的私人图书馆
-        </p>
+          {t('{{name}} · 版本 {{version}} · 本地优先的私人图书馆', { name: APP_CONFIG.name, version: APP_CONFIG.version })}</p>
       </section>
     </div>
   );

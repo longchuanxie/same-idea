@@ -1,3 +1,4 @@
+import type { SanitizeSummary } from '@/services/contentSanitizer'
 import type { TextChapter } from '@/services/textContent'
 
 import { getDB, STORE_NAMES } from './db'
@@ -11,6 +12,12 @@ import { getDB, STORE_NAMES } from './db'
  *
  * 仅缓存 TXT/Markdown：EPUB 章节内容携带运行期生成的图片 object URL，
  * 跨会话失效，不可缓存。
+ *
+ * 净化（A/B 类规则）生效后的缓存约定（2026-10-16）：
+ * - TXT 记录携带 sanitizeRev（净化配置指纹）与 sanitizeSummary（命中摘要），
+ *   配置/规则变化 → rev 不匹配 → textContent 重算整本并覆盖回写；
+ * - Markdown 记录 sanitizeRev 固定为 'md'（净化不接 MD：章节另有结构文档渲染管线）；
+ * - 旧记录无 sanitizeRev 字段 = 视为不匹配，下次开书自动重算一次（一次性迁移成本）。
  */
 export interface TextChapterCacheRecord {
   bookId: string
@@ -19,6 +26,10 @@ export interface TextChapterCacheRecord {
   totalChars: number
   chapters: TextChapter[]
   cachedAt: number
+  /** 净化配置指纹（缺省 = 旧记录，按不匹配处理触发重算） */
+  sanitizeRev?: string
+  /** 该 rev 下的净化命中摘要（确认门样例与已净化计数） */
+  sanitizeSummary?: SanitizeSummary
 }
 
 export const textChapterCacheRepo = {

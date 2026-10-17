@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-
+import { t } from '@/i18n';
 import { annotationRepo } from '@/services/storage/annotationRepo';
 import { bookmarkRepo } from '@/services/storage/bookmarkRepo';
 import { knowledgeRepo } from '@/services/storage/knowledgeRepo';
@@ -313,7 +313,7 @@ export async function runCloudSync(
 ): Promise<SyncResult> {
   // 已填用户名却缺密码：与其发 `Basic user:` 让服务器回 401 伪装成鉴权失败，不如提前说清
   if (credentials.username?.trim() && !credentials.password) {
-    throw new Error('已填写 WebDAV 用户名但密码为空，请补全密码后再同步');
+    throw new Error(t('已填写 WebDAV 用户名但密码为空，请补全密码后再同步'));
   }
   const url = buildSyncUrl(credentials.serverAddress);
   const auth = authConfig(credentials);
@@ -330,7 +330,7 @@ export async function runCloudSync(
     } else {
       // 远端 200 但不是本应用的同步载荷（反代登录页/错误页/无关文件）：
       // 静默当「首次同步」PUT 覆盖会毁掉远端内容——停下来说清楚，不赌
-      throw new Error('远端已存在文件但不是有效的同步数据，已停止以防覆盖；请核对同步地址，或先手动备份远端文件');
+      throw new Error(t('远端已存在文件但不是有效的同步数据，已停止以防覆盖；请核对同步地址，或先手动备份远端文件'));
     }
   } catch (e) {
     // 404 = 首次同步，直接上传；其他错误上抛

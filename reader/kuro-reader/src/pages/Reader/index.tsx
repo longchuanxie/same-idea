@@ -20,6 +20,7 @@ import { useHistoryBack } from '@/hooks/useHistoryBack';
 import { useReadingStats } from '@/hooks/useReadingStats';
 import { useSmoothScroll } from '@/hooks/useSmoothScroll';
 import { useVerticalVirtualWindow, type ReaderProgressSnapshot } from '@/hooks/useVerticalVirtualWindow';
+import { t } from '@/i18n';
 import { recognizeComicPage } from '@/services/ocrService';
 import { buildPdfSearchChapters, getPdfPageTexts } from '@/services/pdfText';
 import type { PositionedTextItem } from '@/services/pdfTextLayer';
@@ -61,8 +62,8 @@ const VERTICAL_PREPEND_THRESHOLD = 120;
 const FIRST_PAGE_NOTICE_DURATION = 1600;
 /** 页码徽标自动淡出延迟：翻页提示与首屏提示共用节奏 */
 const PAGE_BADGE_AUTOHIDE_MS = 1600;
-const FIRST_PAGE_NOTICE_TEXT = '已经到第一页';
-const LAST_PAGE_NOTICE_TEXT = '已经到最后一页';
+const FIRST_PAGE_NOTICE_TEXT = t('已经到第一页');
+const LAST_PAGE_NOTICE_TEXT = t('已经到最后一页');
 const DEFAULT_PAGE_SCROLL_RATIO = 0;
 const MAX_PAGE_SCROLL_RATIO = 1;
 const PAGE_PROGRESS_OFFSET = 1;
@@ -622,7 +623,7 @@ export const ReaderPage: React.FC = () => {
     setBookAnnotations((prev) => [annotation, ...prev]);
     setPdfSelection(null);
     window.getSelection()?.removeAllRanges();
-    showReaderNotice(note.trim() ? '已记下这段' : '已划下这段');
+    showReaderNotice(note.trim() ? t('已记下这段') : t('已划下这段'));
   }, [bookId, pdfSelection, chapters, currentChapterId, showReaderNotice]);
 
   /** 手记面板打开时懒加载本书手记 */
@@ -1032,7 +1033,7 @@ export const ReaderPage: React.FC = () => {
     const url = useReaderStore.getState().pageUrls[pageIndex];
     if (!url) return;
     setOcrRecognizingPage(pageIndex);
-    showReaderNotice('正在识别本页文字…');
+    showReaderNotice(t('正在识别本页文字…'));
     try {
       const size = await new Promise<{ w: number; h: number }>((resolve, reject) => {
         const img = new Image();
@@ -1042,13 +1043,13 @@ export const ReaderPage: React.FC = () => {
       });
       const items = await recognizeComicPage(bookId, pageIndex, url, size.w, size.h);
       if (items.length === 0) {
-        showReaderNotice('未能识别出文字');
+        showReaderNotice(t('未能识别出文字'));
         return;
       }
       setOcrItemsByPage((prev) => new Map(prev).set(pageIndex, items));
-      showReaderNotice('已识别，可拖选文字划线');
+      showReaderNotice(t('已识别，可拖选文字划线'));
     } catch {
-      showReaderNotice('识别失败，请重试');
+      showReaderNotice(t('识别失败，请重试'));
     } finally {
       setOcrRecognizingPage(null);
     }
@@ -1114,7 +1115,7 @@ export const ReaderPage: React.FC = () => {
       <div className="bg-background text-on-background min-h-[100dvh] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <span className="material-symbols-outlined text-primary text-4xl animate-spin">progress_activity</span>
-          <p className="font-body text-body-md text-on-surface-variant">加载中...</p>
+          <p className="font-body text-body-md text-on-surface-variant">{t('加载中...')}</p>
         </div>
       </div>
     );
@@ -1125,13 +1126,11 @@ export const ReaderPage: React.FC = () => {
       <div className="bg-background text-on-background min-h-[100dvh] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <span className="material-symbols-outlined text-on-surface-variant text-6xl">image_not_supported</span>
-          <p className="font-body text-body-md text-on-surface-variant">无法加载页面</p>
+          <p className="font-body text-body-md text-on-surface-variant">{t('无法加载页面')}</p>
           <button
             className="btn-secondary px-6 py-2"
             onClick={handleClose}
-          >
-            返回
-          </button>
+          >{t('返回')}</button>
         </div>
       </div>
     );
@@ -1393,7 +1392,7 @@ export const ReaderPage: React.FC = () => {
                       window.getSelection()?.removeAllRanges();
                     }}
                     data-ui-control
-                    aria-label={pdfSelectMode ? '退出文字选择' : '选择文字划线'}
+                    aria-label={pdfSelectMode ? t('退出文字选择') : t('选择文字划线')}
                   >
                     <span
                       className="material-symbols-outlined text-headline-md"
@@ -1417,7 +1416,7 @@ export const ReaderPage: React.FC = () => {
                     if (bookId) toggleFavorite(bookId);
                   }}
                   data-ui-control
-                  aria-label={book?.isFavorite ? '取消收藏' : '收藏'}
+                  aria-label={book?.isFavorite ? t('取消收藏') : t('收藏')}
                 >
                   <span className="material-symbols-outlined text-headline-md" style={book?.isFavorite ? { fontVariationSettings: "'FILL' 1" } : undefined}>
                     {book?.isFavorite ? 'bookmark' : 'bookmark_border'}
@@ -1427,7 +1426,7 @@ export const ReaderPage: React.FC = () => {
                   className="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center w-11 h-11 rounded-full hover:bg-surface-variant/50"
                   onClick={() => setShowChapterList(!showChapterList)}
                   data-ui-control
-                  aria-label="章节目录"
+                  aria-label={t('章节目录')}
                 >
                   <span className="material-symbols-outlined text-headline-md">list</span>
                 </button>
@@ -1435,7 +1434,7 @@ export const ReaderPage: React.FC = () => {
                   className="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center w-11 h-11 rounded-full hover:bg-surface-variant/50"
                   onClick={() => setBottomBarVisible(true)}
                   data-ui-control
-                  aria-label="阅读设置"
+                  aria-label={t('阅读设置')}
                 >
                   <span className="material-symbols-outlined text-headline-md">tune</span>
                 </button>
@@ -1566,7 +1565,7 @@ export const ReaderPage: React.FC = () => {
           extraAction={
             book?.format === 'comic'
               ? {
-                  label: '识别本页文字',
+                  label: t('识别本页文字'),
                   icon: 'document_scanner',
                   disabled: ocrRecognizingPage != null,
                   onSelect: (page) => {

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { t } from '@/i18n'
 import {
   AiRequestError,
   chatCompletionJson,
@@ -159,7 +160,7 @@ describe('chatCompletionJson', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(broken))
     await expect(
       chatCompletionJson(baseConfig, { messages: [{ role: 'user', content: 'x' }], stream: true })
-    ).rejects.toThrow('AI 服务响应中断')
+    ).rejects.toThrow(t('AI 服务响应中断：{{message}}', { message: 'connection reset' }))
   })
 })
 
@@ -197,7 +198,7 @@ describe('listModels', () => {
 
   it('data 非数组时抛错（不支持 /models 的服务）', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ object: 'list' }))))
-    await expect(listModels(baseConfig)).rejects.toThrow(/模型列表/)
+    await expect(listModels(baseConfig)).rejects.toThrow(t('服务没有返回模型列表（可能不支持 /models 接口）'))
   })
 
   it('HTTP 错误透出状态码', async () => {
@@ -207,7 +208,7 @@ describe('listModels', () => {
 
   it('不可达时抛连接错误', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network down')))
-    await expect(listModels(baseConfig)).rejects.toThrow('无法连接')
+    await expect(listModels(baseConfig)).rejects.toThrow(t('无法连接 AI 服务：{{message}}', { message: 'network down' }))
   })
 
   it('端点无响应时 15s 超时，不永久挂起', async () => {
@@ -220,7 +221,7 @@ describe('listModels', () => {
         })
       ))
       const pending = listModels(baseConfig)
-      const assertion = expect(pending).rejects.toThrow('AI 服务响应超时')
+      const assertion = expect(pending).rejects.toThrow(t('AI 服务响应超时'))
       await vi.advanceTimersByTimeAsync(15_000)
       await assertion
     } finally {

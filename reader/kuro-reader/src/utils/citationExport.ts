@@ -6,6 +6,7 @@
  * 年份取入藏年，作者缺省时省略作者域并提示补全。
  */
 
+import { t } from '@/i18n';
 import type { Book } from '@/types'
 
 export type CitationFormat = 'bibtex' | 'gbt7714' | 'apa'
@@ -45,7 +46,7 @@ export function buildBibtex(book: Book): string {
     fields.push(`  author = {${authors.join(' and ')}}`)
   }
   fields.push(`  year = {${accessionYear(book)}}`)
-  fields.push(`  note = {Kuro Reader 私人馆藏}`)
+  fields.push(t('  note = {Kuro Reader 私人馆藏}'))
   return `@book{${bibtexKey(book, authors)},\n${fields.join(',\n')}\n}`
 }
 
@@ -53,7 +54,7 @@ export function buildGbt7714(book: Book): string {
   const authors = splitAuthors(book.author)
   let authorPart = ''
   if (authors.length > GBT_AUTHOR_LIMIT) {
-    authorPart = `${authors.slice(0, GBT_AUTHOR_LIMIT).join(', ')}, 等. `
+    authorPart = t('{{arg1}}, 等. ', { arg1: authors.slice(0, GBT_AUTHOR_LIMIT).join(', ') })
   } else if (authors.length > 0) {
     authorPart = `${authors.join(', ')}. `
   }

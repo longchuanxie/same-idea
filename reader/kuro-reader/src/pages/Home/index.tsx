@@ -10,6 +10,7 @@ import { COPY } from '@/constants/copy';
 import { ROUTES, bookDetailPath, readerPathForBook, reviewPath } from '@/constants/routes';
 import { STORAGE_KEYS } from '@/constants/storage';
 import { useClickOutside } from '@/hooks/useClickOutside';
+import { t } from '@/i18n';
 import { annotationRepo } from '@/services/storage/annotationRepo';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import { useReviewStore } from '@/stores/useReviewStore';
@@ -71,10 +72,10 @@ function useHiddenRevisits(): {
 
 /** 时段问候（建议书 2.8-4）：一天至多四变，无动画 */
 const getGreeting = (hour: number): string => {
-  if (hour >= MORNING_START_HOUR && hour < NOON_START_HOUR) return '早安';
-  if (hour >= NOON_START_HOUR && hour < EVENING_START_HOUR) return '午后好';
-  if (hour >= EVENING_START_HOUR && hour < NIGHT_START_HOUR) return '掌灯时分';
-  return '夜深了';
+  if (hour >= MORNING_START_HOUR && hour < NOON_START_HOUR) return t('早安');
+  if (hour >= NOON_START_HOUR && hour < EVENING_START_HOUR) return t('午后好');
+  if (hour >= EVENING_START_HOUR && hour < NIGHT_START_HOUR) return t('掌灯时分');
+  return t('夜深了');
 };
 
 export const HomePage: React.FC = () => {
@@ -174,9 +175,9 @@ export const HomePage: React.FC = () => {
   const handleDismissSeat = (bookId: string) => {
     setSeatMenuFor(null);
     dismissContinueReading(bookId);
-    toast('已移出座位（进度还在）', {
+    toast(t('已移出座位（进度还在）'), {
       durationMs: 5000,
-      action: { label: '撤销', onAction: () => restoreContinueReading(bookId) },
+      action: { label: t('撤销'), onAction: () => restoreContinueReading(bookId) },
     });
   };
 
@@ -189,7 +190,7 @@ export const HomePage: React.FC = () => {
     if (hiddenSeatIds.length === 0) return;
     const ids = [...hiddenSeatIds];
     ids.forEach((id) => restoreContinueReading(id));
-    toast(`已恢复 ${ids.length} 本到座位`);
+    toast(t('已恢复 {{length}} 本到座位', { length: ids.length }));
   };
 
   const openExcerpt = (ann: Annotation, book: Book) => {
@@ -214,14 +215,10 @@ export const HomePage: React.FC = () => {
         <div className="w-24 h-24 rounded-full border border-outline-variant flex items-center justify-center mb-8">
           <span className="material-symbols-outlined text-icon-lg text-on-surface-faint">local_library</span>
         </div>
-        <h2 className="font-display text-display-lg-mobile text-primary mb-3">书架还空着</h2>
-        <p className="font-body text-body-md text-on-surface-variant mb-10">
-          从采编台带回第一本书吧
-        </p>
+        <h2 className="font-display text-display-lg-mobile text-primary mb-3">{t('书架还空着')}</h2>
+        <p className="font-body text-body-md text-on-surface-variant mb-10">{t('从采编台带回第一本书吧')}</p>
         <div className="flex flex-col w-full max-w-xs gap-3">
-          <Button variant="accent" size="lg" onClick={() => navigate(ROUTES.IMPORT)}>
-            去采编
-          </Button>
+          <Button variant="accent" size="lg" onClick={() => navigate(ROUTES.IMPORT)}>{t('去采编')}</Button>
         </div>
       </div>
     );
@@ -234,20 +231,20 @@ export const HomePage: React.FC = () => {
         <section className="mb-10">
           <div className="flex items-end justify-between mb-4 gap-3">
             <h2 className="font-display text-display-lg-mobile text-primary leading-tight">
-              {getGreeting(new Date().getHours())}。
+              {t('{{greeting}}。', { greeting: getGreeting(new Date().getHours()) })}
               <span className="block text-headline-sm text-on-surface-variant mt-1">
                 {seatBook
-                  ? `${describeLastRead(seatBook.lastReadAt) || '这一次'}，你在读——`
-                  : '座位已清空，进度都还在'}
+                  ? t('{{arg1}}，你在读——', { arg1: describeLastRead(seatBook.lastReadAt) || t('这一次') })
+                  : t('座位已清空，进度都还在')}
               </span>
             </h2>
             {seatBook && (
               <button
-                aria-label={isSeatEditing ? '结束编辑座位列表' : '编辑座位列表'}
+                aria-label={isSeatEditing ? t('结束编辑座位列表') : t('编辑座位列表')}
                 className="flex-shrink-0 pb-1 font-label text-label-md text-on-surface-variant hover:text-primary transition-colors"
                 onClick={toggleSeatEditing}
               >
-                {isSeatEditing ? '完成' : '编辑'}
+                {isSeatEditing ? t('完成') : t('编辑')}
               </button>
             )}
           </div>
@@ -272,7 +269,7 @@ export const HomePage: React.FC = () => {
                       {/* 编辑态叉钮：移出座位（进度保留） */}
                       {isSeatEditing && (
                         <button
-                          aria-label={`移出《${seatBook.title}》`}
+                          aria-label={t('移出《{{title}}》', { title: seatBook.title })}
                           className="absolute top-2 left-2 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-surface-bright/95 border border-outline-variant text-on-surface-variant shadow-paper hover:text-primary transition-colors"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -298,7 +295,7 @@ export const HomePage: React.FC = () => {
                           {!isSeatEditing && (
                             <div className="relative flex-shrink-0" ref={menuRef}>
                               <button
-                                aria-label="座位选项"
+                                aria-label={t('座位选项')}
                                 className="w-8 h-8 -mt-1 -mr-1 flex items-center justify-center rounded text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors"
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -315,9 +312,7 @@ export const HomePage: React.FC = () => {
                                       e.stopPropagation();
                                       handleDismissSeat(seatBook.id);
                                     }}
-                                  >
-                                    不再显示（进度保留）
-                                  </button>
+                                  >{t('不再显示（进度保留）')}</button>
                                 </div>
                               )}
                             </div>
@@ -326,9 +321,9 @@ export const HomePage: React.FC = () => {
                         <p className="font-label text-label-sm text-on-surface-variant">
                           {chapter
                             ? chapter.number != null
-                              ? `第 ${chapter.number} ${seatBook.format === 'text' ? '章' : '话'}`
+                              ? t('第 {{number}} {{arg1}}', { number: chapter.number, arg1: seatBook.format === 'text' ? t('章') : t('话') })
                               : chapter.title
-                            : `${seatBook.totalChapters} 话`}
+                            : t('{{totalChapters}} 话', { totalChapters: seatBook.totalChapters })}
                           <span className="font-mono ml-2">{pct}%</span>
                         </p>
                         {/* 久别回访：回想想 chip（离开 ≥7 天才亮） */}
@@ -352,9 +347,7 @@ export const HomePage: React.FC = () => {
                             style={{ width: `${pct}%` }}
                           />
                         </div>
-                        <Button variant="accent" size="md" className="w-full">
-                          继续阅读
-                        </Button>
+                        <Button variant="accent" size="md" className="w-full">{t('继续阅读')}</Button>
                       </div>
                     </div>
                   </article>
@@ -388,7 +381,7 @@ export const HomePage: React.FC = () => {
                     >
                       {rowContent}
                       <button
-                        aria-label={`移出《${book.title}》`}
+                        aria-label={t('移出《{{title}}》', { title: book.title })}
                         className="w-8 h-8 -mr-1 flex-shrink-0 flex items-center justify-center rounded text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors"
                         onClick={() => handleDismissSeat(book.id)}
                       >
@@ -411,30 +404,22 @@ export const HomePage: React.FC = () => {
               {/* 编辑态：被隐藏书目的恢复入口 */}
               {isSeatEditing && hiddenSeatIds.length > 0 && (
                 <div className="flex items-center justify-between py-2 px-2 -mx-2">
-                  <span className="font-label text-label-sm text-on-surface-variant">
-                    已隐藏 {hiddenSeatIds.length} 本在读
-                  </span>
+                  <span className="font-label text-label-sm text-on-surface-variant">{t('已隐藏 {{length}} 本在读', { length: hiddenSeatIds.length })}</span>
                   <button
                     className="font-label text-label-md text-primary hover:opacity-80 transition-opacity"
                     onClick={handleRestoreAllSeats}
-                  >
-                    全部恢复
-                  </button>
+                  >{t('全部恢复')}</button>
                 </div>
               )}
             </>
           ) : (
             /* 座位清空后的兜底：不给出入口，隐藏的书就再也回不来了 */
             <div className="flex items-center justify-between py-3 px-3 rounded-card bg-surface-container-low">
-              <span className="font-body text-body-md text-on-surface-variant">
-                已隐藏 {hiddenSeatIds.length} 本在读
-              </span>
+              <span className="font-body text-body-md text-on-surface-variant">{t('已隐藏 {{length}} 本在读', { length: hiddenSeatIds.length })}</span>
               <button
                 className="font-label text-label-md text-primary hover:opacity-80 transition-opacity"
                 onClick={handleRestoreAllSeats}
-              >
-                全部恢复
-              </button>
+              >{t('全部恢复')}</button>
             </div>
           )}
         </section>
@@ -445,7 +430,7 @@ export const HomePage: React.FC = () => {
         <button
           className="card-link w-full flex items-center gap-4 p-4"
           onClick={() => navigate(ROUTES.STATS)}
-          aria-label={`今日已读 ${todayMinutes} 分钟，目标 ${dailyGoalMinutes} 分钟，查看台账`}
+          aria-label={t('今日已读 {{todayMinutes}} 分钟，目标 {{dailyGoalMinutes}} 分钟，查看台账', { todayMinutes: todayMinutes, dailyGoalMinutes: dailyGoalMinutes })}
         >
           <span
             className="material-symbols-outlined text-icon-lg flex-shrink-0 transition-all"
@@ -459,10 +444,9 @@ export const HomePage: React.FC = () => {
           </span>
           <span className="flex-1 min-w-0">
             <span className="flex items-baseline justify-between mb-1.5">
-              <span className="font-label text-label-md text-on-surface">今日之灯</span>
+              <span className="font-label text-label-md text-on-surface">{t('今日之灯')}</span>
               <span className="font-mono text-label-sm text-on-surface-variant">
-                {todayMinutes}/{dailyGoalMinutes} 分钟
-              </span>
+                {todayMinutes}/{t('{{dailyGoalMinutes}} 分钟', { dailyGoalMinutes: dailyGoalMinutes })}</span>
             </span>
             <span className="block h-1 rounded-full bg-surface-container-highest overflow-hidden">
               <span
@@ -475,8 +459,8 @@ export const HomePage: React.FC = () => {
             </span>
             <span className="block font-label text-label-sm text-on-surface-faint mt-1.5">
               {goalLit
-                ? '今日之灯已点亮'
-                : `再读 ${Math.max(1, dailyGoalMinutes - todayMinutes)} 分钟，把它点亮`}
+                ? t('今日之灯已点亮')
+                : t('再读 {{arg1}} 分钟，把它点亮', { arg1: Math.max(1, dailyGoalMinutes - todayMinutes) })}
             </span>
           </span>
         </button>
@@ -486,13 +470,11 @@ export const HomePage: React.FC = () => {
       {excerpts.length > 0 && (
         <section className="mb-10">
           <div className="flex justify-between items-end mb-4">
-            <h2 className="font-display text-headline-md text-on-background">摘抄墙</h2>
+            <h2 className="font-display text-headline-md text-on-background">{t('摘抄墙')}</h2>
             <button
               className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1"
               onClick={() => navigate(ROUTES.NOTES)}
-            >
-              全部
-              <span className="material-symbols-outlined text-icon-sm">arrow_forward</span>
+            >{t('全部')}<span className="material-symbols-outlined text-icon-sm">arrow_forward</span>
             </button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -568,7 +550,7 @@ export const HomePage: React.FC = () => {
                 className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors"
                 onClick={() => {
                   hiddenRevisits.hide(revisitCardBook.id);
-                  toast('今天先不看它', { durationMs: 3000 });
+                  toast(t('今天先不看它'), { durationMs: 3000 });
                 }}
               >
                 {COPY.revisit.dismissToday}
@@ -607,13 +589,11 @@ export const HomePage: React.FC = () => {
       {recentAccessions.length > 0 && (
         <section>
           <div className="flex justify-between items-end mb-4">
-            <h2 className="font-display text-headline-md text-on-background">新近入藏</h2>
+            <h2 className="font-display text-headline-md text-on-background">{t('新近入藏')}</h2>
             <button
               className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1"
               onClick={() => navigate(ROUTES.IMPORT)}
-            >
-              去采编
-              <span className="material-symbols-outlined text-icon-sm">arrow_forward</span>
+            >{t('去采编')}<span className="material-symbols-outlined text-icon-sm">arrow_forward</span>
             </button>
           </div>
           <div className="grid grid-cols-3 gap-4">

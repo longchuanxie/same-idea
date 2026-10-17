@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
 import { COPY } from '@/constants/copy';
+import { t } from '@/i18n';
 import type { TextChapter } from '@/services/textContent';
 import { MIN_QUERY_CHARS, searchChapters, type SearchHit } from '@/utils/textSearch';
 
@@ -64,7 +65,7 @@ export const InBookSearchPanel: React.FC<InBookSearchPanelProps> = ({
               <button
                 className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-surface-variant transition-colors"
                 onClick={() => setInput('')}
-                aria-label="清空"
+                aria-label={t('清空')}
               >
                 <span className="material-symbols-outlined text-on-surface-variant text-icon-sm">close</span>
               </button>

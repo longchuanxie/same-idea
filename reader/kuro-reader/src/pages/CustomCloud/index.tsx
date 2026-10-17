@@ -6,6 +6,7 @@ import { OpdsBrowser } from '@/components/molecules/OpdsBrowser';
 import { ReplaceConfirmDialog } from '@/components/molecules/ReplaceConfirmDialog';
 import { ROUTES, bookDetailPath, readerPathForBook } from '@/constants/routes';
 import { useHistoryBack } from '@/hooks/useHistoryBack';
+import { t } from '@/i18n';
 import { createCloudClient, type CloudFile, type CloudStorageClient } from '@/services/cloudStorage';
 import { fetchOpdsFeed } from '@/services/opds';
 import { useLibraryStore } from '@/stores/useLibraryStore';
@@ -28,12 +29,12 @@ interface ProtocolOption {
 }
 
 const PROTOCOLS: ProtocolOption[] = [
-  { id: 'webdav', label: 'WebDAV', icon: 'cloud_sync', description: '通用云存储标准协议' },
-  { id: 'nas', label: 'NAS', icon: 'storage', description: '群晖 / QNAP / 威联通' },
-  { id: 'opds', label: 'OPDS', icon: 'rss_feed', description: 'Calibre / Komga / Kavita 书库目录' },
-  { id: 'smb', label: 'SMB', icon: 'folder_open', description: 'Windows 文件共享（暂不支持浏览）' },
-  { id: 'ftp', label: 'FTP', icon: 'transfer_within_a_station', description: '文件传输协议' },
-  { id: 'onedrive', label: 'OneDrive', icon: 'cloud_download', description: '微软云存储 API（暂不支持浏览）' },
+  { id: 'webdav', label: 'WebDAV', icon: 'cloud_sync', description: t('通用云存储标准协议') },
+  { id: 'nas', label: 'NAS', icon: 'storage', description: t('群晖 / QNAP / 威联通') },
+  { id: 'opds', label: 'OPDS', icon: 'rss_feed', description: t('Calibre / Komga / Kavita 书库目录') },
+  { id: 'smb', label: 'SMB', icon: 'folder_open', description: t('Windows 文件共享（暂不支持浏览）') },
+  { id: 'ftp', label: 'FTP', icon: 'transfer_within_a_station', description: t('文件传输协议') },
+  { id: 'onedrive', label: 'OneDrive', icon: 'cloud_download', description: t('微软云存储 API（暂不支持浏览）') },
 ];
 
 /** 浏览支持的协议（其余仅保留连接测试） */
@@ -98,7 +99,7 @@ export const CustomCloudPage: React.FC = () => {
       }
       // 同书换新文件：替换确认弹窗已开，等裁定收口，不算导入失败
       if (useLibraryStore.getState().pendingReplace) return null;
-      setActionError(useLibraryStore.getState().error || '导入失败');
+      setActionError(useLibraryStore.getState().error || t('导入失败'));
       return null;
     },
     [importFile]
@@ -121,7 +122,7 @@ export const CustomCloudPage: React.FC = () => {
       case 'ftp':
         return { server: 'ftp.example.com', port: '21' };
       case 'onedrive':
-        return { server: '授权登录', port: '' };
+        return { server: t('授权登录'), port: '' };
       default:
         return { server: '', port: '' };
     }
@@ -140,7 +141,7 @@ export const CustomCloudPage: React.FC = () => {
       setCurrentPath(normalizeCloudPath(dir));
     } catch (e) {
       if (seq !== loadDirectorySeqRef.current) return;
-      setFilesError((e as Error).message || '目录读取失败');
+      setFilesError((e as Error).message || t('目录读取失败'));
     } finally {
       if (seq === loadDirectorySeqRef.current) setIsLoadingFiles(false);
     }
@@ -170,7 +171,7 @@ export const CustomCloudPage: React.FC = () => {
       const created = createCloudClient(config);
       const ok = await created.testConnection();
       if (!ok) {
-        setConnectError('连接失败，请检查服务器地址和凭据');
+        setConnectError(t('连接失败，请检查服务器地址和凭据'));
         return;
       }
       setClient(created);
@@ -179,7 +180,7 @@ export const CustomCloudPage: React.FC = () => {
       setActionError(null);
       await loadDirectory(created, path || '/');
     } catch (e) {
-      setConnectError((e as Error).message || '连接失败');
+      setConnectError((e as Error).message || t('连接失败'));
     } finally {
       setIsConnecting(false);
     }
@@ -217,10 +218,10 @@ export const CustomCloudPage: React.FC = () => {
         setImportedBook({ id: book.id, title: book.title, format: book.format });
       } else if (!useLibraryStore.getState().pendingReplace) {
         // 挂起等替换裁定时不算失败（弹窗已开），其余照旧报错
-        setActionError(useLibraryStore.getState().error || '导入失败');
+        setActionError(useLibraryStore.getState().error || t('导入失败'));
       }
     } catch (e) {
-      setActionError((e as Error).message || '下载失败');
+      setActionError((e as Error).message || t('下载失败'));
     } finally {
       setBusyFile(null);
     }
@@ -232,7 +233,7 @@ export const CustomCloudPage: React.FC = () => {
   const handleResolveReplace = async (decision: 'replace' | 'keep-both' | 'cancel') => {
     const book = await resolvePendingReplace(decision);
     if (book) {
-      toast(decision === 'replace' ? `《${book.title}》已更新到新文件内容` : `《${book.title}》已另藏一本`);
+      toast(decision === 'replace' ? t('《{{title}}》已更新到新文件内容', { title: book.title }) : t('《{{title}}》已另藏一本', { title: book.title }));
     }
   };
   const canBrowse = BROWSABLE_PROTOCOLS.has(protocol);
@@ -249,9 +250,7 @@ export const CustomCloudPage: React.FC = () => {
         <button
           className="font-label text-label-sm text-on-surface-variant hover:text-primary transition-colors py-2 px-3"
           onClick={handleDisconnect}
-        >
-          断开连接
-        </button>
+        >{t('断开连接')}</button>
       </div>
 
       {/* 面包屑 */}
@@ -259,9 +258,7 @@ export const CustomCloudPage: React.FC = () => {
         <button
           className="font-label text-label-sm text-on-surface-variant hover:text-primary transition-colors py-1 px-1 whitespace-nowrap"
           onClick={() => client && loadDirectory(client, '/')}
-        >
-          根目录
-        </button>
+        >{t('根目录')}</button>
         {breadcrumbs.map((seg) => (
           <React.Fragment key={seg.path}>
             <span className="material-symbols-outlined text-icon-sm text-on-surface-variant">chevron_right</span>
@@ -286,14 +283,14 @@ export const CustomCloudPage: React.FC = () => {
           data-ui-control
         >
           <span className="material-symbols-outlined text-on-surface-variant">arrow_upward</span>
-          <span className="font-body text-body-md text-on-surface-variant">上级目录</span>
+          <span className="font-body text-body-md text-on-surface-variant">{t('上级目录')}</span>
         </button>
       )}
 
       {isLoadingFiles && (
         <div className="flex items-center justify-center gap-2 py-12 text-on-surface-variant">
           <span className="material-symbols-outlined animate-spin">progress_activity</span>
-          <span className="font-label text-label-sm">正在读取目录...</span>
+          <span className="font-label text-label-sm">{t('正在读取目录...')}</span>
         </div>
       )}
 
@@ -306,16 +303,14 @@ export const CustomCloudPage: React.FC = () => {
           <button
             className="self-start font-label text-label-sm text-primary hover:opacity-80 transition-opacity"
             onClick={() => client && loadDirectory(client, currentPath)}
-          >
-            重试
-          </button>
+          >{t('重试')}</button>
         </div>
       )}
 
       {!isLoadingFiles && !filesError && files.length === 0 && (
         <div className="text-center py-16">
           <span className="material-symbols-outlined text-5xl text-on-surface-variant block mb-3">folder_open</span>
-          <p className="font-body text-body-md text-on-surface-variant">此目录为空</p>
+          <p className="font-body text-body-md text-on-surface-variant">{t('此目录为空')}</p>
         </div>
       )}
 
@@ -348,8 +343,8 @@ export const CustomCloudPage: React.FC = () => {
                   <span className="font-body text-body-md text-on-surface block truncate">{file.name}</span>
                   {!file.isDirectory && (
                     <span className="font-label text-label-sm text-on-surface-variant">
-                      {isBusy ? '下载并导入中...' : formatFileSize(file.size)}
-                      {!downloadable && !isBusy && ' · 不支持的格式'}
+                      {isBusy ? t('下载并导入中...') : formatFileSize(file.size)}
+                      {!downloadable && !isBusy && t(' · 不支持的格式')}
                     </span>
                   )}
                 </span>
@@ -367,21 +362,17 @@ export const CustomCloudPage: React.FC = () => {
         <section className="border border-primary rounded-lg p-4 bg-surface-bright flex flex-col gap-3">
           <div className="flex items-center gap-3">
             <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-            <p className="font-body text-body-md text-primary">《{importedBook.title}》导入成功</p>
+            <p className="font-body text-body-md text-primary">《{t('{{title}}》导入成功', { title: importedBook.title })}</p>
           </div>
           <div className="flex gap-3">
             <button
               className="btn-primary btn-sm px-4 py-2"
               onClick={() => navigate(readerPathForBook(importedBook))}
-            >
-              开始阅读
-            </button>
+            >{t('开始阅读')}</button>
             <button
               className="px-4 py-2 rounded-full border border-outline-variant font-label text-label-sm text-on-surface-variant hover:text-primary hover:border-primary transition-colors"
               onClick={() => navigate(bookDetailPath(importedBook.id))}
-            >
-              查看详情
-            </button>
+            >{t('查看详情')}</button>
           </div>
         </section>
       )}
@@ -400,7 +391,7 @@ export const CustomCloudPage: React.FC = () => {
   const renderForm = () => (
     <main className="w-full max-w-max-width-content px-margin-mobile md:px-margin-desktop pt-8 pb-32 flex-grow flex flex-col gap-10">
         <section className="flex flex-col gap-4">
-          <h2 className="font-label text-label-md text-on-surface-variant uppercase tracking-wider">选择协议</h2>
+          <h2 className="font-label text-label-md text-on-surface-variant uppercase tracking-wider">{t('选择协议')}</h2>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
             {PROTOCOLS.map((p) => (
               <button
@@ -430,7 +421,7 @@ export const CustomCloudPage: React.FC = () => {
           <div className="flex flex-col md:flex-row gap-6">
             <div className="flex-grow flex flex-col gap-2">
               <label className="font-label text-label-sm text-on-surface-variant">
-                {protocol === 'opds' ? '目录地址' : protocol === 'nas' ? 'NAS 地址 / IP' : protocol === 'onedrive' ? '授权方式' : '服务器地址'}
+                {protocol === 'opds' ? t('目录地址') : protocol === 'nas' ? t('NAS 地址 / IP') : protocol === 'onedrive' ? t('授权方式') : t('服务器地址')}
               </label>
               <input
                 className="input-field"
@@ -443,7 +434,7 @@ export const CustomCloudPage: React.FC = () => {
             </div>
             {protocol !== 'onedrive' && protocol !== 'opds' && (
               <div className="w-full md:w-32 flex flex-col gap-2">
-                <label className="font-label text-label-sm text-on-surface-variant">端口 (选填)</label>
+                <label className="font-label text-label-sm text-on-surface-variant">{t('端口 (选填)')}</label>
                 <input
                   className="input-field"
                   placeholder={placeholders.port}
@@ -457,7 +448,7 @@ export const CustomCloudPage: React.FC = () => {
 
           {protocol !== 'onedrive' && protocol !== 'opds' && (
             <div className="flex flex-col gap-2">
-              <label className="font-label text-label-sm text-on-surface-variant">路径 (选填)</label>
+              <label className="font-label text-label-sm text-on-surface-variant">{t('路径 (选填)')}</label>
               <input
                 className="input-field"
                 placeholder={protocol === 'nas' ? '/Comics' : '/books'}
@@ -473,11 +464,11 @@ export const CustomCloudPage: React.FC = () => {
           <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-2">
               <label className="font-label text-label-sm text-on-surface-variant">
-                {protocol === 'onedrive' ? '账户邮箱' : '用户名'}
+                {protocol === 'onedrive' ? t('账户邮箱') : t('用户名')}
               </label>
               <input
                 className="input-field"
-                placeholder={protocol === 'onedrive' ? 'example@outlook.com' : '输入用户名'}
+                placeholder={protocol === 'onedrive' ? 'example@outlook.com' : t('输入用户名')}
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -485,7 +476,7 @@ export const CustomCloudPage: React.FC = () => {
             </div>
             <div className="flex flex-col gap-2 relative">
               <label className="font-label text-label-sm text-on-surface-variant">
-                {protocol === 'onedrive' ? '授权码 / Token' : '密码'}
+                {protocol === 'onedrive' ? t('授权码 / Token') : t('密码')}
               </label>
               <input
                 className="input-field pr-10"
@@ -529,19 +520,13 @@ export const CustomCloudPage: React.FC = () => {
             >
               {isConnecting ? (
                 <>
-                  <span className="material-symbols-outlined animate-spin">progress_activity</span>
-                  正在连接...
-                </>
+                  <span className="material-symbols-outlined animate-spin">progress_activity</span>{t('正在连接...')}</>
               ) : (
                 <>
-                  <span className="material-symbols-outlined">cloud_sync</span>
-                  连接并浏览
-                </>
+                  <span className="material-symbols-outlined">cloud_sync</span>{t('连接并浏览')}</>
               )}
             </button>
-            <p className="text-center font-body text-body-md text-on-surface-variant text-sm mt-4">
-              连接后可浏览远端目录并直接导入书籍；连接信息仅保存在本地设备上。
-            </p>
+            <p className="text-center font-body text-body-md text-on-surface-variant text-sm mt-4">{t('连接后可浏览远端目录并直接导入书籍；连接信息仅保存在本地设备上。')}</p>
           </section>
         ) : (
           <section className="mt-8 flex flex-col gap-3">
@@ -557,19 +542,13 @@ export const CustomCloudPage: React.FC = () => {
             >
               {isConnecting ? (
                 <>
-                  <span className="material-symbols-outlined animate-spin">progress_activity</span>
-                  正在测试连接...
-                </>
+                  <span className="material-symbols-outlined animate-spin">progress_activity</span>{t('正在测试连接...')}</>
               ) : (
                 <>
-                  <span className="material-symbols-outlined">cloud_sync</span>
-                  测试并连接
-                </>
+                  <span className="material-symbols-outlined">cloud_sync</span>{t('测试并连接')}</>
               )}
             </button>
-            <p className="text-center font-body text-body-md text-on-surface-variant text-sm">
-              该协议暂不支持应用内浏览，敬请期待。
-            </p>
+            <p className="text-center font-body text-body-md text-on-surface-variant text-sm">{t('该协议暂不支持应用内浏览，敬请期待。')}</p>
           </section>
         )}
     </main>
@@ -582,16 +561,16 @@ export const CustomCloudPage: React.FC = () => {
           <button
             className="text-primary hover:opacity-80 transition-opacity p-2 -ml-2"
             onClick={() => (client || isOpdsConnected ? handleDisconnect() : historyBack(ROUTES.IMPORT))}
-            aria-label={client || isOpdsConnected ? '返回连接页' : '返回'}
+            aria-label={client || isOpdsConnected ? t('返回连接页') : t('返回')}
           >
             <span className="material-symbols-outlined">arrow_back</span>
           </button>
-          <h1 className="font-display text-headline-md text-primary tracking-tight">自定义云端来源</h1>
+          <h1 className="font-display text-headline-md text-primary tracking-tight">{t('自定义云端来源')}</h1>
         </div>
         <button
           className="text-on-surface-variant hover:text-primary transition-colors p-2 -mr-2"
           onClick={() => setIsHelpOpen(true)}
-          aria-label="连接说明"
+          aria-label={t('连接说明')}
         >
           <span className="material-symbols-outlined">help_outline</span>
         </button>
@@ -603,20 +582,17 @@ export const CustomCloudPage: React.FC = () => {
           <div className="absolute inset-0 bg-on-background/40 animate-fade-in" onClick={() => setIsHelpOpen(false)} />
           <div className="relative bg-surface rounded-t-card-lg max-h-[70vh] flex flex-col animate-slide-up shadow-raised">
             <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/50">
-              <h3 className="font-display text-headline-sm text-primary">连接说明</h3>
+              <h3 className="font-display text-headline-sm text-primary">{t('连接说明')}</h3>
               <button
                 className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-variant transition-colors"
                 onClick={() => setIsHelpOpen(false)}
-                aria-label="关闭"
+                aria-label={t('关闭')}
               >
                 <span className="material-symbols-outlined text-on-surface-variant text-icon-md">close</span>
               </button>
             </div>
             <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4 space-y-3">
-              <p className="font-body text-body-sm text-on-surface-variant">
-                填服务地址、端口与凭据后「测试连接」，连接成功即可浏览并下载导入。支持导入
-                epub / txt / md / pdf / zip / cbz / cbr。
-              </p>
+              <p className="font-body text-body-sm text-on-surface-variant">{t('填服务地址、端口与凭据后「测试连接」，连接成功即可浏览并下载导入。支持导入 epub / txt / md / pdf / zip / cbz / cbr。')}</p>
               {PROTOCOLS.map(({ id, label, icon, description }) => (
                 <div key={id} className="flex items-start gap-3 py-2 border-b border-outline-variant/30 last:border-b-0">
                   <span className="material-symbols-outlined text-secondary text-icon-md shrink-0 mt-0.5">{icon}</span>
@@ -624,17 +600,14 @@ export const CustomCloudPage: React.FC = () => {
                     <p className="font-label text-label-md text-primary">
                       {label}
                       {HELP_TEST_ONLY.has(id) && (
-                        <span className="font-label text-label-xs text-on-surface-faint ml-2">仅测试连接</span>
+                        <span className="font-label text-label-xs text-on-surface-faint ml-2">{t('仅测试连接')}</span>
                       )}
                     </p>
                     <p className="font-body text-body-sm text-on-surface-variant">{description}</p>
                   </div>
                 </div>
               ))}
-              <p className="font-label text-label-sm text-on-surface-faint pt-1">
-                示例：WebDAV 填 192.168.1.10，端口 5005，路径 /dav；OPDS 填完整目录地址，如
-                http://192.168.1.10:8080/opds
-              </p>
+              <p className="font-label text-label-sm text-on-surface-faint pt-1">{t('示例：WebDAV 填 192.168.1.10，端口 5005，路径 /dav；OPDS 填完整目录地址，如 http://192.168.1.10:8080/opds')}</p>
             </div>
           </div>
         </div>

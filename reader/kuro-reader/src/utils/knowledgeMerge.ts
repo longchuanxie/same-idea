@@ -11,6 +11,7 @@
  */
 
 import type {
+  ChapterSummaryData,
   CharacterEdge,
   CharacterGraphData,
   CharacterNode,
@@ -943,4 +944,71 @@ export function resolveBeatsEvidence(
 /** 节拍是否为空 */
 export function isBeatsEmpty(data: StoryBeatsData): boolean {
   return data.beats.length === 0
+}
+
+// ---- 章节总结（指定章范围的剧情/论点回顾） ----
+
+/** 章节总结安全上限：单块要点数与全书段数（防模型失控撑爆视图） */
+export const MAX_SUMMARY_POINTS_PER_CHUNK = 8
+export const MAX_SUMMARY_SECTIONS = 48
+
+const SUMMARY_POINT_MAX_CHARS = 80
+const SUMMARY_CLOSING_MAX_CHARS = 60
+
+/** AI 单块返回的章节总结原始形态（chapters 由调用方按分块覆盖章节补盖） */
+export interface SummaryPartial {
+  points: string[]
+  closing?: string
+  chapters?: number[]
+}
+
+/** 校验并规整 AI 返回的总结片段：要点过滤空串与超长裁剪；无有效要点返回 null */
+export function parseSummaryPartial(raw: unknown): SummaryPartial | null {
+  if (raw == null || typeof raw !== 'object') return null
+  const source = raw as { points?: unknown; closing?: unknown }
+  if (!Array.isArray(source.points)) return null
+  const points: string[] = []
+  for (const item of source.points) {
+    if (typeof item !== 'string') continue
+    const text = item.trim().slice(0, SUMMARY_POINT_MAX_CHARS)
+    if (text) points.push(text)
+    if (points.length >= MAX_SUMMARY_POINTS_PER_CHUNK) break
+  }
+  if (points.length === 0) return null
+  const closing = clip(String(source.closing ?? ''), SUMMARY_CLOSING_MAX_CHARS)
+  return { points, ...(closing ? { closing } : {}) }
+}
+
+/** 把分块覆盖章节盖到总结片段上（段头回原文的跳转目标） */
+export function stampSummaryChapters(partial: SummaryPartial, chapterIndexes: number[]): SummaryPartial {
+  return { ...partial, chapters: chapterIndexes }
+}
+
+/**
+ * 合并多块总结片段：每块成一段（label 即段头，如「片段3」），按块序拼接；
+ * closing 取最后一个非空（本段结束时处境由结尾块最有发言权）。
+ * base 为增量合并的基底（现有总结）：旧段前置保留，新段接后，总量受上限约束。
+ */
+export function mergeSummaries(
+  partials: { label: string; data: SummaryPartial }[],
+  base?: ChapterSummaryData
+): ChapterSummaryData {
+  const sections: ChapterSummaryData['sections'] = [...(base?.sections ?? [])]
+  let closing = base?.closing ?? ''
+  for (const partial of partials) {
+    if (sections.length >= MAX_SUMMARY_SECTIONS) break
+    const data = partial.data
+    sections.push({
+      label: partial.label.trim().slice(0, MINDMAP_NODE_TITLE_MAX_CHARS) || partial.label,
+      points: data.points.map((text) => ({ text })),
+      ...(data.chapters && data.chapters.length > 0 ? { chapters: data.chapters } : {}),
+    })
+    if (data.closing) closing = data.closing
+  }
+  return { sections: sections.slice(0, MAX_SUMMARY_SECTIONS), ...(closing ? { closing } : {}) }
+}
+
+/** 章节总结是否为空 */
+export function isSummaryEmpty(data: ChapterSummaryData): boolean {
+  return data.sections.every((section) => section.points.length === 0)
 }

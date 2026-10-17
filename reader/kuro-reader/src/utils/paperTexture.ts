@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 
+import { t } from '@/i18n';
 import type { PaperType } from '@/types';
 
 export interface PaperTextureConfig {
@@ -36,8 +37,8 @@ const PAPER_TEXTURE_OPACITY: Record<PaperType, number> = {
 };
 const PAPER_TEXTURES: Record<PaperType, PaperTextureConfig> = {
   coated: {
-    label: '铜版纸',
-    description: '光滑细腻，色彩鲜艳饱满',
+    label: t('铜版纸'),
+    description: t('光滑细腻，色彩鲜艳饱满'),
     icon: 'photo_prints',
     svgFilter: (opacity) =>
       `url("data:image/svg+xml,%3Csvg viewBox='0 0 300 300' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)' opacity='${opacity * COATED_TEXTURE_OPACITY}'/%3E%3C/svg%3E")`,
@@ -46,8 +47,8 @@ const PAPER_TEXTURES: Record<PaperType, PaperTextureConfig> = {
     blendMode: 'multiply',
   },
   rice: {
-    label: '宣纸',
-    description: '纤维纹理，墨韵渗透，古朴典雅',
+    label: t('宣纸'),
+    description: t('纤维纹理，墨韵渗透，古朴典雅'),
     icon: 'auto_stories',
     svgFilter: (opacity) =>
       `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.02 0.3' numOctaves='5' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='discrete' tableValues='0 0.3 0.5 0.7 0.85 1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)' opacity='${opacity * RICE_TEXTURE_OPACITY}'/%3E%3C/svg%3E")`,
@@ -56,8 +57,8 @@ const PAPER_TEXTURES: Record<PaperType, PaperTextureConfig> = {
     blendMode: 'multiply',
   },
   kraft: {
-    label: '牛皮纸',
-    description: '粗犷纤维，温暖质朴，复古怀旧',
+    label: t('牛皮纸'),
+    description: t('粗犷纤维，温暖质朴，复古怀旧'),
     icon: 'description',
     svgFilter: (opacity) =>
       `url("data:image/svg+xml,%3Csvg viewBox='0 0 300 300' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0.35 0.26 0.08 0 0.04 0.28 0.22 0.07 0 0.03 0.18 0.13 0.05 0 0.01 0 0 0 1 0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='discrete' tableValues='0 0.45 0.75 0.9 1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)' opacity='${opacity * KRAFT_TEXTURE_OPACITY}'/%3E%3C/svg%3E")`,
@@ -66,8 +67,8 @@ const PAPER_TEXTURES: Record<PaperType, PaperTextureConfig> = {
     blendMode: 'multiply',
   },
   newsprint: {
-    label: '新闻纸',
-    description: '粗糙颗粒，微黄泛灰，报刊质感',
+    label: t('新闻纸'),
+    description: t('粗糙颗粒，微黄泛灰，报刊质感'),
     icon: 'newspaper',
     svgFilter: (opacity) =>
       `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.012' numOctaves='3' seed='7' stitchTiles='stitch' result='patch'/%3E%3CfeColorMatrix in='patch' type='matrix' values='0.5 0.4 0.12 0 0.06 0.42 0.34 0.11 0 0.04 0.3 0.22 0.08 0 0.02 0 0 0 1 0' result='stain'/%3E%3CfeTurbulence type='turbulence' baseFrequency='0.38' numOctaves='5' seed='3' stitchTiles='stitch' result='scratch'/%3E%3CfeColorMatrix in='scratch' type='saturate' values='0' result='gray'/%3E%3CfeComponentTransfer in='gray' result='scr'%3E%3CfeFuncA type='discrete' tableValues='0 0.45 0.75 1'/%3E%3C/feComponentTransfer%3E%3CfeBlend in='stain' in2='scr' mode='multiply'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)' opacity='${opacity * NEWSPRINT_TEXTURE_OPACITY}'/%3E%3C/svg%3E")`,
@@ -76,8 +77,8 @@ const PAPER_TEXTURES: Record<PaperType, PaperTextureConfig> = {
     blendMode: 'multiply',
   },
   green: {
-    label: '护眼纸',
-    description: '柔和豆绿，舒缓疲劳，久读不刺眼',
+    label: t('护眼纸'),
+    description: t('柔和豆绿，舒缓疲劳，久读不刺眼'),
     icon: 'spa',
     svgFilter: (opacity) =>
       `url("data:image/svg+xml,%3Csvg viewBox='0 0 300 300' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.35' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)' opacity='${opacity * GREEN_TEXTURE_OPACITY}'/%3E%3C/svg%3E")`,
@@ -87,8 +88,8 @@ const PAPER_TEXTURES: Record<PaperType, PaperTextureConfig> = {
     inkColor: '#2d3a2d',
   },
   night: {
-    label: '夜读纸',
-    description: '暖黑纸面，柔光浅墨，深夜阅读不扰人',
+    label: t('夜读纸'),
+    description: t('暖黑纸面，柔光浅墨，深夜阅读不扰人'),
     icon: 'dark_mode',
     svgFilter: (opacity) =>
       `url("data:image/svg+xml,%3Csvg viewBox='0 0 300 300' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.45' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)' opacity='${opacity * NIGHT_TEXTURE_OPACITY}'/%3E%3C/svg%3E")`,
@@ -98,8 +99,8 @@ const PAPER_TEXTURES: Record<PaperType, PaperTextureConfig> = {
     inkColor: '#d6cfc0',
   },
   matte: {
-    label: '哑光纸',
-    description: '柔和漫反射，低饱和，细腻不刺眼',
+    label: t('哑光纸'),
+    description: t('柔和漫反射，低饱和，细腻不刺眼'),
     icon: 'filter_none',
     svgFilter: (opacity) =>
       `url("data:image/svg+xml,%3Csvg viewBox='0 0 300 300' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)' opacity='${opacity * MATTE_TEXTURE_OPACITY}'/%3E%3C/svg%3E")`,
@@ -108,8 +109,8 @@ const PAPER_TEXTURES: Record<PaperType, PaperTextureConfig> = {
     blendMode: 'multiply',
   },
   eink: {
-    label: '墨水屏',
-    description: '高对比度黑白，护眼无蓝光，电纸书质感',
+    label: t('墨水屏'),
+    description: t('高对比度黑白，护眼无蓝光，电纸书质感'),
     icon: 'tablet_mac',
     svgFilter: (opacity) =>
       `url("data:image/svg+xml,%3Csvg viewBox='0 0 300 300' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='discrete' tableValues='0 0.5 1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)' opacity='${opacity * EINK_TEXTURE_OPACITY}'/%3E%3C/svg%3E")`,

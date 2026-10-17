@@ -37,6 +37,12 @@ export interface Book {
   format?: BookFormat
   /** 知识库内容类型偏好（小说/学术/自动检测）；缺省 'auto' */
   contentKind?: ContentKindPreference
+  /** 按书净化门槛（A 类广告规则）：undefined/'pending' = 待确认（开书弹净化确认门，先只检测）；
+   *  'on' = 已确认应用；'off' = 该书不净化（可在确认门选「本书不再提示」）。替换流保 bookId，随书保留 */
+  contentSanitize?: {
+    ads: 'pending' | 'on' | 'off'
+    confirmedAt?: number
+  }
 }
 
 /** @deprecated Use `Book` instead. Kept for incremental migration. */
@@ -108,6 +114,18 @@ export type TextAlign = 'left' | 'justify'
 /** 文本阅读模式 */
 export type TextReadingMode = 'scroll' | 'paginate' | 'book' | 'columns'
 
+/** 原文净化设置（A 类广告水印 / B 类排版噪音，本地规则零 token；引擎见 services/contentSanitizer） */
+export interface ContentSanitizeSettings {
+  /** 总开关（关闭 = 读取层完全不净化，回原始内容） */
+  enabled: boolean
+  /** B 类排版清理：空行折叠/缩进规范/中文标点全角化 */
+  typography: boolean
+  /** A 类广告清理（每书首次应用前有确认门） */
+  ads: boolean
+  /** 自定义关键词：命中即按广告片段剔除（未知站名等兜底） */
+  customKeywords: string[]
+}
+
 /** 听书发音引擎(与 services/tts 的 TtsEngineSetting 一致;'native' 仅 App 内展示) */
 export type TtsEngineOption = 'auto' | 'system' | 'native' | 'neural' | 'server'
 
@@ -148,6 +166,8 @@ export interface UserSettings {
   knowledgeAiUrl: string
   knowledgeAiKey: string
   knowledgeAiModel: string
+  /** 原文净化（A 类广告水印 / B 类排版噪音；本地规则，零流量零 AI，仅 TXT 生效） */
+  contentSanitize: ContentSanitizeSettings
 }
 
 export interface SecurityQuestion {
@@ -286,8 +306,25 @@ export type ContentKind = 'fiction' | 'academic'
 /** 书籍的知识库内容类型偏好（'auto' 按文本启发式检测；存于书档案，随书记忆） */
 export type ContentKindPreference = ContentKind | 'auto'
 
-/** 知识产物类型：人物关系图谱 / 概念关系图谱 / 思维导图 / 概念术语卡 / 论文速览 / 叙事节拍（注册表见 services/ai/knowledgeTasks） */
-export type KnowledgeArtifactType = 'character-graph' | 'concept-graph' | 'mindmap' | 'glossary' | 'paper-brief' | 'story-beats'
+/** 知识产物类型：人物关系图谱 / 概念关系图谱 / 思维导图 / 概念术语卡 / 论文速览 / 叙事节拍 / 章节总结（注册表见 services/ai/knowledgeTasks） */
+export type KnowledgeArtifactType = 'character-graph' | 'concept-graph' | 'mindmap' | 'glossary' | 'paper-brief' | 'story-beats' | 'chapter-summary'
+
+/** 章节总结段：一个分块的要点归纳（label 如「第30-32章」，chapters 为覆盖章索引） */
+export interface ChapterSummarySection {
+  /** 分块标签（块序号或章范围） */
+  label: string
+  /** 本段要点（按时间序/论述序） */
+  points: { text: string; verified?: boolean }[]
+  /** 覆盖章节（0 起章索引；PDF 为页索引）——段头回原文的跳转目标 */
+  chapters?: number[]
+}
+
+/** 章节总结数据：指定章范围的剧情/论点回顾（追更补课、久别找回） */
+export interface ChapterSummaryData {
+  sections: ChapterSummarySection[]
+  /** 一句话收尾（本段结束时的人物处境/论证落点） */
+  closing?: string
+}
 
 /** 贡献点的证据强度（论文速览卡）：实验支撑 / 理论证明 / 部分支撑 / 仅声称 */
 export type ContributionStrength = 'experiment' | 'theory' | 'partial' | 'claim'
@@ -438,7 +475,7 @@ export interface KnowledgeArtifact {
   bookId: string
   type: KnowledgeArtifactType
   title: string
-  data: CharacterGraphData | MindmapNodeData | GlossaryData | PaperBriefData | StoryBeatsData
+  data: CharacterGraphData | MindmapNodeData | GlossaryData | PaperBriefData | StoryBeatsData | ChapterSummaryData
   /** 生成来源元信息：内容指纹用于书本内容变化后提示重新生成 */
   meta?: {
     /** 实际进入语料的章节数（范围生成时 < 原书总章数） */

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
+import { t } from '@/i18n'
 import { normalizeAiBaseUrl } from '@/services/ai/aiClient'
 import {
   CUSTOM_PROVIDER_ID,
@@ -38,7 +39,7 @@ describe('KNOWLEDGE_AI_PROVIDERS', () => {
 
 describe('findKnowledgeAiProvider', () => {
   it('按 id 查找', () => {
-    expect(findKnowledgeAiProvider('glm')?.label).toBe('智谱 GLM')
+    expect(findKnowledgeAiProvider('glm')?.label).toBe(t('智谱 GLM'))
     expect(findKnowledgeAiProvider('nope')).toBeUndefined()
   })
 })

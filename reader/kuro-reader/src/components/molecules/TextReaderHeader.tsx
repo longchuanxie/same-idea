@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { t } from '@/i18n';
 import { cn } from '@/utils/cn';
 
 interface TextReaderHeaderProps {
@@ -68,7 +69,7 @@ export const TextReaderHeader: React.FC<TextReaderHeaderProps> = ({
             className="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center w-11 h-11 rounded-full hover:bg-surface-variant/50"
             onClick={onOpenChapters}
             data-ui-control
-            aria-label="章节目录"
+            aria-label={t('章节目录')}
           >
             <span className="material-symbols-outlined text-headline-md">format_list_bulleted</span>
           </button>
@@ -78,7 +79,7 @@ export const TextReaderHeader: React.FC<TextReaderHeaderProps> = ({
           className="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center w-11 h-11 rounded-full hover:bg-surface-variant/50"
           onClick={onOpenAnnotations}
           data-ui-control
-          aria-label="手记列表"
+          aria-label={t('手记列表')}
         >
           <span className="material-symbols-outlined text-headline-md">edit_note</span>
         </button>
@@ -87,7 +88,7 @@ export const TextReaderHeader: React.FC<TextReaderHeaderProps> = ({
           className="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center w-11 h-11 rounded-full hover:bg-surface-variant/50"
           onClick={onOpenSearch}
           data-ui-control
-          aria-label="检索本书"
+          aria-label={t('检索本书')}
         >
           <span className="material-symbols-outlined text-headline-md">search</span>
         </button>
@@ -96,7 +97,7 @@ export const TextReaderHeader: React.FC<TextReaderHeaderProps> = ({
           className={`${isFavorite ? 'text-seal' : 'text-on-surface-variant'} hover:text-primary transition-colors flex items-center justify-center w-11 h-11 rounded-full hover:bg-surface-variant/50`}
           onClick={onToggleFavorite}
           data-ui-control
-          aria-label={isFavorite ? '取消收藏' : '收藏本书'}
+          aria-label={isFavorite ? t('取消收藏') : t('收藏本书')}
         >
           <span
             className="material-symbols-outlined text-headline-md"
@@ -110,7 +111,7 @@ export const TextReaderHeader: React.FC<TextReaderHeaderProps> = ({
           className={`${isBookmarked ? 'text-primary' : 'text-on-surface-variant'} hover:text-primary transition-colors flex items-center justify-center w-11 h-11 rounded-full hover:bg-surface-variant/50`}
           onClick={onToggleBookmark}
           data-ui-control
-          aria-label={isBookmarked ? '移除书签' : '添加书签'}
+          aria-label={isBookmarked ? t('移除书签') : t('添加书签')}
         >
           <span
             className="material-symbols-outlined text-headline-md"
@@ -123,7 +124,7 @@ export const TextReaderHeader: React.FC<TextReaderHeaderProps> = ({
           className="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center w-11 h-11 rounded-full hover:bg-surface-variant/50"
           onClick={onOpenSettings}
           data-ui-control
-          aria-label="阅读设置"
+          aria-label={t('阅读设置')}
         >
           <span className="material-symbols-outlined text-headline-md">tune</span>
         </button>

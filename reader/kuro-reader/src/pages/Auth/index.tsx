@@ -4,19 +4,20 @@ import { useNavigate } from 'react-router-dom';
 
 import { GestureLock } from '@/components/organisms/GestureLock';
 import { ROUTES } from '@/constants/routes';
+import { t } from '@/i18n';
 import { isLockedUntilExpired } from '@/services/gestureAuth';
 import { useAppStore } from '@/stores/useAppStore';
 
 /** 预设安全问题列表 */
 const SECURITY_QUESTIONS = [
-  '你第一只宠物的名字是什么？',
-  '你出生的城市是哪里？',
-  '你母亲的姓名是？',
-  '你最喜欢的书是什么？',
-  '你小学的名字是？',
-  '你最好的朋友叫什么？',
-  '你最喜欢的电影是什么？',
-  '你第一个老师的名字是？',
+  t('你第一只宠物的名字是什么？'),
+  t('你出生的城市是哪里？'),
+  t('你母亲的姓名是？'),
+  t('你最喜欢的书是什么？'),
+  t('你小学的名字是？'),
+  t('你最好的朋友叫什么？'),
+  t('你最喜欢的电影是什么？'),
+  t('你第一个老师的名字是？'),
 ];
 
 type AuthView = 'verify' | 'setup-gesture' | 'setup-questions' | 'reset-questions';
@@ -89,7 +90,7 @@ export const AuthPage: React.FC = () => {
       if (isValid) {
         navigate(ROUTES.HOME, { replace: true });
       } else {
-        setErrorMessage('手势密码错误');
+        setErrorMessage(t('手势密码错误'));
       }
     },
     [verifyGestureLock, navigate]
@@ -110,14 +111,14 @@ export const AuthPage: React.FC = () => {
     if (!pendingGesturePoints) return;
     const validQuestions = questions.filter((q) => q.question && q.answer.trim());
     if (validQuestions.length < 1) {
-      setErrorMessage('请至少设置 1 个安全问题');
+      setErrorMessage(t('请至少设置 1 个安全问题'));
       return;
     }
     try {
       await setupGestureLock(pendingGesturePoints, validQuestions);
       navigate(ROUTES.HOME, { replace: true });
     } catch {
-      setErrorMessage('设置失败，请重试');
+      setErrorMessage(t('设置失败，请重试'));
     }
   }, [pendingGesturePoints, questions, setupGestureLock, navigate]);
 
@@ -125,7 +126,7 @@ export const AuthPage: React.FC = () => {
   const handleResetSubmit = useCallback(async () => {
     const nonEmpty = resetAnswers.filter((a) => a.trim());
     if (nonEmpty.length === 0) {
-      setErrorMessage('请回答所有安全问题');
+      setErrorMessage(t('请回答所有安全问题'));
       return;
     }
     const valid = await verifySecurityQuestions(resetAnswers);
@@ -134,7 +135,7 @@ export const AuthPage: React.FC = () => {
       setView('setup-gesture');
       setErrorMessage(null);
     } else {
-      setErrorMessage('安全问题答案错误');
+      setErrorMessage(t('安全问题答案错误'));
     }
   }, [resetAnswers, verifySecurityQuestions, resetLockViaSecurityQuestions]);
 
@@ -146,7 +147,7 @@ export const AuthPage: React.FC = () => {
   /** 点击"忘记手势？" */
   const handleForgot = useCallback(() => {
     if (!hasSecurityQuestions) {
-      setErrorMessage('未设置安全问题，无法重置密码锁');
+      setErrorMessage(t('未设置安全问题，无法重置密码锁'));
       return;
     }
     setErrorMessage(null);
@@ -170,7 +171,7 @@ export const AuthPage: React.FC = () => {
                 <span className="material-symbols-outlined text-icon-lg">book_4</span>
               </div>
               <h1 className="font-display text-headline-md text-primary">Kuro Reader</h1>
-              <p className="font-body text-body-sm text-on-surface-variant">设置手势密码以保护您的阅读隐私</p>
+              <p className="font-body text-body-sm text-on-surface-variant">{t('设置手势密码以保护您的阅读隐私')}</p>
             </header>
 
             <GestureLock mode="setup" onComplete={handleGestureSetupComplete} onError={setErrorMessage} />
@@ -182,9 +183,7 @@ export const AuthPage: React.FC = () => {
             <button
               className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors"
               onClick={handleSkip}
-            >
-              跳过，稍后设置
-            </button>
+            >{t('跳过，稍后设置')}</button>
           </main>
         </div>
       </div>
@@ -201,17 +200,14 @@ export const AuthPage: React.FC = () => {
               <div className="w-12 h-12 flex items-center justify-center rounded-card border border-outline-variant text-primary mb-2">
                 <span className="material-symbols-outlined text-icon-lg">question_mark</span>
               </div>
-              <h1 className="font-display text-headline-md text-primary">设置安全问题</h1>
-              <p className="font-body text-body-sm text-on-surface-variant">
-                忘记密码时可通过安全问题重置，请至少设置 1 个
-              </p>
+              <h1 className="font-display text-headline-md text-primary">{t('设置安全问题')}</h1>
+              <p className="font-body text-body-sm text-on-surface-variant">{t('忘记密码时可通过安全问题重置，请至少设置 1 个')}</p>
             </header>
 
             <div className="w-full space-y-6">
               {questions.map((q, idx) => (
                 <div key={idx} className="space-y-2">
-                  <label className="font-label text-label-sm text-on-surface-variant">
-                    安全问题 {idx + 1}
+                  <label className="font-label text-label-sm text-on-surface-variant">{t('安全问题')}{idx + 1}
                   </label>
                   <select
                     className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-3 font-body text-body-md text-on-surface focus:border-primary focus:ring-0 outline-none transition-colors"
@@ -222,7 +218,7 @@ export const AuthPage: React.FC = () => {
                       setQuestions(next);
                     }}
                   >
-                    <option value="">-- 请选择问题 --</option>
+                    <option value="">{t('-- 请选择问题 --')}</option>
                     {SECURITY_QUESTIONS.map((sq) => (
                       <option key={sq} value={sq} disabled={questions.some((o, i) => i !== idx && o.question === sq)}>
                         {sq}
@@ -231,7 +227,7 @@ export const AuthPage: React.FC = () => {
                   </select>
                   <input
                     className="input-field"
-                    placeholder="输入答案"
+                    placeholder={t('输入答案')}
                     value={q.answer}
                     onChange={(e) => {
                       const next = [...questions];
@@ -254,15 +250,11 @@ export const AuthPage: React.FC = () => {
                   setView('setup-gesture');
                   setErrorMessage(null);
                 }}
-              >
-                上一步
-              </button>
+              >{t('上一步')}</button>
               <button
                 className="btn-primary flex-1 py-3"
                 onClick={handleSubmitQuestions}
-              >
-                完成设置
-              </button>
+              >{t('完成设置')}</button>
             </div>
           </main>
         </div>
@@ -280,10 +272,8 @@ export const AuthPage: React.FC = () => {
               <div className="w-12 h-12 flex items-center justify-center rounded-card border border-outline-variant text-primary mb-2">
                 <span className="material-symbols-outlined text-icon-lg">lock_reset</span>
               </div>
-              <h1 className="font-display text-headline-md text-primary">验证安全问题</h1>
-              <p className="font-body text-body-sm text-on-surface-variant">
-                回答正确后可重新设置手势密码
-              </p>
+              <h1 className="font-display text-headline-md text-primary">{t('验证安全问题')}</h1>
+              <p className="font-body text-body-sm text-on-surface-variant">{t('回答正确后可重新设置手势密码')}</p>
             </header>
 
             <div className="w-full space-y-4">
@@ -292,7 +282,7 @@ export const AuthPage: React.FC = () => {
                   <label className="font-label text-label-sm text-on-surface-variant">{sq.question}</label>
                   <input
                     className="input-field"
-                    placeholder="输入答案"
+                    placeholder={t('输入答案')}
                     value={resetAnswers[idx] ?? ''}
                     onChange={(e) => {
                       const next = [...resetAnswers];
@@ -312,15 +302,11 @@ export const AuthPage: React.FC = () => {
               <button
                 className="btn-secondary flex-1 py-3"
                 onClick={handleBackToVerify}
-              >
-                返回
-              </button>
+              >{t('返回')}</button>
               <button
                 className="btn-primary flex-1 py-3"
                 onClick={handleResetSubmit}
-              >
-                验证并重置
-              </button>
+              >{t('验证并重置')}</button>
             </div>
           </main>
         </div>
@@ -358,9 +344,7 @@ export const AuthPage: React.FC = () => {
             <button
               className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors"
               onClick={handleForgot}
-            >
-              忘记手势？
-            </button>
+            >{t('忘记手势？')}</button>
           </div>
         </main>
       </div>

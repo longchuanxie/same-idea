@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from 'react';
 
+import { t } from '@/i18n';
+import { getKnowledgeTask } from '@/services/ai/knowledgeTasks';
 import type {
   Book,
   GraphDetailLevel,
@@ -15,9 +17,9 @@ import type {
  */
 
 const DETAIL_OPTIONS: { value: GraphDetailLevel; label: string; hint: string }[] = [
-  { value: 'core', label: '聚焦核心', hint: '只留主要条目（≤8 个）' },
-  { value: 'standard', label: '标准', hint: '常速阅读的均衡取材' },
-  { value: 'rich', label: '尽量详尽', hint: '含重要次要条目（≤24 个）' },
+  { value: 'core', label: t('聚焦核心'), hint: t('只留主要条目（≤8 个）') },
+  { value: 'standard', label: t('标准'), hint: t('常速阅读的均衡取材') },
+  { value: 'rich', label: t('尽量详尽'), hint: t('含重要次要条目（≤24 个）') },
 ];
 
 /** 图谱类任务（实体+关系）：详细度选项适用 */
@@ -49,7 +51,8 @@ export const GenerationOptionsSheet: React.FC<GenerationOptionsSheetProps> = ({
   const hasNewChapters =
     Boolean(artifact) && totalChapters != null && baseChapterCount != null && totalChapters > baseChapterCount;
 
-  const [mode, setMode] = useState<'all' | 'range'>('all');
+  // 章节总结这类「先圈范围」的任务默认落在起止章模式——全书对它们既贵又非所求
+  const [mode, setMode] = useState<'all' | 'range'>(getKnowledgeTask(type).requireScope ? 'range' : 'all');
   const [fromText, setFromText] = useState('');
   const [toText, setToText] = useState('');
   const [detail, setDetail] = useState<GraphDetailLevel>('standard');
@@ -91,13 +94,13 @@ export const GenerationOptionsSheet: React.FC<GenerationOptionsSheetProps> = ({
     >
       <div
         role="dialog"
-        aria-label={`自定义生成${label}`}
+        aria-label={t('自定义生成{{label}}', { label: label })}
         className="bg-surface-bright border border-outline-variant rounded-t-card-lg sm:rounded-card-lg p-5 w-full sm:max-w-md max-h-[85vh] overflow-y-auto animate-scale-in"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="font-display text-headline-sm text-primary mb-1">自定义生成{label}</h3>
+        <h3 className="font-display text-headline-sm text-primary mb-1">{t('自定义生成{{label}}', { label: label })}</h3>
         <p className="font-label text-label-xs text-on-surface-faint mb-4">
-          {totalChapters != null ? `本书共 ${totalChapters} 章 · ` : ''}
+          {totalChapters != null ? t('本书共 {{totalChapters}} 章 · ', { totalChapters: totalChapters }) : ''}
           {book.title}
         </p>
 
@@ -115,12 +118,8 @@ export const GenerationOptionsSheet: React.FC<GenerationOptionsSheetProps> = ({
               {incremental ? 'check_circle' : 'radio_button_unchecked'}
             </span>
             <span className="min-w-0">
-              <span className="block font-label text-label-sm text-on-surface">
-                只补新章节（第 {incrementalFrom} 章起）
-              </span>
-              <span className="block font-label text-label-xs text-on-surface-variant mt-0.5">
-                在现有图谱上并入新内容，快且省——旧关系与原文依据原样保留
-              </span>
+              <span className="block font-label text-label-sm text-on-surface">{t('只补新章节（第 {{incrementalFrom}} 章起）', { incrementalFrom: incrementalFrom })}</span>
+              <span className="block font-label text-label-xs text-on-surface-variant mt-0.5">{t('在现有图谱上并入新内容，快且省——旧关系与原文依据原样保留')}</span>
             </span>
           </button>
         )}
@@ -128,7 +127,7 @@ export const GenerationOptionsSheet: React.FC<GenerationOptionsSheetProps> = ({
         {/* 范围（增量时不需要） */}
         {!incremental && (
           <div className="mb-3">
-            <p className="font-label text-label-xs text-on-surface-variant mb-1.5">生成范围</p>
+            <p className="font-label text-label-xs text-on-surface-variant mb-1.5">{t('生成范围')}</p>
             <div className="flex items-center gap-2 mb-2">
               {(['all', 'range'] as const).map((value) => (
                 <button
@@ -140,13 +139,13 @@ export const GenerationOptionsSheet: React.FC<GenerationOptionsSheetProps> = ({
                   }`}
                   onClick={() => setMode(value)}
                 >
-                  {value === 'all' ? '全书' : '起止章'}
+                  {value === 'all' ? t('全书') : t('起止章')}
                 </button>
               ))}
             </div>
             {mode === 'range' && (
               <div className="flex items-center gap-2">
-                <span className="font-label text-label-sm text-on-surface-variant whitespace-nowrap">第</span>
+                <span className="font-label text-label-sm text-on-surface-variant whitespace-nowrap">{t('第')}</span>
                 <input
                   type="number"
                   min={1}
@@ -154,21 +153,21 @@ export const GenerationOptionsSheet: React.FC<GenerationOptionsSheetProps> = ({
                   value={fromText}
                   onChange={(e) => setFromText(e.target.value)}
                   placeholder="1"
-                  aria-label="起始章"
+                  aria-label={t('起始章')}
                   className="input-field w-20 font-mono text-label-sm"
                 />
-                <span className="font-label text-label-sm text-on-surface-variant whitespace-nowrap">章 至 第</span>
+                <span className="font-label text-label-sm text-on-surface-variant whitespace-nowrap">{t('章 至 第')}</span>
                 <input
                   type="number"
                   min={1}
                   inputMode="numeric"
                   value={toText}
                   onChange={(e) => setToText(e.target.value)}
-                  placeholder={totalChapters != null ? String(totalChapters) : '末章'}
-                  aria-label="结束章（留空到末尾）"
+                  placeholder={totalChapters != null ? String(totalChapters) : t('末章')}
+                  aria-label={t('结束章（留空到末尾）')}
                   className="input-field w-20 font-mono text-label-sm"
                 />
-                <span className="font-label text-label-sm text-on-surface-variant whitespace-nowrap">章</span>
+                <span className="font-label text-label-sm text-on-surface-variant whitespace-nowrap">{t('章')}</span>
               </div>
             )}
           </div>
@@ -177,7 +176,7 @@ export const GenerationOptionsSheet: React.FC<GenerationOptionsSheetProps> = ({
         {/* 图谱详细度 */}
         {GRAPH_TASK_TYPES.includes(type) && (
           <div className="mb-4">
-            <p className="font-label text-label-xs text-on-surface-variant mb-1.5">详细度</p>
+            <p className="font-label text-label-xs text-on-surface-variant mb-1.5">{t('详细度')}</p>
             <div className="grid grid-cols-3 gap-2">
               {DETAIL_OPTIONS.map((option) => (
                 <button
@@ -202,17 +201,13 @@ export const GenerationOptionsSheet: React.FC<GenerationOptionsSheetProps> = ({
             type="button"
             className="btn-ghost px-4 py-2"
             onClick={onClose}
-          >
-            取消
-          </button>
+          >{t('取消')}</button>
           <button
             type="button"
             disabled={!canStart}
             className="btn-primary px-5 py-2"
             onClick={handleStart}
-          >
-            开始生成
-          </button>
+          >{t('开始生成')}</button>
         </div>
       </div>
     </div>

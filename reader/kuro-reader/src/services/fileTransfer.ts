@@ -1,6 +1,7 @@
 import { FileTransfer } from '@capacitor/file-transfer';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 
+import { t } from '@/i18n';
 import { isNativePlatform } from '@/utils/capacitor';
 
 const DOWNLOAD_TIMEOUT = 120000;
@@ -73,7 +74,7 @@ async function downloadNative(options: DownloadOptions): Promise<DownloadResult>
           progress: false,
         }),
         new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('下载超时，请重试')), DOWNLOAD_TIMEOUT)
+          setTimeout(() => reject(new Error(t('下载超时，请重试'))), DOWNLOAD_TIMEOUT)
         ),
       ]);
     } catch (e) {

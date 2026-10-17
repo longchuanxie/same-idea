@@ -1,5 +1,7 @@
 import axios from 'axios';
 
+import { t } from '@/i18n';
+
 /** OPDS 目录条目 */
 export interface OpdsEntry {
   id: string;
@@ -87,13 +89,13 @@ function authHeader(credentials?: OpdsCredentials): Record<string, string> {
 export function parseOpdsFeed(xml: string, baseUrl: string): OpdsFeed {
   const doc = new DOMParser().parseFromString(xml, 'text/xml');
   if (doc.querySelector('parsererror')) {
-    throw new Error('OPDS 目录格式错误');
+    throw new Error(t('OPDS 目录格式错误'));
   }
 
-  const feedTitle = textOfElement(firstElementByLocalName(doc, 'title')) ?? 'OPDS 目录';
+  const feedTitle = textOfElement(firstElementByLocalName(doc, 'title')) ?? t('OPDS 目录');
 
   const entries: OpdsEntry[] = elementsByLocalName(doc, 'entry').map((entry) => {
-    const title = textOfElement(firstElementByLocalName(entry, 'title')) ?? '未命名';
+    const title = textOfElement(firstElementByLocalName(entry, 'title')) ?? t('未命名');
     const id = textOfElement(firstElementByLocalName(entry, 'id')) ?? title;
     const content =
       textOfElement(firstElementByLocalName(entry, 'content')) ??
@@ -165,9 +167,9 @@ export async function downloadOpdsBook(
   credentials?: OpdsCredentials
 ): Promise<File> {
   const link = entry.acquisitions[0];
-  if (!link) throw new Error('该条目没有可下载的文件');
+  if (!link) throw new Error(t('该条目没有可下载的文件'));
   const fileName = buildOpdsFileName(entry.title, link.href, link.type);
-  if (!fileName) throw new Error('不支持的文件格式');
+  if (!fileName) throw new Error(t('不支持的文件格式'));
 
   const response = await axios.get<Blob>(link.href, {
     responseType: 'blob',

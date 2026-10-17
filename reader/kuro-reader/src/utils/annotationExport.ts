@@ -1,3 +1,4 @@
+import { t } from '@/i18n';
 import type { Annotation, AnnotationStyle } from '@/types'
 
 const CONTEXT_HEADER_SEPARATOR = '---';
@@ -6,9 +7,9 @@ const CONTEXT_HEADER_SEPARATOR = '---';
 const FILE_NAME_MAX_CHARS = 50;
 
 const STYLE_LABELS: Record<AnnotationStyle, string> = {
-  highlight: '高亮',
-  underline: '下划线',
-  wavy: '波浪线',
+  highlight: t('高亮'),
+  underline: t('下划线'),
+  wavy: t('波浪线'),
 };
 
 function formatDateTime(date: Date): string {
@@ -50,7 +51,7 @@ function renderAnnotationSections(
 
     lines.push(toBlockquote(ann.selectedText), '');
     if (ann.note.trim()) {
-      lines.push(`**笔记**：${ann.note.trim()}`, '');
+      lines.push(t('**笔记**：{{arg1}}', { arg1: ann.note.trim() }), '');
     }
     // Obsidian/Notion 兼容标签行
     const tags = (ann.tagIds ?? [])
@@ -77,12 +78,12 @@ export function buildAnnotationMarkdown(
   exportedAt: Date = new Date(),
   tagNames?: ReadonlyMap<string, string>
 ): string {
-  const lines: string[] = [`# 《${bookTitle}》批注`, ''];
+  const lines: string[] = [t('# 《{{bookTitle}}》批注', { bookTitle: bookTitle }), ''];
 
   const metaParts = [
-    author ? `作者：${author}` : undefined,
-    `导出时间：${formatDateTime(exportedAt)}`,
-    `批注数量：${annotations.length}`,
+    author ? t('作者：{{author}}', { author: author }) : undefined,
+    t('导出时间：{{arg1}}', { arg1: formatDateTime(exportedAt) }),
+    t('批注数量：{{length}}', { length: annotations.length }),
   ].filter(Boolean);
   lines.push(`> ${metaParts.join(' · ')}`, '');
 
@@ -113,20 +114,20 @@ export function buildThemedMarkdown(
   bookTitleOf: (bookId: string) => string,
   exportedAt: Date = new Date(),
   tagNames?: ReadonlyMap<string, string>,
-  untaggedName = '未分类'
+  untaggedName = t('未分类')
 ): string {
   const meaningful = entries.filter((e) => e.annotations.length > 0);
   const totalCount = meaningful.reduce((sum, e) => sum + e.annotations.length, 0);
   const lines: string[] = [
-    '# 摘抄墙 · 按主题',
+    t('# 摘抄墙 · 按主题'),
     '',
-    `> 导出时间：${formatDateTime(exportedAt)} · 主题 ${meaningful.length} · 手记 ${totalCount}`,
+    t('> 导出时间：{{arg1}} · 主题 {{length}} · 手记 {{totalCount}}', { arg1: formatDateTime(exportedAt), length: meaningful.length, totalCount: totalCount }),
     '',
   ];
 
   for (const entry of meaningful) {
     const heading = entry.tagName === untaggedName ? untaggedName : `#${entry.tagName}`;
-    lines.push(`## ${heading}（${entry.annotations.length} 条）`, '');
+    lines.push(t('## {{heading}}（{{arg1}} 条）', { heading: heading, arg1: entry.annotations.length }), '');
 
     const byBook = new Map<string, Annotation[]>();
     for (const ann of entry.annotations) {
@@ -156,9 +157,9 @@ export function buildMultiBookMarkdown(
   const meaningful = entries.filter((e) => e.annotations.length > 0);
   const totalCount = meaningful.reduce((sum, e) => sum + e.annotations.length, 0);
   const lines: string[] = [
-    '# 摘抄墙 · 全部手记',
+    t('# 摘抄墙 · 全部手记'),
     '',
-    `> 导出时间：${formatDateTime(exportedAt)} · 书目 ${meaningful.length} · 手记 ${totalCount}`,
+    t('> 导出时间：{{arg1}} · 书目 {{length}} · 手记 {{totalCount}}', { arg1: formatDateTime(exportedAt), length: meaningful.length, totalCount: totalCount }),
     '',
   ];
 
@@ -187,7 +188,7 @@ export function exportMultiBookMarkdown(entries: MultiBookEntry[], tagNames?: Re
   const date = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
   const stamp = `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}`;
-  downloadTextFile(`摘抄墙-${stamp}.md`, markdown);
+  downloadTextFile(t('摘抄墙-{{stamp}}.md', { stamp: stamp }), markdown);
 }
 
 /** 清理文件名中的非法字符并限制长度 */
@@ -218,5 +219,5 @@ export function exportAnnotationsToMarkdown(
   const date = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
   const stamp = `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}`;
-  downloadTextFile(`《${sanitizeFileName(bookTitle)}》批注-${stamp}.md`, markdown);
+  downloadTextFile(t('《{{arg1}}》批注-{{stamp}}.md', { arg1: sanitizeFileName(bookTitle), stamp: stamp }), markdown);
 }

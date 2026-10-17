@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { t } from '@/i18n';
 import { cn } from '@/utils/cn';
 
 interface TextProgressHintProps {
@@ -25,8 +26,7 @@ export const TextProgressHint: React.FC<TextProgressHintProps> = ({
       {estimatedTimeLeft && (
         <span className="font-label text-label-sm text-surface opacity-80">{estimatedTimeLeft}</span>
       )}
-      <span className="font-label text-label-sm text-surface tabular-nums">
-        全书 {overallPercent}%
+      <span className="font-label text-label-sm text-surface tabular-nums">{t('全书 {{overallPercent}}', { overallPercent: overallPercent })}%
       </span>
     </div>
   </div>

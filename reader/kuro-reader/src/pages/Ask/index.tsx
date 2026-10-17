@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { COPY } from '@/constants/copy'
 import { ROUTES, settingsPath, knowledgeSourcePath } from '@/constants/routes';
+import { t } from '@/i18n';
 import { isProviderConfigured } from '@/services/ai/aiClient'
 import { LibraryQaError, askLibrary, type QaResult } from '@/services/ai/libraryQA'
 import { recordUsageSignal } from '@/services/telemetry/usageSignals';
@@ -30,7 +31,7 @@ function makeTurnId(): string {
 }
 
 /** 示例问题：空态里给个起手式 */
-const EXAMPLE_QUERIES = ['哪本书讲过……', '作者是怎么论证……的', '书里对……的定义是什么']
+const EXAMPLE_QUERIES = [t('哪本书讲过……'), t('作者是怎么论证……的'), t('书里对……的定义是什么')]
 
 /**
  * 问藏书：跨书检索相关选段 → AI 基于选段作答 → 引文逐字校验、可回原文。
@@ -106,7 +107,7 @@ export const AskLibraryPage: React.FC = () => {
                 ...turn,
                 status: 'error',
                 noHits,
-                error: noHits ? COPY.askLibrary.noHits : e instanceof Error ? e.message : '问答失败',
+                error: noHits ? COPY.askLibrary.noHits : e instanceof Error ? e.message : t('问答失败'),
               }
             : turn
         )
@@ -129,17 +130,11 @@ export const AskLibraryPage: React.FC = () => {
       {booksLoaded && searchableBooks.length === 0 ? (
         <div className="flex flex-col items-center text-center py-12">
           <span className="material-symbols-outlined text-on-surface-faint text-5xl mb-4 block">psychology_off</span>
-          <p className="font-body text-body-md text-on-surface-variant mb-2">馆里还没有能问答的书</p>
-          <p className="font-label text-label-sm text-on-surface-faint mb-6 max-w-sm">
-            文本书和 PDF 才能问——漫画还没有文本层；导入一本，或者去书架翻开一本再回来
-          </p>
+          <p className="font-body text-body-md text-on-surface-variant mb-2">{t('馆里还没有能问答的书')}</p>
+          <p className="font-label text-label-sm text-on-surface-faint mb-6 max-w-sm">{t('文本书和 PDF 才能问——漫画还没有文本层；导入一本，或者去书架翻开一本再回来')}</p>
           <div className="flex gap-3">
-            <button className="btn-secondary px-6 py-2" onClick={() => navigate(ROUTES.LIBRARY)}>
-              去书库
-            </button>
-            <button className="btn-primary px-6 py-2" onClick={() => navigate(ROUTES.IMPORT)}>
-              去导入
-            </button>
+            <button className="btn-secondary px-6 py-2" onClick={() => navigate(ROUTES.LIBRARY)}>{t('去书库')}</button>
+            <button className="btn-primary px-6 py-2" onClick={() => navigate(ROUTES.IMPORT)}>{t('去导入')}</button>
           </div>
         </div>
       ) : (
@@ -148,14 +143,14 @@ export const AskLibraryPage: React.FC = () => {
       <section className="mb-6 flex flex-col gap-3">
         {searchableBooks.length > 1 && (
           <div className="flex items-center gap-2">
-            <span className="font-label text-label-sm text-on-surface-faint">范围</span>
+            <span className="font-label text-label-sm text-on-surface-faint">{t('范围')}</span>
             <select
               value={scopeBookId}
               onChange={(e) => setScopeBookId(e.target.value)}
-              aria-label="检索范围"
+              aria-label={t('检索范围')}
               className="px-2 py-1 rounded-full font-label text-label-xs bg-surface-container-low text-on-surface-variant border border-outline-variant focus:outline-none focus:border-primary max-w-[60%]"
             >
-              <option value="">{COPY.askLibrary.scopeAllBooks}（{searchableBooks.length} 本）</option>
+              <option value="">{COPY.askLibrary.scopeAllBooks}（{t('{{length}} 本）', { length: searchableBooks.length })}</option>
               {searchableBooks.map((book) => (
                 <option key={book.id} value={book.id}>
                   《{book.title}》

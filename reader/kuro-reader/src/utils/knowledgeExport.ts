@@ -3,7 +3,9 @@
  * 以 .md 落盘嫁接 Obsidian/Notion（与手记导出同一哲学）。
  */
 
+import { t } from '@/i18n';
 import type {
+  ChapterSummaryData,
   CharacterGraphData,
   GlossaryData,
   KnowledgeArtifact,
@@ -46,22 +48,22 @@ export function buildMindmapMarkdown(node: MindmapNodeData, depth = 0): string {
 
 /** 章节/页位置标签（0 起索引 +1 展示；PDF 场景同构为页） */
 function sourcePositionLabel(chapterIndex: number): string {
-  return `第${chapterIndex + 1}章`
+  return t('第{{arg1}}章', { arg1: chapterIndex + 1 })
 }
 
 /** 贡献点证据强度的展示标签（与 PaperBriefView 一致） */
 const STRENGTH_LABELS: Record<PaperBriefData['contributions'][number]['strength'], string> = {
-  experiment: '实验支撑',
-  theory: '理论证明',
-  partial: '部分支撑',
-  claim: '仅声称',
+  experiment: t('实验支撑'),
+  theory: t('理论证明'),
+  partial: t('部分支撑'),
+  claim: t('仅声称'),
 }
 
 /** 图谱人物与关系清单（含出现章节与依据原文——图谱与原文的书面联系）。
  *  entityLabel 随图谱种类变化（人物/概念）。 */
 export function buildGraphReferenceLists(
   graph: CharacterGraphData,
-  entityLabel: '人物' | '概念' = '人物'
+  entityLabel: string = t('人物')
 ): string {
   const nameById = new Map(graph.nodes.map((node) => [node.id, node.name]))
   const characters = graph.nodes
@@ -69,7 +71,7 @@ export function buildGraphReferenceLists(
       const parts = [node.name]
       if (node.role) parts.push(node.role)
       const chapters = node.chapters?.length
-        ? `（出现：${node.chapters.map((i) => sourcePositionLabel(i)).join('、')}）`
+        ? t('（出现：{{arg1}}）', { arg1: node.chapters.map((i) => sourcePositionLabel(i)).join('、') })
         : ''
       return `- ${parts.join('｜')}${node.description ? `：${node.description}` : ''}${chapters}`
     })
@@ -91,9 +93,9 @@ export function buildGraphReferenceLists(
     '',
     characters,
     '',
-    '## 关系',
+    t('## 关系'),
     '',
-    `| ${entityLabel} | 关系 | ${entityLabel} | 原文依据 |`,
+    t('| {{entityLabel}} | 关系 | {{arg1}} | 原文依据 |', { entityLabel: entityLabel, arg1: entityLabel }),
     '|---|---|---|---|',
     relations,
   ].join('\n')
@@ -105,9 +107,9 @@ export function buildGlossaryMarkdown(data: GlossaryData): string {
     .map((term) => {
       const lines = [`- **${term.term}**${term.definition ? `：${term.definition}` : ''}`]
       if (term.evidence) {
-        lines.push(`  - 原文：「${term.evidence.quote}」（${sourcePositionLabel(term.evidence.chapterIndex)}）`)
+        lines.push(t('  - 原文：「{{arg1}}」（{{arg2}}）', { arg1: term.evidence.quote, arg2: sourcePositionLabel(term.evidence.chapterIndex) }))
       } else if (term.chapters && term.chapters.length > 0) {
-        lines.push(`  - 位置：${term.chapters.map((i) => sourcePositionLabel(i)).join('、')}`)
+        lines.push(t('  - 位置：{{arg1}}', { arg1: term.chapters.map((i) => sourcePositionLabel(i)).join('、') }))
       }
       return lines.join('\n')
     })
@@ -119,7 +121,7 @@ export function buildKnowledgeArtifactMarkdown(bookTitle: string, artifact: Know
   const header = [
     `# ${artifact.title}`,
     '',
-    `> 来源：《${bookTitle}》 · ${new Date(artifact.updatedAt).toLocaleString('zh-CN')}`,
+    t('> 来源：《{{bookTitle}}》 · {{arg1}}', { bookTitle: bookTitle, arg1: new Date(artifact.updatedAt).toLocaleString('zh-CN') }),
     '',
   ]
   if (artifact.type === 'character-graph' || artifact.type === 'concept-graph') {
@@ -130,35 +132,35 @@ export function buildKnowledgeArtifactMarkdown(bookTitle: string, artifact: Know
       buildCharacterGraphMermaid(graph),
       '```',
       '',
-      buildGraphReferenceLists(graph, artifact.type === 'concept-graph' ? '概念' : '人物'),
+      buildGraphReferenceLists(graph, artifact.type === 'concept-graph' ? t('概念') : t('人物')),
       '',
     ].join('\n')
   }
   if (artifact.type === 'glossary') {
-    return [...header, '## 术语速查', '', buildGlossaryMarkdown(artifact.data as GlossaryData), ''].join('\n')
+    return [...header, t('## 术语速查'), '', buildGlossaryMarkdown(artifact.data as GlossaryData), ''].join('\n')
   }
   if (artifact.type === 'paper-brief') {
     const brief = artifact.data as PaperBriefData
     const lines: string[] = [...header]
     if (brief.tldr) lines.push(`> ${brief.tldr}`, '')
     if (brief.contributions.length > 0) {
-      lines.push('## 贡献点', '')
+      lines.push(t('## 贡献点'), '')
       for (const entry of brief.contributions) {
-        const evidence = entry.evidence ? `「${entry.evidence.quote}」（第${entry.evidence.chapterIndex + 1}章）` : ''
+        const evidence = entry.evidence ? t('「{{arg1}}」（第{{arg2}}章）', { arg1: entry.evidence.quote, arg2: entry.evidence.chapterIndex + 1 }) : ''
         lines.push(`- **[${STRENGTH_LABELS[entry.strength]}]** ${entry.point}${evidence}`)
       }
       lines.push('')
     }
     if (brief.limitations.length > 0) {
-      lines.push('## 局限与软肋', '')
+      lines.push(t('## 局限与软肋'), '')
       for (const entry of brief.limitations) {
-        const evidence = entry.evidence ? `「${entry.evidence.quote}」（第${entry.evidence.chapterIndex + 1}章）` : ''
+        const evidence = entry.evidence ? t('「{{arg1}}」（第{{arg2}}章）', { arg1: entry.evidence.quote, arg2: entry.evidence.chapterIndex + 1 }) : ''
         lines.push(`- ${entry.point}${evidence}`)
       }
       lines.push('')
     }
     if (brief.questions.length > 0) {
-      lines.push('## 审稿人视角的疑问', '')
+      lines.push(t('## 审稿人视角的疑问'), '')
       for (const entry of brief.questions) {
         lines.push(`1. ${entry.question}`)
       }
@@ -168,14 +170,30 @@ export function buildKnowledgeArtifactMarkdown(bookTitle: string, artifact: Know
   }
   if (artifact.type === 'story-beats') {
     const { beats } = artifact.data as StoryBeatsData
-    const lines: string[] = [...header, '## 叙事节拍', '']
+    const lines: string[] = [...header, t('## 叙事节拍'), '']
     for (const beat of beats) {
       const evidence = beat.evidence ? `「${beat.evidence.quote}」` : ''
       lines.push(
-        `- **${beatRoleMeta(beat.role).label}** · 第${beat.chapterIndex + 1}章 —— ${beat.title}${beat.detail ? `：${beat.detail}` : ''}${evidence}`
+        t('- **{{arg1}}** · 第{{arg2}}章 —— {{title}}{{arg3}}{{evidence}}', { arg1: beatRoleMeta(beat.role).label, arg2: beat.chapterIndex + 1, title: beat.title, arg3: beat.detail ? `：${beat.detail}` : '', evidence: evidence })
       )
     }
     lines.push('')
+    return lines.join('\n')
+  }
+  if (artifact.type === 'chapter-summary') {
+    const summary = artifact.data as ChapterSummaryData
+    const lines: string[] = [...header]
+    for (const section of summary.sections) {
+      if (section.points.length === 0) continue
+      lines.push(`## ${section.label}`, '')
+      for (const point of section.points) {
+        lines.push(`- ${point.text}`)
+      }
+      lines.push('')
+    }
+    if (summary.closing) {
+      lines.push(t('> 此刻处境：{{arg1}}', { arg1: summary.closing }), '')
+    }
     return lines.join('\n')
   }
   return [...header, buildMindmapMarkdown(artifact.data as MindmapNodeData), ''].join('\n')

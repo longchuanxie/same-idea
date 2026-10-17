@@ -1,4 +1,5 @@
 import { readerPathForBook } from '@/constants/routes';
+import { t } from '@/i18n';
 import type { Book, ReadingProgress } from '@/types';
 
 
@@ -48,7 +49,7 @@ export function buildContinueWidgetPayload(source: ContinueWidgetSource): Contin
   const percent = Math.max(0, Math.min(100, Math.round(Number.isFinite(rawPercent) ? rawPercent : 0)))
   return {
     bookId: book.id,
-    bookTitle: (book.title || '').trim() || '未命名书',
+    bookTitle: (book.title || '').trim() || t('未命名书'),
     chapterTitle,
     percent,
     route: readerPathForBook(book, chapterId || undefined),

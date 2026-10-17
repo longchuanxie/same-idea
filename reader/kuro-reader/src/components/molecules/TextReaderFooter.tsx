@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { t } from '@/i18n';
 import { cn } from '@/utils/cn';
 
 interface TextReaderFooterProps {
@@ -71,9 +72,7 @@ export const TextReaderFooter: React.FC<TextReaderFooterProps> = ({
               disabled={chapterIndex === 0}
               data-ui-control
             >
-              <span className="material-symbols-outlined text-icon-sm">chevron_left</span>
-              上一章
-            </button>
+              <span className="material-symbols-outlined text-icon-sm">chevron_left</span>{t('上一章')}</button>
             <span className="font-mono text-label-sm text-on-surface-variant tabular-nums">
               {chapterIndex + 1}/{chapterTotal}
             </span>
@@ -87,9 +86,7 @@ export const TextReaderFooter: React.FC<TextReaderFooterProps> = ({
               onClick={onNextChapter}
               disabled={chapterIndex === chapterTotal - 1}
               data-ui-control
-            >
-              下一章
-              <span className="material-symbols-outlined text-icon-sm">chevron_right</span>
+            >{t('下一章')}<span className="material-symbols-outlined text-icon-sm">chevron_right</span>
             </button>
           </div>
         )}
@@ -103,7 +100,7 @@ export const TextReaderFooter: React.FC<TextReaderFooterProps> = ({
                   : 'bg-surface-container-high border-transparent'
               )}
               role="group"
-              aria-label="播报"
+              aria-label={t('播报')}
             >
               {ttsSupported && (
                 <button
@@ -115,8 +112,8 @@ export const TextReaderFooter: React.FC<TextReaderFooterProps> = ({
                   )}
                   onClick={onToggleTTS}
                   data-ui-control
-                  aria-label={ttsActive ? '停止听书' : '开始听书'}
-                  title="听书"
+                  aria-label={ttsActive ? t('停止听书') : t('开始听书')}
+                  title={t('听书')}
                 >
                   <span className="material-symbols-outlined text-icon-md">volume_up</span>
                 </button>
@@ -130,8 +127,8 @@ export const TextReaderFooter: React.FC<TextReaderFooterProps> = ({
                 )}
                 onClick={onToggleAutoScroll}
                 data-ui-control
-                aria-label={isAutoScrolling ? '停止自动滚动' : '开始自动滚动'}
-                title="自动滚动"
+                aria-label={isAutoScrolling ? t('停止自动滚动') : t('开始自动滚动')}
+                title={t('自动滚动')}
               >
                 <span className="material-symbols-outlined text-icon-md">
                   {isAutoScrolling ? 'pause' : 'play_arrow'}

@@ -7,6 +7,7 @@
  * 低谷=棕（沉）、结局=松绿（收束）。目录结构条与节拍查看器共用本表。
  */
 
+import { t } from '@/i18n';
 import type { StoryBeatRole } from '@/types'
 import { KNOWLEDGE_PALETTE, PALETTE_TINT_ALPHA } from '@/utils/knowledgePalette'
 
@@ -18,15 +19,15 @@ export interface BeatRoleMeta {
 }
 
 export const BEAT_ROLE_META: Record<StoryBeatRole, BeatRoleMeta> = {
-  hook: { label: '开局', color: KNOWLEDGE_PALETTE[1] }, // 黛蓝
-  inciting: { label: '引子', color: KNOWLEDGE_PALETTE[3] }, // 藤黄
-  rising: { label: '推进', color: KNOWLEDGE_PALETTE[7] }, // 灰蓝
-  turn: { label: '转折', color: KNOWLEDGE_PALETTE[5] }, // 紫棠
-  midpoint: { label: '中点', color: KNOWLEDGE_PALETTE[4] }, // 青碧
-  low: { label: '低谷', color: KNOWLEDGE_PALETTE[6] }, // 棕
-  climax: { label: '高潮', color: KNOWLEDGE_PALETTE[0] }, // 朱砂
-  resolution: { label: '结局', color: KNOWLEDGE_PALETTE[2] }, // 松绿
-  custom: { label: '节点', color: KNOWLEDGE_PALETTE[7] }, // 灰蓝（未归类）
+  hook: { label: t('开局'), color: KNOWLEDGE_PALETTE[1] }, // 黛蓝
+  inciting: { label: t('引子'), color: KNOWLEDGE_PALETTE[3] }, // 藤黄
+  rising: { label: t('推进'), color: KNOWLEDGE_PALETTE[7] }, // 灰蓝
+  turn: { label: t('转折'), color: KNOWLEDGE_PALETTE[5] }, // 紫棠
+  midpoint: { label: t('中点'), color: KNOWLEDGE_PALETTE[4] }, // 青碧
+  low: { label: t('低谷'), color: KNOWLEDGE_PALETTE[6] }, // 棕
+  climax: { label: t('高潮'), color: KNOWLEDGE_PALETTE[0] }, // 朱砂
+  resolution: { label: t('结局'), color: KNOWLEDGE_PALETTE[2] }, // 松绿
+  custom: { label: t('节点'), color: KNOWLEDGE_PALETTE[7] }, // 灰蓝（未归类）
 }
 
 export function beatRoleMeta(role: StoryBeatRole): BeatRoleMeta {

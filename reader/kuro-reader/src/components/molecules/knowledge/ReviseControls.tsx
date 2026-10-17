@@ -1,6 +1,7 @@
 import React from 'react'
 
 import { COPY } from '@/constants/copy'
+import { t } from '@/i18n';
 
 /**
  * 修订模式的条目控件：已校验章 + 改/删/校章三连。
@@ -41,17 +42,17 @@ export const EntryReviseActions: React.FC<EntryReviseActionsProps> = ({
     className="flex items-center gap-1"
     onClick={(e) => e.stopPropagation()}
     role="group"
-    aria-label={`修订 ${entryLabel}`}
+    aria-label={t('修订 {{entryLabel}}', { entryLabel: entryLabel })}
   >
     <button
-      aria-label={`改 ${entryLabel}`}
+      aria-label={t('改 {{entryLabel}}', { entryLabel: entryLabel })}
       className="w-7 h-7 flex items-center justify-center rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors"
       onClick={onEdit}
     >
       <span className="material-symbols-outlined text-icon-sm">edit</span>
     </button>
     <button
-      aria-label={`删 ${entryLabel}`}
+      aria-label={t('删 {{entryLabel}}', { entryLabel: entryLabel })}
       className="w-7 h-7 flex items-center justify-center rounded-full text-on-surface-variant hover:text-seal hover:bg-seal-soft/50 transition-colors"
       onClick={onRemove}
     >

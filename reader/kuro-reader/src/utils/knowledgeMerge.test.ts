@@ -19,6 +19,9 @@ import {
   resolveGraphEvidence,
   stampGlossaryChapters,
   stampPartialChapters,
+  isSummaryEmpty,
+  mergeSummaries,
+  parseSummaryPartial,
 } from '@/utils/knowledgeMerge'
 
 describe('parseGraphPartial', () => {
@@ -705,5 +708,49 @@ describe('叙事节拍 · 解析/合并/证据校验', () => {
     expect(resolved.beats[0].evidence?.offsetRatio).toBeCloseTo(8 / 29, 3)
     expect(resolved.beats[1].evidence).toBeUndefined()
     expect('evidenceQuote' in resolved.beats[1]).toBe(false)
+  })
+})
+
+describe('章节总结', () => {
+  it('parseSummaryPartial：过滤空串/非字符串、裁剪超长、无有效要点返回 null', () => {
+    const partial = parseSummaryPartial({
+      points: ['  张三夜探敌营  ', 42, '', 'x'.repeat(120)],
+      closing: '  敌营灯火通明  ',
+    })
+    expect(partial).not.toBeNull()
+    expect(partial!.points).toEqual(['张三夜探敌营', 'x'.repeat(80)])
+    expect(partial!.closing).toBe('敌营灯火通明')
+    expect(parseSummaryPartial({ points: [] })).toBeNull()
+    expect(parseSummaryPartial({ points: ['', '  '] })).toBeNull()
+    expect(parseSummaryPartial('junk')).toBeNull()
+  })
+
+  it('parseSummaryPartial：单块要点数受上限约束', () => {
+    const partial = parseSummaryPartial({ points: Array.from({ length: 20 }, (_, i) => `要点${i}`) })
+    expect(partial!.points.length).toBe(8)
+  })
+
+  it('mergeSummaries：块序成段、盖章章节入段、closing 取最后一个非空', () => {
+    const merged = mergeSummaries([
+      { label: '片段1', data: { points: ['a1', 'a2'], chapters: [0, 1] } },
+      { label: '片段2', data: { points: ['b1'], closing: '' } },
+      { label: '片段3', data: { points: ['c1'], closing: '大军压境', chapters: [4] } },
+    ])
+    expect(merged.sections.map((section) => section.label)).toEqual(['片段1', '片段2', '片段3'])
+    expect(merged.sections[0].chapters).toEqual([0, 1])
+    expect(merged.closing).toBe('大军压境')
+  })
+
+  it('mergeSummaries：增量基底旧段前置保留，closing 兜底基底', () => {
+    const base = { sections: [{ label: '旧段', points: [{ text: '旧要点' }] }], closing: '旧收尾' }
+    const merged = mergeSummaries([{ label: '片段1', data: { points: ['新要点'] } }], base)
+    expect(merged.sections.map((section) => section.label)).toEqual(['旧段', '片段1'])
+    expect(merged.closing).toBe('旧收尾')
+  })
+
+  it('isSummaryEmpty：所有段都无要点才算空', () => {
+    expect(isSummaryEmpty({ sections: [] })).toBe(true)
+    expect(isSummaryEmpty({ sections: [{ label: 'a', points: [] }] })).toBe(true)
+    expect(isSummaryEmpty({ sections: [{ label: 'a', points: [{ text: 'x' }] }] })).toBe(false)
   })
 })

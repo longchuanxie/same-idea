@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 
+import { t } from '@/i18n';
 import { cn } from '@/utils/cn';
 
 export interface FullscreenViewerProps {
@@ -230,7 +231,7 @@ export const FullscreenViewer: React.FC<FullscreenViewerProps> = ({
         <button
           className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors"
           onClick={onClose}
-          aria-label="关闭全屏"
+          aria-label={t('关闭全屏')}
         >
           <span className="material-symbols-outlined">close</span>
         </button>
@@ -242,7 +243,7 @@ export const FullscreenViewer: React.FC<FullscreenViewerProps> = ({
             className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors"
             onClick={handleZoomOut}
             disabled={scale <= MIN_SCALE}
-            aria-label="缩小"
+            aria-label={t('缩小')}
           >
             <span className="material-symbols-outlined">remove</span>
           </button>
@@ -253,7 +254,7 @@ export const FullscreenViewer: React.FC<FullscreenViewerProps> = ({
             className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors"
             onClick={handleZoomIn}
             disabled={scale >= MAX_SCALE}
-            aria-label="放大"
+            aria-label={t('放大')}
           >
             <span className="material-symbols-outlined">add</span>
           </button>
@@ -296,7 +297,7 @@ export const FullscreenViewer: React.FC<FullscreenViewerProps> = ({
             )}
             onClick={onPrevPage}
             disabled={pageIndex <= 0}
-            aria-label="上一页"
+            aria-label={t('上一页')}
           >
             <span className="material-symbols-outlined">navigate_before</span>
           </button>
@@ -306,7 +307,7 @@ export const FullscreenViewer: React.FC<FullscreenViewerProps> = ({
               'bg-white/10 text-white hover:bg-white/20'
             )}
             onClick={resetTransform}
-            aria-label="重置缩放"
+            aria-label={t('重置缩放')}
           >
             <span className="material-symbols-outlined">fit_screen</span>
           </button>
@@ -319,7 +320,7 @@ export const FullscreenViewer: React.FC<FullscreenViewerProps> = ({
             )}
             onClick={onNextPage}
             disabled={pageIndex >= totalPages - 1}
-            aria-label="下一页"
+            aria-label={t('下一页')}
           >
             <span className="material-symbols-outlined">navigate_next</span>
           </button>

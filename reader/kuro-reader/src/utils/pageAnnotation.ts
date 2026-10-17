@@ -1,5 +1,6 @@
 /** 页级手记：漫画/PDF 等图页书的整页批注（无文字划线，锚定章内页码） */
 
+import { t } from '@/i18n';
 import type { Annotation } from '@/types';
 
 export interface PageNoteInput {
@@ -20,7 +21,7 @@ export function isPageNote(annotation: Pick<Annotation, 'pageIndex'>): boolean {
 
 /** 页级手记的展示标题（selectedText 复用此文案，保证墙/列表/详情一致） */
 export function pageNoteTitle(pageIndex: number): string {
-  return `第 ${pageIndex + 1} 页`;
+  return t('第 {{arg1}} 页', { arg1: pageIndex + 1 });
 }
 
 /** 页级手记id 前缀（与文本批注 ann- 区分，便于排查） */

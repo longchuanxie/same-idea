@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { EntryReviseActions, VerifiedBadge } from '@/components/molecules/knowledge/ReviseControls'
 import { knowledgeSourcePath } from '@/constants/routes'
+import { t } from '@/i18n';
 import { recordUsageSignal } from '@/services/telemetry/usageSignals'
 import type { Book, StoryBeat, StoryBeatsData } from '@/types'
 import { beatRoleMeta, beatRoleTint, beatRulerRatio } from '@/utils/beatRoles'
@@ -26,9 +27,9 @@ interface BeatsViewProps {
 }
 
 function chapterLabelOf(book: Book, chapterIndex: number): string {
-  if (book.format === 'pdf') return `第${chapterIndex + 1}页`
+  if (book.format === 'pdf') return t('第{{arg1}}页', { arg1: chapterIndex + 1 })
   const chapter = book.chapters?.[chapterIndex]
-  return chapter ? `第${chapter.number}章` : `第${chapterIndex + 1}章`
+  return chapter ? t('第{{number}}章', { number: chapter.number }) : t('第{{arg1}}章', { arg1: chapterIndex + 1 })
 }
 
 export const BeatsView: React.FC<BeatsViewProps> = ({
@@ -54,16 +55,14 @@ export const BeatsView: React.FC<BeatsViewProps> = ({
 
   if (beats.length === 0) {
     return (
-      <div className="p-8 text-center font-label text-label-md text-on-surface-variant">
-        这份节拍卡是空的——重新生成或换一本长篇试试
-      </div>
+      <div className="p-8 text-center font-label text-label-md text-on-surface-variant">{t('这份节拍卡是空的——重新生成或换一本长篇试试')}</div>
     )
   }
 
   return (
     <div className="max-h-[68vh] overflow-y-auto overscroll-contain p-4">
       {/* 节拍尺：标签上下交错排布，密集节拍不易相撞（上标签需要顶部余量） */}
-      <div className="relative mb-5 h-28 pt-6" role="list" aria-label="全书节拍尺">
+      <div className="relative mb-5 h-28 pt-6" role="list" aria-label={t('全书节拍尺')}>
         <div className="absolute left-0 right-0 top-1/2 border-t border-outline-variant" aria-hidden="true" />
         {beats.map(({ beat, ratio }, index) => {
           const meta = beatRoleMeta(beat.role)
@@ -78,7 +77,7 @@ export const BeatsView: React.FC<BeatsViewProps> = ({
                 recordUsageSignal('knowledge-beat-tap', { bookId: book.id })
                 navigate(knowledgeSourcePath(book, beat.chapterIndex))
               }}
-              title={`${meta.label}·${beat.title} · ${chapterLabelOf(book, beat.chapterIndex)}（点击回原文）`}
+              title={t('{{label}}·{{title}} · {{arg1}}（点击回原文）', { label: meta.label, title: beat.title, arg1: chapterLabelOf(book, beat.chapterIndex) })}
             >
               <span
                 className="block w-3 h-3 rounded-full ring-2 ring-surface-container-lowest group-hover:scale-125 transition-transform"
@@ -132,8 +131,8 @@ export const BeatsView: React.FC<BeatsViewProps> = ({
                   )}
                   {!revising && (
                     <button
-                      aria-label={`回到${beat.title}相关原文`}
-                      title="回到原文"
+                      aria-label={t('回到{{title}}相关原文', { title: beat.title })}
+                      title={t('回到原文')}
                       className="shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors"
                       onClick={() => {
                         recordUsageSignal('knowledge-beat-tap', { bookId: book.id })

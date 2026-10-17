@@ -1,3 +1,4 @@
+import { t } from '@/i18n';
 import type { NavItem } from '@/types';
 
 /** 底栏高亮显式映射（建议书 5.2）：按路由前缀匹配。
@@ -29,49 +30,49 @@ export const getAppBarConfig = (pathname: string): AppBarConfig => {
     return { variant: 'home' };
   }
   if (pathname === '/library') {
-    return { variant: 'default', title: '书库' };
+    return { variant: 'default', title: t('书库') };
   }
   if (pathname.startsWith('/library/')) {
     return { variant: 'none' };
   }
   if (pathname === '/import') {
-    return { variant: 'back', title: '导入书籍' };
+    return { variant: 'back', title: t('导入书籍') };
   }
   if (pathname === '/import/custom-cloud') {
-    return { variant: 'back', title: '自定义云盘' };
+    return { variant: 'back', title: t('自定义云盘') };
   }
   if (pathname === '/settings') {
-    return { variant: 'back', title: '设置' };
+    return { variant: 'back', title: t('设置') };
   }
   if (pathname === '/profile') {
-    return { variant: 'back', title: '个人中心' };
+    return { variant: 'back', title: t('个人中心') };
   }
   if (pathname === '/stats') {
-    return { variant: 'back', title: '阅读统计' };
+    return { variant: 'back', title: t('阅读统计') };
   }
   if (pathname === '/search') {
-    return { variant: 'back', title: '搜索' };
+    return { variant: 'back', title: t('搜索') };
   }
   if (pathname === '/notes') {
-    return { variant: 'back', title: '手记' };
+    return { variant: 'back', title: t('手记') };
   }
   if (pathname === '/knowledge-hub') {
-    return { variant: 'back', title: '知识库' };
+    return { variant: 'back', title: t('知识库') };
   }
   if (pathname === '/tags') {
-    return { variant: 'back', title: '分类目录' };
+    return { variant: 'back', title: t('分类目录') };
   }
   if (pathname === '/review') {
-    return { variant: 'back', title: '复习席' };
+    return { variant: 'back', title: t('复习席') };
   }
   if (pathname === '/vocabulary') {
-    return { variant: 'back', title: '生词本' };
+    return { variant: 'back', title: t('生词本') };
   }
   if (pathname === '/ask') {
-    return { variant: 'back', title: '问藏书' };
+    return { variant: 'back', title: t('问藏书') };
   }
   if (pathname === '/atlas') {
-    return { variant: 'back', title: '跨书图谱' };
+    return { variant: 'back', title: t('跨书图谱') };
   }
   return { variant: 'back' };
 };

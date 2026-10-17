@@ -6,6 +6,7 @@ import { BookCoverImage } from '@/components/atoms/BookCoverImage';
 import { FormatBadge } from '@/components/atoms/FormatBadge';
 import { COPY } from '@/constants/copy';
 import { ROUTES, bookDetailPath, knowledgePath, readerPathForBook } from '@/constants/routes';
+import { t } from '@/i18n';
 import { getKnowledgeTask } from '@/services/ai/knowledgeTasks';
 import { annotationRepo } from '@/services/storage/annotationRepo';
 import { knowledgeRepo } from '@/services/storage/knowledgeRepo';
@@ -110,9 +111,7 @@ export const SearchPage: React.FC = () => {
                   : ''
               )}
               onClick={() => setSelectedTagId(null)}
-            >
-              全部
-            </button>
+            >{t('全部')}</button>
             {tags.map((tag) => (
               <button
                 key={tag.id}
@@ -244,8 +243,7 @@ export const SearchPage: React.FC = () => {
                           </span>
                           {matchCount > 1 && (
                             <span className="font-label text-label-xs text-on-surface-faint shrink-0">
-                              {matchCount} 处
-                            </span>
+                              {t('{{matchCount}} 处', { matchCount: matchCount })}</span>
                           )}
                         </div>
                         <span className="font-body text-label-md text-on-surface-variant truncate">
@@ -273,7 +271,7 @@ export const SearchPage: React.FC = () => {
       {!hasCriteria && books.length > 0 && (
         <section className="w-full flex flex-col gap-8">
           <div className="flex justify-between items-end">
-            <h2 className="font-display text-display-lg-mobile text-primary">最近添加</h2>
+            <h2 className="font-display text-display-lg-mobile text-primary">{t('最近添加')}</h2>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
             {recentBooks.map((book) => (
@@ -300,7 +298,7 @@ export const SearchPage: React.FC = () => {
                   <h4 className="min-w-0 font-body text-body-lg text-primary leading-tight truncate">{book.title}</h4>
                 </div>
                 <p className="font-label text-label-md text-on-surface-variant mt-1">
-                  {book.author || (book.status === 'completed' ? '已完结' : `${book.totalChapters} 话`)}
+                  {book.author || (book.status === 'completed' ? t('已完结') : t('{{totalChapters}} 话', { totalChapters: book.totalChapters }))}
                 </p>
               </article>
             ))}
@@ -311,14 +309,12 @@ export const SearchPage: React.FC = () => {
       {!hasCriteria && books.length === 0 && (
         <section className="w-full flex flex-col items-center justify-center py-16 text-center">
           <span className="material-symbols-outlined text-on-surface-variant text-6xl mb-4">auto_stories</span>
-          <p className="font-body text-body-md text-on-surface-variant">书架为空</p>
-          <p className="font-label text-label-sm text-on-surface-variant mt-2">导入书籍后可在此搜索</p>
+          <p className="font-body text-body-md text-on-surface-variant">{t('书架为空')}</p>
+          <p className="font-label text-label-sm text-on-surface-variant mt-2">{t('导入书籍后可在此搜索')}</p>
           <button
             className="btn-secondary px-6 py-2 mt-4"
             onClick={() => navigate(ROUTES.IMPORT)}
-          >
-            去导入
-          </button>
+          >{t('去导入')}</button>
         </section>
       )}
     </div>

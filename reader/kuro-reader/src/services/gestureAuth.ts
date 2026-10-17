@@ -1,4 +1,5 @@
 import { APP_CONFIG } from '@/constants/config';
+import { t } from '@/i18n';
 
 async function generateSalt(): Promise<string> {
   const array = new Uint8Array(SALT_LENGTH_BYTES);
@@ -28,7 +29,7 @@ const SALT_LENGTH_BYTES = 16;
 const HEX_RADIX = 16;
 export async function setupGesture(points: number[]): Promise<{ hash: string; salt: string }> {
   if (points.length < APP_CONFIG.auth.minGesturePoints) {
-    throw new Error(`至少需要连接 ${APP_CONFIG.auth.minGesturePoints} 个点`);
+    throw new Error(t('至少需要连接 {{arg1}} 个点', { arg1: APP_CONFIG.auth.minGesturePoints }));
   }
   const salt = await generateSalt();
   const hash = await hashGesture(points, salt);

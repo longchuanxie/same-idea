@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 
 import { createPortal } from 'react-dom';
 
+import { t } from '@/i18n';
 import { cn } from '@/utils/cn';
 
 export interface DropdownSelectOption {
@@ -204,7 +205,7 @@ export const DropdownSelect: React.FC<DropdownSelectProps> = ({
           !disabled && 'cursor-pointer'
         )}
       >
-        <span className={cn('truncate', !selectedLabel && 'text-on-surface-faint')}>{selectedLabel || '请选择'}</span>
+        <span className={cn('truncate', !selectedLabel && 'text-on-surface-faint')}>{selectedLabel || t('请选择')}</span>
         <span
           aria-hidden="true"
           className={cn(

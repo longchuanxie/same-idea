@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { EntryReviseActions, VerifiedBadge } from '@/components/molecules/knowledge/ReviseControls'
 import { knowledgeSourcePath } from '@/constants/routes'
+import { t } from '@/i18n';
 import { recordUsageSignal } from '@/services/telemetry/usageSignals'
 import type { Book, GlossaryData, GlossaryTerm } from '@/types'
 
@@ -25,9 +26,9 @@ interface GlossaryViewProps {
 }
 
 function chapterLabelOf(book: Book, chapterIndex: number): string {
-  if (book.format === 'pdf') return `第${chapterIndex + 1}页`
+  if (book.format === 'pdf') return t('第{{arg1}}页', { arg1: chapterIndex + 1 })
   const chapter = book.chapters?.[chapterIndex]
-  return chapter ? `第${chapter.number}章` : `第${chapterIndex + 1}章`
+  return chapter ? t('第{{number}}章', { number: chapter.number }) : t('第{{arg1}}章', { arg1: chapterIndex + 1 })
 }
 
 export const GlossaryView: React.FC<GlossaryViewProps> = ({
@@ -55,9 +56,7 @@ export const GlossaryView: React.FC<GlossaryViewProps> = ({
 
   if (terms.length === 0) {
     return (
-      <div className="p-8 text-center font-label text-label-md text-on-surface-variant">
-        这份术语卡是空的——重新生成或切换内容类型试试
-      </div>
+      <div className="p-8 text-center font-label text-label-md text-on-surface-variant">{t('这份术语卡是空的——重新生成或切换内容类型试试')}</div>
     )
   }
 
@@ -76,8 +75,7 @@ export const GlossaryView: React.FC<GlossaryViewProps> = ({
             </div>
             {term.chapters && term.chapters.length > 0 && (
               <span className="shrink-0 font-label text-label-sm text-on-surface-faint">
-                {chapterLabelOf(book, term.chapters[0])}定义
-              </span>
+                {t('{{arg1}}定义', { arg1: chapterLabelOf(book, term.chapters[0]) })}</span>
             )}
           </div>
           {term.definition && (
@@ -105,9 +103,7 @@ export const GlossaryView: React.FC<GlossaryViewProps> = ({
                   navigate(term.sourcePath ?? '')
                 }}
               >
-                <span className="material-symbols-outlined text-icon-sm">book_open</span>
-                回到原文
-              </button>
+                <span className="material-symbols-outlined text-icon-sm">book_open</span>{t('回到原文')}</button>
             )}
             {revising && onEditTerm && onRemoveTerm && onToggleTermVerified && (
               <EntryReviseActions

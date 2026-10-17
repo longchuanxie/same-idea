@@ -7,6 +7,7 @@
  * 纯函数、客户端即时计算，命中全部可深链回原处。
  */
 
+import { t } from '@/i18n';
 import type {
   Annotation,
   Book,
@@ -89,7 +90,7 @@ function artifactEntries(artifact: KnowledgeArtifact): [string, string][] {
   if (artifact.type === 'character-graph' || artifact.type === 'concept-graph') {
     const graph = artifact.data as CharacterGraphData
     const nameById = new Map(graph.nodes.map((n) => [n.id, n.name]))
-    const entity = artifact.type === 'concept-graph' ? '概念' : '人物'
+    const entity = artifact.type === 'concept-graph' ? t('概念') : t('人物')
     const nodeEntries = graph.nodes.map(
       (n) => [`${n.name} ${n.role ?? ''} ${n.description ?? ''}`, `${entity} · ${n.name}`] as [string, string]
     )
@@ -105,13 +106,13 @@ function artifactEntries(artifact: KnowledgeArtifact): [string, string][] {
   if (artifact.type === 'glossary') {
     const glossary = artifact.data as GlossaryData
     return glossary.terms.map(
-      (t) => [`${t.term} ${t.definition ?? ''}`, `术语 · ${t.term}`] as [string, string]
+      ({ term, definition }) => [`${term} ${definition ?? ''}`, t('术语 · {{term}}', { term })] as [string, string]
     )
   }
   if (artifact.type === 'mindmap') {
     const entries: [string, string][] = []
     const walk = (node: MindmapNodeData): void => {
-      entries.push([`${node.title} ${node.detail ?? ''}`, `导图 · ${node.title}`])
+      entries.push([`${node.title} ${node.detail ?? ''}`, t('导图 · {{title}}', { title: node.title })])
       node.children?.forEach(walk)
     }
     walk(artifact.data as MindmapNodeData)
@@ -119,12 +120,12 @@ function artifactEntries(artifact: KnowledgeArtifact): [string, string][] {
   }
   const brief = artifact.data as PaperBriefData
   return [
-    [brief.tldr ?? '', '速览 · TL;DR'] as [string, string],
+    [brief.tldr ?? '', t('速览 · TL;DR')] as [string, string],
     ...brief.contributions.map(
-      (c) => [c.point, `贡献 · ${c.point}`] as [string, string]
+      (c) => [c.point, t('贡献 · {{point}}', { point: c.point })] as [string, string]
     ),
-    ...brief.limitations.map((l) => [l.point, `局限 · ${l.point}`] as [string, string]),
-    ...brief.questions.map((qu) => [qu.question, `疑问 · ${qu.question}`] as [string, string]),
+    ...brief.limitations.map((l) => [l.point, t('局限 · {{point}}', { point: l.point })] as [string, string]),
+    ...brief.questions.map((qu) => [qu.question, t('疑问 · {{question}}', { question: qu.question })] as [string, string]),
   ]
 }
 

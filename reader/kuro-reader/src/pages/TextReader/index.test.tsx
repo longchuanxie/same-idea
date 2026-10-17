@@ -83,13 +83,14 @@ vi.mock('@/stores/useLibraryStore', () => ({
 }))
 
 vi.mock('@/services/textContent', () => ({
-  loadTextContent: vi.fn(async () => ({
+  loadTextContentDetailed: vi.fn(async () => ({
     chapters: [
       { id: 'ch-1', title: '第一章', content: '这是第一章的正文内容，用于页面冒烟断言。' },
       { id: 'ch-2', title: '第二章', content: '第二章正文。' },
     ],
     isEpub: false,
     isMarkdown: false,
+    sanitize: { pendingAdHitCount: 0, adSamples: [] },
   })),
   resolveTextChapterIndex: vi.fn(() => 0),
 }))

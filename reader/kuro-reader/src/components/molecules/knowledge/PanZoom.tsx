@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 
+import { t } from '@/i18n';
+
 /**
  * 平移缩放容器：图谱/导图等大幅 SVG 画布的统一交互层。
  * 单指拖拽平移；双指捏合缩放；滚轮缩放（桌面）；右下悬浮缩放条（沿用 Mermaid 图表样式）。
@@ -184,7 +186,7 @@ export const PanZoom: React.FC<PanZoomProps> = ({ children, ariaLabel, className
           type="button"
           className="rounded-full p-1 hover:bg-surface-variant disabled:opacity-30"
           disabled={scale <= MIN_SCALE}
-          aria-label="缩小视图"
+          aria-label={t('缩小视图')}
           onClick={() => zoomBy(1 / BUTTON_ZOOM_RATIO)}
         >
           <span className="material-symbols-outlined text-icon-md">zoom_out</span>
@@ -192,7 +194,7 @@ export const PanZoom: React.FC<PanZoomProps> = ({ children, ariaLabel, className
         <button
           type="button"
           className="min-w-12 rounded-full px-2 py-1 font-label text-label-sm hover:bg-surface-variant"
-          aria-label="重置视图"
+          aria-label={t('重置视图')}
           onClick={resetView}
         >
           {Math.round(scale * PERCENT_MULTIPLIER)}%
@@ -201,7 +203,7 @@ export const PanZoom: React.FC<PanZoomProps> = ({ children, ariaLabel, className
           type="button"
           className="rounded-full p-1 hover:bg-surface-variant disabled:opacity-30"
           disabled={scale >= MAX_SCALE}
-          aria-label="放大视图"
+          aria-label={t('放大视图')}
           onClick={() => zoomBy(BUTTON_ZOOM_RATIO)}
         >
           <span className="material-symbols-outlined text-icon-md">zoom_in</span>

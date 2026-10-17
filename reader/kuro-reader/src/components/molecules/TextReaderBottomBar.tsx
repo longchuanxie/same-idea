@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { ToggleSwitch } from '@/components/atoms/ToggleSwitch';
 import { STORAGE_KEYS } from '@/constants/storage';
 import { TEXT_READER_FONT_OPTIONS } from '@/constants/textReaderFonts';
+import { t } from '@/i18n';
 import { isNativeTtsAvailable } from '@/services/tts/nativeTtsEngine';
 import { PROGRESS_INDETERMINATE } from '@/services/tts/piperEngine';
 import type { PaperType, TextFontFamily, TextAlign, TextReadingMode, TtsEngineOption } from '@/types';
@@ -13,9 +14,9 @@ import { getAllPaperTypes } from '@/utils/paperTexture';
 type SettingsTab = 'typography' | 'appearance' | 'more';
 
 const SETTINGS_TABS: { key: SettingsTab; label: string; icon: string }[] = [
-  { key: 'typography', label: '排版', icon: 'format_size' },
-  { key: 'appearance', label: '外观', icon: 'palette' },
-  { key: 'more', label: '更多', icon: 'tune' },
+  { key: 'typography', label: t('排版'), icon: 'format_size' },
+  { key: 'appearance', label: t('外观'), icon: 'palette' },
+  { key: 'more', label: t('更多'), icon: 'tune' },
 ];
 
 export interface TextReaderBottomBarProps {
@@ -70,10 +71,10 @@ const LINE_HEIGHT_MATCH_EPSILON = 0.05;
 const COLOR_TEMP_WARM_THRESHOLD = 50;
 
 const READING_MODES: { mode: TextReadingMode; label: string; icon: string }[] = [
-  { mode: 'scroll', label: '上下滚动', icon: 'swap_vert' },
-  { mode: 'paginate', label: '左右翻页', icon: 'chevron_left' },
-  { mode: 'columns', label: '双栏阅读', icon: 'view_week' },
-  { mode: 'book', label: '模拟翻书', icon: 'menu_book' },
+  { mode: 'scroll', label: t('上下滚动'), icon: 'swap_vert' },
+  { mode: 'paginate', label: t('左右翻页'), icon: 'chevron_left' },
+  { mode: 'columns', label: t('双栏阅读'), icon: 'view_week' },
+  { mode: 'book', label: t('模拟翻书'), icon: 'menu_book' },
 ];
 
 /** App 内（安卓 WebView）无 Web Speech：native 选项仅 App 内出现，system 在 App 内必然无声 */
@@ -89,22 +90,22 @@ interface TtsEngineOptionView {
 
 // 命名口径：App 内「系统语音」= Android 系统 TTS 引擎（native）；浏览器 Web Speech 叫「浏览器语音」
 const TTS_ENGINE_OPTIONS: TtsEngineOptionView[] = [
-  { option: 'auto', label: '跟随系统', icon: 'auto_awesome' },
-  ...(IS_NATIVE_PLATFORM ? [{ option: 'native' as const, label: '系统语音', icon: 'volume_up' }] : []),
-  { option: 'system', label: '浏览器语音', icon: 'record_voice_over', unavailable: IS_NATIVE_PLATFORM },
-  { option: 'neural', label: '神经网络', icon: 'graphic_eq' },
-  { option: 'server', label: '自定义服务', icon: 'dns' },
+  { option: 'auto', label: t('跟随系统'), icon: 'auto_awesome' },
+  ...(IS_NATIVE_PLATFORM ? [{ option: 'native' as const, label: t('系统语音'), icon: 'volume_up' }] : []),
+  { option: 'system', label: t('浏览器语音'), icon: 'record_voice_over', unavailable: IS_NATIVE_PLATFORM },
+  { option: 'neural', label: t('神经网络'), icon: 'graphic_eq' },
+  { option: 'server', label: t('自定义服务'), icon: 'dns' },
 ];
 
 const TTS_INPUT_CLASS =
   'input-field h-10';
 
 const AUTO_ADVANCE_TEXT_CHAPTER_LABELS = {
-  title: '章末自动衔接',
-  enabled: '无缝续读：读完自动衔接下一章',
-  disabled: '章末显示继续提示',
-  enableAria: '开启章末自动衔接下一章',
-  disableAria: '关闭章末自动衔接下一章',
+  title: t('章末自动衔接'),
+  enabled: t('无缝续读：读完自动衔接下一章'),
+  disabled: t('章末显示继续提示'),
+  enableAria: t('开启章末自动衔接下一章'),
+  disableAria: t('关闭章末自动衔接下一章'),
 } as const;
 
 export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
@@ -154,16 +155,16 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
   const engineHint = (() => {
     switch (selectedEngine) {
       case 'system':
-        return '浏览器/操作系统内置语音；无响应时自动改用神经网络离线语音';
+        return t('浏览器/操作系统内置语音；无响应时自动改用神经网络离线语音');
       case 'native':
-        return '使用 Android 系统语音引擎；可在系统设置安装更高质量的中文音色，引擎缺失时自动改用神经网络';
+        return t('使用 Android 系统语音引擎；可在系统设置安装更高质量的中文音色，引擎缺失时自动改用神经网络');
       case 'neural':
         return ''; // 下载状态由下方进度提示单独接管
       case 'server':
-        return '兼容 OpenAI /v1/audio/speech 接口的自部署 TTS 服务';
+        return t('兼容 OpenAI /v1/audio/speech 接口的自部署 TTS 服务');
       case 'auto':
       default:
-        return `优先使用${IS_NATIVE_PLATFORM ? '系统语音' : '浏览器语音'}；不可用时自动改用神经网络离线语音`;
+        return t('优先使用{{arg1}}；不可用时自动改用神经网络离线语音', { arg1: IS_NATIVE_PLATFORM ? t('系统语音') : t('浏览器语音') });
     }
   })();
   // 记忆上次停留 tab：高频项（阅读模式/发音引擎在「更多」）不必每次重新走三层
@@ -192,8 +193,8 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-on-surface-variant text-icon-md">format_size</span>
-                <p className="font-label text-label-md text-on-surface">字号</p>
-                <span className="font-label text-label-sm text-on-surface-faint">（仅本书正文）</span>
+                <p className="font-label text-label-md text-on-surface">{t('字号')}</p>
+                <span className="font-label text-label-sm text-on-surface-faint">{t('（仅本书正文）')}</span>
               </div>
               <span className="font-mono text-label-sm text-on-surface-variant">{fontSize}px</span>
             </div>
@@ -244,7 +245,7 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-on-surface-variant text-[18px]">format_line_spacing</span>
-                <p className="font-label text-label-md text-on-surface">行距</p>
+                <p className="font-label text-label-md text-on-surface">{t('行距')}</p>
               </div>
               <span className="font-label text-label-sm text-on-surface-variant">{lineHeight.toFixed(1)}</span>
             </div>
@@ -268,7 +269,7 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
 
           {/* 字体 */}
           <div className="py-3 px-4 bg-surface-container-lowest rounded-card border border-outline-variant mb-4">
-            <p className="font-label text-label-md text-on-surface mb-3">字体</p>
+            <p className="font-label text-label-md text-on-surface mb-3">{t('字体')}</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {TEXT_READER_FONT_OPTIONS.map(({ family, label, fontFamily }) => (
                 <button
@@ -290,7 +291,7 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
 
           {/* 文字对齐 */}
           <div className="py-3 px-4 bg-surface-container-lowest rounded-card border border-outline-variant mb-4">
-            <p className="font-label text-label-md text-on-surface mb-3">文字对齐</p>
+            <p className="font-label text-label-md text-on-surface mb-3">{t('文字对齐')}</p>
             <div className="flex gap-2">
               <button
                 className={cn(
@@ -301,9 +302,7 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
                 )}
                 onClick={() => onTextAlignChange('left')}
               >
-                <span className="material-symbols-outlined text-[18px]">format_align_left</span>
-                左对齐
-              </button>
+                <span className="material-symbols-outlined text-[18px]">format_align_left</span>{t('左对齐')}</button>
               <button
                 className={cn(
                   'flex-1 h-10 rounded-lg border text-label-sm font-label transition-colors flex items-center justify-center gap-2',
@@ -313,9 +312,7 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
                 )}
                 onClick={() => onTextAlignChange('justify')}
               >
-                <span className="material-symbols-outlined text-[18px]">format_align_justify</span>
-                两端对齐
-              </button>
+                <span className="material-symbols-outlined text-[18px]">format_align_justify</span>{t('两端对齐')}</button>
             </div>
           </div>
 
@@ -324,15 +321,15 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
             <div className="flex items-center gap-3">
               <span className="material-symbols-outlined text-on-surface-variant">format_indent_increase</span>
               <div>
-                <p className="font-label text-label-md text-on-surface">首行缩进</p>
+                <p className="font-label text-label-md text-on-surface">{t('首行缩进')}</p>
                 <p className="font-body text-body-sm text-on-surface-variant">
-                  {firstLineIndent ? '已开启（2字符）' : '已关闭'}
+                  {firstLineIndent ? t('已开启（2字符）') : t('已关闭')}
                 </p>
               </div>
             </div>
             <ToggleSwitch
               checked={firstLineIndent}
-              ariaLabel="首行缩进"
+              ariaLabel={t('首行缩进')}
               onChange={onFirstLineIndentToggle}
             />
           </div>
@@ -342,15 +339,15 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
             <div className="flex items-center gap-3">
               <span className="material-symbols-outlined text-on-surface-variant">view_agenda</span>
               <div>
-                <p className="font-label text-label-md text-on-surface">竖排书写</p>
+                <p className="font-label text-label-md text-on-surface">{t('竖排书写')}</p>
                 <p className="font-body text-body-sm text-on-surface-variant">
-                  {verticalWriting ? '已开启（滚动模式）' : '已关闭'}
+                  {verticalWriting ? t('已开启（滚动模式）') : t('已关闭')}
                 </p>
               </div>
             </div>
             <ToggleSwitch
               checked={verticalWriting}
-              ariaLabel="竖排书写"
+              ariaLabel={t('竖排书写')}
               onChange={onVerticalWritingToggle}
             />
           </div>
@@ -367,15 +364,15 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
             <div className="flex items-center gap-3">
               <span className="material-symbols-outlined text-on-surface-variant">note</span>
               <div>
-                <p className="font-label text-label-md text-on-surface">纸张模拟效果</p>
+                <p className="font-label text-label-md text-on-surface">{t('纸张模拟效果')}</p>
                 <p className="font-body text-body-sm text-on-surface-variant">
-                  {paperModeEnabled ? '已开启' : '已关闭'}
+                  {paperModeEnabled ? t('已开启') : t('已关闭')}
                 </p>
               </div>
             </div>
             <ToggleSwitch
               checked={paperModeEnabled}
-              ariaLabel="纸张模拟效果"
+              ariaLabel={t('纸张模拟效果')}
               onChange={onPaperModeToggle}
             />
           </div>
@@ -383,7 +380,7 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
           {/* 纸张类型 */}
           {paperModeEnabled && (
             <div className="py-3 px-4 bg-surface-container-lowest rounded-card border border-outline-variant mb-4">
-              <p className="font-label text-label-md text-on-surface mb-3">纸张类型</p>
+              <p className="font-label text-label-md text-on-surface mb-3">{t('纸张类型')}</p>
               <div className="flex flex-wrap gap-2">
                 {paperTypes.map(({ type, config }) => (
                   <button
@@ -409,7 +406,7 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-on-surface-variant text-[18px]">brightness_6</span>
-                <p className="font-label text-label-md text-on-surface">亮度</p>
+                <p className="font-label text-label-md text-on-surface">{t('亮度')}</p>
               </div>
               <span className="font-label text-label-sm text-on-surface-variant">{brightness}%</span>
             </div>
@@ -428,10 +425,10 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-on-surface-variant text-[18px]">thermostat</span>
-                <p className="font-label text-label-md text-on-surface">色温</p>
+                <p className="font-label text-label-md text-on-surface">{t('色温')}</p>
               </div>
               <span className="font-label text-label-sm text-on-surface-variant">
-                {colorTemperature === 0 ? '冷光' : colorTemperature <= COLOR_TEMP_WARM_THRESHOLD ? '暖白' : '暖光'}
+                {colorTemperature === 0 ? t('冷光') : colorTemperature <= COLOR_TEMP_WARM_THRESHOLD ? t('暖白') : t('暖光')}
               </span>
             </div>
             <input
@@ -450,7 +447,7 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-on-surface-variant text-icon-md">texture</span>
-                <p className="font-label text-label-md text-on-surface">纹理强度</p>
+                <p className="font-label text-label-md text-on-surface">{t('纹理强度')}</p>
               </div>
               <span className="font-mono text-label-sm text-on-surface-variant">{textureIntensity}%</span>
             </div>
@@ -477,7 +474,7 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
   const morePanel = (
     <>
           <div className="py-3 px-4 bg-surface-container-lowest rounded-card-lg border border-outline-variant mb-4">
-            <p className="font-label text-label-md text-on-surface mb-3">阅读模式</p>
+            <p className="font-label text-label-md text-on-surface mb-3">{t('阅读模式')}</p>
             <div className="grid grid-cols-4 gap-2">
               {READING_MODES.map(({ mode, label, icon }) => (
                 <button
@@ -520,7 +517,7 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-on-surface-variant text-icon-md">speed</span>
-                <p className="font-label text-label-md text-on-surface">自动滚动速度</p>
+                <p className="font-label text-label-md text-on-surface">{t('自动滚动速度')}</p>
               </div>
               <span className="font-mono text-label-sm text-on-surface-variant">{autoScrollSpeed}</span>
             </div>
@@ -538,22 +535,22 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
             <div className="flex items-center gap-3">
               <span className="material-symbols-outlined text-on-surface-variant">touch_app</span>
               <div>
-                <p className="font-label text-label-md text-on-surface">点击区域翻页</p>
+                <p className="font-label text-label-md text-on-surface">{t('点击区域翻页')}</p>
                 <p className="font-body text-body-sm text-on-surface-variant">
-                  {tapZoneEnabled ? '上下翻页，中间显隐菜单' : '点击仅显隐菜单'}
+                  {tapZoneEnabled ? t('上下翻页，中间显隐菜单') : t('点击仅显隐菜单')}
                 </p>
               </div>
             </div>
             <ToggleSwitch
               checked={tapZoneEnabled}
-              ariaLabel="点击区域翻页"
+              ariaLabel={t('点击区域翻页')}
               onChange={onTapZoneEnabledToggle}
             />
           </div>
 
           {/* 听书发音引擎（按平台如实展示可用性；选项卡随纸型 chip 的选择块配方） */}
           <div className="py-3 px-4 bg-surface-container-lowest rounded-card-lg border border-outline-variant mb-4">
-            <p className="font-label text-label-md text-on-surface mb-3">听书发音</p>
+            <p className="font-label text-label-md text-on-surface mb-3">{t('听书发音')}</p>
             <div className="flex flex-wrap gap-2">
               {TTS_ENGINE_OPTIONS.map(({ option, label, icon, unavailable }) => (
                 <button
@@ -582,9 +579,9 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
               <p className="font-body text-body-sm text-on-surface-variant mt-3">
                 {neuralDownloadPercent != null
                   ? neuralDownloadPercent === PROGRESS_INDETERMINATE
-                    ? '音色包下载中，完成后自动离线可用。'
-                    : `音色包下载中 ${neuralDownloadPercent}%，完成后自动离线可用。`
-                  : '离线神经网络中文语音（huayan）。首次使用需下载约 60-80MB 音色包，仅下载一次。'}
+                    ? t('音色包下载中，完成后自动离线可用。')
+                    : t('音色包下载中 {{neuralDownloadPercent}}%，完成后自动离线可用。', { neuralDownloadPercent: neuralDownloadPercent })
+                  : t('离线神经网络中文语音（huayan）。首次使用需下载约 60-80MB 音色包，仅下载一次。')}
               </p>
             )}
             {ttsEngine === 'server' && (
@@ -592,21 +589,21 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
                 <input
                   type="url"
                   value={ttsServerUrl}
-                  placeholder="服务地址，如 http://192.168.1.10:9880"
+                  placeholder={t('服务地址，如 http://192.168.1.10:9880')}
                   className={TTS_INPUT_CLASS}
                   onChange={(e) => onTtsServerFieldChange('url', e.target.value)}
                 />
                 <input
                   type="text"
                   value={ttsServerModel}
-                  placeholder="模型名（可选，默认 tts-1）"
+                  placeholder={t('模型名（可选，默认 tts-1）')}
                   className={TTS_INPUT_CLASS}
                   onChange={(e) => onTtsServerFieldChange('model', e.target.value)}
                 />
                 <input
                   type="text"
                   value={ttsServerVoice}
-                  placeholder="音色名（可选，默认 alloy）"
+                  placeholder={t('音色名（可选，默认 alloy）')}
                   className={TTS_INPUT_CLASS}
                   onChange={(e) => onTtsServerFieldChange('voice', e.target.value)}
                 />
@@ -627,16 +624,16 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
         <div className="max-w-max-width-content mx-auto">
           {/* 标题栏 + tab 导航 */}
           <div className="pt-3 flex items-center justify-between">
-            <span className="font-label text-label-md text-on-surface-variant">阅读设置</span>
+            <span className="font-label text-label-md text-on-surface-variant">{t('阅读设置')}</span>
             <button
               className="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-variant transition-colors"
               onClick={onClose}
-              aria-label="关闭"
+              aria-label={t('关闭')}
             >
               <span className="material-symbols-outlined text-icon-md">close</span>
             </button>
           </div>
-          <div className="flex gap-1 mt-1 mb-3 border-b border-outline-variant/50" role="tablist" aria-label="设置分组">
+          <div className="flex gap-1 mt-1 mb-3 border-b border-outline-variant/50" role="tablist" aria-label={t('设置分组')}>
             {SETTINGS_TABS.map(({ key, label, icon }) => (
               <button
                 key={key}

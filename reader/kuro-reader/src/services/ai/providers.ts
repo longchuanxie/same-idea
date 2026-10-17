@@ -5,6 +5,7 @@
  * 客户端不再叠加 /v1（见 aiClient 的 URL 拼接规则）。
  */
 
+import { t } from '@/i18n'
 import { normalizeAiBaseUrl } from '@/services/ai/aiClient'
 import { isNativePlatform } from '@/utils/capacitor'
 
@@ -27,13 +28,14 @@ export interface KnowledgeAiProvider {
 
 export const CUSTOM_PROVIDER_ID = 'custom'
 
+// label/hint 是 UI 显示面：走 t() 随语言走（全局 t + 切语言整页 reload，模块级常量重求值即生效）
 const ALL_PRESETS: KnowledgeAiProvider[] = [
   {
     id: 'glm',
-    label: '智谱 GLM',
+    label: t('智谱 GLM'),
     baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
     needsKey: true,
-    hint: 'glm-4 系列',
+    hint: t('glm-4 系列'),
     models: ['glm-4-flash', 'glm-4-air', 'glm-4-plus', 'glm-4.5', 'glm-4.6'],
   },
   {
@@ -41,7 +43,7 @@ const ALL_PRESETS: KnowledgeAiProvider[] = [
     label: 'DeepSeek',
     baseUrl: 'https://api.deepseek.com',
     needsKey: true,
-    hint: 'deepseek-chat 系列',
+    hint: t('deepseek-chat 系列'),
     models: ['deepseek-chat', 'deepseek-reasoner'],
   },
   {
@@ -49,15 +51,15 @@ const ALL_PRESETS: KnowledgeAiProvider[] = [
     label: 'OpenAI',
     baseUrl: 'https://api.openai.com',
     needsKey: true,
-    hint: 'gpt 系列',
+    hint: t('gpt 系列'),
     models: ['gpt-4o-mini', 'gpt-4o', 'gpt-4.1'],
   },
   {
     id: 'siliconflow',
-    label: '硅基流动',
+    label: t('硅基流动'),
     baseUrl: 'https://api.siliconflow.cn',
     needsKey: true,
-    hint: '多模型聚合',
+    hint: t('多模型聚合'),
     models: [],
   },
   {
@@ -65,15 +67,15 @@ const ALL_PRESETS: KnowledgeAiProvider[] = [
     label: 'Ollama',
     baseUrl: 'http://127.0.0.1:11434/v1',
     needsKey: false,
-    hint: '本机运行，无需密钥',
+    hint: t('本机运行，无需密钥'),
     models: [],
   },
   {
     id: CUSTOM_PROVIDER_ID,
-    label: '自定义',
+    label: t('自定义'),
     baseUrl: '',
     needsKey: true,
-    hint: '任意 OpenAI 兼容服务',
+    hint: t('任意 OpenAI 兼容服务'),
     models: [],
   },
 ]

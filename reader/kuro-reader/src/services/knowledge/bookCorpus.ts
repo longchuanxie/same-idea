@@ -9,6 +9,7 @@
  * 标签用于思维导图分支命名（如「第1-3章」）。
  */
 
+import { t } from '@/i18n';
 import { getPdfPageTexts } from '@/services/pdfText'
 import { loadTextContent } from '@/services/textContent'
 import type { Book } from '@/types'
@@ -186,12 +187,12 @@ export async function buildBookCorpus(
       chapterTexts.push(inRange(index) ? pageText : '')
     })
   } else {
-    throw new BookCorpusError('漫画没有可分析的文本层', 'unsupported')
+    throw new BookCorpusError(t('漫画没有可分析的文本层'), 'unsupported')
   }
 
   const hasText = entries.some((entry) => entry.text.trim().length > 0)
   if (!hasText) {
-    throw new BookCorpusError('这本书提不出可分析的文本（可能没有文字层）', 'empty')
+    throw new BookCorpusError(t('这本书提不出可分析的文本（可能没有文字层）'), 'empty')
   }
 
   // 分块数由全书字数自然决定（字数/6k 目标块），不设硬上限——
@@ -300,17 +301,17 @@ export async function buildDigestCorpus(
       if (inRange(index)) chapters.push({ title: `第${index + 1}页`, content: pageText, index })
     })
   } else {
-    throw new BookCorpusError('漫画没有可分析的文本层', 'unsupported')
+    throw new BookCorpusError(t('漫画没有可分析的文本层'), 'unsupported')
   }
 
   const entries = buildDigestEntries(chapters)
   const text = entries.map((entry) => entry.line).join('\n')
   if (!text.trim()) {
-    throw new BookCorpusError('这本书提不出可分析的文本（可能没有文字层）', 'empty')
+    throw new BookCorpusError(t('这本书提不出可分析的文本（可能没有文字层）'), 'empty')
   }
   const coveredIndexes = entries.map((entry) => entry.chapterIndex)
   const chunk: BookCorpusChunk = {
-    label: '全书骨架',
+    label: '全书骨架', // i18n-exempt: 数据字段（digest label），语言随内容走（M-i18n.4）
     text,
     chapterIndexes: coveredIndexes,
   }

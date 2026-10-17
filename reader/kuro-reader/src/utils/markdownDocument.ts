@@ -1,5 +1,7 @@
 import { Marked, type Token, type Tokens } from 'marked'
 
+import { t } from '@/i18n';
+
 const LAST_ASCII_CONTROL_CODE = 31
 const DELETE_ASCII_CONTROL_CODE = 127
 
@@ -161,7 +163,7 @@ function appendInlineTokens(
       case 'image': {
         const image = token as Tokens.Image
         const start = builder.text.length
-        appendText(builder, image.text ? `[图片：${image.text}]` : '[图片]')
+        appendText(builder, image.text ? t('[图片：{{text}}]', { text: image.text }) : t('[图片]'))
         builder.spans.push({
           type: 'image',
           start,
@@ -428,7 +430,7 @@ function appendFootnotes(
   builder.blocks.push({ type: 'divider', start: dividerStart, end: builder.text.length })
 
   const headingStart = beginBlock(builder)
-  appendText(builder, '脚注')
+  appendText(builder, t('脚注'))
   builder.blocks.push({ type: 'heading', start: headingStart, end: builder.text.length, depth: 4 })
 
   footnotes.forEach((footnote, index) => {

@@ -388,6 +388,27 @@ IndexedDB（`kuro-reader-db`，**v8**），11 个 Object Store，由 [db.ts](src
 - **仓库层**——vocab/review 的 remove（含对账批删 removeMany）记墓碑；两 repo 新增 `deleteByBookId`；**bookRepo.deleteFully 补级联**（此前删书不清生词/复习卡——生词本是主数据不是派生，会留孤儿，本轮修复）
 - **墓碑类型**：TombstoneKind 增 `vocab` | `review`
 
+### 4.22 章节总结：指定章范围的 AI 回顾（2026-10-16）
+
+「AI 总结指定章节」落地——前情提要之外补上主动圈范围的总结动线（详见 docs/knowledge-roadmap.md M1.9）。
+
+- **注册表第七类产物** `chapter-summary`（[knowledgeTasks](src/services/ai/knowledgeTasks.ts)）：`requireScope` 新任务标记——点任务卡直接弹起止章选择、生成选项弹层默认「起止章」模式（范围即产物语义，防全书空跑）；小说/学术双视角分侧提示词（情节要点不剧透 / 论点推进落点）
+- **合并层**（[knowledgeMerge](src/utils/knowledgeMerge.ts)）：`parseSummaryPartial`（要点过滤裁剪、单块 ≤8 条）/`mergeSummaries`（块序成段、closing 取末块非空、增量基底前置）/`isSummaryEmpty`；段安全上限 48
+- **查看器** `SummaryView`：分段要点列表 + 段头覆盖章 chip（回原文+usage 信号）+「此刻处境」行；修订模式单条要点改/删/校验章（[knowledgeEdit](src/utils/knowledgeEdit.ts) 三纯函数，双层索引防过滤错位）；导出 Markdown 与知识库总目计数接线
+- **伴生修正**：范围件（任意类型）重新生成沿用 `meta.scope` 原范围——此前会悄悄升级成全书
+- **验证**：mock LLM 浏览器端到端（弹层默认态→圈3-7章生成→2 分块段+chip 分布→回原文 ch3）；亮/暗双模式截图 + DOM 几何裁定（截图管线平铺失真三档疑似问题均为假阳性/既有约定）；暗色对比度 13.9/7.7/5.4:1 全超 AA；1053 例全绿（新增 11）
+
+### 4.23 原文净化：A 类广告水印 + B 类排版噪音的本地清理（2026-10-16）
+
+下载的 TXT 常夹站点广告/水印与排版噪音，阅读器此前原样渲染——本模块给文本管线补上净化层（裁定先做 A/B 类，C/D 类压后）。
+
+- **规则引擎**（[contentSanitizer](src/services/contentSanitizer.ts)，纯函数零 token）：A 类=片段剔除式广告清理（URL/群号/公众号/站名词典/推广话术，命中先挖片段、剩余正文不足 4 字才整行删；残料连接词「本书来自」迭代剥离；行长 >120 不动、章级删除比例 >60% 熔断、章节标题行永不动）；B 类=排版规范化（连续空行折叠/行尾空白/段首 ≤2 缩进剥除（≥3 视为诗行保留）/中文语境半角标点全角化（后视容忍空白，v2 判例））。规则语义版本 SANITIZE_RULES_VERSION 进缓存指纹
+- **管线接线**：[textContent](src/services/textContent.ts) 新增 `loadTextContentDetailed`（唯一正文出口，旧签名保留包装）——TXT 净化结果物化进 DB v11 章节缓存（记录扩 `sanitizeRev`+`sanitizeSummary`，配置/规则变即重算、旧记录一次性迁移）；导入预热（useLibraryStore `warmTextCacheFromParsed`）同步净化落库。渲染/TTS/书内搜索/知识语料/分页全部吃净化后文本
+- **按书门槛**：`Book.contentSanitize.ads` 三态（pending/on/off）；首开 detect 命中弹 `SanitizeConfirmDialog`（样例清单+立即净化/暂不/本书不再提示，ConfirmDialog 形制）；确认走 `applyContentSanitize`（书记录落库 + 旧知识件标 stale 对齐替换流语义 + `sanitize-applied` 信号，弃用记 `sanitize-dismissed`）
+- **设置**：Settings 新增「阅读净化」分组——总开关/广告与水印/排版清理三 Toggle + 自定义关键词 textarea（一行一个，失焦去重落库；未知站名兜底，通配站名规则因「他常去起点中文网」误伤判例删除）
+- **范围与护栏**：仅 TXT（MD 结构文档双轨、EPUB 无缓存层不接）；原始 blob 永不改写（关闭即回原始）；净化不删章（进度锚不动）；不做正文语义改写、不做云端规则库
+- **验证**：引擎+管线 22 例单测（含叙述句对照组「记住本书的教训/翻到最新章节/扫码关注了他/这本书来自父亲的遗物」等不杀样例）；1075 例全绿；浏览器亮/暗实测（4 处命中确认门→净化生效→toast 反馈→门槛重置回滚脏版验证 rev 可逆）；i18n 五语 19 key 补译；视觉验收六图过检（toast「白字不可见」经计算样式取证为视觉幻觉，实为 13:1 对比度药丸）
+
 ---
 
 ## 五、路由结构

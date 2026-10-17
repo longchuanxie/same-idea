@@ -7,6 +7,7 @@ import { FormatBadge } from '@/components/atoms/FormatBadge';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
 import { CATALOG_COLORS } from '@/constants/catalogColors';
 import { bookDetailPath } from '@/constants/routes';
+import { t } from '@/i18n';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import { cn } from '@/utils/cn';
 
@@ -70,8 +71,8 @@ export const TagsPage: React.FC = () => {
   return (
     <div className="relative z-10 w-full max-w-max-width-content mx-auto px-margin-mobile md:px-0 pt-8 pb-16">
       <header className="mb-8">
-        <h1 className="font-display text-display-lg-mobile md:text-display-lg text-primary mb-2">分类目录</h1>
-        <p className="font-body text-body-md text-on-surface-variant">给书架立几个目录，找书更快。</p>
+        <h1 className="font-display text-display-lg-mobile md:text-display-lg text-primary mb-2">{t('分类目录')}</h1>
+        <p className="font-body text-body-md text-on-surface-variant">{t('给书架立几个目录，找书更快。')}</p>
       </header>
 
       <div className="mb-6">
@@ -85,19 +86,17 @@ export const TagsPage: React.FC = () => {
             setTimeout(() => inputRef.current?.focus(), TAG_INPUT_FOCUS_DELAY_MS);
           }}
         >
-          <span className="material-symbols-outlined text-icon-md">add</span>
-          新建标签
-        </button>
+          <span className="material-symbols-outlined text-icon-md">add</span>{t('新建标签')}</button>
       </div>
 
       {(isCreating || editingTagId) && (
         <div className="bg-surface rounded-card border border-outline-variant p-5 mb-6">
           <h3 className="font-label text-label-md text-on-surface mb-4">
-            {editingTagId ? '编辑标签' : '新建标签'}
+            {editingTagId ? t('编辑标签') : t('新建标签')}
           </h3>
           <div className="flex flex-col gap-4">
             <div>
-              <label className="font-label text-label-sm text-on-surface-variant mb-1 block">标签名称</label>
+              <label className="font-label text-label-sm text-on-surface-variant mb-1 block">{t('标签名称')}</label>
               <input
                 ref={inputRef}
                 type="text"
@@ -108,12 +107,12 @@ export const TagsPage: React.FC = () => {
                     editingTagId ? handleUpdateTag(editingTagId) : handleCreateTag();
                   }
                 }}
-                placeholder="输入标签名称"
+                placeholder={t('输入标签名称')}
                 className="w-full px-4 py-2.5 bg-surface-container-lowest border border-outline-variant rounded-lg text-on-surface font-body text-body-md focus:outline-none focus:border-primary"
               />
             </div>
             <div>
-              <label className="font-label text-label-sm text-on-surface-variant mb-2 block">选择颜色</label>
+              <label className="font-label text-label-sm text-on-surface-variant mb-2 block">{t('选择颜色')}</label>
               <div className="flex flex-wrap gap-2">
                 {CATALOG_COLORS.map((color) => (
                   <button
@@ -124,7 +123,7 @@ export const TagsPage: React.FC = () => {
                     )}
                     style={{ backgroundColor: color }}
                     onClick={() => setNewTagColor(color)}
-                    aria-label={`选择颜色 ${color}`}
+                    aria-label={t('选择颜色 {{color}}', { color: color })}
                   />
                 ))}
               </div>
@@ -136,9 +135,7 @@ export const TagsPage: React.FC = () => {
                   setIsCreating(false);
                   setEditingTagId(null);
                 }}
-              >
-                取消
-              </button>
+              >{t('取消')}</button>
               <button
                 className="btn-primary px-4 py-2"
                 onClick={() => {
@@ -146,7 +143,7 @@ export const TagsPage: React.FC = () => {
                 }}
                 disabled={!newTagName.trim()}
               >
-                {editingTagId ? '保存' : '创建'}
+                {editingTagId ? t('保存') : t('创建')}
               </button>
             </div>
           </div>
@@ -156,8 +153,8 @@ export const TagsPage: React.FC = () => {
       {tags.length === 0 && !isCreating && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <span className="material-symbols-outlined text-on-surface-variant text-6xl mb-4">label</span>
-          <p className="font-body text-body-md text-on-surface-variant">还没有分类</p>
-          <p className="font-label text-label-sm text-on-surface-variant mt-2">新建一个分类，把书归到一起</p>
+          <p className="font-body text-body-md text-on-surface-variant">{t('还没有分类')}</p>
+          <p className="font-label text-label-sm text-on-surface-variant mt-2">{t('新建一个分类，把书归到一起')}</p>
         </div>
       )}
 
@@ -192,7 +189,7 @@ export const TagsPage: React.FC = () => {
                       e.stopPropagation();
                       startEditing(tag);
                     }}
-                    aria-label="编辑"
+                    aria-label={t('编辑')}
                   >
                     <span className="material-symbols-outlined text-[18px]">edit</span>
                   </button>
@@ -202,7 +199,7 @@ export const TagsPage: React.FC = () => {
                       e.stopPropagation();
                       handleDeleteTag(tag);
                     }}
-                    aria-label="删除"
+                    aria-label={t('删除')}
                   >
                     <span className="material-symbols-outlined text-[18px]">delete</span>
                   </button>
@@ -216,7 +213,7 @@ export const TagsPage: React.FC = () => {
             {selectedTagId === tag.id && (
               <div className="px-4 pb-4">
                 {filteredBooks.length === 0 ? (
-                  <p className="font-body text-body-sm text-on-surface-variant py-2">暂无关联书籍</p>
+                  <p className="font-body text-body-sm text-on-surface-variant py-2">{t('暂无关联书籍')}</p>
                 ) : (
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
                     {filteredBooks.map((book) => (
@@ -256,14 +253,14 @@ export const TagsPage: React.FC = () => {
 
       <ConfirmDialog
         isOpen={pendingDeleteTag !== null}
-        title={`移除分类「${pendingDeleteTag?.name ?? ''}」？`}
+        title={t('移除分类「{{arg1}}」？', { arg1: pendingDeleteTag?.name ?? '' })}
         message={
           pendingDeleteTag
-            ? `挂在 ${getBooksByTag(pendingDeleteTag.id).length} 本书上的这个分类会一并摘下，书不受影响。`
+            ? t('挂在 {{arg1}} 本书上的这个分类会一并摘下，书不受影响。', { arg1: getBooksByTag(pendingDeleteTag.id).length })
             : ''
         }
-        confirmLabel="移除"
-        cancelLabel="留下"
+        confirmLabel={t('移除')}
+        cancelLabel={t('留下')}
         variant="danger"
         onConfirm={() => void confirmDeleteTag()}
         onCancel={() => setPendingDeleteTag(null)}

@@ -2,6 +2,9 @@ import React from 'react';
 
 import { createRoot } from 'react-dom/client';
 
+// i18n 底座先于一切 UI 模块加载（全局 t 依赖 init 副作用；zh 缺省即显示中文 key）
+import '@/i18n';
+
 import { registerStatsApplier } from '@/services/cloudSync';
 import { useStatsStore } from '@/stores/useStatsStore';
 import { initNativeFeatures } from '@/utils/capacitor';

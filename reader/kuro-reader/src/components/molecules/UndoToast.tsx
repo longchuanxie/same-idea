@@ -1,5 +1,7 @@
 import React from 'react';
 
+import { t } from '@/i18n';
+
 interface UndoToastProps {
   message: string;
   onUndo?: () => void;
@@ -8,7 +10,7 @@ interface UndoToastProps {
 }
 
 /** 底部轻提示；提供 onUndo 时附带动作按钮（由调用方负责定时隐藏） */
-export const UndoToast: React.FC<UndoToastProps> = ({ message, onUndo, actionLabel = '撤销' }) => (
+export const UndoToast: React.FC<UndoToastProps> = ({ message, onUndo, actionLabel = t('撤销') }) => (
   <div
     className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[70] animate-fade-in"
     role="status"

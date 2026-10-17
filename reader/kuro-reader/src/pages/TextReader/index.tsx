@@ -11,6 +11,7 @@ import { ChapterEndPrompt } from '@/components/molecules/ChapterEndPrompt';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
 import { InBookSearchPanel } from '@/components/molecules/InBookSearchPanel';
 import { MarkdownReaderContent } from '@/components/molecules/MarkdownReaderContent';
+import { SanitizeConfirmDialog } from '@/components/molecules/SanitizeConfirmDialog';
 import { SelectionFloatingButton } from '@/components/molecules/SelectionFloatingButton';
 import { SpeechBadge } from '@/components/molecules/SpeechBadge';
 import { TextProgressHint } from '@/components/molecules/TextProgressHint';
@@ -43,6 +44,7 @@ import { useSpeech } from '@/hooks/useSpeech';
 import { useTextProgressSaving } from '@/hooks/useTextProgressSaving';
 import { useTextSelection, type TextSelectionInfo } from '@/hooks/useTextSelection';
 import { useWakeLock } from '@/hooks/useWakeLock';
+import { t } from '@/i18n';
 import { isProviderConfigured } from '@/services/ai/aiClient';
 import { translateSelection } from '@/services/ai/translation';
 import { lookupWord, type VocabLookupResult } from '@/services/ai/vocabLookup';
@@ -56,7 +58,8 @@ import {
 import { annotationRepo } from '@/services/storage/annotationRepo';
 import { bookmarkRepo } from '@/services/storage/bookmarkRepo';
 import { vocabRepo, vocabEntryId } from '@/services/storage/vocabRepo';
-import { loadTextContent, resolveTextChapterIndex, type TextChapter } from '@/services/textContent';
+import { recordUsageSignal } from '@/services/telemetry/usageSignals';
+import { loadTextContentDetailed, resolveTextChapterIndex, type TextChapter } from '@/services/textContent';
 import { isPiperDownloading, normalizePiperDownloadPercent, piperModelStored, preloadPiperModel, PROGRESS_INDETERMINATE, subscribePiperDownloadProgress } from '@/services/tts/piperEngine';
 import {
   clearTtsPlaybackNotification,
@@ -180,8 +183,8 @@ const BLOCKQUOTE_TEXT_INSET_PX = 20; // border-l-4(4px) + pl-4(16px)
 const LIST_MARKER_GUTTER_BASE_PX = 16; // list-item 标记槽首层 1rem
 const LIST_MARKER_GUTTER_STEP_PX = 20; // 每层嵌套加 1.25rem
 const TEXT_CHAPTER_END_PROMPT_LABELS = {
-  title: '\u5df2\u8bfb\u5b8c\u672c\u7ae0',
-  action: '\u7ee7\u7eed\u4e0b\u4e00\u7ae0',
+  title: t('已读完本章'),
+  action: t('继续下一章'),
 } as const;
 
 const getCurrentTextPageLayout = (isColumnsLayoutActive: boolean) => getTextPageLayout({
@@ -472,7 +475,7 @@ export const TextReaderPage: React.FC = () => {
   });
 
   const book = bookId ? getBookById(bookId) : undefined;
-  const title = book?.title ?? '未知书籍';
+  const title = book?.title ?? t('未知书籍');
   const currentChapter = chapters[currentChapterIndex];
   const hasMultipleChapters = chapters.length > 1;
 
@@ -633,6 +636,9 @@ export const TextReaderPage: React.FC = () => {
     return filters.length > 0 ? filters.join(' ') : undefined;
   }, [brightness, colorTemperature]);
 
+  // 净化确认门：pending 命中（detect 模式）→ 弹「立即净化 / 暂不 / 本书不再提示」
+  const [sanitizePrompt, setSanitizePrompt] = useState<{ hitCount: number; samples: string[] } | null>(null);
+
   // 加载文本内容
   useEffect(() => {
     if (!bookId) return;
@@ -642,12 +648,16 @@ export const TextReaderPage: React.FC = () => {
     }
     let cancelled = false;
     setIsLoading(true);
-    loadTextContent(bookId).then(({ chapters: loadedChapters, isEpub: epub, isMarkdown: markdown }) => {
+    loadTextContentDetailed(bookId).then(({ chapters: loadedChapters, isEpub: epub, isMarkdown: markdown, sanitize: sanitizeStatus }) => {
       if (cancelled) return;
       setChapters(loadedChapters);
       setIsEpub(epub);
       setIsMarkdown(markdown);
       setIsLoading(false);
+      // A 类广告规则按书确认门：detect 模式命中待决 → 弹「立即净化」确认（B 类排版已直接生效）
+      if (sanitizeStatus.pendingAdHitCount > 0) {
+        setSanitizePrompt({ hitCount: sanitizeStatus.pendingAdHitCount, samples: sanitizeStatus.adSamples });
+      }
       // 加载完成后自动显示 UI 3 秒
       setUiVisible(true);
       if (uiAutoHideTimerRef.current) clearTimeout(uiAutoHideTimerRef.current);
@@ -657,7 +667,7 @@ export const TextReaderPage: React.FC = () => {
       }, UI_AUTO_HIDE_AFTER_LOAD_MS);
     }).catch(() => {
       if (cancelled) return;
-      setChapters([{ id: 'ch1', title: '正文', content: '加载失败' }]);
+      setChapters([{ id: 'ch1', title: t('正文'), content: t('加载失败') }]);
       setIsLoading(false);
     });
     return () => { cancelled = true };
@@ -674,6 +684,31 @@ export const TextReaderPage: React.FC = () => {
       toastTimerRef.current = null;
     }, undo ? UNDO_TOAST_AUTO_HIDE_MS : HINT_TOAST_AUTO_HIDE_MS);
   }, []);
+
+  // 净化确认门动作：确认后 rev 已变（ads pending→on），重走唯一出口缓存自动重算
+  const handleSanitizeConfirm = useCallback(async () => {
+    if (!sanitizePrompt || !bookId) return;
+    const { hitCount } = sanitizePrompt;
+    setSanitizePrompt(null);
+    await useLibraryStore.getState().applyContentSanitize(bookId);
+    setIsLoading(true);
+    loadTextContentDetailed(bookId).then(({ chapters: purifiedChapters }) => {
+      setChapters(purifiedChapters);
+      setIsLoading(false);
+      showToast(t('已净化 {{count}} 处疑似广告', { count: hitCount }));
+    }).catch(() => setIsLoading(false));
+  }, [sanitizePrompt, bookId, showToast]);
+
+  const handleSanitizeCancel = useCallback(() => {
+    if (sanitizePrompt && bookId) recordUsageSignal('sanitize-dismissed', { bookId });
+    setSanitizePrompt(null);
+  }, [sanitizePrompt, bookId]);
+
+  const handleSanitizeDisable = useCallback(() => {
+    if (!bookId) return;
+    setSanitizePrompt(null);
+    void useLibraryStore.getState().disableContentSanitize(bookId);
+  }, [bookId]);
 
   // 按书偏好恢复每本书只执行一次：本 effect 依赖 textReadingMode，若每次依赖变化都覆盖，
   // 用户刚切换的模式会被书内旧值当场回滚（切换不立即落进度，旧值仍在 readingProgress 里）
@@ -2107,7 +2142,7 @@ export const TextReaderPage: React.FC = () => {
     await bookmarkRepo.remove(id);
     setBookmarks((prev) => prev.filter((b) => b.id !== id));
     if (deleted) {
-      showToast('已删除书签', () => {
+      showToast(t('已删除书签'), () => {
         // 撤销以新 createdAt 重存：云同步 LWW 里「晚于墓碑的记录胜出」，
         // 原样写回会被自己的删除墓碑在下次同步再次删掉（同 Vocabulary 判例）
         bookmarkRepo.add({ ...deleted, createdAt: new Date() }).then(() => {
@@ -2219,7 +2254,7 @@ export const TextReaderPage: React.FC = () => {
     const { settings: s } = useAppStore.getState();
     const config = { baseUrl: s.knowledgeAiUrl, apiKey: s.knowledgeAiKey, model: s.knowledgeAiModel };
     if (!isProviderConfigured(config)) {
-      showToast(COPY.vocab.aiNotConfigured, () => navigate(settingsPath('ai')), '去设置');
+      showToast(COPY.vocab.aiNotConfigured, () => navigate(settingsPath('ai')), t('去设置'));
       return;
     }
     const chapterIndex = resolveSelectionChapterIndex(sel);
@@ -2300,7 +2335,7 @@ export const TextReaderPage: React.FC = () => {
     const { settings: s } = useAppStore.getState();
     const config = { baseUrl: s.knowledgeAiUrl, apiKey: s.knowledgeAiKey, model: s.knowledgeAiModel };
     if (!isProviderConfigured(config)) {
-      showToast(COPY.translate.aiNotConfigured, () => navigate(settingsPath('ai')), '去设置');
+      showToast(COPY.translate.aiNotConfigured, () => navigate(settingsPath('ai')), t('去设置'));
       return;
     }
     const position = {
@@ -2379,7 +2414,7 @@ export const TextReaderPage: React.FC = () => {
     await annotationRepo.remove(id);
     setAnnotations((prev) => prev.filter((a) => a.id !== id));
     if (deleted) {
-      showToast('已删除批注', () => {
+      showToast(t('已删除批注'), () => {
         // 撤销以新 updatedAt 重存：原样写回会输给自身删除墓碑被云同步再次删除
         // （同 Vocabulary/书签判例）；createdAt 保留原值，列表排序不漂移
         annotationRepo.add({ ...deleted, updatedAt: new Date() }).then(() => {
@@ -2516,7 +2551,7 @@ export const TextReaderPage: React.FC = () => {
       <div className="bg-background text-on-background min-h-[100dvh] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <span className="material-symbols-outlined text-primary text-4xl animate-spin">progress_activity</span>
-          <p className="font-body text-body-md text-on-surface-variant">加载中...</p>
+          <p className="font-body text-body-md text-on-surface-variant">{t('加载中...')}</p>
         </div>
       </div>
     );
@@ -2899,7 +2934,7 @@ export const TextReaderPage: React.FC = () => {
                 <article data-reader-article className={articleClassName} style={articleStyle}>
                   <div className="text-center text-on-surface-variant py-24">
                     <span className="material-symbols-outlined text-6xl block mb-4">description</span>
-                    <p>暂无内容</p>
+                    <p>{t('暂无内容')}</p>
                   </div>
                 </article>
               );
@@ -2932,9 +2967,7 @@ export const TextReaderPage: React.FC = () => {
                       verticalWriting ? '' : 'max-w-[680px] mx-auto'
                     )}
                     style={{ color: effectiveColor }}
-                  >
-                    —— 全书完 ——
-                  </div>
+                  >{t('—— 全书完 ——')}</div>
                 )}
               </>
             );
@@ -3040,14 +3073,14 @@ export const TextReaderPage: React.FC = () => {
             <div className="w-full h-[100dvh] flex items-center justify-center">
               <div className="flex flex-col items-center gap-4">
                 <span className="material-symbols-outlined text-4xl animate-spin opacity-50">progress_activity</span>
-                <p className="opacity-50">加载中...</p>
+                <p className="opacity-50">{t('加载中...')}</p>
               </div>
             </div>
           ) : (
             <div className="w-full h-[100dvh] flex items-center justify-center">
               <div className="flex flex-col items-center gap-4">
                 <span className="material-symbols-outlined text-4xl opacity-50">description</span>
-                <p className="opacity-50">暂无内容</p>
+                <p className="opacity-50">{t('暂无内容')}</p>
               </div>
             </div>
           )}
@@ -3078,12 +3111,12 @@ export const TextReaderPage: React.FC = () => {
         <div
           className="fixed bottom-gutter left-margin-mobile z-toast pointer-events-none mb-safe animate-fade-in"
           role="status"
-          aria-label={neuralDownloadPercent === PROGRESS_INDETERMINATE ? '语音包下载中' : `语音包下载中 ${neuralDownloadPercent}%`}
+          aria-label={neuralDownloadPercent === PROGRESS_INDETERMINATE ? t('语音包下载中') : t('语音包下载中 {{neuralDownloadPercent}}%', { neuralDownloadPercent: neuralDownloadPercent })}
         >
           <div className="bg-on-surface/50 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-2">
             <span className="material-symbols-outlined text-label-sm text-surface animate-spin">progress_activity</span>
             <span className="font-label text-label-sm text-surface tabular-nums">
-              {neuralDownloadPercent === PROGRESS_INDETERMINATE ? '语音包下载中' : `语音包下载 ${neuralDownloadPercent}%`}
+              {neuralDownloadPercent === PROGRESS_INDETERMINATE ? t('语音包下载中') : t('语音包下载 {{neuralDownloadPercent}}%', { neuralDownloadPercent: neuralDownloadPercent })}
             </span>
           </div>
         </div>
@@ -3239,7 +3272,7 @@ export const TextReaderPage: React.FC = () => {
             useAppStore.getState().updateSettings({ textReadingMode: mode });
             setCurrentPageIndex(0);
             if (mode === 'columns' && !isLandscapeViewport) {
-              showToast('双栏阅读需要横屏，旋转设备后生效');
+              showToast(t('双栏阅读需要横屏，旋转设备后生效'));
             }
           }}
           ttsEngine={settings.ttsEngine}
@@ -3255,19 +3288,29 @@ export const TextReaderPage: React.FC = () => {
 
       {toast && <UndoToast message={toast.message} onUndo={toast.undo} actionLabel={toast.actionLabel} />}
 
+      {/* 原文净化确认门（首开检测到疑似广告时） */}
+      <SanitizeConfirmDialog
+        isOpen={sanitizePrompt !== null}
+        hitCount={sanitizePrompt?.hitCount ?? 0}
+        samples={sanitizePrompt?.samples ?? []}
+        onConfirm={() => void handleSanitizeConfirm()}
+        onCancel={handleSanitizeCancel}
+        onDisable={handleSanitizeDisable}
+      />
+
       {/* 神经网络音色包首次下载确认 */}
       <ConfirmDialog
         isOpen={pendingNeuralConfirm}
-        title="下载离线语音包"
-        message="神经网络语音需先下载约 60-80MB 的中文音色包（仅下载一次，之后可离线使用）。是否继续？"
-        confirmLabel="下载并启用"
+        title={t('下载离线语音包')}
+        message={t('神经网络语音需先下载约 60-80MB 的中文音色包（仅下载一次，之后可离线使用）。是否继续？')}
+        confirmLabel={t('下载并启用')}
         onConfirm={() => {
           setPendingNeuralConfirm(false);
           useAppStore.getState().updateSettings({ ttsEngine: 'neural' });
-          showToast('正在后台下载离线语音包，期间朗读先走系统语音');
+          showToast(t('正在后台下载离线语音包，期间朗读先走系统语音'));
           void preloadPiperModel()
-            .then(() => showToast('离线语音包已就绪，之后可离线朗读'))
-            .catch(() => showToast('语音包下载失败，将在下次朗读时自动重试'));
+            .then(() => showToast(t('离线语音包已就绪，之后可离线朗读')))
+            .catch(() => showToast(t('语音包下载失败，将在下次朗读时自动重试')));
         }}
         onCancel={() => {
           setPendingNeuralConfirm(false);

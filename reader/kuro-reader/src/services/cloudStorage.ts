@@ -1,5 +1,6 @@
 import axios from 'axios';
 
+import { t } from '@/i18n';
 import type { CloudSourceConfig } from '@/types';
 
 import { FTPClient } from './ftpClient';
@@ -113,6 +114,6 @@ export function createCloudClient(config: CloudSourceConfig): CloudStorageClient
     case 'ftp':
       return new FTPClient(config);
     default:
-      throw new Error(`不支持的协议: ${config.protocol}`);
+      throw new Error(t('不支持的协议: {{protocol}}', { protocol: config.protocol }));
   }
 }

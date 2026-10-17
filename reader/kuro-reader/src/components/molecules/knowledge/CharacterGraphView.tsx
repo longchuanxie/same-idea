@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react'
 
 import { PanZoom } from '@/components/molecules/knowledge/PanZoom'
+import { t } from '@/i18n';
 import type { CharacterGraphData, CharacterNode } from '@/types'
 import { computeForceLayout, graphNodeRadius } from '@/utils/graphLayout'
 import { knowledgeColor, PALETTE_TINT_ALPHA } from '@/utils/knowledgePalette'
@@ -30,7 +31,7 @@ interface CharacterGraphViewProps {
   selectedNodeId?: string | null
   onSelectNode?: (node: CharacterNode | null) => void
   /** 实体称谓（aria 文案用）：人物图谱=人物 / 概念图谱=概念 */
-  entityLabel?: '人物' | '概念'
+  entityLabel?: string
 }
 
 interface PositionedNode extends CharacterNode {
@@ -53,7 +54,7 @@ export const CharacterGraphView: React.FC<CharacterGraphViewProps> = ({
   data,
   selectedNodeId,
   onSelectNode,
-  entityLabel = '人物',
+  entityLabel = t('人物'),
 }) => {
   const baseLayout = useMemo(
     () => computeForceLayout(data.nodes, data.edges, CANVAS_WIDTH, CANVAS_HEIGHT),
@@ -119,14 +120,14 @@ export const CharacterGraphView: React.FC<CharacterGraphViewProps> = ({
   }
 
   return (
-    <PanZoom ariaLabel={`${entityLabel}关系图谱，可拖拽与缩放`} className="h-[68vh]" fitWidth={CANVAS_WIDTH} fitHeight={CANVAS_HEIGHT}>
+    <PanZoom ariaLabel={t('{{entityLabel}}关系图谱，可拖拽与缩放', { entityLabel: entityLabel })} className="h-[68vh]" fitWidth={CANVAS_WIDTH} fitHeight={CANVAS_HEIGHT}>
       <svg
         width={CANVAS_WIDTH}
         height={CANVAS_HEIGHT}
         viewBox={`0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`}
         className="touch-none"
         role="img"
-                aria-label={`${data.nodes.length} 个${entityLabel}的关系图`}
+                aria-label={t('{{arg1}} 个{{entityLabel}}的关系图', { arg1: data.nodes.length, entityLabel: entityLabel })}
       >
         {/* 关系边（压在节点下方） */}
         {data.edges.map((edge, index) => {

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { EntryReviseActions, VerifiedBadge } from '@/components/molecules/knowledge/ReviseControls';
 import { knowledgeSourcePath } from '@/constants/routes';
+import { t } from '@/i18n';
 import { recordUsageSignal } from '@/services/telemetry/usageSignals';
 import type { Book, ContributionStrength, KnowledgeEvidence, PaperBriefData } from '@/types';
 import type { BriefSection } from '@/utils/knowledgeEdit';
@@ -16,10 +17,10 @@ import type { BriefSection } from '@/utils/knowledgeEdit';
  */
 
 const STRENGTH_LABELS: Record<ContributionStrength, string> = {
-  experiment: '实验支撑',
-  theory: '理论证明',
-  partial: '部分支撑',
-  claim: '仅声称',
+  experiment: t('实验支撑'),
+  theory: t('理论证明'),
+  partial: t('部分支撑'),
+  claim: t('仅声称'),
 };
 
 /** 强度徽标的视觉分级：实底=硬证据，描边=软声称 */
@@ -96,10 +97,10 @@ export const PaperBriefView: React.FC<PaperBriefViewProps> = ({
     {data.tldr && (
       <div className="mb-5 rounded-card border border-outline-variant bg-surface-container-low p-4">
         <div className="flex items-center justify-between gap-2 mb-1">
-          <p className="font-label text-label-xs text-on-surface-faint">一句话速览</p>
+          <p className="font-label text-label-xs text-on-surface-faint">{t('一句话速览')}</p>
           {revising && onEditTldr && (
             <button
-              aria-label="改一句话速览"
+              aria-label={t('改一句话速览')}
               className="w-7 h-7 -mr-1 flex items-center justify-center rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors"
               onClick={onEditTldr}
             >
@@ -111,7 +112,7 @@ export const PaperBriefView: React.FC<PaperBriefViewProps> = ({
       </div>
     )}
 
-    <Section title="贡献点（按证据强度）" icon="verified" count={data.contributions.length}>
+    <Section title={t('贡献点（按证据强度）')} icon="verified" count={data.contributions.length}>
       <ul className="flex flex-col gap-2">
         {data.contributions.map((entry, index) => (
           <li key={`${entry.point}-${index}`} className="flex flex-col gap-1">
@@ -137,12 +138,12 @@ export const PaperBriefView: React.FC<PaperBriefViewProps> = ({
           </li>
         ))}
         {data.contributions.length === 0 && (
-          <li className="font-label text-label-sm text-on-surface-faint">文本中没有明确声称的贡献点</li>
+          <li className="font-label text-label-sm text-on-surface-faint">{t('文本中没有明确声称的贡献点')}</li>
         )}
       </ul>
     </Section>
 
-    <Section title="局限与软肋" icon="report_problem" count={data.limitations.length}>
+    <Section title={t('局限与软肋')} icon="report_problem" count={data.limitations.length}>
       <ul className="flex flex-col gap-2">
         {data.limitations.map((entry, index) => (
           <li key={`${entry.point}-${index}`} className="flex flex-col gap-1">
@@ -163,12 +164,12 @@ export const PaperBriefView: React.FC<PaperBriefViewProps> = ({
           </li>
         ))}
         {data.limitations.length === 0 && (
-          <li className="font-label text-label-sm text-on-surface-faint">文本中没有可见的局限陈述</li>
+          <li className="font-label text-label-sm text-on-surface-faint">{t('文本中没有可见的局限陈述')}</li>
         )}
       </ul>
     </Section>
 
-    <Section title="审稿人视角的疑问" icon="help" count={data.questions.length}>
+    <Section title={t('审稿人视角的疑问')} icon="help" count={data.questions.length}>
       <ul className="flex flex-col gap-2">
         {data.questions.map((entry, index) => (
           <li key={`${entry.question}-${index}`} className="flex flex-col gap-1">
@@ -189,7 +190,7 @@ export const PaperBriefView: React.FC<PaperBriefViewProps> = ({
           </li>
         ))}
         {data.questions.length === 0 && (
-          <li className="font-label text-label-sm text-on-surface-faint">没有生成疑问</li>
+          <li className="font-label text-label-sm text-on-surface-faint">{t('没有生成疑问')}</li>
         )}
       </ul>
     </Section>

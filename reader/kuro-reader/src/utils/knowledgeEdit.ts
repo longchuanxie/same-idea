@@ -8,6 +8,7 @@
  */
 
 import type {
+  ChapterSummaryData,
   CharacterEdge,
   CharacterGraphData,
   CharacterNode,
@@ -231,4 +232,62 @@ export function setStoryBeatVerified(
       beat.id === beatId ? { ...beat, verified: verified || undefined } : beat
     ),
   }
+}
+
+// ---------- 章节总结 ----------
+
+/** 定位到总结里的一条要点（段与要点双层索引），返回新数据；越界原样返回 */
+function mapSummaryPoint(
+  data: ChapterSummaryData,
+  sectionIndex: number,
+  pointIndex: number,
+  map: (point: ChapterSummaryData['sections'][number]['points'][number]) => ChapterSummaryData['sections'][number]['points'][number]
+): ChapterSummaryData {
+  return {
+    ...data,
+    sections: data.sections.map((section, sIndex) =>
+      sIndex !== sectionIndex
+        ? section
+        : {
+            ...section,
+            points: section.points.map((point, pIndex) => (pIndex === pointIndex ? map(point) : point)),
+          }
+    ),
+  }
+}
+
+export function patchSummaryPoint(
+  data: ChapterSummaryData,
+  sectionIndex: number,
+  pointIndex: number,
+  text: string
+): ChapterSummaryData {
+  return mapSummaryPoint(data, sectionIndex, pointIndex, (point) => ({ ...point, text }))
+}
+
+export function removeSummaryPoint(
+  data: ChapterSummaryData,
+  sectionIndex: number,
+  pointIndex: number
+): ChapterSummaryData {
+  return {
+    ...data,
+    sections: data.sections
+      .map((section, sIndex) =>
+        sIndex !== sectionIndex ? section : { ...section, points: section.points.filter((_, pIndex) => pIndex !== pointIndex) }
+      )
+      .filter((section) => section.points.length > 0),
+  }
+}
+
+export function setSummaryPointVerified(
+  data: ChapterSummaryData,
+  sectionIndex: number,
+  pointIndex: number,
+  verified: boolean
+): ChapterSummaryData {
+  return mapSummaryPoint(data, sectionIndex, pointIndex, (point) => ({
+    ...point,
+    verified: verified || undefined,
+  }))
 }

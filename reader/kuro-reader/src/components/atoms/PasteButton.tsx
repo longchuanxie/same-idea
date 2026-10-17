@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 
 import { COPY } from '@/constants/copy';
+import { t } from '@/i18n';
 import { readTextFromClipboard } from '@/utils/clipboard';
 import { toast } from '@/utils/toast';
 
@@ -38,8 +39,8 @@ export const PasteButton: React.FC<PasteButtonProps> = ({ onPaste }) => {
     <button
       type="button"
       className="btn-icon absolute right-1 top-1/2 h-9 w-9 -translate-y-1/2"
-      aria-label="粘贴"
-      title="粘贴"
+      aria-label={t('粘贴')}
+      title={t('粘贴')}
       onClick={() => void handlePaste()}
       disabled={pasting}
     >

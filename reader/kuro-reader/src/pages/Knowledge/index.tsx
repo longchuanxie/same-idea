@@ -12,9 +12,11 @@ import { KnowledgeEntryEditDialog, type EditFieldDef } from '@/components/molecu
 import { MindmapView } from '@/components/molecules/knowledge/MindmapView'
 import { PaperBriefView } from '@/components/molecules/knowledge/PaperBriefView'
 import { EntryReviseActions, VerifiedBadge } from '@/components/molecules/knowledge/ReviseControls'
+import { SummaryView } from '@/components/molecules/knowledge/SummaryView'
 import { COPY } from '@/constants/copy'
 import { ROUTES, bookDetailPath, knowledgeSourcePath, settingsPath } from '@/constants/routes'
 import { useHistoryBack } from '@/hooks/useHistoryBack'
+import { t } from '@/i18n';
 import { isProviderConfigured } from '@/services/ai/aiClient'
 import { getKnowledgeTask } from '@/services/ai/knowledgeTasks'
 import { recordUsageSignal } from '@/services/telemetry/usageSignals'
@@ -23,6 +25,7 @@ import { useKnowledgeStore } from '@/stores/useKnowledgeStore'
 import { useLibraryStore } from '@/stores/useLibraryStore'
 import type {
   Book,
+  ChapterSummaryData,
   CharacterEdge,
   CharacterGraphData,
   CharacterNode,
@@ -42,18 +45,21 @@ import {
   patchGlossaryTerm,
   patchMindmapNode,
   patchStoryBeat,
+  patchSummaryPoint,
   removeBriefEntry,
   removeGraphEdge,
   removeGraphNode,
   removeGlossaryTerm,
   removeMindmapNode,
   removeStoryBeat,
+  removeSummaryPoint,
   setBriefEntryVerified,
   setGraphEdgeVerified,
   setGraphNodeVerified,
   setGlossaryTermVerified,
   setMindmapNodeVerified,
   setStoryBeatVerified,
+  setSummaryPointVerified,
   type BriefSection,
   type MindmapNodePath,
 } from '@/utils/knowledgeEdit'
@@ -79,6 +85,7 @@ type EditState =
   | { kind: 'briefEntry'; section: BriefSection; index: number }
   | { kind: 'mindmap'; path: MindmapNodePath; node: MindmapNodeData }
   | { kind: 'beat'; beat: StoryBeat }
+  | { kind: 'summaryPoint'; sectionIndex: number; pointIndex: number; text: string }
 
 function formatTimestamp(value: Date | string): string {
   const date = new Date(value)
@@ -87,9 +94,9 @@ function formatTimestamp(value: Date | string): string {
 
 /** 章节徽标文案：文本书按章节序号，PDF 按页码 */
 function chapterLabelOf(book: Book, chapterIndex: number): string {
-  if (book.format === 'pdf') return `第${chapterIndex + 1}页`
+  if (book.format === 'pdf') return t('第{{arg1}}页', { arg1: chapterIndex + 1 })
   const chapter = book.chapters?.[chapterIndex]
-  return chapter ? `第${chapter.number}章` : `第${chapterIndex + 1}章`
+  return chapter ? t('第{{number}}章', { number: chapter.number }) : t('第{{arg1}}章', { arg1: chapterIndex + 1 })
 }
 
 /** 按路径取导图节点（修订弹窗初值用；路径失效返回 null） */
@@ -173,6 +180,10 @@ export const KnowledgePage: React.FC = () => {
     () => (artifact?.type === 'story-beats' ? (artifact.data as StoryBeatsData) : null),
     [artifact]
   )
+  const chapterSummary = useMemo(
+    () => (artifact?.type === 'chapter-summary' ? (artifact.data as ChapterSummaryData) : null),
+    [artifact]
+  )
   const selectedNode = useMemo(
     () => graph?.nodes.find((node) => node.id === selectedNodeId) ?? null,
     [graph, selectedNodeId]
@@ -207,10 +218,8 @@ export const KnowledgePage: React.FC = () => {
       <div className="paper-texture min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <span className="material-symbols-outlined text-on-surface-variant text-6xl">search_off</span>
-          <p className="font-body text-body-md text-on-surface-variant">这个知识件不存在，或已随书本移出馆藏</p>
-          <Button variant="secondary" onClick={() => historyBack(bookId && book ? bookDetailPath(book.id) : ROUTES.LIBRARY)}>
-            返回
-          </Button>
+          <p className="font-body text-body-md text-on-surface-variant">{t('这个知识件不存在，或已随书本移出馆藏')}</p>
+          <Button variant="secondary" onClick={() => historyBack(bookId && book ? bookDetailPath(book.id) : ROUTES.LIBRARY)}>{t('返回')}</Button>
         </div>
       </div>
     )
@@ -235,13 +244,16 @@ export const KnowledgePage: React.FC = () => {
   const doRegenerate = async () => {
     setSelectedNodeId(null)
     setRevising(false)
-    const ok = await generateArtifact(book, artifact.type)
-    if (ok) toast(`${task.label}已重新生成`)
+    // 沿用生成时圈定的章节范围：范围件（第30-60章的总结/图谱）重生成仍是原范围，
+    // 不悄悄升级成全书——既符合预期也省 token
+    const regenerateOptions = artifact.meta?.scope ? { scope: artifact.meta.scope } : undefined
+    const ok = await generateArtifact(book, artifact.type, regenerateOptions)
+    if (ok) toast(t('{{label}}已重新生成', { label: task.label }))
   }
 
   const handleRegenerate = async () => {
     if (!aiReady) {
-      toast('先到设置里配好知识库 AI 服务，再重新生成')
+      toast(t('先到设置里配好知识库 AI 服务，再重新生成'))
       navigate(settingsPath('ai'))
       return
     }
@@ -305,6 +317,11 @@ export const KnowledgePage: React.FC = () => {
           })
         )
         break
+      case 'summaryPoint':
+        revise((data) =>
+          patchSummaryPoint(data as ChapterSummaryData, target.sectionIndex, target.pointIndex, values.text)
+        )
+        break
     }
     toast(COPY.knowledgeEdit.revisedToast)
   }
@@ -333,6 +350,9 @@ export const KnowledgePage: React.FC = () => {
       case 'beat':
         revise((data) => removeStoryBeat(data as StoryBeatsData, target.beat.id))
         break
+      case 'summaryPoint':
+        revise((data) => removeSummaryPoint(data as ChapterSummaryData, target.sectionIndex, target.pointIndex))
+        break
       case 'briefTldr':
         break
     }
@@ -345,11 +365,11 @@ export const KnowledgePage: React.FC = () => {
     switch (editState.kind) {
       case 'node':
         return editDialogInfo(
-          `修订「${editState.node.name}」`,
+          t('修订「{{arg1}}」', { arg1: editState.node.name }),
           [
-            { key: 'name', label: '名字', required: true },
-            { key: 'role', label: '身份' },
-            { key: 'description', label: '小传', multiline: true },
+            { key: 'name', label: t('名字'), required: true },
+            { key: 'role', label: t('身份') },
+            { key: 'description', label: t('小传'), multiline: true },
           ],
           {
             name: editState.node.name,
@@ -360,7 +380,7 @@ export const KnowledgePage: React.FC = () => {
         )
       case 'edge':
         return editDialogInfo(
-          `修订「${editState.edge.relation}」关系`,
+          t('修订「{{arg1}}」关系', { arg1: editState.edge.relation }),
           [
             { key: 'relation', label: COPY.knowledgeEdit.relationName, required: true },
             { key: 'description', label: COPY.knowledgeEdit.relationNote, multiline: true },
@@ -373,18 +393,18 @@ export const KnowledgePage: React.FC = () => {
         )
       case 'term':
         return editDialogInfo(
-          `修订术语「${editState.term.term}」`,
+          t('修订术语「{{arg1}}」', { arg1: editState.term.term }),
           [
-            { key: 'term', label: '术语', required: true },
-            { key: 'definition', label: '书中定义', multiline: true },
+            { key: 'term', label: t('术语'), required: true },
+            { key: 'definition', label: t('书中定义'), multiline: true },
           ],
           { term: editState.term.term, definition: editState.term.definition ?? '' },
           true
         )
       case 'briefTldr':
         return editDialogInfo(
-          '修订一句话速览',
-          [{ key: 'tldr', label: '速览', multiline: true, required: true }],
+          t('修订一句话速览'),
+          [{ key: 'tldr', label: t('速览'), multiline: true, required: true }],
           { tldr: paperBrief?.tldr ?? '' },
           false
         )
@@ -394,30 +414,37 @@ export const KnowledgePage: React.FC = () => {
             ? paperBrief[editState.section][editState.index]?.point
             : paperBrief?.questions[editState.index]?.question
         return editDialogInfo(
-          '修订要点',
-          [{ key: 'text', label: '内容', multiline: true, required: true }],
+          t('修订要点'),
+          [{ key: 'text', label: t('内容'), multiline: true, required: true }],
           { text: entryText ?? '' },
           true
         )
       }
       case 'mindmap':
         return editDialogInfo(
-          `修订「${editState.node.title}」`,
+          t('修订「{{arg1}}」', { arg1: editState.node.title }),
           [
-            { key: 'title', label: '标题', required: true },
-            { key: 'detail', label: '补充', multiline: true },
+            { key: 'title', label: t('标题'), required: true },
+            { key: 'detail', label: t('补充'), multiline: true },
           ],
           { title: editState.node.title, detail: editState.node.detail ?? '' },
           true
         )
       case 'beat':
         return editDialogInfo(
-          `修订节拍「${editState.beat.title}」`,
+          t('修订节拍「{{arg1}}」', { arg1: editState.beat.title }),
           [
-            { key: 'title', label: '事件名', required: true },
-            { key: 'detail', label: '说明', multiline: true },
+            { key: 'title', label: t('事件名'), required: true },
+            { key: 'detail', label: t('说明'), multiline: true },
           ],
           { title: editState.beat.title, detail: editState.beat.detail ?? '' },
+          true
+        )
+      case 'summaryPoint':
+        return editDialogInfo(
+          t('修订要点'),
+          [{ key: 'text', label: t('内容'), multiline: true, required: true }],
+          { text: editState.text },
           true
         )
     }
@@ -438,11 +465,11 @@ export const KnowledgePage: React.FC = () => {
             onClick={() => {
               setShowMoreMenu(false)
               exportKnowledgeArtifactMarkdown(book.title, artifact)
-              toast('已导出 Markdown')
+              toast(t('已导出 Markdown'))
             }}
           >
             <span className="material-symbols-outlined text-icon-md">ios_share</span>
-            <span className="font-label text-label-md">导出 Markdown</span>
+            <span className="font-label text-label-md">{t('导出 Markdown')}</span>
           </button>
           <button
             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-container transition-colors text-on-surface-variant hover:text-primary disabled:opacity-40"
@@ -453,7 +480,7 @@ export const KnowledgePage: React.FC = () => {
             }}
           >
             <span className="material-symbols-outlined text-icon-md">refresh</span>
-            <span className="font-label text-label-md">重新生成</span>
+            <span className="font-label text-label-md">{t('重新生成')}</span>
           </button>
           <div className="border-t border-outline-variant my-1" />
           <button
@@ -464,7 +491,7 @@ export const KnowledgePage: React.FC = () => {
             }}
           >
             <span className="material-symbols-outlined text-icon-md">delete</span>
-            <span className="font-label text-label-md">删除此知识件</span>
+            <span className="font-label text-label-md">{t('删除此知识件')}</span>
           </button>
         </div>
       )}
@@ -478,27 +505,22 @@ export const KnowledgePage: React.FC = () => {
             </span>
             {task.label} ·{' '}
             {artifact.meta?.bookChapterCount != null && artifact.meta.chapterCount < artifact.meta.bookChapterCount
-              ? `已分析 ${artifact.meta.chapterCount}/${artifact.meta.bookChapterCount} 章`
-              : `覆盖 ${artifact.meta?.chapterCount ?? '—'} 章`}
+              ? t('已分析 {{arg1}}/{{arg2}} 章', { arg1: artifact.meta.chapterCount, arg2: artifact.meta.bookChapterCount })
+              : t('覆盖 {{arg1}} 章', { arg1: artifact.meta?.chapterCount ?? '—' })}
             {artifact.meta?.scope && (
-              <span>
-                （第 {(artifact.meta.scope.from ?? 0) + 1}-{(artifact.meta.scope.to ?? 0) + 1} 章）
-              </span>
+              <span>{t('（第')}{(artifact.meta.scope.from ?? 0) + 1}-{(artifact.meta.scope.to ?? 0) + 1}{t('章）')}</span>
             )}
-            {artifact.meta?.detail === 'core' && <span>· 核心版</span>}
-            {artifact.meta?.detail === 'rich' && <span>· 详尽版</span>}
+            {artifact.meta?.detail === 'core' && <span>{t('· 核心版')}</span>}
+            {artifact.meta?.detail === 'rich' && <span>{t('· 详尽版')}</span>}
           </span>
-          <span>{formatTimestamp(artifact.updatedAt)} 生成</span>
+          <span>{t('{{arg1}} 生成', { arg1: formatTimestamp(artifact.updatedAt) })}</span>
         </div>
 
         {/* 完整性告警：块被体量护栏截断时，分析不覆盖全书，必须显性提示 */}
         {artifact.meta?.totalChunkCount != null &&
           artifact.meta.totalChunkCount > (artifact.meta.analyzedChunkCount ?? 0) && (
             <div className="mb-3 rounded-card border border-seal/40 bg-seal-soft/40 p-3">
-              <p className="font-label text-label-sm text-seal-deep">
-                ⚠ 本次分析触达体量护栏：仅覆盖 {artifact.meta.analyzedChunkCount}/{artifact.meta.totalChunkCount} 块
-                （约 {artifact.meta.chapterCount} 章），不是完整分析。可回到档案卡用「起止章」分批生成其余部分。
-              </p>
+              <p className="font-label text-label-sm text-seal-deep">{t('⚠ 本次分析触达体量护栏：仅覆盖 {{arg1}}', { arg1: artifact.meta.analyzedChunkCount })}/{t('{{arg1}} 块 （约 {{arg2}} 章），不是完整分析。可回到档案卡用「起止章」分批生成其余部分。', { arg1: artifact.meta.totalChunkCount, arg2: artifact.meta.chapterCount })}</p>
             </div>
           )}
 
@@ -509,7 +531,7 @@ export const KnowledgePage: React.FC = () => {
               <p className="font-label text-label-sm text-seal-deep">{COPY.knowledgeEdit.reviseHint}</p>
             ) : (
               manualEdits > 0 && (
-                <p className="font-label text-label-sm text-on-surface-faint">含 {manualEdits} 处手工修订</p>
+                <p className="font-label text-label-sm text-on-surface-faint">{t('含 {{manualEdits}} 处手工修订', { manualEdits: manualEdits })}</p>
               )
             )}
             <button
@@ -524,7 +546,7 @@ export const KnowledgePage: React.FC = () => {
               <span className="material-symbols-outlined text-icon-sm">
                 {revising ? 'task_alt' : 'edit_note'}
               </span>
-              {revising ? '完成修订' : COPY.knowledgeEdit.revise}
+              {revising ? t('完成修订') : COPY.knowledgeEdit.revise}
             </button>
           </div>
         )}
@@ -532,19 +554,15 @@ export const KnowledgePage: React.FC = () => {
         {/* 排队中：任务已进后台队列（串行执行，可离开页面） */}
         {isQueued && (
           <div className="mb-3 flex items-center justify-between rounded-card border border-outline-variant bg-surface-container-low p-4">
-            <span className="font-label text-label-md text-on-surface-variant">
-              排队中
-              {generationState?.queuePosition != null && generationState.queuePosition > 1
-                ? ` · 第 ${generationState.queuePosition} 位`
+            <span className="font-label text-label-md text-on-surface-variant">{t('排队中')}{generationState?.queuePosition != null && generationState.queuePosition > 1
+                ? t(' · 第 {{queuePosition}} 位', { queuePosition: generationState.queuePosition })
                 : ''}
-              <span className="text-on-surface-faint"> · 退出页面也会继续</span>
+              <span className="text-on-surface-faint">{t('· 退出页面也会继续')}</span>
             </span>
             <button
               className="font-label text-label-sm text-on-surface-variant hover:text-seal transition-colors"
               onClick={() => cancelGeneration(book.id, artifact.type)}
-            >
-              取消
-            </button>
+            >{t('取消')}</button>
           </div>
         )}
 
@@ -552,15 +570,11 @@ export const KnowledgePage: React.FC = () => {
         {isRunning && (
           <div className="mb-3 rounded-card border border-outline-variant bg-surface-container-low p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="font-label text-label-md text-on-surface">
-                正在通读全书（{generationState.done}/{generationState.total} 段）…
-              </span>
+              <span className="font-label text-label-md text-on-surface">{t('正在通读全书（{{done}}', { done: generationState.done })}/{t('{{total}} 段）…', { total: generationState.total })}</span>
               <button
                 className="font-label text-label-sm text-on-surface-variant hover:text-seal transition-colors"
                 onClick={() => cancelGeneration(book.id, artifact.type)}
-              >
-                取消
-              </button>
+              >{t('取消')}</button>
             </div>
             <div className="h-1.5 rounded-full bg-surface-container-high overflow-hidden">
               <div
@@ -580,9 +594,7 @@ export const KnowledgePage: React.FC = () => {
             <button
               className="shrink-0 font-label text-label-md text-primary hover:opacity-80"
               onClick={() => void handleRegenerate()}
-            >
-              重试
-            </button>
+            >{t('重试')}</button>
           </div>
         )}
 
@@ -593,7 +605,7 @@ export const KnowledgePage: React.FC = () => {
               data={graph}
               selectedNodeId={selectedNodeId}
               onSelectNode={(node) => setSelectedNodeId(node?.id ?? null)}
-              entityLabel={artifact.type === 'concept-graph' ? '概念' : '人物'}
+              entityLabel={artifact.type === 'concept-graph' ? t('概念') : t('人物')}
             />
           ) : mindmap ? (
             <MindmapView
@@ -667,6 +679,26 @@ export const KnowledgePage: React.FC = () => {
                 })
               }
             />
+          ) : chapterSummary ? (
+            <SummaryView
+              data={chapterSummary}
+              book={book}
+              revising={revising}
+              onEditPoint={(sectionIndex, pointIndex) => {
+                const point = chapterSummary.sections[sectionIndex]?.points[pointIndex]
+                if (point) setEditState({ kind: 'summaryPoint', sectionIndex, pointIndex, text: point.text })
+              }}
+              onRemovePoint={(sectionIndex, pointIndex) => {
+                revise((data) => removeSummaryPoint(data as ChapterSummaryData, sectionIndex, pointIndex))
+                toast(COPY.knowledgeEdit.removedToast)
+              }}
+              onTogglePointVerified={(sectionIndex, pointIndex) =>
+                revise((data) => {
+                  const current = (data as ChapterSummaryData).sections[sectionIndex]?.points[pointIndex]
+                  return setSummaryPointVerified(data as ChapterSummaryData, sectionIndex, pointIndex, !current?.verified)
+                })
+              }
+            />
           ) : null}
         </div>
 
@@ -702,7 +734,7 @@ export const KnowledgePage: React.FC = () => {
                   />
                 )}
                 <button
-                  aria-label="收起卡片"
+                  aria-label={t('收起卡片')}
                   className="w-8 h-8 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container transition-colors"
                   onClick={() => setSelectedNodeId(null)}
                 >
@@ -719,7 +751,7 @@ export const KnowledgePage: React.FC = () => {
             {/* 出现章节：点击回原文 */}
             {selectedNodeChapterList.length > 0 && (
               <div className="flex flex-wrap items-center gap-1.5 mb-3">
-                <span className="font-label text-label-sm text-on-surface-faint">出现</span>
+                <span className="font-label text-label-sm text-on-surface-faint">{t('出现')}</span>
                 {selectedNodeChapterList.slice(0, CHAPTER_CHIPS_MAX).map((chapterIndex) => (
                   <button
                     key={chapterIndex}
@@ -733,9 +765,7 @@ export const KnowledgePage: React.FC = () => {
                   </button>
                 ))}
                 {selectedNodeChapterList.length > CHAPTER_CHIPS_MAX && (
-                  <span className="font-label text-label-sm text-on-surface-faint">
-                    等 {selectedNodeChapterList.length} 处
-                  </span>
+                  <span className="font-label text-label-sm text-on-surface-faint">{t('等 {{length}} 处', { length: selectedNodeChapterList.length })}</span>
                 )}
               </div>
             )}
@@ -764,7 +794,7 @@ export const KnowledgePage: React.FC = () => {
                         {revising && (
                           <span className="shrink-0 self-center">
                             <button
-                              aria-label={`改与${relation.counterpart}的关系`}
+                              aria-label={t('改与{{counterpart}}的关系', { counterpart: relation.counterpart })}
                               className="w-7 h-7 inline-flex items-center justify-center rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors align-middle"
                               onClick={() => {
                                 const edge = graph?.edges[relation.index]
@@ -774,7 +804,7 @@ export const KnowledgePage: React.FC = () => {
                               <span className="material-symbols-outlined text-icon-sm">edit</span>
                             </button>
                             <button
-                              aria-label={`删与${relation.counterpart}的关系`}
+                              aria-label={t('删与{{counterpart}}的关系', { counterpart: relation.counterpart })}
                               className="w-7 h-7 inline-flex items-center justify-center rounded-full text-on-surface-variant hover:text-seal hover:bg-seal-soft/50 transition-colors align-middle"
                               onClick={() => {
                                 revise((data) => removeGraphEdge(data as CharacterGraphData, relation.index))
@@ -807,8 +837,8 @@ export const KnowledgePage: React.FC = () => {
                         )}
                         {target && !revising && (
                           <button
-                            aria-label={`回到${relation.counterpart}相关原文`}
-                            title="回到原文"
+                            aria-label={t('回到{{counterpart}}相关原文', { counterpart: relation.counterpart })}
+                            title={t('回到原文')}
                             className="shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors"
                             onClick={() => {
                               recordUsageSignal('knowledge-back-to-source', { bookId: book.id })
@@ -857,9 +887,7 @@ export const KnowledgePage: React.FC = () => {
           className="fixed bottom-6 left-1/2 -translate-x-1/2 z-dialog flex items-center gap-2 px-5 py-2.5 rounded-full border border-seal/60 bg-surface-bright text-seal font-label text-label-md shadow-raised hover:bg-seal-soft/60 transition-colors"
           onClick={handleEditRemove}
         >
-          <span className="material-symbols-outlined text-icon-sm">delete</span>
-          删除这条
-        </button>
+          <span className="material-symbols-outlined text-icon-sm">delete</span>{t('删除这条')}</button>
       )}
 
       <ConfirmDialog
@@ -878,10 +906,10 @@ export const KnowledgePage: React.FC = () => {
 
       <ConfirmDialog
         isOpen={confirmDelete}
-        title={`删除「${artifact.title}」？`}
-        message="这个知识件会从馆藏中消失，可随时重新生成。"
-        confirmLabel="删除"
-        cancelLabel="留下"
+        title={t('删除「{{title}}」？', { title: artifact.title })}
+        message={t('这个知识件会从馆藏中消失，可随时重新生成。')}
+        confirmLabel={t('删除')}
+        cancelLabel={t('留下')}
         variant="danger"
         onConfirm={() => {
           setConfirmDelete(false)

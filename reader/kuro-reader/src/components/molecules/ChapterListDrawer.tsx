@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { t } from '@/i18n';
 import { cn } from '@/utils/cn';
 
 interface ChapterListDrawerProps {
@@ -20,7 +21,7 @@ export const ChapterListDrawer: React.FC<ChapterListDrawerProps> = ({
     <div className="absolute inset-0 bg-on-background/40 animate-fade-in" onClick={onClose} />
     <div className="relative w-[280px] max-w-[80vw] h-full bg-surface-bright shadow-raised animate-slide-left flex flex-col">
       <div className="flex items-center justify-between px-4 py-3 border-b border-outline-variant">
-        <h3 className="font-display text-headline-sm text-primary">章节目录</h3>
+        <h3 className="font-display text-headline-sm text-primary">{t('章节目录')}</h3>
         <button
           className="text-on-surface-variant hover:text-primary transition-colors w-11 h-11 flex items-center justify-center rounded-full hover:bg-surface-variant/50"
           onClick={onClose}
@@ -53,11 +54,10 @@ export const ChapterListDrawer: React.FC<ChapterListDrawerProps> = ({
                   isCurrentChapter ? 'text-primary font-medium' : 'text-on-surface'
                 )}
               >
-                {chapter.title || `第${idx + 1}话`}
+                {chapter.title || t('第{{arg1}}话', { arg1: idx + 1 })}
               </p>
               <p className="font-label text-label-sm text-on-surface-variant mt-0.5">
-                {chapter.pages.length} 页
-                {isCurrentChapter && ' · 当前'}
+                {t('{{arg1}} 页', { arg1: chapter.pages.length })}{isCurrentChapter && t(' · 当前')}
               </p>
             </button>
           );

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
+import { t } from '@/i18n';
 import type { OpdsEntry } from '@/services/opds';
 import { downloadOpdsBook, fetchOpdsFeed } from '@/services/opds';
 import type { Book } from '@/types';
@@ -57,7 +58,7 @@ export const OpdsBrowser: React.FC<OpdsBrowserProps> = ({
           });
         }
       } catch (e) {
-        setLoadError((e as Error).message || '目录读取失败');
+        setLoadError((e as Error).message || t('目录读取失败'));
       } finally {
         setIsLoading(false);
       }
@@ -89,7 +90,7 @@ export const OpdsBrowser: React.FC<OpdsBrowserProps> = ({
       const book = await onImportFile(file);
       if (book) setImportedTitle(book.title);
     } catch (e) {
-      setActionError((e as Error).message || '下载失败');
+      setActionError((e as Error).message || t('下载失败'));
     } finally {
       setBusyEntry(null);
     }
@@ -109,9 +110,7 @@ export const OpdsBrowser: React.FC<OpdsBrowserProps> = ({
             setTrail([]);
             openFeed(catalogUrl);
           }}
-        >
-          目录首页
-        </button>
+        >{t('目录首页')}</button>
         {trail.map((crumb, i) => (
           <React.Fragment key={crumb.url}>
             <span className="material-symbols-outlined text-icon-sm text-on-surface-variant">chevron_right</span>
@@ -135,7 +134,7 @@ export const OpdsBrowser: React.FC<OpdsBrowserProps> = ({
       {isLoading && (
         <div className="flex items-center justify-center gap-2 py-12 text-on-surface-variant">
           <span className="material-symbols-outlined animate-spin">progress_activity</span>
-          <span className="font-label text-label-sm">正在读取目录...</span>
+          <span className="font-label text-label-sm">{t('正在读取目录...')}</span>
         </div>
       )}
 
@@ -148,9 +147,7 @@ export const OpdsBrowser: React.FC<OpdsBrowserProps> = ({
           <button
             className="self-start font-label text-label-sm text-primary hover:opacity-80 transition-opacity"
             onClick={() => openFeed(currentUrl)}
-          >
-            重试
-          </button>
+          >{t('重试')}</button>
         </div>
       )}
 
@@ -179,10 +176,10 @@ export const OpdsBrowser: React.FC<OpdsBrowserProps> = ({
                   <span className="font-body text-body-md text-on-surface block truncate">{entry.title}</span>
                   <span className="font-label text-label-sm text-on-surface-variant block truncate">
                     {isBusy
-                      ? '下载并导入中...'
+                      ? t('下载并导入中...')
                       : entry.isCatalog
-                        ? entry.content ?? '子目录'
-                        : entry.acquisitions[0]?.type?.split(';')[0] ?? '出版物'}
+                        ? entry.content ?? t('子目录')
+                        : entry.acquisitions[0]?.type?.split(';')[0] ?? t('出版物')}
                   </span>
                 </span>
                 {entry.isCatalog && (
@@ -195,14 +192,12 @@ export const OpdsBrowser: React.FC<OpdsBrowserProps> = ({
             <button
               className="py-3 font-label text-label-sm text-primary hover:opacity-80 transition-opacity"
               onClick={handleLoadMore}
-            >
-              加载更多
-            </button>
+            >{t('加载更多')}</button>
           )}
           {!isLoading && entries.length === 0 && (
             <div className="text-center py-16">
               <span className="material-symbols-outlined text-5xl text-on-surface-variant block mb-3">rss_feed</span>
-              <p className="font-body text-body-md text-on-surface-variant">此目录为空</p>
+              <p className="font-body text-body-md text-on-surface-variant">{t('此目录为空')}</p>
             </div>
           )}
         </div>
@@ -212,7 +207,7 @@ export const OpdsBrowser: React.FC<OpdsBrowserProps> = ({
         <section className="border border-primary rounded-lg p-4 bg-surface-bright">
           <div className="flex items-center gap-3">
             <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-            <p className="font-body text-body-md text-primary">《{importedTitle}》导入成功，可在书架中查看</p>
+            <p className="font-body text-body-md text-primary">《{t('{{importedTitle}}》导入成功，可在书架中查看', { importedTitle: importedTitle })}</p>
           </div>
         </section>
       )}

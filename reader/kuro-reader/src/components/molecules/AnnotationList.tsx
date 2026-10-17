@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 
 import { COPY } from '@/constants/copy';
+import { t } from '@/i18n';
 import type { Annotation, AnnotationStyle, Bookmark } from '@/types';
 import { exportAnnotationsToMarkdown } from '@/utils/annotationExport';
 import { cn } from '@/utils/cn';
@@ -66,18 +67,18 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
   const getStyleInfo = (style?: AnnotationStyle) => {
     switch (style) {
       case 'underline':
-        return { icon: 'format_underlined', label: '下划线' };
+        return { icon: 'format_underlined', label: t('下划线') };
       case 'wavy':
-        return { icon: 'wave', label: '波浪线' };
+        return { icon: 'wave', label: t('波浪线') };
       case 'highlight':
       default:
-        return { icon: 'brush', label: '水彩笔' };
+        return { icon: 'brush', label: t('水彩笔') };
     }
   };
 
   const TABS: { key: ListTab; label: string; count: number }[] = [
-    { key: 'notes', label: '手记', count: annotations.length },
-    ...(hasBookmarkTab ? [{ key: 'bookmarks' as const, label: '书签', count: bookmarkList.length }] : []),
+    { key: 'notes', label: t('手记'), count: annotations.length },
+    ...(hasBookmarkTab ? [{ key: 'bookmarks' as const, label: t('书签'), count: bookmarkList.length }] : []),
   ];
 
   return (
@@ -93,7 +94,7 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
         {/* 标题栏：tab 切换 + 操作 */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-outline-variant/50">
           {hasBookmarkTab ? (
-            <div className="flex gap-4 flex-1 min-w-0" role="tablist" aria-label="手记与书签">
+            <div className="flex gap-4 flex-1 min-w-0" role="tablist" aria-label={t('手记与书签')}>
               {TABS.map(({ key, label, count }) => (
                 <button
                   key={key}
@@ -117,19 +118,18 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
               ))}
             </div>
           ) : (
-            <h3 className="font-display text-headline-sm text-primary">手记</h3>
+            <h3 className="font-display text-headline-sm text-primary">{t('手记')}</h3>
           )}
           <div className="flex items-center gap-2">
             {activeTab === 'notes' && annotations.length > 0 && (
               <>
                 <span className="font-label text-label-sm text-on-surface-variant opacity-60">
-                  {annotations.length} 条
-                </span>
+                  {t('{{length}} 条', { length: annotations.length })}</span>
                 <button
                   className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-variant transition-colors"
                   onClick={() => exportAnnotationsToMarkdown(bookTitle, undefined, annotations)}
-                  aria-label="导出手记为 Markdown"
-                  title="导出手记为 Markdown"
+                  aria-label={t('导出手记为 Markdown')}
+                  title={t('导出手记为 Markdown')}
                 >
                   <span className="material-symbols-outlined text-on-surface-variant text-icon-md">ios_share</span>
                 </button>
@@ -150,8 +150,8 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
             annotations.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 gap-3">
                 <span className="material-symbols-outlined text-on-surface-variant text-5xl opacity-40">edit_note</span>
-                <p className="font-body text-body-md text-on-surface-variant">墙上还没有手记</p>
-                <p className="font-label text-label-sm text-on-surface-faint">读的时候，长按一句话就能把它贴上来</p>
+                <p className="font-body text-body-md text-on-surface-variant">{t('墙上还没有手记')}</p>
+                <p className="font-label text-label-sm text-on-surface-faint">{t('读的时候，长按一句话就能把它贴上来')}</p>
               </div>
             ) : (
               <div className="py-2">
@@ -229,15 +229,11 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
                             <button
                               className="px-3 py-1 rounded font-label text-label-sm text-on-surface-variant hover:bg-surface-variant transition-colors"
                               onClick={() => { setEditingId(null); setEditNote(''); }}
-                            >
-                              取消
-                            </button>
+                            >{t('取消')}</button>
                             <button
                               className="btn-primary btn-sm px-3 py-1"
                               onClick={() => saveEdit(ann.id)}
-                            >
-                              保存
-                            </button>
+                            >{t('保存')}</button>
                           </div>
                         </div>
                       ) : (
@@ -271,8 +267,8 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
             bookmarkList.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 gap-3">
                 <span className="material-symbols-outlined text-on-surface-variant text-5xl opacity-40">bookmark_border</span>
-                <p className="font-body text-body-md text-on-surface-variant opacity-60">暂无书签</p>
-                <p className="font-label text-label-sm text-on-surface-variant opacity-40">点击顶栏书签按钮添加</p>
+                <p className="font-body text-body-md text-on-surface-variant opacity-60">{t('暂无书签')}</p>
+                <p className="font-label text-label-sm text-on-surface-variant opacity-40">{t('点击顶栏书签按钮添加')}</p>
               </div>
             ) : (
               <div className="py-2">
@@ -324,7 +320,7 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
                           )}
                           <div className="flex items-center gap-3 pl-6">
                             <span className="font-label text-label-sm text-on-surface-variant opacity-60">
-                              {bm.pageIndex != null ? `第 ${bm.pageIndex + 1} 页` : `${Math.round((bm.scrollRatio ?? 0) * 100)}%`}
+                              {bm.pageIndex != null ? t('第 {{arg1}} 页', { arg1: bm.pageIndex + 1 }) : `${Math.round((bm.scrollRatio ?? 0) * 100)}%`}
                             </span>
                             <span className="font-label text-label-sm text-on-surface-variant opacity-40">
                               {formatTime(bm.createdAt)}

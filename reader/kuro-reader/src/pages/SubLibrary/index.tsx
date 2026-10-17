@@ -6,6 +6,7 @@ import { BookCoverImage } from '@/components/atoms/BookCoverImage';
 import { FormatBadge } from '@/components/atoms/FormatBadge';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
 import { ROUTES, bookDetailPath } from '@/constants/routes';
+import { t } from '@/i18n';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 
 export const SubLibraryPage: React.FC = () => {
@@ -112,8 +113,8 @@ export const SubLibraryPage: React.FC = () => {
   const handleBatchDelete = async () => {
     if (selectedIds.size === 0) return;
     openConfirm(
-      '批量删除',
-      `确定要删除选中的 ${selectedIds.size} 本书籍吗？此操作不可恢复。`,
+      t('批量删除'),
+      t('确定要删除选中的 {{size}} 本书籍吗？此操作不可恢复。', { size: selectedIds.size }),
       async () => {
         await batchDelete(Array.from(selectedIds));
         if (subLibraryId) {
@@ -162,13 +163,11 @@ export const SubLibraryPage: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <span className="material-symbols-outlined text-on-surface-variant text-6xl">folder_off</span>
-          <p className="font-body text-body-md text-on-surface-variant">未找到该子书库</p>
+          <p className="font-body text-body-md text-on-surface-variant">{t('未找到该子书库')}</p>
           <button
             className="btn-secondary px-6 py-2"
             onClick={() => navigate(ROUTES.LIBRARY)}
-          >
-            返回书架
-          </button>
+          >{t('返回书架')}</button>
         </div>
       </div>
     );
@@ -178,7 +177,7 @@ export const SubLibraryPage: React.FC = () => {
     <div className="paper-texture min-h-screen pb-0">
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-outline-variant flex justify-between items-center w-full px-margin-mobile py-unit h-16 max-w-max-width-content mx-auto pt-safe">
         <button
-          aria-label="返回"
+          aria-label={t('返回')}
           className="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
           onClick={() => navigate(ROUTES.LIBRARY)}
         >
@@ -200,9 +199,7 @@ export const SubLibraryPage: React.FC = () => {
             <button
               className="text-primary font-label text-label-md"
               onClick={handleRename}
-            >
-              保存
-            </button>
+            >{t('保存')}</button>
           </div>
         ) : (
           <h1 className="font-display text-headline-md text-primary truncate max-w-[60%] text-center">
@@ -210,7 +207,7 @@ export const SubLibraryPage: React.FC = () => {
           </h1>
         )}
         <button
-          aria-label="编辑分组"
+          aria-label={t('编辑分组')}
           className="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
           onClick={isEditing ? handleRename : enterEditMode}
         >
@@ -221,24 +218,19 @@ export const SubLibraryPage: React.FC = () => {
       <main className="relative z-10 max-w-max-width-content mx-auto px-margin-mobile pt-8 pb-32">
         <div className="mb-8 flex items-center justify-between">
           <p className="font-label text-label-sm text-on-surface-variant uppercase tracking-widest">
-            {subLibBooks.length} 本藏书
-          </p>
+            {t('{{length}} 本藏书', { length: subLibBooks.length })}</p>
           {!isSelectMode && (
             <div className="flex gap-2">
               <button
                 className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1"
                 onClick={goImport}
               >
-                <span className="material-symbols-outlined text-lg">add</span>
-                导入
-              </button>
+                <span className="material-symbols-outlined text-lg">add</span>{t('导入')}</button>
               <button
                 className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1"
                 onClick={() => setIsSelectMode(true)}
               >
-                <span className="material-symbols-outlined text-lg">checklist</span>
-                管理
-              </button>
+                <span className="material-symbols-outlined text-lg">checklist</span>{t('管理')}</button>
               <button
                 className="font-label text-label-md text-on-surface-variant hover:text-error transition-colors flex items-center gap-1"
                 onClick={() => {
@@ -246,9 +238,7 @@ export const SubLibraryPage: React.FC = () => {
                   setShowDeleteDialog(true);
                 }}
               >
-                <span className="material-symbols-outlined text-lg">delete</span>
-                删除书库
-              </button>
+                <span className="material-symbols-outlined text-lg">delete</span>{t('删除书库')}</button>
             </div>
           )}
           {isSelectMode && (
@@ -256,15 +246,11 @@ export const SubLibraryPage: React.FC = () => {
               <button
                 className="font-label text-label-md text-primary hover:opacity-80 transition-opacity"
                 onClick={selectAll}
-              >
-                全选
-              </button>
+              >{t('全选')}</button>
               <button
                 className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors"
                 onClick={exitSelectMode}
-              >
-                取消
-              </button>
+              >{t('取消')}</button>
             </div>
           )}
         </div>
@@ -272,20 +258,16 @@ export const SubLibraryPage: React.FC = () => {
         {subLibBooks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
             <span className="material-symbols-outlined text-on-surface-variant text-6xl mb-4">folder_open</span>
-            <p className="font-body text-body-md text-on-surface-variant mb-6">此子书库暂无书籍</p>
+            <p className="font-body text-body-md text-on-surface-variant mb-6">{t('此子书库暂无书籍')}</p>
             <div className="flex gap-3">
               <button
                 className="btn-primary px-6 py-2"
                 onClick={goImport}
-              >
-                导入书籍
-              </button>
+              >{t('导入书籍')}</button>
               <button
                 className="btn-secondary px-6 py-2"
                 onClick={() => navigate(ROUTES.LIBRARY)}
-              >
-                去书架添加
-              </button>
+              >{t('去书架添加')}</button>
             </div>
           </div>
         ) : (
@@ -337,9 +319,7 @@ export const SubLibraryPage: React.FC = () => {
                       </div>
                     )}
                     {pct >= 100 && (
-                      <div className="absolute top-2 right-2 bg-background/90 px-2 py-0.5 border border-outline-variant rounded font-label text-[10px] text-primary">
-                        已读完
-                      </div>
+                      <div className="absolute top-2 right-2 bg-background/90 px-2 py-0.5 border border-outline-variant rounded font-label text-[10px] text-primary">{t('已读完')}</div>
                     )}
                   </div>
                   <div>
@@ -350,7 +330,7 @@ export const SubLibraryPage: React.FC = () => {
                       </h3>
                     </div>
                     <p className="font-label text-label-sm text-on-surface-variant mt-1">
-                      {pct > 0 ? `${pct}% 读完` : '未开始'}
+                      {pct > 0 ? t('{{pct}}% 读完', { pct: pct }) : t('未开始')}
                     </p>
                   </div>
                 </article>
@@ -370,7 +350,7 @@ export const SubLibraryPage: React.FC = () => {
             disabled={selectedIds.size === 0}
           >
             <span className="material-symbols-outlined group-hover:text-primary mb-1">delete</span>
-            <span className="font-label text-label-sm group-hover:text-primary">删除</span>
+            <span className="font-label text-label-sm group-hover:text-primary">{t('删除')}</span>
           </button>
           <button
             className={`flex flex-col items-center justify-center rounded-full px-4 py-2 transition-all group border-l border-outline-variant/50 pl-6 ${
@@ -380,7 +360,7 @@ export const SubLibraryPage: React.FC = () => {
             disabled={selectedIds.size === 0}
           >
             <span className="material-symbols-outlined group-hover:text-primary mb-1">done_all</span>
-            <span className="font-label text-label-sm group-hover:text-primary">标为已读</span>
+            <span className="font-label text-label-sm group-hover:text-primary">{t('标为已读')}</span>
           </button>
           <button
             className={`flex flex-col items-center justify-center rounded-full px-4 py-2 transition-all group border-l border-outline-variant/50 pl-6 ${
@@ -390,7 +370,7 @@ export const SubLibraryPage: React.FC = () => {
             disabled={selectedIds.size === 0}
           >
             <span className="material-symbols-outlined group-hover:text-primary mb-1">folder_off</span>
-            <span className="font-label text-label-sm group-hover:text-primary">移出</span>
+            <span className="font-label text-label-sm group-hover:text-primary">{t('移出')}</span>
           </button>
         </div>
       )}
@@ -398,10 +378,8 @@ export const SubLibraryPage: React.FC = () => {
       {showDeleteDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-on-background/40">
           <div className="bg-surface-bright border border-outline-variant rounded-lg p-6 mx-margin-mobile max-w-md w-full">
-            <h3 className="font-display text-headline-md text-primary mb-2">删除子书库</h3>
-            <p className="font-body text-body-md text-on-surface-variant mb-4">
-              确定要删除「{subLibrary.name}」吗？
-            </p>
+            <h3 className="font-display text-headline-md text-primary mb-2">{t('删除子书库')}</h3>
+            <p className="font-body text-body-md text-on-surface-variant mb-4">{t('确定要删除「{{name}}」吗？', { name: subLibrary.name })}</p>
             <label className="flex items-start gap-3 mb-6 cursor-pointer group">
               <input
                 type="checkbox"
@@ -410,11 +388,9 @@ export const SubLibraryPage: React.FC = () => {
                 className="mt-0.5 w-5 h-5 accent-error cursor-pointer"
               />
               <div>
-                <p className="font-label text-label-md text-on-surface group-hover:text-primary transition-colors">
-                  同时删除其中的 {subLibBooks.length} 本书籍
-                </p>
+                <p className="font-label text-label-md text-on-surface group-hover:text-primary transition-colors">{t('同时删除其中的 {{length}} 本书籍', { length: subLibBooks.length })}</p>
                 <p className="font-label text-label-sm text-on-surface-variant mt-0.5">
-                  {deleteBooksOnRemove ? '书籍将被永久删除，此操作不可恢复' : '仅移除分组关系，书籍保留在主书架'}
+                  {deleteBooksOnRemove ? t('书籍将被永久删除，此操作不可恢复') : t('仅移除分组关系，书籍保留在主书架')}
                 </p>
               </div>
             </label>
@@ -425,16 +401,14 @@ export const SubLibraryPage: React.FC = () => {
                   setShowDeleteDialog(false);
                   setDeleteBooksOnRemove(false);
                 }}
-              >
-                取消
-              </button>
+              >{t('取消')}</button>
               <button
                 className={`font-label text-label-md px-6 py-2 rounded hover:opacity-90 transition-colors ${
                   deleteBooksOnRemove ? 'bg-error text-on-error' : 'option-active'
                 }`}
                 onClick={handleDeleteSubLibrary}
               >
-                {deleteBooksOnRemove ? '删除书库及书籍' : '仅删除书库'}
+                {deleteBooksOnRemove ? t('删除书库及书籍') : t('仅删除书库')}
               </button>
             </div>
           </div>
@@ -448,8 +422,8 @@ export const SubLibraryPage: React.FC = () => {
         onConfirm={confirmDialog.onConfirm}
         onCancel={closeConfirm}
         variant={confirmDialog.variant}
-        confirmLabel="确认"
-        cancelLabel="取消"
+        confirmLabel={t('确认')}
+        cancelLabel={t('取消')}
       />
     </div>
   );

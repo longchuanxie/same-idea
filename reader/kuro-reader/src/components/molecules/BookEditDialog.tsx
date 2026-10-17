@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
+import { t } from '@/i18n';
 import type { Book } from '@/types';
 
 export interface BookEditDialogProps {
@@ -50,45 +51,45 @@ export const BookEditDialog: React.FC<BookEditDialogProps> = ({
         className="bg-surface-bright border border-outline-variant rounded-lg p-6 mx-margin-mobile max-w-md w-full max-h-[80vh] overflow-y-auto animate-scale-in"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="font-display text-headline-md text-primary mb-4">编辑书籍信息</h3>
+        <h3 className="font-display text-headline-md text-primary mb-4">{t('编辑书籍信息')}</h3>
 
         <div className="flex flex-col gap-4 mb-6">
           <div>
-            <label className="font-label text-label-sm text-on-surface-variant mb-1 block">标题</label>
+            <label className="font-label text-label-sm text-on-surface-variant mb-1 block">{t('标题')}</label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="书籍标题"
+              placeholder={t('书籍标题')}
               className="input-field"
               autoFocus
             />
           </div>
 
           <div>
-            <label className="font-label text-label-sm text-on-surface-variant mb-1 block">作者</label>
+            <label className="font-label text-label-sm text-on-surface-variant mb-1 block">{t('作者')}</label>
             <input
               type="text"
               value={author}
               onChange={(e) => setAuthor(e.target.value)}
-              placeholder="作者名称"
+              placeholder={t('作者名称')}
               className="input-field"
             />
           </div>
 
           <div>
-            <label className="font-label text-label-sm text-on-surface-variant mb-1 block">描述</label>
+            <label className="font-label text-label-sm text-on-surface-variant mb-1 block">{t('描述')}</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="书籍描述"
+              placeholder={t('书籍描述')}
               rows={3}
               className="input-field resize-none"
             />
           </div>
 
           <div>
-            <label className="font-label text-label-sm text-on-surface-variant mb-2 block">状态</label>
+            <label className="font-label text-label-sm text-on-surface-variant mb-2 block">{t('状态')}</label>
             <div className="flex gap-3">
               <button
                 className={`flex-1 py-2 px-4 rounded border font-label text-label-md transition-colors ${
@@ -97,9 +98,7 @@ export const BookEditDialog: React.FC<BookEditDialogProps> = ({
                     : 'option'
                 }`}
                 onClick={() => setStatus('ongoing')}
-              >
-                连载中
-              </button>
+              >{t('连载中')}</button>
               <button
                 className={`flex-1 py-2 px-4 rounded border font-label text-label-md transition-colors ${
                   status === 'completed'
@@ -107,9 +106,7 @@ export const BookEditDialog: React.FC<BookEditDialogProps> = ({
                     : 'option'
                 }`}
                 onClick={() => setStatus('completed')}
-              >
-                已完结
-              </button>
+              >{t('已完结')}</button>
             </div>
           </div>
         </div>
@@ -118,16 +115,12 @@ export const BookEditDialog: React.FC<BookEditDialogProps> = ({
           <button
             className="btn-secondary px-6 py-2"
             onClick={onCancel}
-          >
-            取消
-          </button>
+          >{t('取消')}</button>
           <button
             className="btn-primary px-6 py-2"
             onClick={handleSave}
             disabled={!title.trim()}
-          >
-            保存
-          </button>
+          >{t('保存')}</button>
         </div>
       </div>
     </div>

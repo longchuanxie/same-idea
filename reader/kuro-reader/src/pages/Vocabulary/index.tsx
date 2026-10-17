@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { COPY } from '@/constants/copy'
 import { ROUTES, reviewPath } from '@/constants/routes'
+import { t } from '@/i18n';
 import { vocabRepo } from '@/services/storage/vocabRepo'
 import { useLibraryStore } from '@/stores/useLibraryStore'
 import type { VocabEntry } from '@/types'
@@ -12,7 +13,7 @@ import { toast } from '@/utils/toast'
 
 /** 生词本导出分组：按书归组，组内按收录先后 */
 function buildVocabMarkdown(entries: VocabEntry[], bookTitleOf: (bookId: string) => string): string {
-  const lines = ['# 生词本', '']
+  const lines = [t('# 生词本'), '']
   const groups = new Map<string, VocabEntry[]>()
   for (const entry of entries) {
     const list = groups.get(entry.bookId) ?? []
@@ -25,7 +26,7 @@ function buildVocabMarkdown(entries: VocabEntry[], bookTitleOf: (bookId: string)
       const pron = entry.pronunciation ? `（${entry.pronunciation}）` : ''
       lines.push(`- **${entry.word}**${pron}：${entry.definition}`)
       if (entry.note) lines.push(`  - ${entry.note}`)
-      if (entry.context) lines.push(`  - 语境：${entry.context}`)
+      if (entry.context) lines.push(t('  - 语境：{{context}}', { context: entry.context }))
     }
     lines.push('')
   }
@@ -63,7 +64,7 @@ export const VocabularyPage: React.FC = () => {
     toast(COPY.vocab.deletedToast, {
       durationMs: 5000,
       action: {
-        label: '撤销',
+        label: t('撤销'),
         onAction: () => {
           const revived: VocabEntry = { ...entry, updatedAt: new Date() }
           void vocabRepo.save(revived).then(() => {
@@ -78,7 +79,7 @@ export const VocabularyPage: React.FC = () => {
     if (!entries || entries.length === 0) return
     const markdown = buildVocabMarkdown(entries, (bookId) => bookById.get(bookId)?.title ?? COPY.globalSearch.orphanBook)
     const stamp = new Date().toISOString().slice(0, 10).replaceAll('-', '')
-    downloadTextFile(`生词本-${stamp}.md`, markdown)
+    downloadTextFile(t('生词本-{{stamp}}.md', { stamp: stamp }), markdown)
     toast(COPY.vocab.exportedToast)
   }
 
@@ -104,9 +105,7 @@ export const VocabularyPage: React.FC = () => {
                 onClick={handleExport}
                 title={COPY.vocab.exportAll}
               >
-                <span className="material-symbols-outlined text-icon-md">ios_share</span>
-                导出
-              </button>
+                <span className="material-symbols-outlined text-icon-md">ios_share</span>{t('导出')}</button>
             </div>
           )}
         </div>
@@ -149,11 +148,11 @@ export const VocabularyPage: React.FC = () => {
                     <span className="font-label text-label-sm text-on-surface-variant">{entry.pronunciation}</span>
                   )}
                   {entry.lookupCount > 1 && (
-                    <span className="font-label text-label-xs text-on-surface-faint">查过 {entry.lookupCount} 次</span>
+                    <span className="font-label text-label-xs text-on-surface-faint">{t('查过 {{lookupCount}} 次', { lookupCount: entry.lookupCount })}</span>
                   )}
                 </div>
                 <button
-                  aria-label={`删掉 ${entry.word}`}
+                  aria-label={t('删掉 {{word}}', { word: entry.word })}
                   className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full text-on-surface-variant hover:text-seal hover:bg-seal-soft/50 transition-colors"
                   onClick={() => void handleDelete(entry)}
                 >

@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 
 import { useClickOutside } from '@/hooks/useClickOutside';
+import { t } from '@/i18n';
 
 export interface SubLibraryMenuProps {
   subLibraryId: string;
@@ -45,7 +46,7 @@ export const SubLibraryMenu: React.FC<SubLibraryMenuProps> = ({
           e.stopPropagation();
           setIsOpen(!isOpen);
         }}
-        aria-label="子书库菜单"
+        aria-label={t('子书库菜单')}
       >
         <span className="material-symbols-outlined text-icon-md">more_vert</span>
       </button>
@@ -72,18 +73,14 @@ export const SubLibraryMenu: React.FC<SubLibraryMenuProps> = ({
                 <button
                   className="btn-primary btn-sm flex-1 py-1"
                   onClick={handleRename}
-                >
-                  保存
-                </button>
+                >{t('保存')}</button>
                 <button
                   className="btn-secondary btn-sm flex-1 py-1"
                   onClick={() => {
                     setIsEditing(false);
                     setEditName(subLibraryName);
                   }}
-                >
-                  取消
-                </button>
+                >{t('取消')}</button>
               </div>
             </div>
           ) : (
@@ -96,7 +93,7 @@ export const SubLibraryMenu: React.FC<SubLibraryMenuProps> = ({
                 }}
               >
                 <span className="material-symbols-outlined text-icon-md">edit</span>
-                <span className="font-label text-label-md">重命名</span>
+                <span className="font-label text-label-md">{t('重命名')}</span>
               </button>
               <div className="border-t border-outline-variant my-1" />
               <button
@@ -107,7 +104,7 @@ export const SubLibraryMenu: React.FC<SubLibraryMenuProps> = ({
                 }}
               >
                 <span className="material-symbols-outlined text-icon-md">delete</span>
-                <span className="font-label text-label-md">删除</span>
+                <span className="font-label text-label-md">{t('删除')}</span>
               </button>
             </>
           )}

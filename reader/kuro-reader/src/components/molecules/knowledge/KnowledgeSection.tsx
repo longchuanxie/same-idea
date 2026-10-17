@@ -6,8 +6,9 @@ import { ConfirmDialog } from '@/components/molecules/ConfirmDialog'
 import { GenerationOptionsSheet } from '@/components/molecules/knowledge/GenerationOptionsSheet'
 import { COPY } from '@/constants/copy'
 import { settingsPath, knowledgePath } from '@/constants/routes'
+import { t } from '@/i18n';
 import { isProviderConfigured } from '@/services/ai/aiClient'
-import { KNOWLEDGE_TASKS, getKnowledgeTasksForKind } from '@/services/ai/knowledgeTasks'
+import { KNOWLEDGE_TASKS, getKnowledgeTask, getKnowledgeTasksForKind } from '@/services/ai/knowledgeTasks'
 import { getPdfPageTexts } from '@/services/pdfText'
 import { loadTextContent } from '@/services/textContent'
 import { useAppStore } from '@/stores/useAppStore'
@@ -27,14 +28,14 @@ import { toast } from '@/utils/toast'
 const PERCENT_BASE = 100
 
 const KIND_OPTIONS: { value: ContentKindPreference; label: string }[] = [
-  { value: 'auto', label: '自动' },
-  { value: 'fiction', label: '小说' },
-  { value: 'academic', label: '学术' },
+  { value: 'auto', label: t('自动') },
+  { value: 'fiction', label: t('小说') },
+  { value: 'academic', label: t('学术') },
 ]
 
 const KIND_BADGE: Record<ContentKind, string> = {
-  fiction: '小说视角',
-  academic: '学术视角',
+  fiction: t('小说视角'),
+  academic: t('学术视角'),
 }
 
 function formatTimestamp(value: Date | string): string {
@@ -49,7 +50,7 @@ function ensureAiConfiguredOrHint(navigate: (path: string) => void): boolean {
     model: settings.knowledgeAiModel,
   })
   if (!ready) {
-    toast('先到设置里配好知识库 AI 服务（服务地址 + 模型），再来点亮知识库')
+    toast(t('先到设置里配好知识库 AI 服务（服务地址 + 模型），再来点亮知识库'))
     navigate(settingsPath('ai'))
   }
   return ready
@@ -105,6 +106,11 @@ const TaskCard: React.FC<TaskCardProps> = ({
       return
     }
     if (!ensureAiConfiguredOrHint(navigate)) return
+    // 「先圈范围」类任务（章节总结）：点卡片直接弹起止章选择，不全书空跑
+    if (getKnowledgeTask(type).requireScope) {
+      setOptionsOpen(true)
+      return
+    }
     void generateArtifact(book, type)
   }
 
@@ -130,7 +136,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
     <div
       role="button"
       tabIndex={0}
-      aria-label={artifact ? `查看${label}` : `生成${label}`}
+      aria-label={artifact ? t('查看{{label}}', { label: label }) : t('生成{{label}}', { label: label })}
       className="relative p-4 rounded-card border border-outline-variant bg-surface-container-low hover:bg-surface-container transition-colors cursor-pointer text-left"
       onClick={handleCardClick}
       onKeyDown={(e) => {
@@ -145,7 +151,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
         <span className="font-label text-label-md text-primary flex-1">{label}</span>
         {artifact && idle && (
           <button
-            aria-label={`重新生成${label}`}
+            aria-label={t('重新生成{{label}}', { label: label })}
             className="w-8 h-8 flex items-center justify-center rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-variant transition-colors"
             onClick={(e) => {
               e.stopPropagation()
@@ -157,8 +163,8 @@ const TaskCard: React.FC<TaskCardProps> = ({
         )}
         {idle && (
           <button
-            aria-label={`自定义生成${label}`}
-            title="自定义范围与详细度"
+            aria-label={t('自定义生成{{label}}', { label: label })}
+            title={t('自定义范围与详细度')}
             className="w-8 h-8 flex items-center justify-center rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-variant transition-colors"
             onClick={(e) => {
               e.stopPropagation()
@@ -173,35 +179,25 @@ const TaskCard: React.FC<TaskCardProps> = ({
 
       {/* 范围/增量的产物态摘要：让"这份图谱覆盖了什么"一眼可见 */}
       {artifact && idle && artifact.meta?.scope && (
-        <p className="font-label text-label-xs text-on-surface-faint mt-1">
-          覆盖第 {(artifact.meta.scope.from ?? 0) + 1}-{(artifact.meta.scope.to ?? 0) + 1} 章
-          {artifact.meta.detail === 'core' ? ' · 核心版' : artifact.meta.detail === 'rich' ? ' · 详尽版' : ''}
+        <p className="font-label text-label-xs text-on-surface-faint mt-1">{t('覆盖第')}{(artifact.meta.scope.from ?? 0) + 1}-{(artifact.meta.scope.to ?? 0) + 1}{t('章')}{artifact.meta.detail === 'core' ? t(' · 核心版') : artifact.meta.detail === 'rich' ? t(' · 详尽版') : ''}
         </p>
       )}
       {/* 分析完整性对账：块被体量护栏截断时必须显性告警，不能静默丢章节 */}
       {artifact && idle &&
         artifact.meta?.totalChunkCount != null &&
         artifact.meta.totalChunkCount > (artifact.meta.analyzedChunkCount ?? 0) && (
-          <p className="font-label text-label-xs text-seal mt-1">
-            ⚠ 体量护栏：仅分析 {artifact.meta.analyzedChunkCount}/{artifact.meta.totalChunkCount} 块——
-            可用 tune 按起止章分批生成完整分析
-          </p>
+          <p className="font-label text-label-xs text-seal mt-1">{t('⚠ 体量护栏：仅分析 {{arg1}}', { arg1: artifact.meta.analyzedChunkCount })}/{t('{{arg1}} 块—— 可用 tune 按起止章分批生成完整分析', { arg1: artifact.meta.totalChunkCount })}</p>
         )}
       {artifact && idle && !artifact.meta?.scope && hasNewChaptersHint(totalChapters, artifact) && (
-        <p className="font-label text-label-xs text-seal mt-1">
-          书有更新——点 tune 图标可只补新章节
-        </p>
+        <p className="font-label text-label-xs text-seal mt-1">{t('书有更新——点 tune 图标可只补新章节')}</p>
       )}
       {/* 替换更新流落点：书内容已被新文件替换，这份卡还是旧内容生成的 */}
       {artifact?.stale && idle && (
-        <p className="font-label text-label-xs text-seal mt-1">
-          ⚠ 书内容已替换——这份卡基于旧版文件，点 ↻ 按当前内容重新生成
-        </p>
+        <p className="font-label text-label-xs text-seal mt-1">{t('⚠ 书内容已替换——这份卡基于旧版文件，点 ↻ 按当前内容重新生成')}</p>
       )}
 
       {artifact && idle && !error && (
-        <p className="font-label text-label-sm text-on-surface-faint mt-2">
-          已生成 · {formatTimestamp(artifact.updatedAt)}
+        <p className="font-label text-label-sm text-on-surface-faint mt-2">{t('已生成 · {{arg1}}', { arg1: formatTimestamp(artifact.updatedAt) })}
         </p>
       )}
 
@@ -209,15 +205,13 @@ const TaskCard: React.FC<TaskCardProps> = ({
         <div className="mt-3" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-between">
             <span className="font-label text-label-sm text-on-surface-variant">
-              {queuePosition != null && queuePosition > 1 ? `排队中 · 第 ${queuePosition} 位` : '排队中'}
-              <span className="text-on-surface-faint"> · 退出页面也会继续</span>
+              {queuePosition != null && queuePosition > 1 ? t('排队中 · 第 {{queuePosition}} 位', { queuePosition: queuePosition }) : t('排队中')}
+              <span className="text-on-surface-faint">{t('· 退出页面也会继续')}</span>
             </span>
             <button
               className="font-label text-label-sm text-on-surface-variant hover:text-seal transition-colors"
               onClick={() => cancelGeneration(book.id, type)}
-            >
-              取消
-            </button>
+            >{t('取消')}</button>
           </div>
         </div>
       )}
@@ -225,15 +219,11 @@ const TaskCard: React.FC<TaskCardProps> = ({
       {running && (
         <div className="mt-3" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-between mb-1.5">
-            <span className="font-label text-label-sm text-on-surface">
-              通读中 {done}/{total} 段
-            </span>
+            <span className="font-label text-label-sm text-on-surface">{t('通读中 {{done}}', { done: done })}/{t('{{total}} 段', { total: total })}</span>
             <button
               className="font-label text-label-sm text-on-surface-variant hover:text-seal transition-colors"
               onClick={() => cancelGeneration(book.id, type)}
-            >
-              取消
-            </button>
+            >{t('取消')}</button>
           </div>
           <div className="h-1.5 rounded-full bg-surface-container-high overflow-hidden">
             <div
@@ -344,16 +334,15 @@ export const KnowledgeSection: React.FC<{ book: Book }> = ({ book }) => {
   return (
     <section className="py-8 border-t border-outline-variant animate-fade-in stagger-2">
       <div className="flex justify-between items-baseline mb-2">
-        <h2 className="font-display text-headline-md text-primary">知识库</h2>
+        <h2 className="font-display text-headline-md text-primary">{t('知识库')}</h2>
         <span className="font-label text-label-sm text-on-surface-variant">
-          {KIND_BADGE[effectiveKind]} · 由 AI 通读本书生成
-        </span>
+          {t('{{arg1}} · 由 AI 通读本书生成', { arg1: KIND_BADGE[effectiveKind] })}</span>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-5">
         <p className="font-label text-label-sm text-on-surface-variant">
           {effectiveKind === 'academic'
-            ? '论点织成导图，术语汇成卡片——都能一点回原文。'
-            : '人物一图看全，情节织成导图——生成后可导出 Markdown 嫁接 Obsidian。'}
+            ? t('论点织成导图，术语汇成卡片——都能一点回原文。')
+            : t('人物一图看全，情节织成导图——生成后可导出 Markdown 嫁接 Obsidian。')}
         </p>
         {supported && (
           <div className="flex items-center gap-1 p-1 rounded-full border border-outline-variant bg-surface-container-low">
@@ -399,9 +388,7 @@ export const KnowledgeSection: React.FC<{ book: Book }> = ({ book }) => {
           })}
         </div>
       ) : (
-        <p className="p-4 rounded-card border border-dashed border-outline-variant font-label text-label-sm text-on-surface-variant">
-          漫画还没有可分析的文本层——先长按页面试试「识别本页文字」，等 OCR 文字攒起来就能进知识库。
-        </p>
+        <p className="p-4 rounded-card border border-dashed border-outline-variant font-label text-label-sm text-on-surface-variant">{t('漫画还没有可分析的文本层——先长按页面试试「识别本页文字」，等 OCR 文字攒起来就能进知识库。')}</p>
       )}
     </section>
   )

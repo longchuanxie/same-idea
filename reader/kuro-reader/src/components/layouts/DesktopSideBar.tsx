@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 import { APP_CONFIG } from '@/constants/config';
 import { ROUTES, subLibraryPath } from '@/constants/routes';
+import { t } from '@/i18n';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import { cn } from '@/utils/cn';
 import { formatBytes } from '@/utils/formatBytes';
@@ -24,26 +25,26 @@ interface NavItemConfig {
 }
 
 const NAV_ITEMS: NavItemConfig[] = [
-  { label: '首页', icon: 'home', path: ROUTES.HOME, match: (p) => p === '/' },
+  { label: t('首页'), icon: 'home', path: ROUTES.HOME, match: (p) => p === '/' },
   {
-    label: '书库',
+    label: t('书库'),
     icon: 'auto_stories',
     path: ROUTES.LIBRARY,
     match: (p) => p === '/library',
   },
   // 桌面无底栏，导入需常驻入口（与移动底栏对齐；否则只能绕 Home「去采编」）
-  { label: '导入', icon: 'upload_file', path: ROUTES.IMPORT, match: (p) => p.startsWith('/import') },
-  { label: '检索台', icon: 'search', path: ROUTES.SEARCH, match: (p) => p.startsWith('/search') },
-  { label: '手记', icon: 'edit_note', path: ROUTES.NOTES, match: (p) => p.startsWith('/notes') },
+  { label: t('导入'), icon: 'upload_file', path: ROUTES.IMPORT, match: (p) => p.startsWith('/import') },
+  { label: t('检索台'), icon: 'search', path: ROUTES.SEARCH, match: (p) => p.startsWith('/search') },
+  { label: t('手记'), icon: 'edit_note', path: ROUTES.NOTES, match: (p) => p.startsWith('/notes') },
   {
-    label: '知识库',
+    label: t('知识库'),
     icon: 'psychology',
     path: ROUTES.KNOWLEDGE_HUB,
     match: (p) => p.startsWith('/knowledge'),
   },
-  { label: '台账', icon: 'bar_chart', path: ROUTES.STATS, match: (p) => p.startsWith('/stats') },
+  { label: t('台账'), icon: 'bar_chart', path: ROUTES.STATS, match: (p) => p.startsWith('/stats') },
   {
-    label: '设置',
+    label: t('设置'),
     icon: 'settings',
     path: ROUTES.SETTINGS,
     match: (p) => p.startsWith('/settings') || p.startsWith('/profile'),
@@ -89,11 +90,11 @@ export const DesktopSideBar: React.FC<DesktopSideBarProps> = ({ collapsed, onTog
             <div className="font-display text-headline-sm text-primary font-bold tracking-tight truncate">
               {APP_CONFIG.name}
             </div>
-            <div className="font-label text-label-sm text-on-surface-faint mt-0.5">私人图书馆</div>
+            <div className="font-label text-label-sm text-on-surface-faint mt-0.5">{t('私人图书馆')}</div>
           </div>
         )}
         <button
-          aria-label={collapsed ? '展开侧边栏' : '收起侧边栏'}
+          aria-label={collapsed ? t('展开侧边栏') : t('收起侧边栏')}
           className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors"
           onClick={onToggleCollapsed}
         >
@@ -138,7 +139,7 @@ export const DesktopSideBar: React.FC<DesktopSideBarProps> = ({ collapsed, onTog
         {/* 特藏室（子书库树） */}
         {!collapsed && subLibraries.length > 0 && (
           <div className="pt-4">
-            <div className="px-3 mb-1 font-label text-label-sm text-on-surface-faint">特藏室</div>
+            <div className="px-3 mb-1 font-label text-label-sm text-on-surface-faint">{t('特藏室')}</div>
             {subLibraries.map((sl) => {
               const isActive = pathname === subLibraryPath(sl.id);
               return (
@@ -173,7 +174,7 @@ export const DesktopSideBar: React.FC<DesktopSideBarProps> = ({ collapsed, onTog
         {/* 分类目录 */}
         <button
           aria-current={pathname.startsWith('/tags') ? 'page' : undefined}
-          title={collapsed ? '分类目录' : undefined}
+          title={collapsed ? t('分类目录') : undefined}
           className={cn(
             'relative w-full flex items-center gap-3 h-10 px-3 rounded transition-colors duration-instant',
             collapsed && 'justify-center px-0',
@@ -191,7 +192,7 @@ export const DesktopSideBar: React.FC<DesktopSideBarProps> = ({ collapsed, onTog
           )}
           <span className="material-symbols-outlined text-icon-lg">sell</span>
           {!collapsed && (
-            <span className="font-label text-label-md flex-1 text-left">分类目录</span>
+            <span className="font-label text-label-md flex-1 text-left">{t('分类目录')}</span>
           )}
           {!collapsed && (
             <span className="font-mono text-label-sm text-on-surface-faint">{tags.length}</span>
@@ -203,10 +204,9 @@ export const DesktopSideBar: React.FC<DesktopSideBarProps> = ({ collapsed, onTog
       {!collapsed && (
         <div className="px-4 py-4 border-t border-outline-variant">
           <div className="flex items-baseline justify-between mb-1.5">
-            <span className="font-label text-label-sm text-on-surface-faint">馆容量</span>
+            <span className="font-label text-label-sm text-on-surface-faint">{t('馆容量')}</span>
             <span className="font-mono text-label-sm text-on-surface-variant">
-              {books.length} 本藏书
-            </span>
+              {t('{{length}} 本藏书', { length: books.length })}</span>
           </div>
           <div className="h-1 rounded-full bg-surface-container-highest overflow-hidden">
             <div

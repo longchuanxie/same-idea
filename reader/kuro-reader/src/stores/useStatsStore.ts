@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 import { STORAGE_KEYS } from '@/constants/storage';
+import { t } from '@/i18n';
 import type { ReadingStats } from '@/types';
 
 interface ReadingSession {
@@ -45,7 +46,7 @@ const DEFAULT_STATS: ReadingStats = {
 };
 
 function getDayLabel(date: Date): string {
-  const days = ['日', '一', '二', '三', '四', '五', '六'];
+  const days = [t('日'), t('一'), t('二'), t('三'), t('四'), t('五'), t('六')];
   return days[date.getDay()];
 }
 

@@ -11,6 +11,7 @@
  * 队列只管排队、持久化与续跑，不知道任何知识库细节。
  */
 
+import { t } from '@/i18n';
 import {
   generationTaskRepo,
   type GenerationCheckpoint,
@@ -174,7 +175,7 @@ async function pump(): Promise<void> {
           })
         }
       } catch (e) {
-        result = { ok: false, error: e instanceof Error ? e.message : '生成任务异常中断' }
+        result = { ok: false, error: e instanceof Error ? e.message : t('生成任务异常中断') }
       }
       controllers.delete(next.id)
 

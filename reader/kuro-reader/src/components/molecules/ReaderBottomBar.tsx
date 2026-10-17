@@ -1,6 +1,7 @@
 import type { FC } from 'react';
 
 import { ToggleSwitch } from '@/components/atoms/ToggleSwitch';
+import { t } from '@/i18n';
 import type { PaperType } from '@/types';
 import { cn } from '@/utils/cn';
 import { getAllPaperTypes } from '@/utils/paperTexture';
@@ -8,8 +9,8 @@ import { getAllPaperTypes } from '@/utils/paperTexture';
 type ReadingDirection = 'rtl' | 'ltr';
 
 const READING_DIRECTION_LABELS: Record<ReadingDirection, string> = {
-  rtl: '\u4ece\u53f3\u81f3\u5de6',
-  ltr: '\u4ece\u5de6\u81f3\u53f3',
+  rtl: t('从右至左'),
+  ltr: t('从左至右'),
 };
 
 const WARM_TEMPERATURE_THRESHOLD = 50;
@@ -63,11 +64,11 @@ export const ReaderBottomBar: FC<ReaderBottomBarProps> = ({
       <div className="bg-surface/95 backdrop-blur-md border-t border-outline-variant/50 px-margin-mobile py-5 pb-safe">
         <div className="max-w-max-width-content mx-auto">
           <div className="flex items-center justify-between mb-4">
-            <span className="font-label text-label-md text-on-surface-variant">阅读设置</span>
+            <span className="font-label text-label-md text-on-surface-variant">{t('阅读设置')}</span>
             <button
               className="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-variant transition-colors"
               onClick={onClose}
-              aria-label="关闭"
+              aria-label={t('关闭')}
             >
               <span className="material-symbols-outlined text-icon-md">close</span>
             </button>
@@ -86,7 +87,7 @@ export const ReaderBottomBar: FC<ReaderBottomBarProps> = ({
               onClick={() => onDirectionChange('vertical')}
             >
               <span className="material-symbols-outlined text-icon-lg">swap_vert</span>
-              <span className="font-label text-label-sm">条漫</span>
+              <span className="font-label text-label-sm">{t('条漫')}</span>
             </button>
             <button
               className={cn(
@@ -98,7 +99,7 @@ export const ReaderBottomBar: FC<ReaderBottomBarProps> = ({
               onClick={() => onDirectionChange('horizontal')}
             >
               <span className="material-symbols-outlined text-icon-lg">swap_horiz</span>
-              <span className="font-label text-label-sm">水平翻页</span>
+              <span className="font-label text-label-sm">{t('水平翻页')}</span>
             </button>
           </div>
 
@@ -114,7 +115,7 @@ export const ReaderBottomBar: FC<ReaderBottomBarProps> = ({
                 onClick={() => onPageLayoutChange('single')}
               >
                 <span className="material-symbols-outlined text-icon-lg">crop_portrait</span>
-                <span className="font-label text-label-sm">单页</span>
+                <span className="font-label text-label-sm">{t('单页')}</span>
               </button>
               <button
                 className={cn(
@@ -126,7 +127,7 @@ export const ReaderBottomBar: FC<ReaderBottomBarProps> = ({
                 onClick={() => onPageLayoutChange('double')}
               >
                 <span className="material-symbols-outlined text-icon-lg">auto_stories</span>
-                <span className="font-label text-label-sm">双页</span>
+                <span className="font-label text-label-sm">{t('双页')}</span>
               </button>
             </div>
           )}
@@ -164,22 +165,22 @@ export const ReaderBottomBar: FC<ReaderBottomBarProps> = ({
             <div className="flex items-center gap-3">
               <span className="material-symbols-outlined text-on-surface-variant">note</span>
               <div>
-                <p className="font-label text-label-md text-on-surface">纸张模拟效果</p>
+                <p className="font-label text-label-md text-on-surface">{t('纸张模拟效果')}</p>
                 <p className="font-body text-body-sm text-on-surface-variant">
-                  {paperModeEnabled ? '已开启' : '已关闭'}
+                  {paperModeEnabled ? t('已开启') : t('已关闭')}
                 </p>
               </div>
             </div>
             <ToggleSwitch
               checked={paperModeEnabled}
-              ariaLabel="纸张模拟效果"
+              ariaLabel={t('纸张模拟效果')}
               onChange={onPaperModeToggle}
             />
           </div>
 
           {paperModeEnabled && (
             <div className="py-3 px-4 bg-surface-container-lowest rounded-card-lg border border-outline-variant">
-              <p className="font-label text-label-md text-on-surface mb-3">纸张类型</p>
+              <p className="font-label text-label-md text-on-surface mb-3">{t('纸张类型')}</p>
               <div className="flex flex-wrap gap-2">
                 {paperTypes.map(({ type, config }) => (
                   <button
@@ -205,7 +206,7 @@ export const ReaderBottomBar: FC<ReaderBottomBarProps> = ({
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-on-surface-variant text-[18px]">texture</span>
-                <p className="font-label text-label-md text-on-surface">纹理强度</p>
+                <p className="font-label text-label-md text-on-surface">{t('纹理强度')}</p>
               </div>
               <span className="font-label text-label-sm text-on-surface-variant">{textureIntensity}%</span>
             </div>
@@ -222,7 +223,7 @@ export const ReaderBottomBar: FC<ReaderBottomBarProps> = ({
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-on-surface-variant text-[18px]">brightness_6</span>
-                <p className="font-label text-label-md text-on-surface">亮度</p>
+                <p className="font-label text-label-md text-on-surface">{t('亮度')}</p>
               </div>
               <span className="font-label text-label-sm text-on-surface-variant">{brightness}%</span>
             </div>
@@ -240,9 +241,9 @@ export const ReaderBottomBar: FC<ReaderBottomBarProps> = ({
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-on-surface-variant text-[18px]">thermostat</span>
-                <p className="font-label text-label-md text-on-surface">色温</p>
+                <p className="font-label text-label-md text-on-surface">{t('色温')}</p>
               </div>
-              <span className="font-label text-label-sm text-on-surface-variant">{colorTemperature === 0 ? '冷光' : colorTemperature <= WARM_TEMPERATURE_THRESHOLD ? '暖白' : '暖光'}</span>
+              <span className="font-label text-label-sm text-on-surface-variant">{colorTemperature === 0 ? t('冷光') : colorTemperature <= WARM_TEMPERATURE_THRESHOLD ? t('暖白') : t('暖光')}</span>
             </div>
             <input
               type="range"

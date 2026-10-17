@@ -2,6 +2,12 @@ import { create, type StoreApi } from 'zustand';
 
 import { getRandomCatalogColor, migrateTagColor } from '@/constants/catalogColors';
 import { STORAGE_KEYS } from '@/constants/storage';
+import { t } from '@/i18n';
+import {
+  computeSanitizeRev,
+  resolveSanitizeOptions,
+  sanitizeBookChapters,
+} from '@/services/contentSanitizer';
 import { getParserForFile } from '@/services/parsers';
 import { ComicArchiveParser } from '@/services/parsers/comicArchiveParser';
 import type { ParsedBook, ParsedTextBook } from '@/services/parsers/types';
@@ -15,6 +21,7 @@ import { tagRepo } from '@/services/storage/tagRepo';
 import { textChapterCacheRepo } from '@/services/storage/textChapterCacheRepo';
 import { recordUsageSignal } from '@/services/telemetry/usageSignals';
 import { buildTextChapters, warmTextChapterCache } from '@/services/textContent';
+import { useAppStore } from '@/stores/useAppStore';
 import type { Book, Chapter, ReadingProgress, SubLibrary, Tag } from '@/types';
 import { deriveMergedBookTitle, extractArchiveChapterInfo } from '@/utils/comicChapterSplit';
 import { extractTitleFromFileName } from '@/utils/extractTitle';
@@ -54,6 +61,10 @@ export interface LibraryState {
   loadBooks: () => Promise<void>;
   importFile: (file: File, opts?: ImportOptions) => Promise<Book | null>;
   resolvePendingReplace: (decision: 'replace' | 'keep-both' | 'cancel') => Promise<Book | null>;
+  /** 确认门通过：该书 A 类广告净化 pending → on（旧知识件标 stale；打点 sanitize-applied） */
+  applyContentSanitize: (bookId: string) => Promise<void>;
+  /** 该书关闭广告净化（不再弹确认门；打点 sanitize-dismissed） */
+  disableContentSanitize: (bookId: string) => Promise<void>;
   importFolder: (files: File[], folderName: string, opts?: ImportOptions) => Promise<Book | null>;
   importArchivesAsSubLibrary: (files: File[], folderName: string, opts?: ImportOptions) => Promise<SubLibrary | null>;
   importArchivesAsBook: (files: File[], fallbackTitle: string, opts?: ImportOptions) => Promise<Book | null>;
@@ -144,7 +155,7 @@ const WARNING_NAME_PREVIEW_LIMIT = 3;
 /** 汇总文件名用于提示：最多列 3 个，多则「等 N 个」 */
 function summarizeFileNames(names: string[]): string {
   const shown = names.slice(0, WARNING_NAME_PREVIEW_LIMIT).join('、');
-  return names.length > WARNING_NAME_PREVIEW_LIMIT ? `${shown} 等 ${names.length} 个文件` : shown;
+  return names.length > WARNING_NAME_PREVIEW_LIMIT ? t('{{shown}} 等 {{length}} 个文件', { shown: shown, length: names.length }) : shown;
 }
 
 /** 部分成功警示文案：整体导入成功但存在被跳过/解析失败的文件时非空 */
@@ -159,14 +170,18 @@ function trackCoverObjectUrl(url: string): string {
   return url;
 }
 
-/** 导入完成点预热文本书解析缓存：TXT 直接用导入时已拆好的章节落库，
+/** 导入完成点预热文本书解析缓存：TXT 直接用导入时已拆好的章节落库（含 A/B 类净化——
+ *  新书广告门槛按 'pending' 走 detect：排版即净化、广告只检测进摘要，确认门在首开时弹），
  *  首次开书即免整本重解析（长网文为秒级收益）。Markdown 的逐章 parseMarkdownDocument
  *  成本较高，不在导入期跑——留待首次开书回填，此后同样命中缓存 */
 function warmTextCacheFromParsed(bookId: string, parsed: ParsedBook): void {
   if (parsed.format !== 'text' || !parsed.chapters || parsed.chapters.length === 0) return;
   const type = parsed.textFile.type;
   if (type.startsWith('text/markdown') || type.startsWith('text/x-markdown')) return;
-  warmTextChapterCache(bookId, buildTextChapters(parsed.chapters, false), false);
+  const options = resolveSanitizeOptions(useAppStore.getState().settings.contentSanitize, 'pending');
+  const built = buildTextChapters(parsed.chapters, false);
+  const { chapters, summary } = sanitizeBookChapters(built, options);
+  warmTextChapterCache(bookId, chapters, false, { rev: computeSanitizeRev(options), summary });
 }
 
 /** 替换更新流资格：书架上的书与导入文件都是 TXT/MD 文本（EPUB 章节带运行期 object URL 不跨会话，不接） */
@@ -245,12 +260,12 @@ async function persistParsedAsNewBook(
 function buildPartialImportWarning(failedFiles: string[], unsupportedFiles: string[]): string | null {
   if (failedFiles.length === 0 && unsupportedFiles.length === 0) return null;
   if (failedFiles.length === 0) {
-    return `已跳过 ${unsupportedFiles.length} 个不支持合并的文件（仅图片档案可并入一书）：${summarizeFileNames(unsupportedFiles)}`;
+    return t('已跳过 {{length}} 个不支持合并的文件（仅图片档案可并入一书）：{{arg1}}', { length: unsupportedFiles.length, arg1: summarizeFileNames(unsupportedFiles) });
   }
   if (unsupportedFiles.length === 0) {
-    return `${failedFiles.length} 个压缩包解析失败未并入：${summarizeFileNames(failedFiles)}`;
+    return t('{{length}} 个压缩包解析失败未并入：{{arg1}}', { length: failedFiles.length, arg1: summarizeFileNames(failedFiles) });
   }
-  return `部分文件未并入：解析失败 ${failedFiles.length} 个、类型不支持 ${unsupportedFiles.length} 个`;
+  return t('部分文件未并入：解析失败 {{length}} 个、类型不支持 {{arg1}} 个', { length: failedFiles.length, arg1: unsupportedFiles.length });
 }
 
 /** 将 ParsedBook 转换为 Book + Chapter 实体 */
@@ -312,7 +327,7 @@ function buildBookFromParsed(parsed: ParsedBook, bookId: string): { book: Book; 
         id: `${bookId}-ch${idx + 1}`,
         bookId,
         number: idx + 1,
-        title: ch.title || `第${idx + 1}章`,
+        title: ch.title || t('第{{arg1}}章', { arg1: idx + 1 }),
         pages: [],
         status: 'unread',
         pageRefs: [{ kind: 'text-content' as const }],
@@ -413,7 +428,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     // 导入重入守卫：并发导入会在 books 更新前读到旧列表、绕过按标题去重，
     // 产生重复书目（双击/OPDS 下载与本地导入并行等场景）
     if (get().isImporting) {
-      set({ error: '已有导入正在进行中，请等待完成后再导入' });
+      set({ error: t('已有导入正在进行中，请等待完成后再导入') });
       return null;
     }
     set({ isImporting: true, importProgress: 0, error: null, importWarning: null });
@@ -426,7 +441,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
       const existingByFileTitle = get().books.find(b => b.title === fileTitle || b.title === file.name);
       if (existingByFileTitle && !isTextReplaceCandidate(existingByFileTitle, file)) {
         set({
-          error: `「${existingByFileTitle.title}」已存在于书架中`,
+          error: t('「{{title}}」已存在于书架中', { title: existingByFileTitle.title }),
           isImporting: false,
           importProgress: 0
         });
@@ -436,7 +451,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
       // 根据文件类型选择合适的 parser
       const parser = getParserForFile(file);
       if (!parser) {
-        set({ error: '不支持的文件格式', isImporting: false, importProgress: 0 });
+        set({ error: t('不支持的文件格式'), isImporting: false, importProgress: 0 });
         return null;
       }
 
@@ -464,7 +479,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
       if (collisionBook) {
         if (parsed.format !== 'text' || !isTextReplaceCandidate(collisionBook, file)) {
           set({
-            error: `「${collisionBook.title}」已存在于书架中`,
+            error: t('「{{title}}」已存在于书架中', { title: collisionBook.title }),
             isImporting: false,
             importProgress: 0
           });
@@ -518,7 +533,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
 
       const existing = get().books.find(b => b.id === pending.existingBookId);
       if (!existing) {
-        set({ error: '原书已不在书架中，替换未执行', pendingReplace: null, isImporting: false, importProgress: 0 });
+        set({ error: t('原书已不在书架中，替换未执行'), pendingReplace: null, isImporting: false, importProgress: 0 });
         return null;
       }
 
@@ -560,11 +575,34 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     }
   },
 
+  applyContentSanitize: async (bookId) => {
+    const book = get().books.find((b) => b.id === bookId);
+    if (!book || book.format !== 'text') return;
+    const updated: Book = { ...book, contentSanitize: { ads: 'on', confirmedAt: Date.now() } };
+    await bookRepo.save(updated);
+    set((state) => ({ books: state.books.map((b) => (b.id === bookId ? updated : b)) }));
+    // 知识件标过期不删除（对齐替换流语义：证据句可能引自被删广告行；重新生成覆盖落库即随新件消失）
+    const artifacts = await knowledgeRepo.getByBookId(bookId);
+    for (const artifact of artifacts) {
+      if (!artifact.stale) await knowledgeRepo.save({ ...artifact, stale: true });
+    }
+    recordUsageSignal('sanitize-applied', { bookId });
+  },
+
+  disableContentSanitize: async (bookId) => {
+    const book = get().books.find((b) => b.id === bookId);
+    if (!book || book.format !== 'text') return;
+    const updated: Book = { ...book, contentSanitize: { ads: 'off', confirmedAt: Date.now() } };
+    await bookRepo.save(updated);
+    set((state) => ({ books: state.books.map((b) => (b.id === bookId ? updated : b)) }));
+    recordUsageSignal('sanitize-dismissed', { bookId });
+  },
+
   importFolder: async (files: File[], folderName: string, opts?: ImportOptions) => {
     // 导入重入守卫：并发导入会在 books 更新前读到旧列表、绕过按标题去重，
     // 产生重复书目（双击/OPDS 下载与本地导入并行等场景）
     if (get().isImporting) {
-      set({ error: '已有导入正在进行中，请等待完成后再导入' });
+      set({ error: t('已有导入正在进行中，请等待完成后再导入') });
       return null;
     }
     set({ isImporting: true, importProgress: 0, error: null, importWarning: null });
@@ -575,7 +613,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
       const existingBook = get().books.find(b => b.title === folderName);
       if (existingBook) {
         set({ 
-          error: `「${folderName}」已存在于书架中`, 
+          error: t('「{{folderName}}」已存在于书架中', { folderName: folderName }), 
           isImporting: false, 
           importProgress: 0 
         });
@@ -585,7 +623,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
       const parsed = await new ComicArchiveParser().parseImageFolder(files, folderName);
 
       if (parsed.format !== 'comic' || parsed.imagePages.length === 0) {
-        set({ error: '该文件夹中没有找到图片文件', isImporting: false, importProgress: 0 });
+        set({ error: t('该文件夹中没有找到图片文件'), isImporting: false, importProgress: 0 });
         return null;
       }
 
@@ -631,7 +669,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     // 导入重入守卫：并发导入会在 books 更新前读到旧列表、绕过按标题去重，
     // 产生重复书目（双击/OPDS 下载与本地导入并行等场景）
     if (get().isImporting) {
-      set({ error: '已有导入正在进行中，请等待完成后再导入' });
+      set({ error: t('已有导入正在进行中，请等待完成后再导入') });
       return null;
     }
     set({ isImporting: true, importProgress: 0, error: null, importWarning: null });
@@ -696,14 +734,14 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
 
       if (chapterPayloads.length === 0 || !coverBlob) {
         const detail = failedFiles.length > 0 ? `（${summarizeFileNames(failedFiles)}）` : '';
-        set({ error: `所有压缩包解析失败${detail}`, isImporting: false, importProgress: 0 });
+        set({ error: t('所有压缩包解析失败{{detail}}', { detail: detail }), isImporting: false, importProgress: 0 });
         return null;
       }
 
       const title = deriveMergedBookTitle(files.map((f) => f.name), fallbackTitle);
       const existing = get().books.find((b) => b.title === title);
       if (existing) {
-        set({ error: `「${existing.title}」已存在于书架中`, isImporting: false, importProgress: 0 });
+        set({ error: t('「{{title}}」已存在于书架中', { title: existing.title }), isImporting: false, importProgress: 0 });
         return null;
       }
 
@@ -756,7 +794,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
     // 导入重入守卫：并发导入会在 books 更新前读到旧列表、绕过按标题去重，
     // 产生重复书目（双击/OPDS 下载与本地导入并行等场景）
     if (get().isImporting) {
-      set({ error: '已有导入正在进行中，请等待完成后再导入' });
+      set({ error: t('已有导入正在进行中，请等待完成后再导入') });
       return null;
     }
     set({
@@ -781,7 +819,7 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
       const existingSubLib = get().subLibraries.find(s => s.name === folderName);
       if (!opts?.subLibraryId && existingSubLib) {
         set({ 
-          error: `子书库「${folderName}」已存在`, 
+          error: t('子书库「{{folderName}}」已存在', { folderName: folderName }), 
           isImporting: false, 
           importProgress: 0,
           batchImportTotal: 0,
@@ -867,8 +905,8 @@ export const useLibraryStore = create<LibraryState>()((set, get) => ({
 
       if (importedBookIds.length === 0) {
         const msg = skippedDuplicates.length > 0
-          ? `所有文件均已存在（跳过了 ${skippedDuplicates.length} 个重复文件）`
-          : '所有压缩包解析失败';
+          ? t('所有文件均已存在（跳过了 {{length}} 个重复文件）', { length: skippedDuplicates.length })
+          : t('所有压缩包解析失败');
         set({
           error: msg,
           isImporting: false,

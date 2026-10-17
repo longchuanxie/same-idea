@@ -1,6 +1,7 @@
 import React from 'react'
 
 import { COPY } from '@/constants/copy'
+import { t } from '@/i18n';
 import type { NotesOutlineResult } from '@/services/ai/notesOutline'
 import { downloadTextFile, sanitizeFileName } from '@/utils/annotationExport'
 import { copyTextToClipboard } from '@/utils/clipboard'
@@ -93,7 +94,7 @@ export const NotesOutlineDialog: React.FC<NotesOutlineDialogProps> = ({ state, o
                   className="btn-secondary px-4 py-2"
                   onClick={() =>
                     downloadTextFile(
-                      `提纲-${sanitizeFileName(state.result!.title)}.md`,
+                      t('提纲-{{arg1}}.md', { arg1: sanitizeFileName(state.result!.title) }),
                       `# ${state.result!.title}\n\n${state.result!.markdown}\n`
                     )
                   }

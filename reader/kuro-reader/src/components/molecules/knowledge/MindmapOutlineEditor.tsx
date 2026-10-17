@@ -1,6 +1,7 @@
 import React from 'react'
 
 import { EntryReviseActions, VerifiedBadge } from '@/components/molecules/knowledge/ReviseControls'
+import { t } from '@/i18n';
 import type { MindmapNodeData } from '@/types'
 import type { MindmapNodePath } from '@/utils/knowledgeEdit'
 
@@ -66,7 +67,7 @@ const NodeRow: React.FC<{
         )}
         {isRoot && (
           <button
-            aria-label={`改 ${node.title}`}
+            aria-label={t('改 {{title}}', { title: node.title })}
             className="w-7 h-7 ml-auto shrink-0 flex items-center justify-center rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors"
             onClick={() => onEditNode(path)}
           >

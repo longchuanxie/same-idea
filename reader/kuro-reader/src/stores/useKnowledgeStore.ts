@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 
+import { t } from '@/i18n';
 import { isProviderConfigured, type AiProviderConfig } from '@/services/ai/aiClient'
 import { requestGenerationNotificationPermission } from '@/services/knowledge/generationNotification'
 import {
@@ -68,7 +69,7 @@ interface KnowledgeState {
   ) => Promise<void>
 }
 
-const UNCONFIGURED_MESSAGE = '知识库 AI 服务未配置——先到设置里填好服务地址与模型'
+const UNCONFIGURED_MESSAGE = t('知识库 AI 服务未配置——先到设置里填好服务地址与模型')
 
 /** 生成调用方传入的书对象（执行时优先用，绕过书架加载时序；终态即清） */
 const pendingBooks = new Map<string, Book>()
@@ -139,7 +140,7 @@ export const useKnowledgeStore = create<KnowledgeState>()((set, get) => {
     const type = ctx.record.type
     const book = pendingBooks.get(key) ?? (await resolveBook(ctx.record.bookId))
     if (!book) {
-      const message = '这本书已不在书架上——任务已停止'
+      const message = t('这本书已不在书架上——任务已停止')
       setGenerationError(key, message)
       resolveTask(key, false)
       return { ok: false, error: message }
@@ -205,7 +206,7 @@ export const useKnowledgeStore = create<KnowledgeState>()((set, get) => {
       resolveTask(key, true)
       return { ok: true }
     } catch (e) {
-      const message = e instanceof Error ? e.message : '知识件生成失败'
+      const message = e instanceof Error ? e.message : t('知识件生成失败')
       setGenerationError(key, message)
       resolveTask(key, false)
       return { ok: false, error: message }

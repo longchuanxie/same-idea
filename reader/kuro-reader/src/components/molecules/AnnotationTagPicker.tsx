@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 
+import { t } from '@/i18n';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import type { Tag } from '@/types';
 import { cn } from '@/utils/cn';
@@ -63,7 +64,7 @@ export const AnnotationTagPicker: React.FC<AnnotationTagPickerProps> = ({
       {allowCreate && !creating && (
         <button
           onClick={() => setCreating(true)}
-          aria-label="新建标签"
+          aria-label={t('新建标签')}
           className="px-2 py-0.5 rounded-full font-label text-label-xs text-on-surface-variant border border-dashed border-outline-variant hover:bg-surface-variant transition-colors"
         >
           ＋
@@ -81,7 +82,7 @@ export const AnnotationTagPicker: React.FC<AnnotationTagPickerProps> = ({
               setNewName('');
             }
           }}
-          placeholder="新标签名"
+          placeholder={t('新标签名')}
           autoFocus
           className="w-24 px-2 py-0.5 bg-surface-container-lowest border border-outline-variant/50 rounded-full font-label text-label-xs focus:outline-none focus:border-primary"
         />

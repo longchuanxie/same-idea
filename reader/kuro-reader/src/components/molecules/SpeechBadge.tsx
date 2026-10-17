@@ -1,5 +1,7 @@
 import React from 'react';
 
+import { t } from '@/i18n';
+
 interface SpeechBadgeProps {
   rate: number;
   paused: boolean;
@@ -24,18 +26,17 @@ export const SpeechBadge: React.FC<SpeechBadgeProps> = ({
 }) => (
   <div className="fixed bottom-36 right-4 z-40">
     <div className="bg-primary/80 backdrop-blur-sm rounded-full px-2 py-1 flex items-center gap-1 shadow-paper-up">
-      <span className="font-label text-label-sm text-on-primary pl-1.5">
-        听书 {rate}x{engineLabel ? ` · ${engineLabel}` : ''}
+      <span className="font-label text-label-sm text-on-primary pl-1.5">{t('听书 {{rate}}', { rate: rate })}x{engineLabel ? ` · ${engineLabel}` : ''}
       </span>
       {synthesizing && (
-        <span className="material-symbols-outlined text-icon-sm text-on-primary animate-spin" aria-label="合成中">
+        <span className="material-symbols-outlined text-icon-sm text-on-primary animate-spin" aria-label={t('合成中')}>
           progress_activity
         </span>
       )}
       <button
         className="w-11 h-11 rounded-full flex items-center justify-center text-on-primary hover:bg-on-primary/20 transition-colors"
         onClick={onCycleRate}
-        aria-label="切换倍速"
+        aria-label={t('切换倍速')}
         data-ui-control
       >
         <span className="material-symbols-outlined text-icon-sm">speed</span>
@@ -43,7 +44,7 @@ export const SpeechBadge: React.FC<SpeechBadgeProps> = ({
       <button
         className="w-11 h-11 rounded-full flex items-center justify-center text-on-primary hover:bg-on-primary/20 transition-colors"
         onClick={onPauseResume}
-        aria-label={paused ? '继续播报' : '暂停播报'}
+        aria-label={paused ? t('继续播报') : t('暂停播报')}
         data-ui-control
       >
         <span className="material-symbols-outlined text-[18px]">{paused ? 'play_arrow' : 'pause'}</span>
@@ -51,7 +52,7 @@ export const SpeechBadge: React.FC<SpeechBadgeProps> = ({
       <button
         className="w-11 h-11 rounded-full flex items-center justify-center text-on-primary hover:bg-on-primary/20 transition-colors"
         onClick={onStop}
-        aria-label="停止听书"
+        aria-label={t('停止听书')}
         data-ui-control
       >
         <span className="material-symbols-outlined text-[18px]">close</span>

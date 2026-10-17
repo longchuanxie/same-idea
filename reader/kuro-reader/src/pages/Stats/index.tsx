@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { FormatBadge } from '@/components/atoms/FormatBadge';
 import { ROUTES, bookDetailPath } from '@/constants/routes';
+import { t } from '@/i18n';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import { useStatsStore } from '@/stores/useStatsStore';
 import { cn } from '@/utils/cn';
@@ -31,8 +32,8 @@ const HEATMAP_LEVEL_CLASSES = [
 
 /** 数字叙事化（建议书 2.10-3）：大数字必须跟一行人话 */
 const narrateTotalHours = (hours: number): string => {
-  if (hours < HOURS_PER_NIGHT) return '时光尚浅，静候墨迹';
-  return `大约 ${Math.round(hours / HOURS_PER_NIGHT)} 个安静的夜晚`;
+  if (hours < HOURS_PER_NIGHT) return t('时光尚浅，静候墨迹');
+  return t('大约 {{arg1}} 个安静的夜晚', { arg1: Math.round(hours / HOURS_PER_NIGHT) });
 };
 
 export const StatsPage: React.FC = () => {
@@ -62,31 +63,31 @@ export const StatsPage: React.FC = () => {
   /** 本期概览（建议书 6.10）：同类指标相邻呈现，衬线大数字 + mono 单位 + 叙事小字 */
   const overviewCards: { label: string; value: number; unit: string; narrative: string; icon: string }[] = [
     {
-      label: '累计时长',
+      label: t('累计时长'),
       value: stats.totalHours,
-      unit: '小时',
+      unit: t('小时'),
       narrative: narrateTotalHours(stats.totalHours),
       icon: 'schedule',
     },
     {
-      label: '连续开馆',
+      label: t('连续开馆'),
       value: stats.currentStreak,
-      unit: '天',
-      narrative: goalStreak > 0 ? `连续达标 ${goalStreak} 天` : '今天开馆即可续上',
+      unit: t('天'),
+      narrative: goalStreak > 0 ? t('连续达标 {{goalStreak}} 天', { goalStreak: goalStreak }) : t('今天开馆即可续上'),
       icon: 'local_fire_department',
     },
     {
-      label: '最长连续',
+      label: t('最长连续'),
       value: stats.longestStreak,
-      unit: '天',
-      narrative: stats.longestStreak > 0 ? `最长的一次，连续 ${stats.longestStreak} 天` : '纪录虚位以待',
+      unit: t('天'),
+      narrative: stats.longestStreak > 0 ? t('最长的一次，连续 {{longestStreak}} 天', { longestStreak: stats.longestStreak }) : t('纪录虚位以待'),
       icon: 'emoji_events',
     },
     {
-      label: '已归架',
+      label: t('已归架'),
       value: completedBooks.length,
-      unit: '部',
-      narrative: completedBooks.length > 0 ? '读完的作品都在架上' : '第一本归架后点亮',
+      unit: t('部'),
+      narrative: completedBooks.length > 0 ? t('读完的作品都在架上') : t('第一本归架后点亮'),
       icon: 'check_circle',
     },
   ];
@@ -94,8 +95,8 @@ export const StatsPage: React.FC = () => {
   return (
     <div className="w-full max-w-max-width-content px-margin-mobile md:px-0 py-8 md:py-16 flex flex-col gap-12">
       <section className="flex flex-col gap-2 border-b border-outline-variant pb-8">
-        <h2 className="font-display text-display-lg-mobile md:text-display-lg text-primary">图书馆台账</h2>
-        <p className="font-body text-body-md text-on-surface-variant">你在此留下的墨迹与时光。</p>
+        <h2 className="font-display text-display-lg-mobile md:text-display-lg text-primary">{t('图书馆台账')}</h2>
+        <p className="font-body text-body-md text-on-surface-variant">{t('你在此留下的墨迹与时光。')}</p>
       </section>
 
       {/* 本期概览：四数一屏，当前/最长连续相邻 */}
@@ -122,18 +123,18 @@ export const StatsPage: React.FC = () => {
       <section className="border border-outline-variant rounded-card-lg p-6 flex flex-col gap-3">
         <div className="flex items-center gap-2 text-on-surface-variant">
           <span className="material-symbols-outlined text-icon-md">flag</span>
-          <h3 className="font-label text-label-md uppercase tracking-widest">今日之灯</h3>
+          <h3 className="font-label text-label-md uppercase tracking-widest">{t('今日之灯')}</h3>
           <button
             className="font-label text-label-sm text-on-surface-variant hover:text-primary transition-colors ml-auto"
             onClick={() => setGoalEditing(!goalEditing)}
           >
-            {goalEditing ? '收起' : '调整目标'}
+            {goalEditing ? t('收起') : t('调整目标')}
           </button>
         </div>
         <div className="flex items-baseline gap-2">
           <span className="font-display text-display-lg-mobile text-primary tabular-nums">{todayMinutes}</span>
           <span className="font-body text-body-md text-on-surface-variant">
-            / {dailyGoalMinutes} 分钟 · 今日已读 {goalPercent}%
+            / {t('{{dailyGoalMinutes}} 分钟 · 今日已读 {{goalPercent}}', { dailyGoalMinutes: dailyGoalMinutes, goalPercent: goalPercent })}%
           </span>
         </div>
         <div className="h-2 rounded-full bg-surface-variant overflow-hidden">
@@ -144,7 +145,7 @@ export const StatsPage: React.FC = () => {
         </div>
         {goalEditing && (
           <div className="flex items-center gap-2 pt-2">
-            <span className="font-label text-label-sm text-on-surface-variant mr-1">目标</span>
+            <span className="font-label text-label-sm text-on-surface-variant mr-1">{t('目标')}</span>
             {GOAL_PRESETS.map((preset) => (
               <button
                 key={preset}
@@ -156,8 +157,7 @@ export const StatsPage: React.FC = () => {
                 )}
                 onClick={() => setDailyGoalMinutes(preset)}
               >
-                {preset} 分钟
-              </button>
+                {t('{{preset}} 分钟', { preset: preset })}</button>
             ))}
           </div>
         )}
@@ -167,8 +167,7 @@ export const StatsPage: React.FC = () => {
         <section className="flex flex-col gap-6">
           <div className="flex items-center gap-2 border-b border-outline-variant pb-2">
             <span className="material-symbols-outlined text-on-surface-variant">check_circle</span>
-            <h3 className="font-display text-headline-md text-primary">
-              已归架作品 <span className="font-mono text-label-sm text-on-surface-variant ml-2">{completedBooks.length}</span>
+            <h3 className="font-display text-headline-md text-primary">{t('已归架作品')}<span className="font-mono text-label-sm text-on-surface-variant ml-2">{completedBooks.length}</span>
             </h3>
           </div>
           <div className="flex flex-col">
@@ -199,10 +198,8 @@ export const StatsPage: React.FC = () => {
       <section className="flex flex-col gap-6">
         <div className="flex items-center gap-2 border-b border-outline-variant pb-2">
           <span className="material-symbols-outlined text-on-surface-variant">calendar_view_month</span>
-          <h3 className="font-display text-headline-md text-primary">年轮 · 阅读热力图</h3>
-          <span className="font-label text-label-sm text-on-surface-variant opacity-60 ml-auto">
-            近 {HEATMAP_WEEKS} 周 · 以每日目标 {dailyGoalMinutes} 分钟定档
-          </span>
+          <h3 className="font-display text-headline-md text-primary">{t('年轮 · 阅读热力图')}</h3>
+          <span className="font-label text-label-sm text-on-surface-variant opacity-60 ml-auto">{t('近 {{HEATMAP_WEEKS}} 周 · 以每日目标 {{dailyGoalMinutes}} 分钟定档', { HEATMAP_WEEKS: HEATMAP_WEEKS, dailyGoalMinutes: dailyGoalMinutes })}</span>
         </div>
         <div className="overflow-x-auto pb-2">
           <div
@@ -212,17 +209,17 @@ export const StatsPage: React.FC = () => {
             {heatmap.map((cell) => (
               <div
                 key={cell.date}
-                title={`${cell.date} · ${cell.minutes} 分钟`}
+                title={t('{{date}} · {{minutes}} 分钟', { date: cell.date, minutes: cell.minutes })}
                 className={`w-3.5 h-3.5 rounded-sm ${HEATMAP_LEVEL_CLASSES[cell.level]}`}
               />
             ))}
           </div>
           <div className="flex items-center gap-1 mt-3 text-on-surface-variant">
-            <span className="font-label text-label-xs">少</span>
+            <span className="font-label text-label-xs">{t('少')}</span>
             {HEATMAP_LEVEL_CLASSES.map((cls) => (
               <span key={cls} className={`w-3 h-3 rounded-sm ${cls}`} />
             ))}
-            <span className="font-label text-label-xs">多</span>
+            <span className="font-label text-label-xs">{t('多')}</span>
           </div>
         </div>
       </section>
@@ -231,7 +228,7 @@ export const StatsPage: React.FC = () => {
         <section className="flex flex-col gap-6 mt-8">
           <div className="flex items-center gap-2 border-b border-outline-variant pb-2">
             <span className="material-symbols-outlined text-on-surface-variant">bar_chart</span>
-            <h3 className="font-display text-headline-md text-primary">近七日节奏</h3>
+            <h3 className="font-display text-headline-md text-primary">{t('近七日节奏')}</h3>
           </div>
           <div className="w-full h-48 border border-outline-variant p-4 flex items-end justify-between gap-2 relative">
             <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-on-surface-variant font-mono text-label-sm py-4 pl-2 opacity-50">
@@ -260,14 +257,12 @@ export const StatsPage: React.FC = () => {
       {stats.totalHours === 0 && completedBooks.length === 0 && (
         <section className="flex flex-col items-center justify-center py-16 text-center">
           <span className="material-symbols-outlined text-on-surface-variant text-6xl mb-4">query_stats</span>
-          <p className="font-body text-body-md text-on-surface-variant">台账还是第一页</p>
-          <p className="font-label text-label-sm text-on-surface-variant mt-2">开始阅读后，墨迹会自己长出来</p>
+          <p className="font-body text-body-md text-on-surface-variant">{t('台账还是第一页')}</p>
+          <p className="font-label text-label-sm text-on-surface-variant mt-2">{t('开始阅读后，墨迹会自己长出来')}</p>
           <button
             className="btn-secondary px-6 py-2 mt-6"
             onClick={() => navigate(ROUTES.LIBRARY)}
-          >
-            去书库挑一本
-          </button>
+          >{t('去书库挑一本')}</button>
         </section>
       )}
     </div>

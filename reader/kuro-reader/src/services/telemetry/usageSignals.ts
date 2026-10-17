@@ -2,7 +2,8 @@ import { STORAGE_KEYS } from '@/constants/storage'
 
 /**
  * 使用信号最小采集：本地 localStorage 计数，不上报、无设备指纹。
- * 服务三类判断：回原文点击率、节拍点击率、替换触发次数（追更型读者规模的唯一直接证据）。
+ * 服务四类判断：回原文点击率、节拍点击率、替换触发次数（追更型读者规模的唯一直接证据）、
+ * 原文净化动作（确认应用/放弃——规则命中率与提示疲劳度的验证信号）。
  * 写入失败（隐私模式/配额）静默——信号是加速层，不拖业务动作。
  */
 
@@ -10,6 +11,8 @@ export const USAGE_SIGNAL_EVENTS = [
   'knowledge-back-to-source',
   'knowledge-beat-tap',
   'book-replace',
+  'sanitize-applied',
+  'sanitize-dismissed',
 ] as const
 
 export type UsageSignalEvent = (typeof USAGE_SIGNAL_EVENTS)[number]

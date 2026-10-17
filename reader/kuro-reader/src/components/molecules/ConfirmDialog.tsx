@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { Button } from '@/components/atoms/Button';
+import { t } from '@/i18n';
 
 export interface ConfirmDialogProps {
   isOpen: boolean;
@@ -17,8 +18,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   isOpen,
   title,
   message,
-  confirmLabel = '确认',
-  cancelLabel = '取消',
+  confirmLabel = t('确认'),
+  cancelLabel = t('取消'),
   variant = 'default',
   onConfirm,
   onCancel,

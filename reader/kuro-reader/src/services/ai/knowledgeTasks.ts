@@ -7,6 +7,7 @@
  */
 
 import type {
+  ChapterSummaryData,
   CharacterGraphData,
   ContentKind,
   GlossaryData,
@@ -19,16 +20,19 @@ import type {
 import {
   isBeatsEmpty,
   isBriefEmpty,
+  isSummaryEmpty,
   mergeBeats,
   mergeBriefs,
   mergeCharacterGraphs,
   mergeGlossary,
   mergeMindmapBranches,
+  mergeSummaries,
   parseBeatsPartial,
   parseBriefPartial,
   parseGlossaryPartial,
   parseGraphPartial,
   parseMindmapPartial,
+  parseSummaryPartial,
   type BeatsPartial,
   type GlossaryPartial,
   type GraphPartial,
@@ -36,6 +40,7 @@ import {
   type InterimBriefData,
   type InterimGlossaryData,
   type InterimGraphData,
+  type SummaryPartial,
 } from '@/utils/knowledgeMerge'
 
 export interface KnowledgeTaskChunkInput {
@@ -81,6 +86,11 @@ export interface KnowledgeTask {
   /** 产物默认标题 */
   artifactTitle: string
   /**
+   * 需要先圈定章节范围的任务（如章节总结）：点任务卡直接弹生成选项
+   * （默认起止章模式）——「全书跑一遍」对该类产物既贵又非用户所求。
+   */
+  requireScope?: boolean
+  /**
    * 语料模式：'chunks' 分块通读（默认，逐块分析后合并）；
    * 'digest' 全书骨架单块（全书视野任务：骨架即唯一 chunk，一次调用出全书结论）
    */
@@ -89,9 +99,9 @@ export interface KnowledgeTask {
   /** 解析单块回复；形状不对返回 null（该块作废）。knownNames 供图谱类放行跨块实体 */
   parsePartial(raw: unknown, knownNames?: string[]): unknown | null
   /** 合并全部有效片段为最终数据；base 为增量合并的基底（现有产物数据） */
-  merge(bookTitle: string, partials: { label: string; data: unknown }[], base?: unknown): CharacterGraphData | MindmapNodeData | GlossaryData | PaperBriefData | StoryBeatsData
+  merge(bookTitle: string, partials: { label: string; data: unknown }[], base?: unknown): CharacterGraphData | MindmapNodeData | GlossaryData | PaperBriefData | StoryBeatsData | ChapterSummaryData
   /** 结果为空判断（空结果不落库，直接报「提不出」） */
-  isEmpty(data: CharacterGraphData | MindmapNodeData | GlossaryData | PaperBriefData | StoryBeatsData): boolean
+  isEmpty(data: CharacterGraphData | MindmapNodeData | GlossaryData | PaperBriefData | StoryBeatsData | ChapterSummaryData): boolean
 }
 
 /** 提示词中分块正文注入上限（与 bookCorpus 分块粒度解耦：块 6k 字，注入 8k 余量） */
@@ -390,6 +400,55 @@ const storyBeatsTask: KnowledgeTask = {
   isEmpty: (data) => isBeatsEmpty(data as StoryBeatsData),
 }
 
+/** 章节总结：指定起止章的剧情/论点回顾——追更补课、久别找回，圈哪段总结哪段 */
+const SUMMARY_SYSTEM_PROMPT = [
+  '你是一位严谨的读书助手，任务是为读者总结书籍片段的关键内容。',
+  '只依据给定文本总结，不推测后续剧情、不引入文本之外的知识。',
+  '严格只输出一个 JSON 对象，不要输出任何解释、前后缀或代码围栏。',
+].join('\n')
+
+const chapterSummaryTask: KnowledgeTask = {
+  type: 'chapter-summary',
+  label: '章节总结',
+  icon: 'summarize',
+  hint: '圈定起止章的剧情/论点回顾——追更补课、久别找回',
+  kinds: ['fiction', 'academic'],
+  artifactTitle: '章节总结',
+  // 总结的对象是「读者圈定的那段」：默认必须选范围，全书跑一遍既贵又非所求
+  requireScope: true,
+  buildMessages: (input) => [
+    { role: 'system', content: SUMMARY_SYSTEM_PROMPT },
+    {
+      role: 'user',
+      content: [
+        `${bookLine(input)}（${input.chunkLabel}）`,
+        '',
+        '请总结下面的片段，输出 JSON：',
+        '{"points":["关键情节或论点（每条≤40字，按发生/论述顺序）"],"closing":"这段结束时人物处境或论证落点（≤30字，可省略）"}',
+        '要求：',
+        // 内容视角决定「总结什么」：小说读者要情节回顾，学术读者要论证推进
+        ...(input.contentKind === 'academic'
+          ? [
+              '- points 概括论点推进：核心主张、关键论证、重要证据与转折，至多 5 条',
+              '- closing 点明这段论述落到哪一步',
+            ]
+          : [
+              '- points 概括情节推进：转折、人物动向、影响理解的新设定，至多 5 条',
+              '- closing 是这段结束时的场景与悬念，不剧透后文',
+            ]),
+        '- 不虚构文本中没有的内容，不写「本章讲述了」这类空话',
+        '',
+        '片段正文：',
+        input.chunkText.slice(0, PROMPT_TEXT_LIMIT_CHARS),
+      ].join('\n'),
+    },
+  ],
+  parsePartial: (raw) => parseSummaryPartial(raw),
+  merge: (_bookTitle, partials, base) =>
+    mergeSummaries(partials.map((partial) => partial as { label: string; data: SummaryPartial }), base as ChapterSummaryData | undefined),
+  isEmpty: (data) => isSummaryEmpty(data as ChapterSummaryData),
+}
+
 /** 注册表：新产物类型在此追加 */
 export const KNOWLEDGE_TASKS: Record<KnowledgeArtifactType, KnowledgeTask> = {
   'character-graph': characterGraphTask,
@@ -398,6 +457,7 @@ export const KNOWLEDGE_TASKS: Record<KnowledgeArtifactType, KnowledgeTask> = {
   mindmap: mindmapTask,
   glossary: glossaryTask,
   'story-beats': storyBeatsTask,
+  'chapter-summary': chapterSummaryTask,
 }
 
 export function getKnowledgeTask(type: KnowledgeArtifactType): KnowledgeTask {

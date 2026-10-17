@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState, type FC, type ReactNode } from 'rea
 
 import type { HLJSApi, LanguageFn } from 'highlight.js'
 
+import { t } from '@/i18n';
 import { copyTextToClipboard } from '@/utils/clipboard'
 
 export interface MarkdownCodeBlockProps {
@@ -181,7 +182,7 @@ const CodeToolbar: FC<CodeToolbarProps> = ({
             <button
               type="button"
               className="rounded px-2 py-1 hover:bg-current/10"
-              aria-label={wrapLines ? '关闭代码自动换行' : '开启代码自动换行'}
+              aria-label={wrapLines ? t('关闭代码自动换行') : t('开启代码自动换行')}
               aria-pressed={wrapLines}
               onClick={(event) => {
                 event.stopPropagation()
@@ -193,7 +194,7 @@ const CodeToolbar: FC<CodeToolbarProps> = ({
             <button
               type="button"
               className="rounded px-2 py-1 hover:bg-current/10"
-              aria-label={showLineNumbers ? '隐藏代码行号' : '显示代码行号'}
+              aria-label={showLineNumbers ? t('隐藏代码行号') : t('显示代码行号')}
               aria-pressed={showLineNumbers}
               onClick={(event) => {
                 event.stopPropagation()
@@ -211,12 +212,12 @@ const CodeToolbar: FC<CodeToolbarProps> = ({
             event.stopPropagation()
             void handleCopy()
           }}
-          aria-label="复制代码"
+          aria-label={t('复制代码')}
         >
           <span className="material-symbols-outlined text-icon-sm">
             {copyStatus === 'copied' ? 'check' : copyStatus === 'failed' ? 'error' : 'content_copy'}
           </span>
-          {copyStatus === 'copied' ? '已复制' : copyStatus === 'failed' ? '复制失败' : '复制'}
+          {copyStatus === 'copied' ? t('已复制') : copyStatus === 'failed' ? t('复制失败') : t('复制')}
         </button>
       </div>
     </div>
@@ -257,14 +258,14 @@ const MermaidDiagram: FC<{ chart: string; paginated: boolean }> = ({ chart, pagi
   if (failed) {
     return (
       <div className="p-4">
-        <p className="mb-3 font-label text-sm opacity-70">Mermaid 图表语法有误，已显示源码</p>
+        <p className="mb-3 font-label text-sm opacity-70">{t('Mermaid 图表语法有误，已显示源码')}</p>
         <pre className="overflow-x-auto whitespace-pre font-mono text-[0.9em] leading-relaxed">{chart}</pre>
       </div>
     )
   }
 
   if (!result) {
-    return <div className="p-6 text-center font-label text-sm opacity-60">正在渲染 Mermaid 图表…</div>
+    return <div className="p-6 text-center font-label text-sm opacity-60">{t('正在渲染 Mermaid 图表…')}</div>
   }
 
   return (
@@ -272,7 +273,7 @@ const MermaidDiagram: FC<{ chart: string; paginated: boolean }> = ({ chart, pagi
       data-reader-horizontal-scroll
       data-ui-control
       role="region"
-      aria-label="Mermaid 图表，可缩放和滚动"
+      aria-label={t('Mermaid 图表，可缩放和滚动')}
       tabIndex={0}
       className={paginated
         ? 'relative max-h-[62vh] overflow-auto overscroll-contain p-4'
@@ -283,7 +284,7 @@ const MermaidDiagram: FC<{ chart: string; paginated: boolean }> = ({ chart, pagi
           type="button"
           className="rounded-full p-1 hover:bg-current/10 disabled:opacity-30"
           disabled={scale <= MERMAID_MIN_SCALE}
-          aria-label="缩小图表"
+          aria-label={t('缩小图表')}
           onClick={(event) => {
             event.stopPropagation()
             setScale((current) => Math.max(MERMAID_MIN_SCALE, current - MERMAID_SCALE_STEP))
@@ -294,7 +295,7 @@ const MermaidDiagram: FC<{ chart: string; paginated: boolean }> = ({ chart, pagi
         <button
           type="button"
           className="min-w-12 rounded-full px-2 py-1 font-label text-xs hover:bg-current/10"
-          aria-label="重置图表缩放"
+          aria-label={t('重置图表缩放')}
           onClick={(event) => {
             event.stopPropagation()
             setScale(MERMAID_DEFAULT_SCALE)
@@ -306,7 +307,7 @@ const MermaidDiagram: FC<{ chart: string; paginated: boolean }> = ({ chart, pagi
           type="button"
           className="rounded-full p-1 hover:bg-current/10 disabled:opacity-30"
           disabled={scale >= MERMAID_MAX_SCALE}
-          aria-label="放大图表"
+          aria-label={t('放大图表')}
           onClick={(event) => {
             event.stopPropagation()
             setScale((current) => Math.min(MERMAID_MAX_SCALE, current + MERMAID_SCALE_STEP))
@@ -355,9 +356,7 @@ export const MarkdownCodeBlock: FC<MarkdownCodeBlockProps> = ({
       ) : (
         <div className="relative">
           {isMermaid && !isComplete && (
-            <p className="border-b border-current/10 px-3 py-2 font-label text-xs opacity-60">
-              图表跨页，完整图形将在包含完整源码的页面中显示
-            </p>
+            <p className="border-b border-current/10 px-3 py-2 font-label text-xs opacity-60">{t('图表跨页，完整图形将在包含完整源码的页面中显示')}</p>
           )}
           <pre
             data-reader-horizontal-scroll

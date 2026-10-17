@@ -18,6 +18,7 @@ vi.mock('@/stores/useAppStore', () => ({
       knowledgeAiUrl: '',
       knowledgeAiKey: '',
       knowledgeAiModel: '',
+      contentSanitize: { enabled: true, typography: true, ads: true, customKeywords: [] },
       auth: { lockTimeout: 300000, maxAttempts: 5 },
     },
     theme: 'auto',

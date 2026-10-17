@@ -14,6 +14,7 @@ import { COPY } from '@/constants/copy';
 import { ROUTES, knowledgePath, notesPath, readerPathForBook } from '@/constants/routes';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { useHistoryBack } from '@/hooks/useHistoryBack';
+import { t } from '@/i18n';
 import { annotationRepo } from '@/services/storage/annotationRepo';
 import { recordUsageSignal } from '@/services/telemetry/usageSignals';
 import { useKnowledgeStore } from '@/stores/useKnowledgeStore';
@@ -37,9 +38,9 @@ const TOC_PREVIEW_COUNT = 12;
 type BookStatus = Book['status'];
 
 const STATUS_OPTIONS: { value: BookStatus; label: string }[] = [
-  { value: 'ongoing', label: '连载中' },
-  { value: 'completed', label: '已完结' },
-  { value: 'hiatus', label: '休载中' },
+  { value: 'ongoing', label: t('连载中') },
+  { value: 'completed', label: t('已完结') },
+  { value: 'hiatus', label: t('休载中') },
 ];
 
 export const BookDetailPage: React.FC = () => {
@@ -131,13 +132,11 @@ export const BookDetailPage: React.FC = () => {
       <div className="paper-texture min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <span className="material-symbols-outlined text-on-surface-variant text-6xl">search_off</span>
-          <p className="font-body text-body-md text-on-surface-variant">未找到该书籍</p>
+          <p className="font-body text-body-md text-on-surface-variant">{t('未找到该书籍')}</p>
           <button
             className="btn-secondary px-6 py-2"
             onClick={() => historyBack(ROUTES.LIBRARY)}
-          >
-            返回书架
-          </button>
+          >{t('返回书架')}</button>
         </div>
       </div>
     );
@@ -155,8 +154,8 @@ export const BookDetailPage: React.FC = () => {
 
   const getChapterStatusText = (status: string): string => {
     switch (status) {
-      case 'read': return '已读';
-      case 'reading': return '继续阅读';
+      case 'read': return t('已读');
+      case 'reading': return t('继续阅读');
       default: return '';
     }
   };
@@ -200,7 +199,7 @@ export const BookDetailPage: React.FC = () => {
           ) : (
             <>
               <h3 className="font-label text-label-md text-primary">
-                {ch.number != null ? <>第 {ch.number} {book.format === 'text' ? '章' : '话'}</> : ch.title}
+                {ch.number != null ? <>{t('第 {{number}}', { number: ch.number })} {book.format === 'text' ? t('章') : t('话')}</> : ch.title}
               </h3>
               {ch.number != null && (
                 <p className="font-label text-label-sm text-on-surface-variant">{ch.title}</p>
@@ -219,9 +218,9 @@ export const BookDetailPage: React.FC = () => {
 
   const getStatusLabel = (status: BookStatus): string => {
     switch (status) {
-      case 'completed': return '已完结';
-      case 'ongoing': return '连载中';
-      case 'hiatus': return '休载中';
+      case 'completed': return t('已完结');
+      case 'ongoing': return t('连载中');
+      case 'hiatus': return t('休载中');
     }
   };
 
@@ -242,7 +241,7 @@ export const BookDetailPage: React.FC = () => {
             }}
           >
             <span className="material-symbols-outlined text-icon-md">edit</span>
-            <span className="font-label text-label-md">编辑档案</span>
+            <span className="font-label text-label-md">{t('编辑档案')}</span>
           </button>
           <button
             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-container transition-colors text-on-surface-variant hover:text-primary"
@@ -252,7 +251,7 @@ export const BookDetailPage: React.FC = () => {
             }}
           >
             <span className="material-symbols-outlined text-icon-md">ios_share</span>
-            <span className="font-label text-label-md">导出手记</span>
+            <span className="font-label text-label-md">{t('导出手记')}</span>
           </button>
           <button
             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-container transition-colors text-on-surface-variant hover:text-primary"
@@ -273,7 +272,7 @@ export const BookDetailPage: React.FC = () => {
             }}
           >
             <span className="material-symbols-outlined text-icon-md">delete</span>
-            <span className="font-label text-label-md">移出馆藏</span>
+            <span className="font-label text-label-md">{t('移出馆藏')}</span>
           </button>
         </div>
       )}
@@ -296,7 +295,7 @@ export const BookDetailPage: React.FC = () => {
             {isEditing ? (
               <div className="flex flex-col gap-4">
                 <div>
-                  <label className="font-label text-label-sm text-on-surface-variant mb-1 block">名称</label>
+                  <label className="font-label text-label-sm text-on-surface-variant mb-1 block">{t('名称')}</label>
                   <input
                     type="text"
                     value={editTitle}
@@ -305,7 +304,7 @@ export const BookDetailPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="font-label text-label-sm text-on-surface-variant mb-1 block">作者</label>
+                  <label className="font-label text-label-sm text-on-surface-variant mb-1 block">{t('作者')}</label>
                   <input
                     type="text"
                     value={editAuthor}
@@ -314,7 +313,7 @@ export const BookDetailPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="font-label text-label-sm text-on-surface-variant mb-1 block">简介</label>
+                  <label className="font-label text-label-sm text-on-surface-variant mb-1 block">{t('简介')}</label>
                   <textarea
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
@@ -323,7 +322,7 @@ export const BookDetailPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="font-label text-label-sm text-on-surface-variant mb-1 block">连载状态</label>
+                  <label className="font-label text-label-sm text-on-surface-variant mb-1 block">{t('连载状态')}</label>
                   <div className="flex gap-2">
                     {STATUS_OPTIONS.map((opt) => (
                       <button
@@ -344,15 +343,11 @@ export const BookDetailPage: React.FC = () => {
                   <button
                     className="btn-primary px-6 py-2"
                     onClick={handleSave}
-                  >
-                    保存
-                  </button>
+                  >{t('保存')}</button>
                   <button
                     className="btn-secondary px-6 py-2"
                     onClick={handleCancelEdit}
-                  >
-                    取消
-                  </button>
+                  >{t('取消')}</button>
                 </div>
               </div>
             ) : (
@@ -364,7 +359,7 @@ export const BookDetailPage: React.FC = () => {
                   <button
                     className="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-variant flex-shrink-0"
                     onClick={enterEditMode}
-                    title="编辑信息"
+                    title={t('编辑信息')}
                   >
                     <span className="material-symbols-outlined text-headline-md">edit</span>
                   </button>
@@ -410,17 +405,15 @@ export const BookDetailPage: React.FC = () => {
                       setTimeout(() => tagInputRef.current?.focus(), TAG_INPUT_FOCUS_DELAY_MS);
                     }}
                   >
-                    <span className="material-symbols-outlined text-icon-sm align-text-bottom">add</span>
-                    标签
-                  </button>
+                    <span className="material-symbols-outlined text-icon-sm align-text-bottom">add</span>{t('标签')}</button>
                 </div>
 
                 {showTagPanel && (
                   <div className="bg-surface-container-low rounded-card-lg border border-outline-variant p-4 mb-4">
                     <div className="flex items-center justify-between mb-3">
-                      <span className="font-label text-label-sm text-on-surface-variant">分类</span>
+                      <span className="font-label text-label-sm text-on-surface-variant">{t('分类')}</span>
                       <button
-                        aria-label="收起分类面板"
+                        aria-label={t('收起分类面板')}
                         className="w-7 h-7 flex items-center justify-center rounded text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors"
                         onClick={() => setShowTagPanel(false)}
                       >
@@ -446,7 +439,7 @@ export const BookDetailPage: React.FC = () => {
                             setNewTagName('');
                           }
                         }}
-                        placeholder="输入标签名称，按回车添加"
+                        placeholder={t('输入标签名称，按回车添加')}
                         className="flex-1 px-3 py-2 bg-surface-container-lowest border border-outline-variant rounded-lg text-on-surface font-body text-body-md focus:outline-none focus:border-primary"
                       />
                       <button
@@ -464,13 +457,11 @@ export const BookDetailPage: React.FC = () => {
                           setNewTagName('');
                         }}
                         disabled={!newTagName.trim()}
-                      >
-                        添加
-                      </button>
+                      >{t('添加')}</button>
                     </div>
                     {tags.length > 0 && (
                       <div className="flex flex-wrap gap-2">
-                        <span className="font-label text-label-sm text-on-surface-variant w-full mb-1">已有标签：</span>
+                        <span className="font-label text-label-sm text-on-surface-variant w-full mb-1">{t('已有标签：')}</span>
                         {tags.map((tag) => {
                           const isAttached = tag.bookIds.includes(book.id);
                           return (
@@ -513,15 +504,13 @@ export const BookDetailPage: React.FC = () => {
                 {progress && (
                   <div className="flex items-center gap-2 justify-center md:justify-start mb-4 font-label text-label-sm text-on-surface-variant">
                     <span className="w-1 h-4 bg-seal rounded-sm flex-shrink-0" aria-hidden="true" />
-                    <span>
-                      在读
-                      {continueChapter ? continueChapter.number != null ? ` · 第 ${continueChapter.number} ${book.format === 'text' ? '章' : '话'}` : ` · ${continueChapter.title}` : ''}
+                    <span>{t('在读')}{continueChapter ? continueChapter.number != null ? t(' · 第 {{number}} {{arg1}}', { number: continueChapter.number, arg1: book.format === 'text' ? t('章') : t('话') }) : ` · ${continueChapter.title}` : ''}
                       <span className="font-mono ml-1.5">{Math.round(progress.percentage)}%</span>
                     </span>
                     {book.lastReadAt && (
                       <>
                         <span aria-hidden="true">·</span>
-                        <span>{describeLastRead(book.lastReadAt)}读过</span>
+                        <span>{t('{{arg1}}读过', { arg1: describeLastRead(book.lastReadAt) })}</span>
                       </>
                     )}
                   </div>
@@ -533,15 +522,15 @@ export const BookDetailPage: React.FC = () => {
                     className="flex-1 md:flex-none md:min-w-44"
                     onClick={() => navigate(startReaderPath)}
                   >
-                    {continueChapter ? '继续阅读' : '立即开读'}
+                    {continueChapter ? t('继续阅读') : t('立即开读')}
                   </Button>
                   <Button
                     variant="secondary"
                     size="lg"
                     className={book.isFavorite ? 'text-primary' : ''}
                     onClick={() => toggleFavorite(book.id)}
-                    aria-label="收藏"
-                    title="收藏"
+                    aria-label={t('收藏')}
+                    title={t('收藏')}
                   >
                     <span
                       className="material-symbols-outlined text-icon-md"
@@ -562,10 +551,9 @@ export const BookDetailPage: React.FC = () => {
         {book.chapters.length > 0 && (
           <section className="py-8 border-t border-outline-variant animate-fade-in stagger-3">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="font-display text-headline-md text-primary">目录</h2>
+              <h2 className="font-display text-headline-md text-primary">{t('目录')}</h2>
               <span className="flex items-center gap-0.5">
-                <span className="font-label text-label-sm text-on-surface-variant">
-                  共 {book.chapters.length} {book.format === 'text' ? '章' : '话'}
+                <span className="font-label text-label-sm text-on-surface-variant">{t('共 {{arg1}}', { arg1: book.chapters.length })} {book.format === 'text' ? t('章') : t('话')}
                 </span>
               </span>
             </div>
@@ -573,17 +561,13 @@ export const BookDetailPage: React.FC = () => {
             {visibleBeats.length > 0 && beatsArtifact && (
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-4">
-                  <span className="font-label text-label-sm text-on-surface-variant">
-                    结构导览 · {visibleBeats.length} 个节拍
-                  </span>
+                  <span className="font-label text-label-sm text-on-surface-variant">{t('结构导览 · {{length}} 个节拍', { length: visibleBeats.length })}</span>
                   <button
                     className="font-label text-label-sm text-primary hover:opacity-80 transition-opacity"
                     onClick={() => navigate(knowledgePath(book.id, beatsArtifact.id))}
-                  >
-                    查看节拍详情
-                  </button>
+                  >{t('查看节拍详情')}</button>
                 </div>
-                <div className="relative h-14" role="list" aria-label="叙事节拍结构条">
+                <div className="relative h-14" role="list" aria-label={t('叙事节拍结构条')}>
                   <div className="absolute left-0 right-0 top-1/2 border-t border-outline-variant" aria-hidden="true" />
                   {visibleBeats.map(({ beat, ratio, labelAbove }) => {
                     const meta = beatRoleMeta(beat.role);
@@ -597,7 +581,7 @@ export const BookDetailPage: React.FC = () => {
                           recordUsageSignal('knowledge-beat-tap', { bookId: book.id });
                           navigate(readerPathForBook(book, book.chapters[beat.chapterIndex].id));
                         }}
-                        title={`${meta.label} · 第 ${beat.chapterIndex + 1} ${book.format === 'text' ? '章' : '话'}：${beat.title}`}
+                        title={t('{{label}} · 第 {{arg1}} {{arg2}}：{{title}}', { label: meta.label, arg1: beat.chapterIndex + 1, arg2: book.format === 'text' ? t('章') : t('话'), title: beat.title })}
                       >
                         <span
                           className="block w-2.5 h-2.5 rounded-full ring-2 ring-surface group-hover:scale-125 transition-transform"
@@ -626,7 +610,7 @@ export const BookDetailPage: React.FC = () => {
                 className="mt-4 font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1.5"
                 onClick={() => setShowAllChapters((v) => !v)}
               >
-                {showAllChapters ? '收起目录' : `展开全部 ${book.chapters.length} ${book.format === 'text' ? '章' : '话'}`}
+                {showAllChapters ? t('收起目录') : t('展开全部 {{arg1}} {{arg2}}', { arg1: book.chapters.length, arg2: book.format === 'text' ? t('章') : t('话') })}
                 <span className="material-symbols-outlined text-icon-sm">
                   {showAllChapters ? 'expand_less' : 'expand_more'}
                 </span>
@@ -639,8 +623,8 @@ export const BookDetailPage: React.FC = () => {
         {annotations.length > 0 && (
           <section className="py-8 border-t border-outline-variant">
             <div className="flex items-baseline justify-between mb-4">
-              <h2 className="font-display text-headline-md text-primary">手记</h2>
-              <span className="font-mono text-label-sm text-on-surface-variant">{annotations.length} 条</span>
+              <h2 className="font-display text-headline-md text-primary">{t('手记')}</h2>
+              <span className="font-mono text-label-sm text-on-surface-variant">{t('{{length}} 条', { length: annotations.length })}</span>
             </div>
             <div className="flex flex-col gap-3 mb-4">
               {[...annotations]
@@ -669,17 +653,13 @@ export const BookDetailPage: React.FC = () => {
               <button
                 className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1.5"
                 onClick={() => navigate(notesPath(book.id))}
-              >
-                查看全部
-                <span className="material-symbols-outlined text-icon-sm">chevron_right</span>
+              >{t('查看全部')}<span className="material-symbols-outlined text-icon-sm">chevron_right</span>
               </button>
               <button
                 className="font-label text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1.5"
                 onClick={() => void handleExportAnnotations()}
               >
-                <span className="material-symbols-outlined text-icon-sm">ios_share</span>
-                导出全部 Markdown
-              </button>
+                <span className="material-symbols-outlined text-icon-sm">ios_share</span>{t('导出全部 Markdown')}</button>
             </div>
           </section>
         )}
@@ -687,14 +667,14 @@ export const BookDetailPage: React.FC = () => {
 
       <ConfirmDialog
         isOpen={confirmDelete}
-        title={`把《${book.title}》从馆中移除？`}
+        title={t('把《{{title}}》从馆中移除？', { title: book.title })}
         message={
           annotations.length > 0
-            ? `它的 ${annotations.length} 条手记与阅读进度会一并消失。`
-            : '它的阅读进度会一并消失。'
+            ? t('它的 {{length}} 条手记与阅读进度会一并消失。', { length: annotations.length })
+            : t('它的阅读进度会一并消失。')
         }
-        confirmLabel="移除"
-        cancelLabel="留下"
+        confirmLabel={t('移除')}
+        cancelLabel={t('留下')}
         variant="danger"
         onConfirm={() => {
           setConfirmDelete(false);

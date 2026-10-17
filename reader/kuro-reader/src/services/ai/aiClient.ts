@@ -6,6 +6,8 @@
  * 可对接 OpenAI / GLM / DeepSeek / Ollama（本地）等任意兼容端点。
  */
 
+import { t } from '@/i18n'
+
 export interface AiProviderConfig {
   /** 服务根地址，如 https://api.openai.com 或 http://127.0.0.1:11434/v1 */
   baseUrl: string
@@ -91,8 +93,8 @@ export async function chatCompletionJson<T>(
   options: ChatJsonOptions
 ): Promise<T> {
   const base = normalizeAiBaseUrl(config.baseUrl)
-  if (!base) throw new AiRequestError('AI 服务地址未配置')
-  if (!config.model.trim()) throw new AiRequestError('AI 模型未配置')
+  if (!base) throw new AiRequestError(t('AI 服务地址未配置'))
+  if (!config.model.trim()) throw new AiRequestError(t('AI 模型未配置'))
 
   // 超时守护覆盖请求 + 响应体读取全程：掐的不只是连接建立，还有慢慢吞吞的读流
   const timeoutController = new AbortController()
@@ -123,15 +125,17 @@ export async function chatCompletionJson<T>(
         signal: timeoutController.signal,
       })
     } catch (e) {
-      if (externalSignal?.aborted) throw new AiRequestError('已取消')
-      if (timeoutController.signal.aborted) throw new AiRequestError('AI 服务响应超时')
-      throw new AiRequestError(`无法连接 AI 服务：${(e as Error).message}`)
+      if (externalSignal?.aborted) throw new AiRequestError(t('已取消'))
+      if (timeoutController.signal.aborted) throw new AiRequestError(t('AI 服务响应超时'))
+      throw new AiRequestError(t('无法连接 AI 服务：{{message}}', { message: (e as Error).message }))
     }
 
     if (!response.ok) {
       const body = await response.text().catch(() => '')
       throw new AiRequestError(
-        `AI 服务返回 ${response.status}${body ? `：${body.slice(0, ERROR_BODY_PREVIEW_CHARS)}` : ''}`,
+        t('AI 服务返回 {{detail}}', {
+          detail: `${response.status}${body ? `：${body.slice(0, ERROR_BODY_PREVIEW_CHARS)}` : ''}`,
+        }),
         response.status
       )
     }
@@ -147,14 +151,14 @@ export async function chatCompletionJson<T>(
       } | null
       if (!payload) {
         // 200 但响应体不是 JSON（网关错误页等）：语法错误冒泡用户看不懂
-        throw new AiRequestError('AI 服务返回了非 JSON 响应（可能被网关/代理拦截）')
+        throw new AiRequestError(t('AI 服务返回了非 JSON 响应（可能被网关/代理拦截）'))
       }
       content = payload.choices?.[0]?.message?.content ?? ''
     }
 
     const parsed = extractJsonPayload(content)
     if (parsed == null) {
-      throw new AiRequestError('AI 没有返回可解析的 JSON 结果')
+      throw new AiRequestError(t('AI 没有返回可解析的 JSON 结果'))
     }
     return parsed as T
   } finally {
@@ -210,9 +214,9 @@ async function readStreamContent(
       if (buffer) consumeLine(buffer)
     }
   } catch (e) {
-    if (externalSignal?.aborted) throw new AiRequestError('已取消')
-    if (timeoutController.signal.aborted) throw new AiRequestError('AI 服务响应超时')
-    throw new AiRequestError(`AI 服务响应中断：${(e as Error).message}`)
+    if (externalSignal?.aborted) throw new AiRequestError(t('已取消'))
+    if (timeoutController.signal.aborted) throw new AiRequestError(t('AI 服务响应超时'))
+    throw new AiRequestError(t('AI 服务响应中断：{{message}}', { message: (e as Error).message }))
   }
   return parts.join('')
 }
@@ -224,7 +228,7 @@ async function readStreamContent(
  */
 export async function listModels(config: AiProviderConfig): Promise<string[]> {
   const base = normalizeAiBaseUrl(config.baseUrl)
-  if (!base) throw new AiRequestError('AI 服务地址未配置')
+  if (!base) throw new AiRequestError(t('AI 服务地址未配置'))
   // 连接测试/拉列表不能永久挂起：超时与响应体读取都在同一守护内
   const timeoutController = new AbortController()
   const timeoutId = window.setTimeout(() => timeoutController.abort(), MODELS_TIMEOUT_MS)
@@ -236,19 +240,21 @@ export async function listModels(config: AiProviderConfig): Promise<string[]> {
         signal: timeoutController.signal,
       })
     } catch (e) {
-      if (timeoutController.signal.aborted) throw new AiRequestError('AI 服务响应超时')
-      throw new AiRequestError(`无法连接 AI 服务：${(e as Error).message}`)
+      if (timeoutController.signal.aborted) throw new AiRequestError(t('AI 服务响应超时'))
+      throw new AiRequestError(t('无法连接 AI 服务：{{message}}', { message: (e as Error).message }))
     }
     if (!response.ok) {
       const body = await response.text().catch(() => '')
       throw new AiRequestError(
-        `AI 服务返回 ${response.status}${body ? `：${body.slice(0, ERROR_BODY_PREVIEW_CHARS)}` : ''}`,
+        t('AI 服务返回 {{detail}}', {
+          detail: `${response.status}${body ? `：${body.slice(0, ERROR_BODY_PREVIEW_CHARS)}` : ''}`,
+        }),
         response.status
       )
     }
     const payload = (await response.json().catch(() => null)) as { data?: unknown } | null
     if (!payload || !Array.isArray(payload.data)) {
-      throw new AiRequestError('服务没有返回模型列表（可能不支持 /models 接口）')
+      throw new AiRequestError(t('服务没有返回模型列表（可能不支持 /models 接口）'))
     }
     const ids = new Set<string>()
     for (const item of payload.data) {

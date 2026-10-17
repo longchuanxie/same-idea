@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { COPY } from '@/constants/copy'
 import { settingsPath, readerPathForBook, knowledgePath } from '@/constants/routes';
+import { t } from '@/i18n';
 import { isProviderConfigured } from '@/services/ai/aiClient'
 import { generateRecap, recapUnitLabel, type RecapResult } from '@/services/ai/readingRecap'
 import { getPdfPageTexts } from '@/services/pdfText'
@@ -58,7 +59,7 @@ export const ReadingRecapSheet: React.FC<ReadingRecapSheetProps> = ({
     if (!progress?.chapterId) return null
     const index = book.chapters.findIndex((ch) => ch.id === progress.chapterId)
     if (index < 0) return null
-    return book.chapters[index].title || `第${index + 1}章`
+    return book.chapters[index].title || t('第{{arg1}}章', { arg1: index + 1 })
   }, [book.chapters, progress?.chapterId])
   const traces = useMemo(
     () => pickTracedAnnotations(annotations, currentChapterIndexOf(book, progress, book.chapters.length)),
@@ -91,7 +92,7 @@ export const ReadingRecapSheet: React.FC<ReadingRecapSheetProps> = ({
       // 与问藏书/查词等 AI 未配置引导口径统一
       setRecap({ status: 'config' })
       toast(COPY.recap.aiNotConfigured, {
-        action: { label: '去设置', onAction: () => navigate(settingsPath('ai')) },
+        action: { label: t('去设置'), onAction: () => navigate(settingsPath('ai')) },
       })
       return
     }
@@ -114,8 +115,8 @@ export const ReadingRecapSheet: React.FC<ReadingRecapSheetProps> = ({
         }
         unitTexts = pages
           .slice(window.from, window.to + 1)
-          .map((text, i) => ({ label: `第${window.from + i + 1}页`, text }))
-        const range = `第${window.from + 1}–${window.to + 1}页`
+          .map((text, i) => ({ label: t('第{{arg1}}页', { arg1: window.from + i + 1 }), text }))
+        const range = t('第{{arg1}}–{{arg2}}页', { arg1: window.from + 1, arg2: window.to + 1 })
         const result = await generateRecap(config, {
           bookTitle: book.title,
           unitLabel,
@@ -139,7 +140,7 @@ export const ReadingRecapSheet: React.FC<ReadingRecapSheetProps> = ({
         }
         unitTexts = chapters
           .slice(window.from, window.to + 1)
-          .map((c, i) => ({ label: c.title || `第${window.from + i + 1}章`, text: c.content }))
+          .map((c, i) => ({ label: c.title || t('第{{arg1}}章', { arg1: window.from + i + 1 }), text: c.content }))
         const range = `${unitTexts[0]?.label ?? ''}–${unitTexts[unitTexts.length - 1]?.label ?? ''}`
         const result = await generateRecap(config, {
           bookTitle: book.title,
@@ -240,9 +241,7 @@ export const ReadingRecapSheet: React.FC<ReadingRecapSheetProps> = ({
               <button
                 className="shrink-0 font-label text-label-sm text-primary hover:opacity-80"
                 onClick={() => navigate(settingsPath('ai'))}
-              >
-                去配置
-              </button>
+              >{t('去配置')}</button>
             </div>
           )}
           {recap.status === 'error' && (

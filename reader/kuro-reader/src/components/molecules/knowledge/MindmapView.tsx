@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react'
 
 import { MindmapOutlineEditor } from '@/components/molecules/knowledge/MindmapOutlineEditor'
 import { PanZoom } from '@/components/molecules/knowledge/PanZoom'
+import { t } from '@/i18n';
 import type { MindmapNodeData } from '@/types'
 import type { MindmapNodePath } from '@/utils/knowledgeEdit'
 import { knowledgeColor, PALETTE_TINT_ALPHA } from '@/utils/knowledgePalette'
@@ -96,7 +97,7 @@ export const MindmapView: React.FC<MindmapViewProps> = ({
 
   return (
     <PanZoom
-      ariaLabel="全书思维导图，可拖拽与缩放"
+      ariaLabel={t('全书思维导图，可拖拽与缩放')}
       className="h-[68vh]"
       fitWidth={layout.width}
       fitHeight={layout.height}
@@ -107,7 +108,7 @@ export const MindmapView: React.FC<MindmapViewProps> = ({
         viewBox={`${-layout.width / 2} 0 ${layout.width} ${layout.height}`}
         className="touch-none"
         role="img"
-        aria-label={`${layout.nodes.length} 个节点的思维导图`}
+        aria-label={t('{{arg1}} 个节点的思维导图', { arg1: layout.nodes.length })}
       >
         <g transform={`translate(0, ${CANVAS_PADDING})`}>
           {/* 分支曲线（压在主题下方） */}
@@ -236,7 +237,7 @@ export const MindmapView: React.FC<MindmapViewProps> = ({
                 key={node.key}
                 role={clickable ? 'button' : undefined}
                 tabIndex={clickable ? 0 : undefined}
-                aria-label={`${node.title}${clickable ? '，点击折叠或展开' : ''}`}
+                aria-label={t('{{title}}{{suffix}}', { title: node.title, suffix: clickable ? t('，点击折叠或展开') : '' })}
                 transform={`translate(${node.x}, ${node.y})`}
                 style={{ cursor: clickable ? 'pointer' : 'default' }}
                 onClick={() => toggleNode(node.key, clickable)}

@@ -182,7 +182,7 @@ function splitOversizedContent(content: string): ParsedTextChapter[] {
  * 1. 不能以全角空格或其他缩进开头（缩进行视为内容行）
  * 2. 匹配可信正则 / 特殊章节名 / 数字编号型
  */
-function isChapterTitle(line: string): boolean {
+export function isChapterTitle(line: string): boolean {
   const trimmed = line.trim()
   if (!trimmed || trimmed.length > 60) return false
 

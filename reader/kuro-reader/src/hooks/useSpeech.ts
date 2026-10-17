@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { t } from '@/i18n';
 import { isNeuralSupported, resolveEngine, type TtsEngineConfig } from '@/services/tts/engineSelector';
 import { isNativeTtsAvailable } from '@/services/tts/nativeTtsEngine';
 import { TtsCancelledError, TtsUnavailableError, type TtsEngine } from '@/services/tts/types';
@@ -239,8 +240,8 @@ export function useSpeech(
       watchdogRef.current = setTimeout(() => {
         if (sessionRef.current !== session) return;
         engineRef.current?.cancel();
-        if (tryNeuralFallback(`「${engine.label}」长时间无响应，已改用神经网络朗读`)) return;
-        haltWithError(`「${engine.label}」长时间无响应，请换用其他发音引擎`);
+        if (tryNeuralFallback(t('「{{label}}」长时间无响应，已改用神经网络朗读', { label: engine.label }))) return;
+        haltWithError(t('「{{label}}」长时间无响应，请换用其他发音引擎', { label: engine.label }));
       }, VOICE_START_WATCHDOG_MS);
     }
     engine?.speak(chunk.text, { rate: rateRef.current, lang: SPEECH_LANG }, {
@@ -259,12 +260,12 @@ export function useSpeech(
         if (error instanceof TtsCancelledError) return;
         // 系统语音引擎终态不可用（设备未装/未启用 TTS 引擎）:出路文案换神经网络续播
         if (error instanceof TtsUnavailableError) {
-          if (tryNeuralFallback('本机没有可用的系统语音引擎，已改用神经网络朗读；安装系统语音引擎后可在发音引擎设置切回')) return;
+          if (tryNeuralFallback(t('本机没有可用的系统语音引擎，已改用神经网络朗读；安装系统语音引擎后可在发音引擎设置切回'))) return;
           haltWithError(error.message);
           return;
         }
-        if (tryNeuralFallback(`「${engine?.label ?? '当前引擎'}」朗读失败，已改用神经网络朗读`)) return;
-        haltWithError(error.message || '语音播报失败');
+        if (tryNeuralFallback(t('「{{arg1}}」朗读失败，已改用神经网络朗读', { arg1: engine?.label ?? t('当前引擎') }))) return;
+        haltWithError(error.message || t('语音播报失败'));
       },
     });
     // 当前分块起播的同时后台预合成下一分块（神经网络/服务端引擎实现），消除块间解析间隙

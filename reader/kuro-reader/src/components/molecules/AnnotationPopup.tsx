@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 
 import { COPY } from '@/constants/copy';
+import { t } from '@/i18n';
 
 import { AnnotationTagPicker } from './AnnotationTagPicker';
 import type { AnnotationStyle } from '../../types';
@@ -62,7 +63,7 @@ export const AnnotationPopup: React.FC<AnnotationPopupProps> = ({
         <div className="px-4 py-3 bg-primary/10 border-b border-outline-variant/30">
           <div className="flex items-center gap-2 mb-1">
             <span className="material-symbols-outlined text-primary text-[14px]">format_quote</span>
-            <span className="font-label text-label-sm text-primary">选中文本</span>
+            <span className="font-label text-label-sm text-primary">{t('选中文本')}</span>
           </div>
           <p className="font-body text-body-sm text-on-surface line-clamp-3 pl-5 opacity-80">
             {selectedText.length > MAX_SELECTED_TEXT_CHARS ? selectedText.slice(0, MAX_SELECTED_TEXT_CHARS) + '...' : selectedText}
@@ -72,7 +73,7 @@ export const AnnotationPopup: React.FC<AnnotationPopupProps> = ({
         {/* 样式选择器 */}
         <div className="px-4 py-2 border-b border-outline-variant/30">
           <div className="flex items-center gap-2">
-            <span className="font-label text-label-xs text-on-surface-variant">样式：</span>
+            <span className="font-label text-label-xs text-on-surface-variant">{t('样式：')}</span>
             <button
               onClick={() => setStyle('highlight')}
               className={`px-2 py-1 rounded-md font-label text-label-xs transition-colors ${
@@ -82,9 +83,7 @@ export const AnnotationPopup: React.FC<AnnotationPopupProps> = ({
               }`}
             >
               <span className="annotation-marker annotation-marker-v1">
-                <span className="material-symbols-outlined text-icon-sm align-middle mr-1">brush</span>
-                水彩笔
-              </span>
+                <span className="material-symbols-outlined text-icon-sm align-middle mr-1">brush</span>{t('水彩笔')}</span>
             </button>
             <button
               onClick={() => setStyle('underline')}
@@ -94,9 +93,7 @@ export const AnnotationPopup: React.FC<AnnotationPopupProps> = ({
                   : 'text-on-surface-variant hover:bg-surface-variant'
               }`}
             >
-              <span className="material-symbols-outlined text-icon-sm align-middle mr-1">format_underlined</span>
-              下划线
-            </button>
+              <span className="material-symbols-outlined text-icon-sm align-middle mr-1">format_underlined</span>{t('下划线')}</button>
             <button
               onClick={() => setStyle('wavy')}
               className={`px-2 py-1 rounded-md font-label text-label-xs transition-colors ${
@@ -105,9 +102,7 @@ export const AnnotationPopup: React.FC<AnnotationPopupProps> = ({
                   : 'text-on-surface-variant hover:bg-surface-variant'
               }`}
             >
-              <span className="material-symbols-outlined text-icon-sm align-middle mr-1">wave</span>
-              波浪线
-            </button>
+              <span className="material-symbols-outlined text-icon-sm align-middle mr-1">wave</span>{t('波浪线')}</button>
           </div>
         </div>
 
@@ -131,9 +126,7 @@ export const AnnotationPopup: React.FC<AnnotationPopupProps> = ({
           <button
             className="px-4 py-1.5 rounded-lg font-label text-label-sm text-on-surface-variant hover:bg-surface-variant transition-colors"
             onClick={onCancel}
-          >
-            取消
-          </button>
+          >{t('取消')}</button>
           <button
             className="btn-primary btn-sm px-4 py-1.5"
             onClick={handleSave}

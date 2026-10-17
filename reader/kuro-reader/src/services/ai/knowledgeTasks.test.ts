@@ -15,14 +15,35 @@ const chunkInputBase = {
 }
 
 describe('任务注册表 · 内容类型分流', () => {
-  it('小说视角：人物图谱 + 导图 + 节拍；学术视角：速览 + 概念图谱 + 导图 + 术语卡', () => {
-    expect(getKnowledgeTasksForKind('fiction').map((t) => t.type)).toEqual(['character-graph', 'mindmap', 'story-beats'])
+  it('小说视角：人物图谱 + 导图 + 节拍 + 章节总结；学术视角：速览 + 概念图谱 + 导图 + 术语卡 + 章节总结', () => {
+    expect(getKnowledgeTasksForKind('fiction').map((t) => t.type)).toEqual(['character-graph', 'mindmap', 'story-beats', 'chapter-summary'])
     expect(getKnowledgeTasksForKind('academic').map((t) => t.type)).toEqual([
       'paper-brief',
       'concept-graph',
       'mindmap',
       'glossary',
+      'chapter-summary',
     ])
+  })
+
+  it('章节总结任务：双视角可用、必须圈范围、提示词按视角切换并要 JSON 要点', () => {
+    const task = getKnowledgeTask('chapter-summary')
+    expect(task.kinds).toEqual(['fiction', 'academic'])
+    expect(task.requireScope).toBe(true)
+    expect(task.corpusMode).toBeUndefined()
+    const fictionPrompt = task.buildMessages({ ...chunkInputBase, contentKind: 'fiction' })[1].content
+    expect(fictionPrompt).toContain('"points"')
+    expect(fictionPrompt).toContain('closing')
+    expect(fictionPrompt).toContain('情节推进')
+    expect(fictionPrompt).toContain('不剧透后文')
+    const academicPrompt = task.buildMessages({ ...chunkInputBase, contentKind: 'academic' })[1].content
+    expect(academicPrompt).toContain('论点推进')
+    expect(academicPrompt).toContain('论述落到哪一步')
+  })
+
+  it('章节总结 requireScope 是唯一需要先圈范围的任务（其余点卡片即全书生成）', () => {
+    const scoped = Object.values(KNOWLEDGE_TASKS).filter((task) => task.requireScope)
+    expect(scoped.map((task) => task.type)).toEqual(['chapter-summary'])
   })
 
   it('叙事节拍任务：小说专属、digest 单块语料、提示词含角色词表与章序折算规则', () => {

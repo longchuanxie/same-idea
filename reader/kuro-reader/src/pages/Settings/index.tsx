@@ -10,6 +10,14 @@ import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
 import { GestureLock } from '@/components/organisms/GestureLock';
 import { COPY } from '@/constants/copy';
 import { STORAGE_KEYS } from '@/constants/storage';
+import {
+  LANGUAGE_LABELS,
+  SUPPORTED_LANGUAGES,
+  getAppLanguage,
+  setAppLanguage,
+  type AppLanguage,
+} from '@/i18n';
+import { t } from '@/i18n';
 import { listModels, normalizeAiBaseUrl } from '@/services/ai/aiClient';
 import {
   CUSTOM_PROVIDER_ID,
@@ -93,24 +101,24 @@ function compactSessions(sessions: SessionEntry[]): SessionEntry[] {
 const LOCK_TIMEOUT_MINUTES = [1, 3, 5, 15, 30] as const;
 const LOCK_TIMEOUT_OPTIONS = LOCK_TIMEOUT_MINUTES.map((minutes) => ({
   value: minutes * 60 * 1000,
-  label: `${minutes} 分钟`,
+  label: t('{{minutes}} 分钟', { minutes: minutes }),
 }));
 
 const MAX_ATTEMPTS_OPTIONS = [
-  { value: 3, label: '3 次' },
-  { value: 5, label: '5 次' },
-  { value: 10, label: '10 次' },
+  { value: 3, label: t('3 次') },
+  { value: 5, label: t('5 次') },
+  { value: 10, label: t('10 次') },
 ];
 
 const SECURITY_QUESTIONS = [
-  '你第一只宠物的名字是什么？',
-  '你出生的城市是哪里？',
-  '你母亲的姓名是？',
-  '你最喜欢的书是什么？',
-  '你小学的名字是？',
-  '你最好的朋友叫什么？',
-  '你最喜欢的电影是什么？',
-  '你第一个老师的名字是？',
+  t('你第一只宠物的名字是什么？'),
+  t('你出生的城市是哪里？'),
+  t('你母亲的姓名是？'),
+  t('你最喜欢的书是什么？'),
+  t('你小学的名字是？'),
+  t('你最好的朋友叫什么？'),
+  t('你最喜欢的电影是什么？'),
+  t('你第一个老师的名字是？'),
 ];
 
 export const SettingsPage: React.FC = () => {
@@ -130,6 +138,8 @@ export const SettingsPage: React.FC = () => {
   const [syncPassword, setSyncPassword] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   const syncInFlightRef = useRef(false);
+  // 界面语言（切换由 setAppLanguage 落偏好并整页 reload 生效，此 state 只喂下拉选中态）
+  const [appLanguage, setAppLanguageState] = useState<AppLanguage>(getAppLanguage);
   // AI 未配置深链：?focus=ai 直达知识库组（滚动+瞬时高亮），配完少走「页顶找起」的弯路
   const [searchParams] = useSearchParams();
   const aiSectionRef = useRef<HTMLElement | null>(null);
@@ -169,11 +179,11 @@ export const SettingsPage: React.FC = () => {
       setAiStatus({
         ok: true,
         text: models.length > 0
-          ? `已连接，拉回 ${models.length} 个模型——可用模型与用量额度以服务商返回为准`
-          : '连接成功，但服务商没有返回任何模型',
+          ? t('已连接，拉回 {{length}} 个模型——可用模型与用量额度以服务商返回为准', { length: models.length })
+          : t('连接成功，但服务商没有返回任何模型'),
       });
     } catch (e) {
-      setAiStatus({ ok: false, text: (e as Error).message || '连接失败' });
+      setAiStatus({ ok: false, text: (e as Error).message || t('连接失败') });
     } finally {
       setIsFetchingAiModels(false);
     }
@@ -405,6 +415,10 @@ export const SettingsPage: React.FC = () => {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
   const [showDirectionOptions, setShowDirectionOptions] = useState(false);
+  // 净化自定义关键词的输入草稿（失焦时去重清洗并落库；避免每敲一个字触发全量缓存 rev 变更）
+  const [sanitizeKeywordsDraft, setSanitizeKeywordsDraft] = useState(
+    settings.contentSanitize.customKeywords.join('\n')
+  );
   const [showFontOptions, setShowFontOptions] = useState(false);
   const [showLockTimeoutOptions, setShowLockTimeoutOptions] = useState(false);
   const [showMaxAttemptsOptions, setShowMaxAttemptsOptions] = useState(false);
@@ -442,7 +456,7 @@ export const SettingsPage: React.FC = () => {
 
   const handleSyncNow = async () => {
     if (!syncServer.trim()) {
-      setSyncMessage({ ok: false, text: '请先填写 WebDAV 地址' });
+      setSyncMessage({ ok: false, text: t('请先填写 WebDAV 地址') });
       return;
     }
     // 同步重入锁：setIsSyncing 异步生效，同一事件循环内的快速连点会双开
@@ -509,23 +523,23 @@ export const SettingsPage: React.FC = () => {
         ok: true,
         text:
           result.direction === 'merged'
-            ? `已合并同步：进度 ${result.counts.progress} 本 · 批注 ${result.counts.annotations} 条 · 书签 ${result.counts.bookmarks} 条 · 知识件 ${result.counts.knowledge} 件 · 生词 ${result.counts.vocab} · 复习卡 ${result.counts.review}`
-            : `已上传：进度 ${result.counts.progress} 本 · 批注 ${result.counts.annotations} 条 · 书签 ${result.counts.bookmarks} 条 · 知识件 ${result.counts.knowledge} 件 · 生词 ${result.counts.vocab} · 复习卡 ${result.counts.review}`,
+            ? t('已合并同步：进度 {{arg1}} 本 · 批注 {{arg2}} 条 · 书签 {{arg3}} 条 · 知识件 {{arg4}} 件 · 生词 {{arg5}} · 复习卡 {{arg6}}', { arg1: result.counts.progress, arg2: result.counts.annotations, arg3: result.counts.bookmarks, arg4: result.counts.knowledge, arg5: result.counts.vocab, arg6: result.counts.review })
+            : t('已上传：进度 {{arg1}} 本 · 批注 {{arg2}} 条 · 书签 {{arg3}} 条 · 知识件 {{arg4}} 件 · 生词 {{arg5}} · 复习卡 {{arg6}}', { arg1: result.counts.progress, arg2: result.counts.annotations, arg3: result.counts.bookmarks, arg4: result.counts.knowledge, arg5: result.counts.vocab, arg6: result.counts.review }),
       });
     } catch (e) {
-      setSyncMessage({ ok: false, text: (e as Error).message || '同步失败' });
+      setSyncMessage({ ok: false, text: (e as Error).message || t('同步失败') });
     } finally {
       syncInFlightRef.current = false;
       setIsSyncing(false);
     }
   };
 
-  const directionLabel = settings.readingDirection === 'rtl' ? '从右至左 (日式传统)' : '从左至右';
+  const directionLabel = settings.readingDirection === 'rtl' ? t('从右至左 (日式传统)') : t('从左至右');
   const fontLabel = `${settings.fontFamily === 'literata' ? 'Literata' : 'Inter'}, ${settings.fontSize}px`;
-  const themeLabel = settings.theme === 'dark' ? '深色' : settings.theme === 'light' ? '浅色' : '跟随系统';
+  const themeLabel = settings.theme === 'dark' ? t('深色') : settings.theme === 'light' ? t('浅色') : t('跟随系统');
   const auth = settings.auth;
-  const lockTimeoutLabel = LOCK_TIMEOUT_OPTIONS.find((o) => o.value === auth.lockTimeout)?.label ?? '5 分钟';
-  const maxAttemptsLabel = MAX_ATTEMPTS_OPTIONS.find((o) => o.value === auth.maxAttempts)?.label ?? '5 次';
+  const lockTimeoutLabel = LOCK_TIMEOUT_OPTIONS.find((o) => o.value === auth.lockTimeout)?.label ?? t('5 分钟');
+  const maxAttemptsLabel = MAX_ATTEMPTS_OPTIONS.find((o) => o.value === auth.maxAttempts)?.label ?? t('5 次');
 
   const handleGestureSetupComplete = (points: number[]) => {
     setPendingGesturePoints(points);
@@ -545,7 +559,7 @@ export const SettingsPage: React.FC = () => {
     if (!pendingGesturePoints) return;
     const validQuestions = securityQuestions.filter((q) => q.question && q.answer.trim());
     if (validQuestions.length < 1) {
-      setGestureError('请至少设置 1 个安全问题');
+      setGestureError(t('请至少设置 1 个安全问题'));
       return;
     }
     try {
@@ -555,7 +569,7 @@ export const SettingsPage: React.FC = () => {
       setGestureError(null);
       setSecurityQuestions([{ question: '', answer: '' }, { question: '', answer: '' }]);
     } catch {
-      setGestureError('设置失败，请重试');
+      setGestureError(t('设置失败，请重试'));
     }
   };
 
@@ -593,18 +607,16 @@ export const SettingsPage: React.FC = () => {
             <div className="w-12 h-12 flex items-center justify-center rounded-card border border-outline-variant text-primary mb-2">
               <span className="material-symbols-outlined text-icon-lg">question_mark</span>
             </div>
-            <h1 className="font-display text-headline-sm text-primary">设置安全问题</h1>
-            <p className="font-body text-body-sm text-on-surface-variant">
-              忘记密码时可通过安全问题重置，请至少设置 1 个
-            </p>
+            <h1 className="font-display text-headline-sm text-primary">{t('设置安全问题')}</h1>
+            <p className="font-body text-body-sm text-on-surface-variant">{t('忘记密码时可通过安全问题重置，请至少设置 1 个')}</p>
           </header>
 
           <div className="w-full space-y-6">
             {securityQuestions.map((q, idx) => (
               <div key={idx} className="space-y-2">
-                <label className="font-label text-label-sm text-on-surface-variant">安全问题 {idx + 1}</label>
+                <label className="font-label text-label-sm text-on-surface-variant">{t('安全问题')}{idx + 1}</label>
                 <DropdownSelect
-                  ariaLabel={`安全问题 ${idx + 1}`}
+                  ariaLabel={t('安全问题 {{arg1}}', { arg1: idx + 1 })}
                   variant="filled"
                   value={q.question}
                   onChange={(question) => {
@@ -613,7 +625,7 @@ export const SettingsPage: React.FC = () => {
                     setSecurityQuestions(next);
                   }}
                   options={[
-                    { value: '', label: '-- 请选择问题 --' },
+                    { value: '', label: t('-- 请选择问题 --') },
                     ...SECURITY_QUESTIONS.map((sq) => ({
                       value: sq,
                       label: sq,
@@ -624,7 +636,7 @@ export const SettingsPage: React.FC = () => {
                 />
                 <input
                   className="input-field"
-                  placeholder="输入答案"
+                  placeholder={t('输入答案')}
                   value={q.answer}
                   onChange={(e) => {
                     const next = [...securityQuestions];
@@ -649,15 +661,11 @@ export const SettingsPage: React.FC = () => {
                 setGestureError(null);
                 setSecurityQuestions([{ question: '', answer: '' }, { question: '', answer: '' }]);
               }}
-            >
-              取消
-            </button>
+            >{t('取消')}</button>
             <button
               className="btn-primary flex-1 py-3"
               onClick={handleSubmitSecurityQuestions}
-            >
-              完成设置
-            </button>
+            >{t('完成设置')}</button>
           </div>
         </main>
       </div>
@@ -667,13 +675,39 @@ export const SettingsPage: React.FC = () => {
   return (
     <div className="relative z-10 w-full max-w-max-width-content mx-auto px-margin-mobile md:px-0 pt-8 pb-16">
       <header className="mb-12">
-          <h1 className="font-display text-headline-md md:text-display-lg-mobile text-primary mb-2">设置</h1>
-          <p className="font-body text-body-sm text-on-surface-variant">个性化您的阅读体验。</p>
+          <h1 className="font-display text-headline-md md:text-display-lg-mobile text-primary mb-2">{t('设置')}</h1>
+          <p className="font-body text-body-sm text-on-surface-variant">{t('个性化您的阅读体验。')}</p>
       </header>
 
       <div className="space-y-12">
         <section>
-          <h2 className="font-label text-label-sm text-secondary uppercase tracking-widest mb-4 ml-2">隐私与安全</h2>
+          <h2 className="font-label text-label-sm text-secondary uppercase tracking-widest mb-4 ml-2">{t('通用')}</h2>
+          <div className="bg-surface rounded-lg border border-outline-variant overflow-hidden">
+            <div className="p-6 flex justify-between items-center gap-4 bg-surface-container-lowest">
+              <div className="flex items-center gap-4 min-w-0">
+                <div className="icon-tile">
+                  <span className="material-symbols-outlined">translate</span>
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-display text-headline-xs text-on-surface">{t('语言')}</h3>
+                  <p className="font-body text-body-xs text-on-surface-variant mt-1">{t('界面语言，切换后自动刷新')}</p>
+                </div>
+              </div>
+              <DropdownSelect
+                ariaLabel={t('界面语言')}
+                options={SUPPORTED_LANGUAGES.map((lang) => ({ value: lang, label: LANGUAGE_LABELS[lang] }))}
+                value={appLanguage}
+                onChange={(lang) => {
+                  setAppLanguageState(lang as AppLanguage);
+                  setAppLanguage(lang as AppLanguage);
+                }}
+              />
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <h2 className="font-label text-label-sm text-secondary uppercase tracking-widest mb-4 ml-2">{t('隐私与安全')}</h2>
           <div className="bg-surface rounded-lg border border-outline-variant overflow-hidden">
             <div className="p-6 border-b border-outline-variant flex justify-between items-center bg-surface-container-lowest">
               <div className="flex items-center gap-4">
@@ -681,15 +715,15 @@ export const SettingsPage: React.FC = () => {
                   <span className="material-symbols-outlined">lock</span>
                 </div>
                 <div>
-                  <h3 className="font-display text-headline-xs text-on-surface">应用锁</h3>
+                  <h3 className="font-display text-headline-xs text-on-surface">{t('应用锁')}</h3>
                   <p className="font-body text-body-xs text-on-surface-variant mt-1">
-                    {auth.isEnabled ? '已启用手势密码保护' : '未启用，任何人均可访问'}
+                    {auth.isEnabled ? t('已启用手势密码保护') : t('未启用，任何人均可访问')}
                   </p>
                 </div>
               </div>
               <ToggleSwitch
                 checked={auth.isEnabled}
-                ariaLabel="应用锁"
+                ariaLabel={t('应用锁')}
                 onChange={(next) => {
                   if (next) {
                     setShowGestureSetup(true);
@@ -711,10 +745,8 @@ export const SettingsPage: React.FC = () => {
                       <span className="material-symbols-outlined">gesture</span>
                     </div>
                     <div>
-                      <h3 className="font-display text-headline-xs text-on-surface">修改手势密码</h3>
-                      <p className="font-body text-body-xs text-on-surface-variant mt-1">
-                        更换当前的手势密码
-                      </p>
+                      <h3 className="font-display text-headline-xs text-on-surface">{t('修改手势密码')}</h3>
+                      <p className="font-body text-body-xs text-on-surface-variant mt-1">{t('更换当前的手势密码')}</p>
                     </div>
                   </div>
                   <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">chevron_right</span>
@@ -729,10 +761,8 @@ export const SettingsPage: React.FC = () => {
                       <span className="material-symbols-outlined">timer</span>
                     </div>
                     <div>
-                      <h3 className="font-display text-headline-xs text-on-surface">自动锁定</h3>
-                      <p className="font-body text-body-xs text-on-surface-variant mt-1">
-                        离开应用后 {lockTimeoutLabel} 需重新验证
-                      </p>
+                      <h3 className="font-display text-headline-xs text-on-surface">{t('自动锁定')}</h3>
+                      <p className="font-body text-body-xs text-on-surface-variant mt-1">{t('离开应用后 {{lockTimeoutLabel}} 需重新验证', { lockTimeoutLabel: lockTimeoutLabel })}</p>
                     </div>
                   </div>
                   <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">
@@ -771,10 +801,8 @@ export const SettingsPage: React.FC = () => {
                       <span className="material-symbols-outlined">pin</span>
                     </div>
                     <div>
-                      <h3 className="font-display text-headline-xs text-on-surface">最大尝试次数</h3>
-                      <p className="font-body text-body-xs text-on-surface-variant mt-1">
-                        连续错误 {maxAttemptsLabel} 后临时锁定
-                      </p>
+                      <h3 className="font-display text-headline-xs text-on-surface">{t('最大尝试次数')}</h3>
+                      <p className="font-body text-body-xs text-on-surface-variant mt-1">{t('连续错误 {{maxAttemptsLabel}} 后临时锁定', { maxAttemptsLabel: maxAttemptsLabel })}</p>
                     </div>
                   </div>
                   <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">
@@ -808,16 +836,14 @@ export const SettingsPage: React.FC = () => {
 
             {!auth.isEnabled && (
               <div className="p-6 bg-surface-container-lowest">
-                <p className="font-body text-body-xs text-on-surface-variant">
-                  启用应用锁后，每次打开应用或从后台返回时需要验证手势密码，保护您的阅读隐私。
-                </p>
+                <p className="font-body text-body-xs text-on-surface-variant">{t('启用应用锁后，每次打开应用或从后台返回时需要验证手势密码，保护您的阅读隐私。')}</p>
               </div>
             )}
           </div>
         </section>
 
         <section>
-          <h2 className="font-label text-label-sm text-secondary uppercase tracking-widest mb-4 ml-2">外观</h2>
+          <h2 className="font-label text-label-sm text-secondary uppercase tracking-widest mb-4 ml-2">{t('外观')}</h2>
           <div className="bg-surface rounded-lg border border-outline-variant overflow-hidden">
             <button
               className="w-full p-6 border-b border-outline-variant flex justify-between items-center bg-surface-container-lowest cursor-pointer hover:bg-surface-container-low transition-colors group text-left"
@@ -833,7 +859,7 @@ export const SettingsPage: React.FC = () => {
                   <span className="material-symbols-outlined">brightness_medium</span>
                 </div>
                 <div>
-                  <h3 className="font-display text-headline-xs text-on-surface">主题</h3>
+                  <h3 className="font-display text-headline-xs text-on-surface">{t('主题')}</h3>
                   <p className="font-body text-body-xs text-on-surface-variant mt-1">{themeLabel}</p>
                 </div>
               </div>
@@ -846,15 +872,13 @@ export const SettingsPage: React.FC = () => {
                   <span className="material-symbols-outlined">fullscreen</span>
                 </div>
                 <div>
-                  <h3 className="font-display text-headline-xs text-on-surface">隐藏状态栏</h3>
-                  <p className="font-body text-body-xs text-on-surface-variant mt-1">
-                    沉浸全屏阅读，隐藏系统状态栏（App 内生效）；顶部下滑可临时呼出。
-                  </p>
+                  <h3 className="font-display text-headline-xs text-on-surface">{t('隐藏状态栏')}</h3>
+                  <p className="font-body text-body-xs text-on-surface-variant mt-1">{t('沉浸全屏阅读，隐藏系统状态栏（App 内生效）；顶部下滑可临时呼出。')}</p>
                 </div>
               </div>
               <ToggleSwitch
                 checked={settings.hideStatusBar}
-                ariaLabel="隐藏状态栏"
+                ariaLabel={t('隐藏状态栏')}
                 onChange={(next) => updateSettings({ hideStatusBar: next })}
               />
             </div>
@@ -865,15 +889,13 @@ export const SettingsPage: React.FC = () => {
                   <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>note</span>
                 </div>
                 <div>
-                  <h3 className="font-display text-headline-xs text-on-surface">纸张模式</h3>
-                  <p className="font-body text-body-xs text-on-surface-variant mt-1">
-                    模拟真实纸张的纹理与色调，减少视觉疲劳。
-                  </p>
+                  <h3 className="font-display text-headline-xs text-on-surface">{t('纸张模式')}</h3>
+                  <p className="font-body text-body-xs text-on-surface-variant mt-1">{t('模拟真实纸张的纹理与色调，减少视觉疲劳。')}</p>
                 </div>
               </div>
               <ToggleSwitch
                 checked={settings.paperMode}
-                ariaLabel="纸张模式"
+                ariaLabel={t('纸张模式')}
                 onChange={() => togglePaperMode()}
               />
             </div>
@@ -884,7 +906,7 @@ export const SettingsPage: React.FC = () => {
                   <div className="icon-tile">
                     <span className="material-symbols-outlined">category</span>
                   </div>
-                  <h3 className="font-display text-headline-xs text-on-surface">纸张类型</h3>
+                  <h3 className="font-display text-headline-xs text-on-surface">{t('纸张类型')}</h3>
                 </div>
                 <div className="flex flex-col gap-3">
                   {/* 效果预览：与阅读器渲染同源——纸型底色 + 同强度纹理层 + 纸型墨色文字 */}
@@ -904,12 +926,12 @@ export const SettingsPage: React.FC = () => {
                       className="relative h-full flex flex-col justify-center gap-1.5 px-5"
                       style={{ color: paperConfig.inkColor ?? PAPER_INK_COLOR }}
                     >
-                      <p className="font-body text-body-md leading-snug">纸上得来终觉浅，绝知此事要躬行。</p>
-                      <p className="font-body text-body-sm leading-snug opacity-80">旧书不厌百回读，熟读深思子自知。</p>
+                      <p className="font-body text-body-md leading-snug">{t('纸上得来终觉浅，绝知此事要躬行。')}</p>
+                      <p className="font-body text-body-sm leading-snug opacity-80">{t('旧书不厌百回读，熟读深思子自知。')}</p>
                     </div>
                   </div>
                   <DropdownSelect
-                    ariaLabel="纸张类型"
+                    ariaLabel={t('纸张类型')}
                     options={getAllPaperTypes().map(({ type, config }) => ({ value: type, label: config.label }))}
                     value={settings.paperType}
                     onChange={(type) => updateSettings({ paperType: type as PaperType })}
@@ -925,10 +947,10 @@ export const SettingsPage: React.FC = () => {
                   <div className="icon-tile">
                     <span className="material-symbols-outlined">texture</span>
                   </div>
-                  <h3 className="font-display text-headline-xs text-on-surface">纹理强度</h3>
+                  <h3 className="font-display text-headline-xs text-on-surface">{t('纹理强度')}</h3>
                 </div>
                 <span className="font-label text-label-sm text-on-surface-variant">
-                  {settings.textureIntensity <= TEXTURE_INTENSITY_WEAK_MAX ? '弱' : settings.textureIntensity <= TEXTURE_INTENSITY_MEDIUM_MAX ? '中等' : '强'}
+                  {settings.textureIntensity <= TEXTURE_INTENSITY_WEAK_MAX ? t('弱') : settings.textureIntensity <= TEXTURE_INTENSITY_MEDIUM_MAX ? t('中等') : t('强')}
                 </span>
               </div>
               <div className="px-2 pt-2">
@@ -941,8 +963,8 @@ export const SettingsPage: React.FC = () => {
                   className="w-full ink-slider cursor-pointer"
                 />
                 <div className="flex justify-between text-xs text-on-surface-variant mt-2 font-label text-label-sm">
-                  <span>弱</span>
-                  <span>强</span>
+                  <span>{t('弱')}</span>
+                  <span>{t('强')}</span>
                 </div>
               </div>
             </div>
@@ -950,7 +972,7 @@ export const SettingsPage: React.FC = () => {
         </section>
 
         <section>
-          <h2 className="font-label text-label-sm text-secondary uppercase tracking-widest mb-4 ml-2">阅读偏好</h2>
+          <h2 className="font-label text-label-sm text-secondary uppercase tracking-widest mb-4 ml-2">{t('阅读偏好')}</h2>
           <div className="bg-surface rounded-lg border border-outline-variant overflow-hidden">
             <button
               className="w-full p-6 border-b border-outline-variant flex justify-between items-center bg-surface-container-lowest cursor-pointer hover:bg-surface-container-low transition-colors group text-left"
@@ -961,7 +983,7 @@ export const SettingsPage: React.FC = () => {
                   <span className="material-symbols-outlined">swap_horiz</span>
                 </div>
                 <div>
-                  <h3 className="font-display text-headline-xs text-on-surface">阅读方向</h3>
+                  <h3 className="font-display text-headline-xs text-on-surface">{t('阅读方向')}</h3>
                   <p className="font-body text-body-xs text-on-surface-variant mt-1">
                     {directionLabel}
                   </p>
@@ -986,7 +1008,7 @@ export const SettingsPage: React.FC = () => {
                   }}
                 >
                   <span className="material-symbols-outlined">format_textdirection_r_to_l</span>
-                  <span className="font-label text-label-md">从右至左 (日式传统)</span>
+                  <span className="font-label text-label-md">{t('从右至左 (日式传统)')}</span>
                 </button>
                 <button
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
@@ -1000,7 +1022,7 @@ export const SettingsPage: React.FC = () => {
                   }}
                 >
                   <span className="material-symbols-outlined">format_textdirection_l_to_r</span>
-                  <span className="font-label text-label-md">从左至右</span>
+                  <span className="font-label text-label-md">{t('从左至右')}</span>
                 </button>
               </div>
             </Collapsible>
@@ -1011,15 +1033,15 @@ export const SettingsPage: React.FC = () => {
                   <span className="material-symbols-outlined">swipe</span>
                 </div>
                 <div>
-                  <h3 className="font-display text-headline-xs text-on-surface">滑动翻页</h3>
+                  <h3 className="font-display text-headline-xs text-on-surface">{t('滑动翻页')}</h3>
                   <p className="font-body text-body-xs text-on-surface-variant mt-1">
-                    {settings.pageTurnGestures ? '已启用，左右滑动翻页' : '已关闭，仅点击翻页'}
+                    {settings.pageTurnGestures ? t('已启用，左右滑动翻页') : t('已关闭，仅点击翻页')}
                   </p>
                 </div>
               </div>
               <ToggleSwitch
                 checked={settings.pageTurnGestures}
-                ariaLabel="滑动翻页"
+                ariaLabel={t('滑动翻页')}
                 onChange={(next) => updateSettings({ pageTurnGestures: next })}
               />
             </div>
@@ -1033,7 +1055,7 @@ export const SettingsPage: React.FC = () => {
                   <span className="material-symbols-outlined">text_format</span>
                 </div>
                 <div>
-                  <h3 className="font-display text-headline-xs text-on-surface">排版与字体</h3>
+                  <h3 className="font-display text-headline-xs text-on-surface">{t('排版与字体')}</h3>
                   <p className="font-body text-body-xs text-on-surface-variant mt-1">{fontLabel}</p>
                 </div>
               </div>
@@ -1074,7 +1096,7 @@ export const SettingsPage: React.FC = () => {
                 </button>
                 <div className="px-4 py-3">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="font-label text-label-sm text-on-surface-variant">字号</span>
+                    <span className="font-label text-label-sm text-on-surface-variant">{t('字号')}</span>
                     <span className="font-label text-label-sm text-on-surface">{settings.fontSize}px</span>
                   </div>
                   <input
@@ -1096,11 +1118,101 @@ export const SettingsPage: React.FC = () => {
           </div>
         </section>
 
+        <section>
+          <h2 className="font-label text-label-sm text-secondary uppercase tracking-widest mb-4 ml-2">{t('阅读净化')}</h2>
+          <div className="bg-surface rounded-lg border border-outline-variant overflow-hidden">
+            <div className="p-6 border-b border-outline-variant flex justify-between items-center bg-surface-container-lowest">
+              <div className="flex items-center gap-4">
+                <div className="icon-tile">
+                  <span className="material-symbols-outlined">cleaning_services</span>
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-display text-headline-xs text-on-surface">{t('净化原文')}</h3>
+                  <p className="font-body text-body-xs text-on-surface-variant mt-1">{t('下载的 TXT 常夹广告水印与排版噪音；本地规则清理，不联网、不调用 AI，原始文件保留')}</p>
+                </div>
+              </div>
+              <ToggleSwitch
+                checked={settings.contentSanitize.enabled}
+                ariaLabel={t('净化原文')}
+                onChange={(next) => updateSettings({ contentSanitize: { ...settings.contentSanitize, enabled: next } })}
+              />
+            </div>
+
+            {settings.contentSanitize.enabled && (
+              <>
+                <div className="p-6 border-b border-outline-variant flex justify-between items-center bg-surface-container-lowest">
+                  <div className="flex items-center gap-4">
+                    <div className="icon-tile">
+                      <span className="material-symbols-outlined">block</span>
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="font-display text-headline-xs text-on-surface">{t('广告与水印清理')}</h3>
+                      <p className="font-body text-body-xs text-on-surface-variant mt-1">{t('整行剔除站点推广、链接、群号等强特征内容；每本书首次打开时先征求确认')}</p>
+                    </div>
+                  </div>
+                  <ToggleSwitch
+                    checked={settings.contentSanitize.ads}
+                    ariaLabel={t('广告与水印清理')}
+                    onChange={(next) => updateSettings({ contentSanitize: { ...settings.contentSanitize, ads: next } })}
+                  />
+                </div>
+
+                <div className="p-6 border-b border-outline-variant flex justify-between items-center bg-surface-container-lowest">
+                  <div className="flex items-center gap-4">
+                    <div className="icon-tile">
+                      <span className="material-symbols-outlined">format_align_left</span>
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="font-display text-headline-xs text-on-surface">{t('排版清理')}</h3>
+                      <p className="font-body text-body-xs text-on-surface-variant mt-1">{t('折叠连续空行、规范段首缩进、中文语境统一全角标点')}</p>
+                    </div>
+                  </div>
+                  <ToggleSwitch
+                    checked={settings.contentSanitize.typography}
+                    ariaLabel={t('排版清理')}
+                    onChange={(next) => updateSettings({ contentSanitize: { ...settings.contentSanitize, typography: next } })}
+                  />
+                </div>
+
+                <div className="p-6 bg-surface-container-lowest">
+                  <div className="flex items-center gap-4 mb-2">
+                    <div className="icon-tile">
+                      <span className="material-symbols-outlined">label</span>
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="font-display text-headline-xs text-on-surface">{t('自定义关键词')}</h3>
+                      <p className="font-body text-body-xs text-on-surface-variant mt-1">{t('命中关键词的短行按广告剔除，一行一个；用于内置规则没覆盖的站点水印')}</p>
+                    </div>
+                  </div>
+                  <textarea
+                    className="input-field min-h-[88px] resize-y font-body"
+                    aria-label={t('净化自定义关键词')}
+                    placeholder={t('一行一个关键词，如：某某小说网')}
+                    value={sanitizeKeywordsDraft}
+                    onChange={(e) => setSanitizeKeywordsDraft(e.target.value)}
+                    onBlur={() => {
+                      const keywords = sanitizeKeywordsDraft
+                        .split('\n')
+                        .map((line) => line.trim())
+                        .filter((line) => line.length > 0)
+                        .filter((line, index, all) => all.indexOf(line) === index);
+                      setSanitizeKeywordsDraft(keywords.join('\n'));
+                      if (keywords.join('\n') !== settings.contentSanitize.customKeywords.join('\n')) {
+                        updateSettings({ contentSanitize: { ...settings.contentSanitize, customKeywords: keywords } });
+                      }
+                    }}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+        </section>
+
         <section
           ref={aiSectionRef}
           className={aiSectionHighlighted ? 'outline outline-2 outline-primary outline-offset-4 rounded-lg' : undefined}
         >
-          <h2 className="font-label text-label-sm text-secondary uppercase tracking-widest mb-4 ml-2">知识库</h2>
+          <h2 className="font-label text-label-sm text-secondary uppercase tracking-widest mb-4 ml-2">{t('知识库')}</h2>
           <div className="bg-surface rounded-lg border border-outline-variant overflow-hidden">
             <div className="p-6 bg-surface-container-lowest">
               <div className="flex items-center gap-4 mb-4">
@@ -1108,20 +1220,16 @@ export const SettingsPage: React.FC = () => {
                   <span className="material-symbols-outlined">psychology</span>
                 </div>
                 <div>
-                  <h3 className="font-display text-headline-xs text-on-surface">AI 分析服务</h3>
-                  <p className="font-body text-body-xs text-on-surface-variant mt-1">
-                    人物图谱与思维导图由它通读全书生成。选好服务商、贴上 Key 即自动连接并列出可选模型；凭据只存在本机，仅在你点「生成」时调用
-                  </p>
+                  <h3 className="font-display text-headline-xs text-on-surface">{t('AI 分析服务')}</h3>
+                  <p className="font-body text-body-xs text-on-surface-variant mt-1">{t('人物图谱与思维导图由它通读全书生成。选好服务商、贴上 Key 即自动连接并列出可选模型；凭据只存在本机，仅在你点「生成」时调用')}</p>
                 </div>
               </div>
               <div className="flex flex-col gap-3 mb-4">
-                <label className="font-label text-label-sm text-on-surface-variant" htmlFor="knowledge-ai-provider">
-                  服务商
-                </label>
+                <label className="font-label text-label-sm text-on-surface-variant" htmlFor="knowledge-ai-provider">{t('服务商')}</label>
                 {/* 弹层自绘：原生 select 展开列表由系统渲染（白底+系统蓝高亮），与主题不符；副标说明展示在框下 */}
                 <DropdownSelect
                   id="knowledge-ai-provider"
-                  ariaLabel="服务商"
+                  ariaLabel={t('服务商')}
                   options={KNOWLEDGE_AI_PROVIDERS.map((preset) => ({ value: preset.id, label: preset.label }))}
                   value={aiProviderId}
                   onChange={handleSelectProvider}
@@ -1134,10 +1242,10 @@ export const SettingsPage: React.FC = () => {
                     className="input-field pr-11"
                     placeholder={
                       isNativePlatform()
-                        ? '服务地址，如 https://api.example.com'
-                        : '服务地址，如 https://api.example.com 或 http://127.0.0.1:11434/v1'
+                        ? t('服务地址，如 https://api.example.com')
+                        : t('服务地址，如 https://api.example.com 或 http://127.0.0.1:11434/v1')
                     }
-                    aria-label="AI 服务地址"
+                    aria-label={t('AI 服务地址')}
                     value={settings.knowledgeAiUrl}
                     disabled={aiProviderId !== CUSTOM_PROVIDER_ID}
                     onChange={(e) => updateSettings({ knowledgeAiUrl: e.target.value })}
@@ -1149,21 +1257,19 @@ export const SettingsPage: React.FC = () => {
                 <div className="relative">
                   <input
                     className="input-field pr-11"
-                    placeholder={aiNeedsKey ? 'API Key（输入后自动测试连接）' : 'API Key（本机服务可留空）'}
-                    aria-label="AI 服务 API Key"
+                    placeholder={aiNeedsKey ? t('API Key（输入后自动测试连接）') : t('API Key（本机服务可留空）')}
+                    aria-label={t('AI 服务 API Key')}
                     type="password"
                     value={settings.knowledgeAiKey}
                     onChange={(e) => updateSettings({ knowledgeAiKey: e.target.value })}
                   />
                   <PasteButton onPaste={(text) => updateSettings({ knowledgeAiKey: text.trim() })} />
                 </div>
-                <label className="font-label text-label-sm text-on-surface-variant" htmlFor="knowledge-ai-model">
-                  模型
-                </label>
+                <label className="font-label text-label-sm text-on-surface-variant" htmlFor="knowledge-ai-model">{t('模型')}</label>
                 {aiModelOptions.length > 0 ? (
                   <DropdownSelect
                     id="knowledge-ai-model"
-                    ariaLabel="AI 模型"
+                    ariaLabel={t('AI 模型')}
                     value={settings.knowledgeAiModel}
                     onChange={(model) => updateSettings({ knowledgeAiModel: model })}
                     options={aiModelOptions.map((model) => ({
@@ -1171,15 +1277,15 @@ export const SettingsPage: React.FC = () => {
                       // 已配置但不在权威列表（实拉或预设）里的值保留为一项，避免受控下拉静默改值
                       label:
                         model === settings.knowledgeAiModel.trim() && !aiModelSource.includes(model)
-                          ? `${model}（当前配置）`
+                          ? t('{{model}}（当前配置）', { model: model })
                           : model,
                     }))}
                   />
                 ) : (
                   <input
                     className="input-field"
-                    placeholder="模型名（连接成功后自动列出可选模型）"
-                    aria-label="AI 模型名"
+                    placeholder={t('模型名（连接成功后自动列出可选模型）')}
+                    aria-label={t('AI 模型名')}
                     value={settings.knowledgeAiModel}
                     onChange={(e) => updateSettings({ knowledgeAiModel: e.target.value })}
                   />
@@ -1192,7 +1298,7 @@ export const SettingsPage: React.FC = () => {
                   disabled={isFetchingAiModels || !settings.knowledgeAiUrl.trim()}
                 >
                   {isFetchingAiModels && <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>}
-                  {isFetchingAiModels ? '正在连接…' : '拉取模型'}
+                  {isFetchingAiModels ? t('正在连接…') : t('拉取模型')}
                 </button>
               </div>
               {aiStatus && (
@@ -1200,15 +1306,13 @@ export const SettingsPage: React.FC = () => {
                   {aiStatus.text}
                 </p>
               )}
-              <p className="font-label text-label-sm text-on-surface-faint mt-3">
-                可用模型与用量额度以服务商返回为准，应用不做本地限制。
-              </p>
+              <p className="font-label text-label-sm text-on-surface-faint mt-3">{t('可用模型与用量额度以服务商返回为准，应用不做本地限制。')}</p>
             </div>
           </div>
         </section>
 
         <section>
-          <h2 className="font-label text-label-sm text-secondary uppercase tracking-widest mb-4 ml-2">系统管理</h2>
+          <h2 className="font-label text-label-sm text-secondary uppercase tracking-widest mb-4 ml-2">{t('系统管理')}</h2>
           <div className="bg-surface rounded-lg border border-outline-variant overflow-hidden">
             {/* 馆容量可视化由 Profile 页与桌面侧栏承载（真实进度条），此处不再摆禁用占位假入口 */}
             <div className="p-6 bg-surface-container-lowest">
@@ -1217,17 +1321,15 @@ export const SettingsPage: React.FC = () => {
                   <span className="material-symbols-outlined">cloud_sync</span>
                 </div>
                 <div>
-                  <h3 className="font-display text-headline-xs text-on-surface">云端同步</h3>
-                  <p className="font-body text-body-xs text-on-surface-variant mt-1">
-                    通过 WebDAV 在多台设备间同步进度、批注与书签
-                  </p>
+                  <h3 className="font-display text-headline-xs text-on-surface">{t('云端同步')}</h3>
+                  <p className="font-body text-body-xs text-on-surface-variant mt-1">{t('通过 WebDAV 在多台设备间同步进度、批注与书签')}</p>
                 </div>
               </div>
               <div className="flex flex-col gap-3 mb-4">
                 <div className="relative">
                   <input
                     className="input-field pr-11"
-                    placeholder="WebDAV 地址，如 http://nas:5005/dav"
+                    placeholder={t('WebDAV 地址，如 http://nas:5005/dav')}
                     value={syncServer}
                     onChange={(e) => { setSyncServer(e.target.value); persistSyncConfig(e.target.value, syncUsername, syncPassword); }}
                   />
@@ -1237,7 +1339,7 @@ export const SettingsPage: React.FC = () => {
                   <div className="relative flex-1 min-w-0">
                     <input
                       className="input-field pr-11"
-                      placeholder="用户名"
+                      placeholder={t('用户名')}
                       value={syncUsername}
                       onChange={(e) => { setSyncUsername(e.target.value); persistSyncConfig(syncServer, e.target.value, syncPassword); }}
                     />
@@ -1246,7 +1348,7 @@ export const SettingsPage: React.FC = () => {
                   <div className="relative flex-1 min-w-0">
                     <input
                       className="input-field pr-11"
-                      placeholder="密码"
+                      placeholder={t('密码')}
                       type="password"
                       value={syncPassword}
                       onChange={(e) => { setSyncPassword(e.target.value); persistSyncConfig(syncServer, syncUsername, e.target.value); }}
@@ -1262,11 +1364,10 @@ export const SettingsPage: React.FC = () => {
                   disabled={isSyncing || !syncServer.trim()}
                 >
                   {isSyncing && <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>}
-                  {isSyncing ? '正在同步...' : '立即同步'}
+                  {isSyncing ? t('正在同步...') : t('立即同步')}
                 </button>
                 {lastSyncedAt && (
-                  <span className="font-label text-label-sm text-on-surface-variant">
-                    上次同步：{new Date(lastSyncedAt).toLocaleString()}
+                  <span className="font-label text-label-sm text-on-surface-variant">{t('上次同步：')}{new Date(lastSyncedAt).toLocaleString()}
                   </span>
                 )}
               </div>
@@ -1283,25 +1384,19 @@ export const SettingsPage: React.FC = () => {
                   <span className="material-symbols-outlined">backup</span>
                 </div>
                 <div>
-                  <h3 className="font-display text-headline-xs text-on-surface">数据备份</h3>
-                  <p className="font-body text-body-xs text-on-surface-variant mt-1">
-                    导出或导入应用数据
-                  </p>
+                  <h3 className="font-display text-headline-xs text-on-surface">{t('数据备份')}</h3>
+                  <p className="font-body text-body-xs text-on-surface-variant mt-1">{t('导出或导入应用数据')}</p>
                 </div>
               </div>
               <div className="flex gap-3">
                 <button
                   className="btn-primary flex-1 py-3 px-4"
                   onClick={handleExportData}
-                >
-                  导出备份
-                </button>
+                >{t('导出备份')}</button>
                 <button
                   className="btn-secondary flex-1 py-3 px-4"
                   onClick={() => fileInputRef.current?.click()}
-                >
-                  导入恢复
-                </button>
+                >{t('导入恢复')}</button>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -1312,17 +1407,13 @@ export const SettingsPage: React.FC = () => {
               </div>
               <div className="flex items-center justify-between gap-4 mt-4 pt-4 border-t border-outline-variant/50">
                 <div className="min-w-0">
-                  <p className="font-label text-label-md text-on-surface">使用数据</p>
-                  <p className="font-body text-body-xs text-on-surface-variant mt-0.5">
-                    回原文/节拍点击与替换次数的本地计数——不上报，导出用于产品验证信号
-                  </p>
+                  <p className="font-label text-label-md text-on-surface">{t('使用数据')}</p>
+                  <p className="font-body text-body-xs text-on-surface-variant mt-0.5">{t('回原文/节拍/替换与净化动作的本地计数——不上报，导出用于产品验证信号')}</p>
                 </div>
                 <button
                   className="btn-ghost shrink-0 py-2 px-3"
                   onClick={handleExportUsageSignals}
-                >
-                  导出使用数据
-                </button>
+                >{t('导出使用数据')}</button>
               </div>
             </div>
           </div>

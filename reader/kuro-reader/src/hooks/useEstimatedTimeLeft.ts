@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
 
+import { t } from '@/i18n';
+
 const CHARS_PER_MINUTE = 500;
 const MINUTES_PER_HOUR = 60;
 const FULL_PERCENT = 100;
@@ -21,10 +23,10 @@ export function useEstimatedTimeLeft(
     const remainingMinutes = Math.ceil(remainingChars / CHARS_PER_MINUTE);
 
     if (remainingMinutes < MINUTES_PER_HOUR) {
-      return `${remainingMinutes}分钟`;
+      return t('{{remainingMinutes}}分钟', { remainingMinutes: remainingMinutes });
     }
     const hours = Math.floor(remainingMinutes / MINUTES_PER_HOUR);
     const mins = remainingMinutes % MINUTES_PER_HOUR;
-    return `${hours}小时${mins}分钟`;
+    return t('{{hours}}小时{{mins}}分钟', { hours: hours, mins: mins });
   }, [contentLength, scrollPercent]);
 }

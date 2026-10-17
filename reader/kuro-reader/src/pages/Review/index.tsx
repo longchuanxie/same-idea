@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { COPY } from '@/constants/copy'
 import { ROUTES } from '@/constants/routes'
+import { t } from '@/i18n';
 import { useLibraryStore } from '@/stores/useLibraryStore'
 import { useReviewStore } from '@/stores/useReviewStore'
 import type { ReviewCard } from '@/types'
@@ -100,7 +101,7 @@ export const ReviewPage: React.FC = () => {
       return
     }
     const stamp = new Date().toISOString().slice(0, 10).replaceAll('-', '')
-    downloadTextFile(`kuro-复习卡-${stamp}.tsv`, rows.join('\n'), 'text/tab-separated-values')
+    downloadTextFile(t('kuro-复习卡-{{stamp}}.tsv', { stamp: stamp }), rows.join('\n'), 'text/tab-separated-values')
     toast(COPY.review.exportedToast)
   }
 
@@ -116,7 +117,7 @@ export const ReviewPage: React.FC = () => {
           </h2>
           <p className="font-body text-body-md text-on-surface-variant mt-1">
             {queue != null && totalPlanned > 0
-              ? `已见 ${metCount} 张 · 还剩 ${queue.length} 张`
+              ? t('已见 {{metCount}} 张 · 还剩 {{length}} 张', { metCount: metCount, length: queue.length })
               : COPY.review.homeEntryHint}
           </p>
         </div>
@@ -148,9 +149,7 @@ export const ReviewPage: React.FC = () => {
           <button
             className="font-label text-label-md text-primary border border-outline-variant rounded-card px-6 py-2 hover:bg-surface-variant transition-colors"
             onClick={() => navigate(ROUTES.LIBRARY)}
-          >
-            去书库挑一本
-          </button>
+          >{t('去书库挑一本')}</button>
         </div>
       )}
 
@@ -160,7 +159,7 @@ export const ReviewPage: React.FC = () => {
           <span className="material-symbols-outlined text-on-surface-faint text-5xl mb-4 block">task_alt</span>
           <p className="font-body text-body-md text-on-surface-variant">{COPY.review.emptyTodayTitle}</p>
           {nextDueText && (
-            <p className="font-label text-label-sm text-on-surface-faint mt-2">下一张 {nextDueText} 到期</p>
+            <p className="font-label text-label-sm text-on-surface-faint mt-2">{t('下一张 {{nextDueText}} 到期', { nextDueText: nextDueText })}</p>
           )}
         </div>
       )}
@@ -194,7 +193,7 @@ export const ReviewPage: React.FC = () => {
           <div
             role="button"
             tabIndex={0}
-            aria-label={revealed ? '答案已显示' : '显示答案'}
+            aria-label={revealed ? t('答案已显示') : t('显示答案')}
             className="min-h-[240px] rounded-card-lg border border-outline-variant bg-surface-container-low paper-texture p-6 md:p-8 flex flex-col items-center justify-center text-center gap-4 cursor-pointer select-none"
             onClick={() => setRevealed(true)}
             onKeyDown={(e) => {

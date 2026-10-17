@@ -61,6 +61,13 @@ const DEFAULT_SETTINGS: UserSettings = {
   knowledgeAiUrl: '',
   knowledgeAiKey: '',
   knowledgeAiModel: '',
+  // 原文净化默认全开（广告走每书确认门，排版零风险直接生效）
+  contentSanitize: {
+    enabled: true,
+    typography: true,
+    ads: true,
+    customKeywords: [],
+  },
   auth: {
     isEnabled: false,
     method: 'auto',
@@ -279,6 +286,11 @@ export const useAppStore = create<AppState>()(
               ...DEFAULT_SETTINGS.auth,
               ...(current.settings?.auth ?? {}),
               ...(p.settings?.auth ?? {}),
+            },
+            contentSanitize: {
+              ...DEFAULT_SETTINGS.contentSanitize,
+              ...(current.settings?.contentSanitize ?? {}),
+              ...(p.settings?.contentSanitize ?? {}),
             },
           },
         };

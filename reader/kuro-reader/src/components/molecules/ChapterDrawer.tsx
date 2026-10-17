@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 
+import { t } from '@/i18n';
 import type { TextChapter } from '@/services/textContent';
 import { cn } from '@/utils/cn';
 
@@ -51,11 +52,11 @@ export const ChapterDrawer: React.FC<ChapterDrawerProps> = ({
       >
         {/* 头部 */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-outline-variant/50">
-          <h2 className="font-display text-title-md text-on-surface">章节目录</h2>
+          <h2 className="font-display text-title-md text-on-surface">{t('章节目录')}</h2>
           <button
             className="w-11 h-11 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-variant transition-colors"
             onClick={onClose}
-            aria-label="关闭"
+            aria-label={t('关闭')}
           >
             <span className="material-symbols-outlined text-icon-md">close</span>
           </button>
@@ -95,9 +96,7 @@ export const ChapterDrawer: React.FC<ChapterDrawerProps> = ({
 
         {/* 底部信息 */}
         <div className="px-4 py-3 border-t border-outline-variant/50 bg-surface-container-low">
-          <p className="font-label text-label-sm text-on-surface-variant">
-            共 {chapters.length} 章 · 当前第 {currentChapterIndex + 1} 章
-          </p>
+          <p className="font-label text-label-sm text-on-surface-variant">{t('共 {{length}} 章 · 当前第', { length: chapters.length })}{currentChapterIndex + 1}{t('章')}</p>
         </div>
       </div>
     </div>

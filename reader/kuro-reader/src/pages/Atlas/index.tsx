@@ -6,6 +6,7 @@ import { CharacterGraphView } from '@/components/molecules/knowledge/CharacterGr
 import { VerifiedBadge } from '@/components/molecules/knowledge/ReviseControls'
 import { COPY } from '@/constants/copy'
 import { ROUTES, knowledgeSourcePath } from '@/constants/routes'
+import { t } from '@/i18n';
 import { knowledgeRepo } from '@/services/storage/knowledgeRepo'
 import { recordUsageSignal } from '@/services/telemetry/usageSignals'
 import { useLibraryStore } from '@/stores/useLibraryStore'
@@ -139,9 +140,7 @@ export const AtlasPage: React.FC = () => {
           <button
             className="btn-secondary px-6 py-2 mt-6"
             onClick={() => navigate(ROUTES.KNOWLEDGE_HUB)}
-          >
-            回知识库
-          </button>
+          >{t('回知识库')}</button>
         </div>
       ) : (
         <>
@@ -174,7 +173,7 @@ export const AtlasPage: React.FC = () => {
                   data={merged.graph}
                   selectedNodeId={selectedNodeId}
                   onSelectNode={(node) => setSelectedNodeId(node?.id ?? null)}
-                  entityLabel={effectiveKind === 'concept' ? '概念' : '人物'}
+                  entityLabel={effectiveKind === 'concept' ? t('概念') : t('人物')}
                 />
               </div>
 
@@ -187,7 +186,7 @@ export const AtlasPage: React.FC = () => {
                       {COPY.atlas.inBooks(selectedSources.length)}
                     </span>
                     <button
-                      aria-label="收起"
+                      aria-label={t('收起')}
                       className="ml-auto w-8 h-8 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container transition-colors"
                       onClick={() => setSelectedNodeId(null)}
                     >
@@ -224,7 +223,7 @@ export const AtlasPage: React.FC = () => {
                           )}
                           {(source.node.chapters?.length ?? 0) > 0 && (
                             <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                              <span className="font-label text-label-xs text-on-surface-faint">出现</span>
+                              <span className="font-label text-label-xs text-on-surface-faint">{t('出现')}</span>
                               {(source.node.chapters ?? []).slice(0, CHAPTER_CHIPS_MAX).map((chapterIndex) => (
                                 <button
                                   key={chapterIndex}
@@ -234,13 +233,11 @@ export const AtlasPage: React.FC = () => {
                                     navigate(knowledgeSourcePath(book, chapterIndex))
                                   }}
                                 >
-                                  {book.format === 'pdf' ? `第${chapterIndex + 1}页` : `第${chapterIndex + 1}章`}
+                                  {book.format === 'pdf' ? t('第{{arg1}}页', { arg1: chapterIndex + 1 }) : t('第{{arg1}}章', { arg1: chapterIndex + 1 })}
                                 </button>
                               ))}
                               {(source.node.chapters?.length ?? 0) > CHAPTER_CHIPS_MAX && (
-                                <span className="font-label text-label-xs text-on-surface-faint">
-                                  等 {source.node.chapters?.length} 处
-                                </span>
+                                <span className="font-label text-label-xs text-on-surface-faint">{t('等')}{source.node.chapters?.length}{t('处')}</span>
                               )}
                             </div>
                           )}
@@ -293,9 +290,7 @@ export const AtlasPage: React.FC = () => {
                                   )
                                 }}
                               >
-                                <span className="material-symbols-outlined text-icon-sm">book_open</span>
-                                回到原文
-                              </button>
+                                <span className="material-symbols-outlined text-icon-sm">book_open</span>{t('回到原文')}</button>
                             )}
                           </div>
                         )
