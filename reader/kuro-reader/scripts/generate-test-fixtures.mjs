@@ -310,6 +310,101 @@ async function main() {
   write('loose-images/划水的猫 03.png', PNG_1X1);
   write('loose-images/readme-not-image.txt', Buffer.from('文件夹导入时应忽略'));
 
+// ============ MOBI（mobi6：无压缩 + EXTH + 图片资源） ============
+/** 大端整型 Buffer */
+const u16 = (v) => { const b = Buffer.alloc(2); b.writeUInt16BE(v >>> 0); return b; };
+const u32 = (v) => { const b = Buffer.alloc(4); b.writeUInt32BE(v >>> 0); return b; };
+
+/**
+ * 手工构造合法的极简 mobi6（按 foliate-js mobi.js 读取的字段偏移对齐）：
+ * 记录 0 = PalmDOC 头(16B) + MOBI 头(232B) + EXTH + 书名；
+ * 记录 1 = 全文 HTML（按 <mbp:pagebreak/> 分节）；
+ * 记录 2.. = 图片资源（recindex 1 起）。
+ */
+function buildMobi({ title, author, html, images }) {
+  const titleBytes = Buffer.from(title, 'utf-8');
+  const htmlBytes = Buffer.from(html, 'utf-8');
+  const MOBI_HEADER_LEN = 232;
+  const FIRST_IMAGE_RECORD = 2;
+
+  const exthRecord = (type, data) => Buffer.concat([u32(type), u32(8 + data.length), data]);
+  const exthBody = Buffer.concat([
+    exthRecord(503, Buffer.from(title, 'utf-8')),   // title
+    exthRecord(100, Buffer.from(author, 'utf-8')),  // creator
+    exthRecord(201, u32(0)),                        // coverOffset：第 0 个资源即封面
+  ]);
+  const exthLenPadded = 12 + exthBody.length + ((4 - ((12 + exthBody.length) % 4)) % 4);
+  const exth = Buffer.concat([
+    Buffer.from('EXTH'), u32(exthLenPadded), u32(3), exthBody,
+    Buffer.alloc(exthLenPadded - 12 - exthBody.length),
+  ]);
+
+  const titleOffset = 16 + MOBI_HEADER_LEN + exth.length;
+  const rec0 = Buffer.alloc(titleOffset + titleBytes.length, 0);
+  rec0.writeUInt16BE(1, 0);                    // compression: 1 = 无压缩
+  rec0.writeUInt32BE(htmlBytes.length, 4);     // text length
+  rec0.writeUInt16BE(1, 8);                    // numTextRecords
+  rec0.writeUInt16BE(4096, 10);                // recordSize
+  rec0.writeUInt16BE(0, 12);                   // encryption: 0
+  rec0.write('MOBI', 16, 'latin1');
+  rec0.writeUInt32BE(MOBI_HEADER_LEN, 20);
+  rec0.writeUInt32BE(2, 24);                   // type: 2 = book
+  rec0.writeUInt32BE(65001, 28);               // encoding: utf-8
+  rec0.writeUInt32BE(17, 32);                  // uid
+  rec0.writeUInt32BE(6, 36);                   // version: mobi6
+  rec0.writeUInt32BE(titleOffset, 84);
+  rec0.writeUInt32BE(titleBytes.length, 88);
+  rec0.writeUInt32BE(FIRST_IMAGE_RECORD, 108); // first image record
+  rec0.writeUInt32BE(0xffffffff, 112);         // 无 HUFF/CDIC
+  rec0.writeUInt32BE(0, 116);
+  rec0.writeUInt32BE(0x40, 128);               // exthFlag: EXTH 存在
+  rec0.writeUInt32BE(0, 240);                  // trailing flags: 无
+  rec0.writeUInt32BE(0xffffffff, 244);         // 无 INDX
+  exth.copy(rec0, 16 + MOBI_HEADER_LEN);
+  titleBytes.copy(rec0, titleOffset);
+
+  const records = [rec0, htmlBytes, ...images];
+  const headerLen = 78 + records.length * 8;
+  const pdb = Buffer.alloc(headerLen, 0);
+  pdb.write('mobi-fixture', 0, 'latin1');
+  pdb.write('BOOK', 60, 'latin1');
+  pdb.write('MOBI', 64, 'latin1');
+  pdb.writeUInt32BE(0xffffffff, 72);
+  pdb.writeUInt16BE(records.length, 76);
+  let offset = headerLen;
+  records.forEach((rec, i) => {
+    pdb.writeUInt32BE(offset, 78 + i * 8);
+    offset += rec.length;
+  });
+  return Buffer.concat([pdb, ...records]);
+}
+
+async function writeMobiFixtures() {
+  const img = makePng(60, 20, 0x2f, 0x3b, 0x2f);
+  const html = [
+    '<html><body>',
+    '<h1>第一章 长夜</h1>',
+    '<p>山风掠过林梢，她沿着石阶向上走。</p>',
+    '<p><img recindex="0001" alt="插图一"/></p>',
+    '<p>暮色从谷底漫起来。</p>',
+    '<mbp:pagebreak/>',
+    '<h1>第二章 微光</h1>',
+    '<p>堤岸尽头的路灯下有人在等。</p>',
+    '</body></html>',
+  ].join('');
+  const mobi = buildMobi({
+    title: 'MOBI 夹具书',
+    author: '夹具作者',
+    html,
+    images: [img],
+  });
+  // 结构自检：BOOKMOBI 魔数与关键偏移
+  if (mobi.toString('latin1', 60, 68) !== 'BOOKMOBI') throw new Error('MOBI 夹具魔数自检失败');
+  write('mobi/fixture.mobi', mobi);
+}
+
+  await writeMobiFixtures();
+
   // GBK 自检
   const { TextDecoder } = globalThis;
   const decoded = new TextDecoder('gbk').decode(gbkBytes);

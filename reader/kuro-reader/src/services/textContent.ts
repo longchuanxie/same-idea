@@ -6,6 +6,7 @@ import {
   type SanitizeSummary,
 } from '@/services/contentSanitizer';
 import { loadEpubChapters } from '@/services/epubContent';
+import { isMobiBlob, loadMobiChapters } from '@/services/mobiContent';
 import type { ParsedTextChapter } from '@/services/parsers/types';
 import {
   splitMarkdownIntoChapters,
@@ -165,9 +166,12 @@ export async function loadTextContentDetailed(bookId: string): Promise<TextConte
   // blob.type 防御：测试环境（jsdom Blob × fake-indexeddb 克隆）会丢 type，真实浏览器不会
   const blobType = blob.type ?? '';
   const isEpub = blobType === 'application/epub+zip';
+  // MOBI 靠魔数探测（BOOKMOBI @60）：安卓选择器对 .mobi/.azw3 常给 octet-stream，
+  // 沿用 EPUB 的 MIME 判别不可靠；EPUB 已按 MIME 命中的不必再读字节
+  const isMobi = !isEpub && (await isMobiBlob(blob));
   const isMarkdown = blobType.startsWith('text/markdown') || blobType.startsWith('text/x-markdown');
 
-  if (!isEpub) {
+  if (!isEpub && !isMobi) {
     // 纯文本：使用共享的章节拆分函数
     const text = await blob.text();
     const parsedChapters = isMarkdown
@@ -195,12 +199,13 @@ export async function loadTextContentDetailed(bookId: string): Promise<TextConte
     };
   }
 
-  // EPUB：走保真管线（XHTML → Markdown + 图片 object URL），复用 Markdown 分页/渲染
+  // EPUB/MOBI：走保真管线（XHTML → Markdown + 图片 object URL），复用 Markdown 分页/渲染
   try {
-    const chapters = await loadEpubChapters(blob);
+    const chapters = isMobi ? await loadMobiChapters(blob) : await loadEpubChapters(blob);
     return { chapters, isEpub: true, isMarkdown: false, sanitize: EMPTY_SANITIZE_STATUS };
   } catch {
-    return { chapters: [{ id: 'ch1', title: '正文', content: 'EPUB 解析失败' }], isEpub: true, isMarkdown: false, sanitize: EMPTY_SANITIZE_STATUS };
+    const label = isMobi ? 'MOBI 解析失败' : 'EPUB 解析失败';
+    return { chapters: [{ id: 'ch1', title: '正文', content: label }], isEpub: true, isMarkdown: false, sanitize: EMPTY_SANITIZE_STATUS };
   }
 }
 

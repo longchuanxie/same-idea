@@ -296,8 +296,10 @@ export const ImportPage: React.FC = () => {
     }, [importFolder, importArchivesAsSubLibrary, importResult, importOpts]);
     const formatList = APP_CONFIG.supportedFormats.join(', ').toUpperCase();
     return (<div className="w-full max-w-max-width-content px-margin-mobile md:px-margin-desktop pt-12 md:pt-24 flex flex-col gap-12">
-      <input ref={fileInputRef} type="file" accept={APP_CONFIG.supportedFormats.join(',')} onChange={handleFileSelect} className="hidden"/>
-      <input ref={folderInputRef} type="file" accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.zip,.cbz,.rar,.cbr,.pdf,.txt,.md,.markdown,.epub" onChange={handleFolderSelect} {...({ webkitdirectory: '', directory: '' } as Record<string, string>)} className="hidden"/>
+      {/* accept 过滤故意不用：WebView 会把扩展名转 MIME，Android 无 mobi/azw3 映射的格式在选择器里被禁用不可选；
+            支持范围由 SUPPORTED_EXTENSIONS 在选中后校验（不支持的报「不支持的文件格式」） */}
+      <input ref={fileInputRef} type="file" onChange={handleFileSelect} className="hidden"/>
+      <input ref={folderInputRef} type="file" onChange={handleFolderSelect} {...({ webkitdirectory: '', directory: '' } as Record<string, string>)} className="hidden"/>
 
       <section className="flex flex-col gap-2">
         <h2 className="font-display text-display-lg-mobile md:text-display-lg text-primary tracking-tight">{t('导入中心')}</h2>
