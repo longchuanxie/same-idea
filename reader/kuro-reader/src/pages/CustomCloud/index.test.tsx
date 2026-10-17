@@ -36,10 +36,10 @@ const renderPage = () =>
   )
 
 const fillAndConnect = async () => {
-  fireEvent.change(screen.getByPlaceholderText('https://dav.example.com'), {
+  fireEvent.change(screen.getByPlaceholderText('http://192.168.1.10:8080'), {
     target: { value: 'http://localhost:6180' },
   })
-  fireEvent.change(screen.getByPlaceholderText('输入用户名'), { target: { value: 'kuro' } })
+  fireEvent.change(screen.getByPlaceholderText('匿名服务可留空'), { target: { value: 'kuro' } })
   fireEvent.click(screen.getByRole('button', { name: /连接并浏览/ }))
   await screen.findByText('断开连接')
 }
@@ -78,6 +78,22 @@ describe('CustomCloud browse flow', () => {
     expect(screen.getByText('unsupported.exe')).toBeTruthy()
     expect(screen.getAllByText(/不支持的格式/).length).toBe(1)
     expect(names).toBeDefined()
+  })
+
+  it('connects anonymously without username (rclone 常匿名开放)', async () => {
+    renderPage()
+    fireEvent.change(screen.getByPlaceholderText('http://192.168.1.10:8080'), {
+      target: { value: 'http://localhost:6180' },
+    })
+    // 用户名留空，连接按钮仍可用
+    const connectButton = screen.getByRole('button', { name: /连接并浏览/ }) as HTMLButtonElement
+    expect(connectButton.disabled).toBe(false)
+    fireEvent.click(connectButton)
+    await screen.findByText('断开连接')
+
+    expect(createCloudClient).toHaveBeenCalledWith(
+      expect.objectContaining({ serverAddress: 'http://localhost:6180', username: '' })
+    )
   })
 
   it('navigates into a folder and back via breadcrumb root', async () => {

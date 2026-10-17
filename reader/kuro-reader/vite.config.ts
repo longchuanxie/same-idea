@@ -3,6 +3,7 @@ import path from 'path';
 import { defineConfig } from 'vite';
 
 import { handleFTPProxy } from './server/ftpProxy';
+import { handleHttpProxy } from './server/httpProxy';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -14,6 +15,12 @@ export default defineConfig({
         server.middlewares.use('/api/ftp', (req, res, next) => {
           handleFTPProxy(req, res, next).catch(next);
         });
+      },
+    },
+    {
+      name: 'http-proxy',
+      configureServer(server) {
+        server.middlewares.use('/api/http-proxy', handleHttpProxy);
       },
     },
   ],

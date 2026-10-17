@@ -29,7 +29,7 @@ interface ProtocolOption {
 }
 
 const PROTOCOLS: ProtocolOption[] = [
-  { id: 'webdav', label: 'WebDAV', icon: 'cloud_sync', description: t('通用云存储标准协议') },
+  { id: 'webdav', label: 'WebDAV', icon: 'cloud_sync', description: t('rclone / Alist / 坚果云 · 通用云存储标准协议') },
   { id: 'nas', label: 'NAS', icon: 'storage', description: t('群晖 / QNAP / 威联通') },
   { id: 'opds', label: 'OPDS', icon: 'rss_feed', description: t('Calibre / Komga / Kavita 书库目录') },
   { id: 'smb', label: 'SMB', icon: 'folder_open', description: t('Windows 文件共享（暂不支持浏览）') },
@@ -114,7 +114,7 @@ export const CustomCloudPage: React.FC = () => {
       case 'opds':
         return { server: 'http://192.168.1.100:8083/opds', port: '' };
       case 'webdav':
-        return { server: 'https://dav.example.com', port: '443' };
+        return { server: 'http://192.168.1.10:8080', port: '8080' };
       case 'nas':
         return { server: '192.168.1.100', port: '5000' };
       case 'smb':
@@ -227,7 +227,8 @@ export const CustomCloudPage: React.FC = () => {
     }
   };
 
-  const isFormValid = serverAddress.trim().length > 0 && username.trim().length > 0;
+  // rclone/NAS 常匿名开放：地址必填即可，凭据选填
+  const isFormValid = serverAddress.trim().length > 0;
 
   /** 替换确认弹窗裁定收口：成功给可见反馈（挂起由弹窗承载，不算失败） */
   const handleResolveReplace = async (decision: 'replace' | 'keep-both' | 'cancel') => {
@@ -468,7 +469,7 @@ export const CustomCloudPage: React.FC = () => {
               </label>
               <input
                 className="input-field"
-                placeholder={protocol === 'onedrive' ? 'example@outlook.com' : t('输入用户名')}
+                placeholder={protocol === 'onedrive' ? 'example@outlook.com' : t('匿名服务可留空')}
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -607,7 +608,7 @@ export const CustomCloudPage: React.FC = () => {
                   </div>
                 </div>
               ))}
-              <p className="font-label text-label-sm text-on-surface-faint pt-1">{t('示例：WebDAV 填 192.168.1.10，端口 5005，路径 /dav；OPDS 填完整目录地址，如 http://192.168.1.10:8080/opds')}</p>
+              <p className="font-label text-label-sm text-on-surface-faint pt-1">{t('示例：rclone 填 http://192.168.1.10:8080（匿名可留空用户名密码）；WebDAV 填 192.168.1.10，端口 5005，路径 /dav；OPDS 填完整目录地址，如 http://192.168.1.10:8080/opds')}</p>
             </div>
           </div>
         </div>
