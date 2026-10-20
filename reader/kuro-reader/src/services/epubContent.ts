@@ -455,8 +455,10 @@ export async function loadEpubChapters(blob: Blob): Promise<TextChapter[]> {
     if (html) docs.push({ docPath, html });
   }
 
-  // 第一遍：收集全部图片 zip 路径
+  // 第一遍：收集全部图片 zip 路径 + inline SVG（outerHTML 片段，供第二遍半生成 data URL，
+  // 免去对全书 XHTML 的又一次 DOMParser——多图书开书解析次数直接关系首屏耗时）
   const imageZipPaths = new Set<string>();
+  const svgFragments: { outerHtml: string; baseDir: string }[] = [];
   for (const { docPath, html } of docs) {
     const docDir = zipDirOf(docPath);
     const dom = new DOMParser().parseFromString(html, 'text/html');
@@ -464,6 +466,9 @@ export async function loadEpubChapters(blob: Blob): Promise<TextChapter[]> {
       const src = img.getAttribute('src') || img.getAttribute('data-src') || '';
       if (!src) continue;
       imageZipPaths.add(zipReadPath(docDir, src));
+    }
+    for (const svg of Array.from(dom.querySelectorAll('svg'))) {
+      svgFragments.push({ outerHtml: svg.outerHTML, baseDir: docDir });
     }
   }
 
@@ -484,16 +489,16 @@ export async function loadEpubChapters(blob: Blob): Promise<TextChapter[]> {
     })
   );
 
-  // 第二遍半：inline SVG → data URL（同 outerHTML 复用；转换器按 outerHTML 匹配取回）
+  // 第二遍半：inline SVG → data URL（同 outerHTML 复用；转换器按 outerHTML 匹配取回）。
+  // 只解析收集到的 SVG 片段本身——正常书无 SVG 时这里是零解析零开销
   const svgDataUrlByOuterHtml = new Map<string, string>();
-  for (const { docPath, html } of docs) {
-    const dom = new DOMParser().parseFromString(html, 'text/html');
-    for (const svg of Array.from(dom.querySelectorAll('svg'))) {
-      const key = svg.outerHTML;
-      if (svgDataUrlByOuterHtml.has(key)) continue;
-      const url = await inlineSvgToDataUrl(svg, zip, zipDirOf(docPath));
-      if (url) svgDataUrlByOuterHtml.set(key, url);
-    }
+  for (const { outerHtml, baseDir } of svgFragments) {
+    if (svgDataUrlByOuterHtml.has(outerHtml)) continue;
+    const frag = new DOMParser().parseFromString(outerHtml, 'image/svg+xml');
+    const svgEl = frag.documentElement;
+    if (!svgEl || svgEl.nodeName === 'parsererror' || svgEl.tagName.toLowerCase() !== 'svg') continue;
+    const url = await inlineSvgToDataUrl(svgEl, zip, baseDir);
+    if (url) svgDataUrlByOuterHtml.set(outerHtml, url);
   }
 
   // 第三遍：转换为 Markdown 章节

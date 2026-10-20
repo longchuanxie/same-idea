@@ -35,17 +35,92 @@ export function normalizePiperDownloadPercent(percent: number): number | null {
 type PiperModule = typeof PiperTts;
 type PiperSession = InstanceType<PiperModule['TtsSession']>;
 
+/** OPFS 内音色包目录与两个文件名（writeModelBlobToOpfs / 库 stored() 共用同一约定） */
+const PIPER_OPFS_DIR = 'piper';
+const PIPER_CONFIG_NAME = `${PIPER_VOICE_ID}.onnx.json`;
+const PIPER_MODEL_NAME = `${PIPER_VOICE_ID}.onnx`;
+
 /**
  * 按库的 OPFS 约定写入模型文件：根目录 piper/ 下以模型 URL 尾段（<voiceId>.onnx[.json]）为键。
  * 库未导出 writeBlob（内部实现且强制 HF 域校验），TtsSession/stored() 读取同约定，自写可被识别。
  */
 async function writeModelBlobToOpfs(basename: string, blob: Blob): Promise<void> {
   const root = await navigator.storage.getDirectory();
-  const dir = await root.getDirectoryHandle('piper', { create: true });
+  const dir = await root.getDirectoryHandle(PIPER_OPFS_DIR, { create: true });
   const file = await dir.getFileHandle(basename, { create: true });
   const writable = await file.createWritable();
   await writable.write(blob);
   await writable.close();
+}
+
+/**
+ * CapacitorHttp 的 responseType:'arraybuffer' 两端实现回传的都是 base64 字符串
+ * （Android 原生 readStreamAsBase64、Web readBlobAsBase64），并非 ArrayBuffer。
+ * 直接 new Blob([data]) 会把 base64 文本当二进制落盘：配置文件在库侧 JSON.parse
+ * 直接炸出 "Unexpected token 'e', \"ewogICJhdW\"..."，模型也无法加载。这里显式解码回字节。
+ */
+function capacitorHttpDataToBlob(data: unknown): Blob {
+  if (typeof data !== 'string') return new Blob([data as ArrayBuffer]);
+  const binary = atob(data.replace(/\s+/g, ''));
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes]);
+}
+
+/** 头部体检取样长度：远小于模型体积，读取只碰首个存储块 */
+const FILE_HEAD_SAMPLE_BYTES = 64;
+
+/** 读 OPFS 音色包文件的头几个字节（目录/文件不存在、读取失败均返回 null） */
+async function readPiperFileHead(name: string): Promise<Uint8Array | null> {
+  try {
+    const root = await navigator.storage.getDirectory();
+    const dir = await root.getDirectoryHandle(PIPER_OPFS_DIR);
+    const file = await (await dir.getFileHandle(name)).getFile();
+    return new Uint8Array(await file.slice(0, FILE_HEAD_SAMPLE_BYTES).arrayBuffer());
+  } catch {
+    return null;
+  }
+}
+
+/** 纯 base64 文本可能的字节全集：字母表 + 填充符 + 空白（换行/回车/空格/制表） */
+const BASE64_TEXT_BYTES = new Set<number>(
+  [...'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=\n\r\t '].map((ch) => ch.charCodeAt(0))
+);
+/** JSON 对象首字节（健康配置 .onnx.json 必以它开头；base64 投毒文件以 'e' 等字母开头） */
+const JSON_OBJECT_START_BYTE = '{'.charCodeAt(0);
+
+/** 纯 base64 文本指纹：取样区间内全部字节都落在 base64 字母表 + 空白里（真二进制文件不可能全中） */
+function isBase64TextHead(head: Uint8Array): boolean {
+  if (head.length === 0) return false;
+  for (let i = 0; i < head.length; i += 1) {
+    if (!BASE64_TEXT_BYTES.has(head[i])) return false;
+  }
+  return true;
+}
+
+async function removePiperCacheFiles(): Promise<void> {
+  try {
+    const root = await navigator.storage.getDirectory();
+    const dir = await root.getDirectoryHandle(PIPER_OPFS_DIR);
+    await dir.removeEntry(PIPER_CONFIG_NAME).catch(() => undefined);
+    await dir.removeEntry(PIPER_MODEL_NAME).catch(() => undefined);
+  } catch {
+    // 目录不存在即无缓存，无需清理
+  }
+}
+
+/**
+ * 已落盘文件是否健康：配置 .onnx.json 必以 '{' 开头（base64 投毒文件以 'e' 等开头）、
+ * 模型 .onnx 是 protobuf 二进制绝不该是纯 base64 文本。检出投毒即清除两个文件，
+ * 让下次 preload 走完整下载自愈（存量投毒不清除会被 stored() 的存在性判断永久放过）。
+ */
+async function piperFilesIntact(): Promise<boolean> {
+  const configHead = await readPiperFileHead(PIPER_CONFIG_NAME);
+  const modelHead = await readPiperFileHead(PIPER_MODEL_NAME);
+  if (!configHead || !modelHead) return false;
+  const intact = configHead[0] === JSON_OBJECT_START_BYTE && !isBase64TextHead(modelHead);
+  if (!intact) await removePiperCacheFiles();
+  return intact;
 }
 
 let modulePromise: Promise<PiperModule> | null = null;
@@ -198,7 +273,7 @@ async function fetchModelFile(
     try {
       onIndeterminate();
       const res = await CapacitorHttp.get({ url, responseType: 'arraybuffer', connectTimeout: MODEL_SOURCE_CONNECT_TIMEOUT_MS, readTimeout: MODEL_DOWNLOAD_READ_TIMEOUT_MS });
-      return new Blob([res.data as ArrayBuffer]);
+      return capacitorHttpDataToBlob(res.data);
     } catch (error) {
       lastError = error;
     }
@@ -219,8 +294,9 @@ export async function preloadPiperModel(): Promise<void> {
   if (activeDownload) return activeDownload;
   activeDownload = (async () => {
     try {
-      const tts = await loadModule();
-      if (!(await tts.stored()).includes(PIPER_VOICE_ID)) {
+      // 引擎模块本身不可用（如 WASM 加载失败）即刻抛出，不落入下面的下载重试路径
+      await loadModule();
+      if (!(await piperModelStored())) {
         fileCompletion.clear();
         emitProgress(0);
         // 配置文件（.onnx.json，很小）
@@ -261,12 +337,17 @@ export function subscribePiperDownloadProgress(listener: (percent: number) => vo
   };
 }
 
-/** 音色模型是否已缓存到本机(OPFS),供设置 UI 提示是否需要下载 */
+/**
+ * 音色模型是否已缓存到本机(OPFS)且文件健康,供设置 UI 提示是否需要下载。
+ * 存在性之外还体检文件头（曾的原生通道缺陷会把 base64 文本当二进制写入），
+ * 检出投毒文件即顺带清除，让下次 preload 重新下载自愈。
+ */
 export async function piperModelStored(): Promise<boolean> {
   try {
     const tts = await loadModule();
     const stored = await tts.stored();
-    return stored.includes(PIPER_VOICE_ID);
+    if (!stored.includes(PIPER_VOICE_ID)) return false;
+    return await piperFilesIntact();
   } catch {
     return false;
   }

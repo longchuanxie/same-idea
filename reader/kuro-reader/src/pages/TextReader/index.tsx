@@ -77,6 +77,7 @@ import { computeAnnotationAnchor, resolveAnnotationOffsets } from '@/utils/annot
 import { getAnnotationPresentation } from '@/utils/annotationHighlight';
 import { copyTextToClipboard } from '@/utils/clipboard';
 import { cn } from '@/utils/cn';
+import { lookupImageDimensions } from '@/utils/imageSize';
 import {
   PAPER_INK_COLOR,
   computePaperOpacity,
@@ -718,15 +719,19 @@ export const TextReaderPage: React.FC = () => {
     return () => { cancelled = true };
   }, [bookId]);
 
-  // 原版式：EPUB/MOBI 原件加载（bookFiles 仓持久化的原始 blob，IndexedDB 惰性引用）
+  // 原版式：EPUB/MOBI 原件按需加载——只在原版式模式取（bookFiles 仓 blob 可能上百 MB，
+  // 重排版模式下预取是纯浪费的 IO 与内存驻留）；切回重排版即释放引用
   useEffect(() => {
-    if (!bookId || !isEpub) return;
+    if (!bookId || !isEpub || textLayoutMode !== 'original') {
+      setOriginalBlob(null);
+      return;
+    }
     let cancelled = false;
     bookFileRepo.get(bookId).then((blob) => {
       if (!cancelled) setOriginalBlob(blob ?? null);
     });
     return () => { cancelled = true; };
-  }, [bookId, isEpub]);
+  }, [bookId, isEpub, textLayoutMode]);
 
   // 原版式进度落库：fraction 全书比例锚写进 locator 的 foliate 键（与重排版锚并存，
   // 切回重排版时章/页锚不丢）；percentage 同步为全书比例
@@ -1549,8 +1554,12 @@ export const TextReaderPage: React.FC = () => {
     // 等测量容器内的图片完成加载（含失败）再量：图片未就绪时高度是占位值，
     // 会把带图页排得过满，渲染时被 overflow-hidden 裁掉尾部内容。
     // 超时兜底保证分页最终总会执行（结果不入缓存，见 finishPagination）
+    // 等待范围收窄：导入期已预注册尺寸的图（PNG/JPEG 头）未加载也占正确高度
+    // （width/height 属性参与布局），无需等解码——只有无尺寸注册的图（webp/gif/
+    // 外链）才等待 complete，图密集章的开书等待从「全部图解码」降到「无尺寸图」
     const pendingMeasureImages = markdownMeasureRef.current
-      ? Array.from(markdownMeasureRef.current.querySelectorAll('img')).filter((img) => !img.complete)
+      ? Array.from(markdownMeasureRef.current.querySelectorAll('img'))
+        .filter((img) => !img.complete && !lookupImageDimensions(img.currentSrc || img.src))
       : [];
     let measuredWithPendingImages = false;
     if (pendingMeasureImages.length > 0) {

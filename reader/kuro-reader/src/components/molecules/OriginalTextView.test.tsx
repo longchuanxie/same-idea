@@ -3,19 +3,21 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 
 import { OriginalTextView } from './OriginalTextView'
 
-/** foliate-view 的受控替身：open/next/prev/goToFraction 全量 mock，事件手工派发 */
+/** foliate-view 的受控替身：open/init/next/prev/goToFraction 全量 mock，事件手工派发 */
 const viewMocks = vi.hoisted(() => ({
   open: vi.fn().mockResolvedValue(undefined),
+  init: vi.fn().mockResolvedValue(undefined),
   next: vi.fn().mockResolvedValue(undefined),
   prev: vi.fn().mockResolvedValue(undefined),
   goToFraction: vi.fn().mockResolvedValue(undefined),
-  instances: [] as Array<HTMLElement & { open?: unknown; next?: unknown; prev?: unknown; goToFraction?: unknown }>,
+  instances: [] as Array<HTMLElement & { open?: unknown; init?: unknown; next?: unknown; prev?: unknown; goToFraction?: unknown }>,
 }))
 
 vi.mock('foliate-js/view.js', () => {
   if (typeof customElements !== 'undefined' && !customElements.get('foliate-view')) {
     class FakeFoliateView extends HTMLElement {
       open = viewMocks.open
+      init = viewMocks.init
       next = viewMocks.next
       prev = viewMocks.prev
       goToFraction = viewMocks.goToFraction
@@ -51,6 +53,7 @@ function getLastView(): (HTMLElement & { open?: unknown; next?: unknown; prev?: 
 describe('OriginalTextView', () => {
   beforeEach(() => {
     viewMocks.open.mockClear()
+    viewMocks.init.mockClear()
     viewMocks.next.mockClear()
     viewMocks.prev.mockClear()
     viewMocks.goToFraction.mockClear()
@@ -96,8 +99,8 @@ describe('OriginalTextView', () => {
     expect(removeSpy).toHaveBeenCalled()
   })
 
-  it('有起始比例时 open 后跳到对应位置', async () => {
-    render(
+  it('有起始比例时 open 后以恢复位置 init，无则空 init 触发首章渲染', async () => {
+    const { rerender } = render(
       <OriginalTextView
         blob={new Blob(['x'])}
         initialFraction={0.42}
@@ -109,7 +112,22 @@ describe('OriginalTextView', () => {
       />
     )
     await act(async () => { await Promise.resolve() })
-    expect(viewMocks.goToFraction).toHaveBeenCalledWith(0.42)
+    // open 只装载数据；init（带恢复位置）才触发渲染——漏 init 是白屏根因
+    expect(viewMocks.init).toHaveBeenCalledWith({ lastLocation: { fraction: 0.42 } })
+
+    rerender(
+      <OriginalTextView
+        blob={new Blob(['y'])}
+        initialFraction={null}
+        background="#fff"
+        color="#111"
+        onRelocate={vi.fn()}
+        onToggleUi={vi.fn()}
+        apiRef={{ current: null }}
+      />
+    )
+    await act(async () => { await Promise.resolve() })
+    expect(viewMocks.init).toHaveBeenLastCalledWith({})
   })
 
   it('relocate 事件转发外层进度回调', async () => {

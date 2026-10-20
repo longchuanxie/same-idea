@@ -18,6 +18,7 @@ import 'foliate-js/view.js'
 /** foliate-js <foliate-view> 的最小结构面（custom element，createElement 产物） */
 interface FoliateView extends HTMLElement {
   open(book: Blob): Promise<void>
+  init(options: { lastLocation?: { fraction: number } }): Promise<void>
   next(): Promise<void>
   prev(): Promise<void>
   goToFraction(fraction: number): Promise<void>
@@ -116,7 +117,13 @@ export const OriginalTextView: FC<OriginalTextViewProps> = ({
           prev: () => void view.prev(),
           goToFraction: (fraction: number) => void view.goToFraction(fraction),
         }
-        if (initialFraction && initialFraction > 0) await view.goToFraction(initialFraction)
+        // open 只装载数据不渲染——init 才触发首章显示（有恢复位置 goTo 之，
+        // 无则内部 next() 从头渲染）。漏掉 init 是「白屏不渲染」的根因
+        await view.init(
+          initialFraction && initialFraction > 0
+            ? { lastLocation: { fraction: initialFraction } }
+            : {}
+        )
       } catch (error) {
         console.error('[OriginalTextView] 打开原版式书籍失败', error)
       }

@@ -14,8 +14,28 @@ vi.mock('@capacitor/core', () => ({
   CapacitorHttp: { get: (...args: unknown[]) => capacitorHttpGet(...args) },
 }))
 
-// ===== 假 OPFS：jsdom 无 OPFS，记录写入文件与字节数 =====
-const opfsFiles = new Map<string, number>()
+// ===== 假 OPFS：jsdom 无 OPFS，记录写入文件的真实内容字节 =====
+const opfsFiles = new Map<string, Uint8Array>()
+
+/** BlobPart → 字节（jsdom 的 Blob 缺 arrayBuffer，FileReader 兜底，手法同 pdfText.ts） */
+async function blobPartBytes(part: BlobPart): Promise<Uint8Array> {
+  if (part instanceof Blob) {
+    if (typeof part.arrayBuffer === 'function') return new Uint8Array(await part.arrayBuffer())
+    return new Uint8Array(await new Promise<ArrayBuffer>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as ArrayBuffer)
+      reader.onerror = () => reject(reader.error)
+      reader.readAsArrayBuffer(part)
+    }))
+  }
+  if (part instanceof ArrayBuffer) return new Uint8Array(part.slice(0))
+  if (ArrayBuffer.isView(part)) {
+    const view = part as Uint8Array
+    return new Uint8Array(view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength) as ArrayBuffer)
+  }
+  return new TextEncoder().encode(String(part))
+}
+
 function installFakeOpfs() {
   opfsFiles.clear()
   const dirHandle = {
@@ -23,22 +43,48 @@ function installFakeOpfs() {
       if (!opfsFiles.has(name) && !opts?.create) throw new Error(`NotFound: ${name}`)
       return {
         async createWritable() {
-          let bytes = 0
+          const parts: BlobPart[] = []
           return {
-            write: async (part: BlobPart) => {
-              bytes += part instanceof Blob ? part.size : (part as ArrayBuffer).byteLength ?? 0
+            write: async (part: BlobPart) => { parts.push(part) },
+            close: async () => {
+              const chunks: Uint8Array[] = []
+              for (const part of parts) chunks.push(await blobPartBytes(part))
+              const total = chunks.reduce((n, c) => n + c.length, 0)
+              const out = new Uint8Array(total)
+              let offset = 0
+              for (const chunk of chunks) { out.set(chunk, offset); offset += chunk.length }
+              opfsFiles.set(name, out)
             },
-            close: async () => { opfsFiles.set(name, bytes) },
           }
         },
-        async getFile() { return { size: opfsFiles.get(name) ?? 0 } as File },
+        async getFile() {
+          const bytes = opfsFiles.get(name) ?? new Uint8Array()
+          return {
+            size: bytes.length,
+            slice: (start: number) => ({ arrayBuffer: async () => bytes.slice(start).buffer as ArrayBuffer }),
+          } as File
+        },
       }
     },
+    async removeEntry(name: string) { opfsFiles.delete(name) },
   }
   const root = { getDirectoryHandle: async () => dirHandle }
   const nav = navigator as unknown as { storage: { getDirectory: unknown } }
   nav.storage = nav.storage ?? ({} as StorageManager)
   nav.storage.getDirectory = async () => root
+}
+
+/** 模拟健康缓存：配置以 '{' 开头的 JSON、模型为 protobuf 二进制（含字母表外字节） */
+function seedHealthyPiperFiles() {
+  opfsFiles.set('zh_CN-huayan-medium.onnx.json', new TextEncoder().encode('{\n  "audio": { "sample_rate": 22050 }\n}'))
+  opfsFiles.set('zh_CN-huayan-medium.onnx', new Uint8Array([0x08, 0x07, 0x12, 0xab, 0x00, 0xff, 0x9c, 0x01]))
+}
+
+/** 模拟投毒缓存：base64 文本被当二进制写入（旧缺陷产物，配置 JSON.parse 必炸） */
+function seedPoisonedPiperFiles() {
+  const encoder = new TextEncoder()
+  opfsFiles.set('zh_CN-huayan-medium.onnx.json', encoder.encode(btoa('{\n  "audio": { "sample_rate": 22050 }\n}')))
+  opfsFiles.set('zh_CN-huayan-medium.onnx', encoder.encode(btoa('fake-binary-model-bytes')))
 }
 
 // sessionPromise / activeDownload 为模块级缓存,每个用例重载模块以隔离
@@ -60,6 +106,25 @@ function fakeResponse(bytes: number, chunks = 2) {
       }),
     },
     arrayBuffer: async () => new ArrayBuffer(bytes),
+  }
+}
+
+/** 构造吐出指定内容的伪 fetch 流式响应（单块） */
+function fakeContentResponse(content: Uint8Array) {
+  let sent = false
+  return {
+    ok: true,
+    headers: { get: (key: string) => (key === 'Content-Length' ? String(content.length) : null) },
+    body: {
+      getReader: () => ({
+        read: async () => {
+          if (sent) return { done: true }
+          sent = true
+          return { done: false, value: content }
+        },
+      }),
+    },
+    arrayBuffer: async () => content.slice().buffer as ArrayBuffer,
   }
 }
 
@@ -152,14 +217,65 @@ describe('preloadPiperModel', () => {
     expect(createMock).not.toHaveBeenCalled()
   })
 
-  it('已存储时跳过下载直接建会话', async () => {
+  it('已存储（且缓存健康）时跳过下载直接建会话', async () => {
     storedMock.mockResolvedValue(['zh_CN-huayan-medium'])
+    seedHealthyPiperFiles()
     createMock.mockResolvedValue(undefined)
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
     const mod = await loadEngine()
     await mod.preloadPiperModel()
     expect(fetchMock).not.toHaveBeenCalled()
+    expect(createMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('原生通道回传 base64 字符串时解码为真二进制落盘（CapacitorHttp arraybuffer 实际形态）', async () => {
+    const configRaw = new TextEncoder().encode('{"audio":{"sample_rate":22050}}')
+    const modelRaw = new Uint8Array([0x08, 0x07, 0x12, 0xab, 0x00, 0xff, 0x9c])
+    capacitorHttpGet.mockImplementation(async ({ url }: { url: string }) => ({
+      data: btoa(String.fromCharCode(...(url.endsWith('.json') ? configRaw : modelRaw))),
+    }))
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('Failed to fetch') }))
+    const mod = await loadEngine()
+    await mod.preloadPiperModel()
+    // 落盘的是解码后的原始字节，而非 base64 文本（旧缺陷会把后者写进 OPFS 毒死会话）
+    expect([...opfsFiles.get('zh_CN-huayan-medium.onnx.json')!]).toEqual([...configRaw])
+    expect([...opfsFiles.get('zh_CN-huayan-medium.onnx')!]).toEqual([...modelRaw])
+  })
+
+  it('piperModelStored 体检存量投毒缓存：返回 false 并清除文件', async () => {
+    storedMock.mockResolvedValue(['zh_CN-huayan-medium'])
+    seedPoisonedPiperFiles()
+    const mod = await loadEngine()
+    await expect(mod.piperModelStored()).resolves.toBe(false)
+    expect(opfsFiles.size).toBe(0)
+  })
+
+  it('piperModelStored 健康缓存返回 true 且不动文件', async () => {
+    storedMock.mockResolvedValue(['zh_CN-huayan-medium'])
+    seedHealthyPiperFiles()
+    const mod = await loadEngine()
+    await expect(mod.piperModelStored()).resolves.toBe(true)
+    expect(opfsFiles.size).toBe(2)
+  })
+
+  it('投毒缓存被 preload 检出自愈：清除后重新下载真二进制', async () => {
+    storedMock.mockResolvedValue(['zh_CN-huayan-medium'])
+    seedPoisonedPiperFiles()
+    const configRaw = new TextEncoder().encode('{"audio":{"sample_rate":22050}}')
+    const modelRaw = new Uint8Array([0x08, 0x07, 0x12, 0xab, 0x00, 0xff, 0x9c])
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      return fakeContentResponse(url.endsWith('.json') ? configRaw : modelRaw)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const mod = await loadEngine()
+    await mod.preloadPiperModel()
+    // 投毒文件不再被存在性判断放过：走了重新下载
+    expect(fetchMock).toHaveBeenCalled()
+    // 重下产物为真二进制：配置以 '{' 开头、模型与源字节一致
+    expect(opfsFiles.get('zh_CN-huayan-medium.onnx.json')![0]).toBe(0x7b)
+    expect([...opfsFiles.get('zh_CN-huayan-medium.onnx')!]).toEqual([...modelRaw])
     expect(createMock).toHaveBeenCalledTimes(1)
   })
 
@@ -266,6 +382,8 @@ describe('PiperEngine', () => {
     FakeAudio.instances = []
     vi.stubGlobal('Audio', FakeAudio)
     installFakeOpfs()
+    // stored() 报已存储须配健康缓存文件，否则 piperModelStored 体检不过会去走下载
+    seedHealthyPiperFiles()
   })
 
   afterEach(() => {
