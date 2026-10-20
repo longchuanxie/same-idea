@@ -11,6 +11,7 @@ import { ChapterEndPrompt } from '@/components/molecules/ChapterEndPrompt';
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog';
 import { InBookSearchPanel } from '@/components/molecules/InBookSearchPanel';
 import { MarkdownReaderContent } from '@/components/molecules/MarkdownReaderContent';
+import { OriginalTextView, type OriginalTextApi, type OriginalTextLocation } from '@/components/molecules/OriginalTextView';
 import { SanitizeConfirmDialog } from '@/components/molecules/SanitizeConfirmDialog';
 import { SelectionFloatingButton } from '@/components/molecules/SelectionFloatingButton';
 import { SpeechBadge } from '@/components/molecules/SpeechBadge';
@@ -58,6 +59,7 @@ import {
   splitTextIntoPages,
 } from '@/services/pagination/textPagination';
 import { annotationRepo } from '@/services/storage/annotationRepo';
+import { bookFileRepo } from '@/services/storage/bookFileRepo';
 import { bookmarkRepo } from '@/services/storage/bookmarkRepo';
 import { vocabRepo, vocabEntryId } from '@/services/storage/vocabRepo';
 import { recordUsageSignal } from '@/services/telemetry/usageSignals';
@@ -163,6 +165,8 @@ const TEXT_MEDIA_CAPTION_RESERVE_PX = 48;
 const TEXT_MEDIA_MIN_HEIGHT_PX = 160;
 /** 分页结果缓存上限（章）：签名命中直接复用，章节往返不再全章重排 */
 const PAGINATION_CACHE_LIMIT = 8;
+/** 原版式进度保存防抖（relocate 高频触发，落库节流） */
+const ORIGINAL_SAVE_DEBOUNCE_MS = 1200;
 /** 整章一页自检阈值：单页文本量超过页面理论容量的倍数即判定测量不可信 */
 const SINGLE_PAGE_SANITY_FACTOR = 1.5;
 const SINGLE_PAGE_MIN_CAPACITY_CHARS = 400;
@@ -227,6 +231,13 @@ export const TextReaderPage: React.FC = () => {
   const [isBottomBarVisible, setIsBottomBarVisible] = useState(false);
   const [isChapterDrawerOpen, setIsChapterDrawerOpen] = useState(false);
   const [isEpub, setIsEpub] = useState(false);
+  // 原版式（foliate-js 保真渲染）：EPUB/MOBI 书原件 blob + foliate 视图锚点/翻页通道
+  const [originalBlob, setOriginalBlob] = useState<Blob | null>(null);
+  /** 原版式打开时的起始位置（恢复 effect 一次解析；之后不随 relocate 更新） */
+  const [originalInitialFraction, setOriginalInitialFraction] = useState<number | null>(null);
+  const originalApiRef = useRef<OriginalTextApi | null>(null);
+  const originalLocationRef = useRef<OriginalTextLocation | null>(null);
+  const originalSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isMarkdown, setIsMarkdown] = useState(false);
   const [localFontSize, setLocalFontSize] = useState<number | null>(null);
   const [localLineHeight, setLocalLineHeight] = useState<number | null>(null);
@@ -461,9 +472,15 @@ export const TextReaderPage: React.FC = () => {
   const autoAdvanceTextChapter = settings.autoAdvanceTextChapter;
   const autoScrollSpeed = settings.autoScrollSpeed;
   const textReadingMode = settings.textReadingMode;
+  const textLayoutMode = settings.textLayoutMode;
   const brightness = settings.brightness;
   const colorTemperature = settings.colorTemperature;
   const isColumnsReadingMode = textReadingMode === 'columns';
+  /** 原版式渲染激活：EPUB/MOBI（isEpub 对两者皆 true）+ 版式开关 */
+  const isOriginalLayout = isEpub && textLayoutMode === 'original';
+  /** 原版式模式的镜像 ref：卸载保存等 cleanup 里读到的是闭包旧值 */
+  const isOriginalLayoutRef = useRef(false);
+  isOriginalLayoutRef.current = isOriginalLayout;
   // 无缝续读：滚动模式 + 章末自动衔接开启（下一章拼接在当前章下方，滚动自然过渡）
   const isSeamlessReading = textReadingMode === 'scroll' && autoAdvanceTextChapter;
   // 竖排书写仅在滚动模式生效（分页引擎为横向测量，不与竖排混用）
@@ -701,6 +718,55 @@ export const TextReaderPage: React.FC = () => {
     return () => { cancelled = true };
   }, [bookId]);
 
+  // 原版式：EPUB/MOBI 原件加载（bookFiles 仓持久化的原始 blob，IndexedDB 惰性引用）
+  useEffect(() => {
+    if (!bookId || !isEpub) return;
+    let cancelled = false;
+    bookFileRepo.get(bookId).then((blob) => {
+      if (!cancelled) setOriginalBlob(blob ?? null);
+    });
+    return () => { cancelled = true; };
+  }, [bookId, isEpub]);
+
+  // 原版式进度落库：fraction 全书比例锚写进 locator 的 foliate 键（与重排版锚并存，
+  // 切回重排版时章/页锚不丢）；percentage 同步为全书比例
+  const saveOriginalProgress = useCallback(() => {
+    const location = originalLocationRef.current;
+    if (!bookId || !location) return;
+    const existing = useLibraryStore.getState().readingProgress[bookId];
+    let locatorData: Record<string, unknown> = {};
+    if (existing?.locator) {
+      try { locatorData = JSON.parse(existing.locator) as Record<string, unknown>; } catch { /* 旧格式容忍 */ }
+    }
+    locatorData.foliate = { fraction: location.fraction, cfi: location.cfi };
+    useLibraryStore.getState().updateProgress(bookId, {
+      ...(existing ?? {
+        bookId, chapterId: 'ch1', page: 0, totalPages: 0,
+        percentage: 0, globalPageIndex: 0, totalImages: 0,
+      }),
+      percentage: location.fraction * PERCENT_MULTIPLIER,
+      locator: JSON.stringify(locatorData),
+      textLayoutMode: 'original',
+      updatedAt: Date.now(),
+    });
+  }, [bookId]);
+
+  const handleOriginalRelocate = useCallback((location: OriginalTextLocation) => {
+    originalLocationRef.current = location;
+    setScrollPercent(Math.round(location.fraction * PERCENT_MULTIPLIER));
+    if (originalSaveTimerRef.current) clearTimeout(originalSaveTimerRef.current);
+    originalSaveTimerRef.current = setTimeout(() => saveOriginalProgress(), ORIGINAL_SAVE_DEBOUNCE_MS);
+  }, [saveOriginalProgress]);
+
+  // 原版式卸载兜底：relocate 防抖可能未及落库（进程被杀场景以最后一次 relocate 为准）
+  useEffect(() => {
+    return () => {
+      if (originalSaveTimerRef.current) clearTimeout(originalSaveTimerRef.current);
+      if (isOriginalLayoutRef.current && originalLocationRef.current) saveOriginalProgress();
+    };
+  }, [saveOriginalProgress]);
+
+
   // 轻提示（撤销 / 方向引导 / AI 未配置的去设置出口）
   const [toast, setToast] = useState<{ message: string; undo?: () => void; actionLabel?: string } | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -781,6 +847,20 @@ export const TextReaderPage: React.FC = () => {
       if (progress.textReadingMode && progress.textReadingMode !== appState.settings.textReadingMode) {
         appState.updateSettings({ textReadingMode: progress.textReadingMode });
       }
+      if (progress.textLayoutMode && progress.textLayoutMode !== appState.settings.textLayoutMode) {
+        appState.updateSettings({ textLayoutMode: progress.textLayoutMode });
+      }
+    }
+
+    // 原版式模式：位置由 foliate 的全书比例锚恢复（locator.foliate 键），
+    // 章节分页/滚动恢复链路不适用——解析后直接让位
+    if (progress.textLayoutMode === 'original') {
+      let foliateAnchor: { fraction?: number } | null = null;
+      if (progress.locator) {
+        try { foliateAnchor = (JSON.parse(progress.locator) as { foliate?: { fraction?: number } }).foliate ?? null; } catch { /* ignore */ }
+      }
+      setOriginalInitialFraction(foliateAnchor?.fraction ?? null);
+      return;
     }
 
     // 从 locator 解析文本阅读定位信息
@@ -868,6 +948,14 @@ export const TextReaderPage: React.FC = () => {
     setIsProgressDragging(false);
     const ratio = dragPercent / PERCENT_MULTIPLIER;
 
+    // 原版式：全书比例直接映射 foliate 锚（relocate 回调会跟上进度保存）
+    if (isOriginalLayoutRef.current) {
+      originalApiRef.current?.goToFraction(ratio);
+      setScrollPercent(dragPercent);
+      showProgressHint();
+      return;
+    }
+
     if (textReadingMode === 'scroll') {
       const container = scrollContainerRef.current;
       if (container) {
@@ -946,6 +1034,10 @@ export const TextReaderPage: React.FC = () => {
       if (uiAutoHideTimerRef.current) {
         clearTimeout(uiAutoHideTimerRef.current);
       }
+      // 守卫：位置恢复未完成的「伪卸载」（dev StrictMode 双挂载的第一次卸载、
+      // loading 早退）不落任何保存——此时 settings/进度镜像还是 rehydrate 前的
+      // 默认值，写入会把按书记忆（版式/阅读模式）静默覆盖回默认
+      if (positionRestoredBookIdRef.current !== bookId) return;
       // 统一保存所有阅读设置到全局 store
       const s = settingsRef.current;
       const settingsUpdate: Partial<import('@/types').UserSettings> = {
@@ -957,6 +1049,7 @@ export const TextReaderPage: React.FC = () => {
         autoAdvanceTextChapter: s.autoAdvanceTextChapter,
         autoScrollSpeed: s.autoScrollSpeed,
         textReadingMode: s.textReadingMode,
+        textLayoutMode: s.textLayoutMode,
         brightness: s.brightness,
         colorTemperature: s.colorTemperature,
         // 局部覆盖的设置
@@ -990,7 +1083,12 @@ export const TextReaderPage: React.FC = () => {
           mode === 'scroll' ? scrollRatio : undefined
         );
         if (progress) {
-          useLibraryStore.getState().updateProgress(progress.bookId, progress);
+          useLibraryStore.getState().updateProgress(progress.bookId, {
+            ...progress,
+            // 版式按书快照：常规组装不含该字段，这里补实际离开时的版式
+            // （原版式路径在自身卸载兜底里已写，此处兜底 reflow 侧）
+            textLayoutMode: isOriginalLayoutRef.current ? 'original' : 'reflow',
+          });
         }
       }
     };
@@ -1919,6 +2017,18 @@ export const TextReaderPage: React.FC = () => {
   // 键盘快捷键
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      if (isOriginalLayoutRef.current) {
+        // 原版式：翻页转发 foliate（foliate 自带触摸手势，键盘走外层）
+        if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+          e.preventDefault();
+          originalApiRef.current?.prev();
+        }
+        if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') {
+          e.preventDefault();
+          originalApiRef.current?.next();
+        }
+        return;
+      }
       if (textReadingMode === 'scroll') {
         if (e.key === 'ArrowUp' || e.key === 'PageUp') {
           e.preventDefault();
@@ -2903,8 +3013,24 @@ export const TextReaderPage: React.FC = () => {
         </div>
       )}
 
+      {/* 原版式渲染（EPUB/MOBI 保真）：foliate-js CSS 多栏分页，作者 CSS/绕排/SVG/表格全保留。
+          原件加载中沿用 loading 兜底；划线批注/听书/书内检索在此模式不生效（M1 边界） */}
+      {isOriginalLayout && originalBlob && (
+        <main className="w-full h-[100dvh]" style={{ ...(displayFilter ? { filter: displayFilter } : {}) }}>
+          <OriginalTextView
+            blob={originalBlob}
+            initialFraction={originalInitialFraction}
+            background={effectiveBg}
+            color={effectiveColor}
+            onRelocate={handleOriginalRelocate}
+            onToggleUi={toggleUi}
+            apiRef={originalApiRef}
+          />
+        </main>
+      )}
+
       {/* 滚动模式 */}
-      {textReadingMode === 'scroll' && (
+      {textReadingMode === 'scroll' && !isOriginalLayout && (
         <main
           ref={scrollContainerRef}
           className={cn('w-full h-[100dvh] overscroll-contain', verticalWriting ? 'overflow-x-auto overflow-y-hidden' : 'overflow-y-auto')}
@@ -2982,7 +3108,7 @@ export const TextReaderPage: React.FC = () => {
       )}
 
       {/* 左右翻页 / 模拟翻书模式 */}
-      {textReadingMode !== 'scroll' && (
+      {textReadingMode !== 'scroll' && !isOriginalLayout && (
         <main
           ref={flipPageRef}
           className={cn(
@@ -3183,7 +3309,13 @@ export const TextReaderPage: React.FC = () => {
               if (bookId) useLibraryStore.getState().toggleFavorite(bookId);
             }}
             onOpenAnnotations={() => setIsAnnotationListOpen(true)}
-            onOpenSearch={() => setIsSearchPanelOpen(true)}
+            onOpenSearch={() => {
+              if (isOriginalLayout) {
+                showToast(t('原版式阅读暂不支持书内检索，可切回重排版使用'));
+                return;
+              }
+              setIsSearchPanelOpen(true);
+            }}
             onOpenSettings={() => setIsBottomBarVisible(true)}
           />
 
@@ -3196,10 +3328,22 @@ export const TextReaderPage: React.FC = () => {
             onPrevChapter={goToPrevChapter}
             onNextChapter={goToNextChapter}
             isAutoScrolling={isAutoScrolling}
-            onToggleAutoScroll={toggleAutoScroll}
+            onToggleAutoScroll={() => {
+              if (isOriginalLayout) {
+                showToast(t('原版式阅读暂不支持自动滚动'));
+                return;
+              }
+              toggleAutoScroll();
+            }}
             ttsSupported={speech.supported}
             ttsActive={ttsActive}
-            onToggleTTS={handleToggleTTS}
+            onToggleTTS={() => {
+              if (isOriginalLayout) {
+                showToast(t('原版式阅读暂不支持听书，可切回重排版使用'));
+                return;
+              }
+              handleToggleTTS();
+            }}
             scrollPercent={scrollPercent}
             dragPercent={dragPercent}
             isDragging={isProgressDragging}
@@ -3230,6 +3374,9 @@ export const TextReaderPage: React.FC = () => {
         <TextReaderBottomBar
           fontSize={fontSize}
           lineHeight={lineHeight}
+          canSwitchLayout={isEpub}
+          textLayoutMode={textLayoutMode}
+          onTextLayoutModeChange={(mode) => useAppStore.getState().updateSettings({ textLayoutMode: mode })}
           paperModeEnabled={settings.paperMode}
           paperType={settings.paperType}
           brightness={brightness}

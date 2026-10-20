@@ -52,6 +52,8 @@ const DEFAULT_SETTINGS: UserSettings = {
   autoAdvanceTextChapter: true,
   autoScrollSpeed: 2,
   textReadingMode: 'scroll',
+  // 正文版式默认重排版（归一化管线）；原版式为 EPUB/MOBI 的保真渲染开关
+  textLayoutMode: 'reflow',
   verticalWriting: false,
   ttsEngine: 'auto',
   ttsModelPromptDismissed: false,

@@ -6,7 +6,7 @@ import { TEXT_READER_FONT_OPTIONS } from '@/constants/textReaderFonts';
 import { t } from '@/i18n';
 import { isNativeTtsAvailable } from '@/services/tts/nativeTtsEngine';
 import { PROGRESS_INDETERMINATE } from '@/services/tts/piperEngine';
-import type { PaperType, TextFontFamily, TextAlign, TextReadingMode, TtsEngineOption } from '@/types';
+import type { PaperType, TextFontFamily, TextAlign, TextLayoutMode, TextReadingMode, TtsEngineOption } from '@/types';
 import { cn } from '@/utils/cn';
 import { getAllPaperTypes } from '@/utils/paperTexture';
 
@@ -50,6 +50,10 @@ export interface TextReaderBottomBarProps {
   onAutoAdvanceTextChapterToggle: () => void;
   onAutoScrollSpeedChange: (speed: number) => void;
   onTextReadingModeChange: (mode: TextReadingMode) => void;
+  /** 正文版式（EPUB/MOBI 可切原版式保真渲染） */
+  canSwitchLayout: boolean;
+  textLayoutMode: TextLayoutMode;
+  onTextLayoutModeChange: (mode: TextLayoutMode) => void;
   ttsEngine: TtsEngineOption;
   ttsServerUrl: string;
   ttsServerModel: string;
@@ -139,6 +143,9 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
   onAutoAdvanceTextChapterToggle,
   onAutoScrollSpeedChange,
   onTextReadingModeChange,
+  canSwitchLayout,
+  textLayoutMode,
+  onTextLayoutModeChange,
   ttsEngine,
   ttsServerUrl,
   ttsServerModel,
@@ -493,6 +500,31 @@ export const TextReaderBottomBar: React.FC<TextReaderBottomBarProps> = ({
               ))}
             </div>
           </div>
+
+          {/* 正文版式：重排版（归一化管线）/ 原版式（foliate-js 保真渲染），仅 EPUB/MOBI 提供 */}
+          {canSwitchLayout && (
+            <div className="py-3 px-4 bg-surface-container-lowest rounded-card-lg border border-outline-variant mb-4">
+              <p className="font-label text-label-md text-on-surface mb-3">{t('正文版式')}</p>
+              <div className="grid grid-cols-2 gap-2">
+                {([['reflow', t('重排版'), 'subject'], ['original', t('原版式'), 'auto_stories']] as const).map(([mode, label, icon]) => (
+                  <button
+                    key={mode}
+                    className={cn(
+                      'flex-1 h-12 rounded-lg border text-label-sm font-label transition-colors flex flex-col items-center justify-center gap-1',
+                      textLayoutMode === mode
+                        ? 'option-active'
+                        : 'bg-surface-container-high text-on-surface-variant border-outline-variant hover:border-primary/50'
+                    )}
+                    onClick={() => onTextLayoutModeChange(mode)}
+                  >
+                    <span className="material-symbols-outlined text-icon-md">{icon}</span>
+                    <span className="text-[11px]">{label}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-on-surface-faint mt-2">{t('原版式按书的原始排版渲染，划线与听书暂不可用')}</p>
+            </div>
+          )}
 
           {/* 章末自动下一章 */}
           <div className="flex items-center justify-between py-3 px-4 bg-surface-container-lowest rounded-card-lg border border-outline-variant mb-4">

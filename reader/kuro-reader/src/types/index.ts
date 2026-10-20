@@ -84,6 +84,8 @@ export interface ReadingProgress {
   locator?: string
   /** 按书记忆的文本阅读模式（未设置时使用全局设置） */
   textReadingMode?: TextReadingMode
+  /** 按书记忆的正文版式（原版式进度与重排版进度各自独立锚点） */
+  textLayoutMode?: TextLayoutMode
   /** 最近更新时间戳（ms），云端同步合并用 */
   updatedAt?: number
 }
@@ -113,6 +115,9 @@ export type TextAlign = 'left' | 'justify'
 
 /** 文本阅读模式 */
 export type TextReadingMode = 'scroll' | 'paginate' | 'book' | 'columns'
+
+/** 正文版式：重排版（归一化 Markdown 管线）/ 原版式（foliate-js 保真渲染，EPUB/MOBI 可用） */
+export type TextLayoutMode = 'reflow' | 'original'
 
 /** 原文净化设置（A 类广告水印 / B 类排版噪音，本地规则零 token；引擎见 services/contentSanitizer） */
 export interface ContentSanitizeSettings {
@@ -152,6 +157,8 @@ export interface UserSettings {
   autoAdvanceTextChapter: boolean
   autoScrollSpeed: number
   textReadingMode: TextReadingMode
+  /** 正文版式：重排版（默认）/原版式（EPUB/MOBI 用 foliate-js 保真渲染） */
+  textLayoutMode: TextLayoutMode
   /** 竖排书写（滚动模式下生效，日文/古典中文场景） */
   verticalWriting: boolean
   /** 听书发音引擎;auto=原生环境走系统语音引擎(Android 系统 TTS)、桌面走浏览器语音 */

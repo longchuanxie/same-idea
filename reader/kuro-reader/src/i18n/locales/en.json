@@ -1159,5 +1159,12 @@
   "净化自定义关键词": "Cleanup custom keywords",
   "一行一个关键词，如：某某小说网": "One keyword per line, e.g. some novel site",
   "回原文/节拍/替换与净化动作的本地计数——不上报，导出用于产品验证信号": "Local counts of back-to-text / beat taps / replacements / cleanup actions — never uploaded; export for product validation",
-  "以上为部分样例，共 {{count}} 处": "{{count}} in total (samples above)"
+  "以上为部分样例，共 {{count}} 处": "{{count}} in total (samples above)",
+  "正文版式": "Body layout",
+  "重排版": "Reflowed",
+  "原版式": "Original",
+  "原版式按书的原始排版渲染，划线与听书暂不可用": "Original layout renders the book as authored; highlighting and read-aloud are unavailable for now",
+  "原版式阅读暂不支持书内检索，可切回重排版使用": "In-book search is unavailable in Original layout; switch back to Reflowed to use it",
+  "原版式阅读暂不支持听书，可切回重排版使用": "Read-aloud is unavailable in Original layout; switch back to Reflowed to use it",
+  "原版式阅读暂不支持自动滚动": "Auto-scroll is unavailable in Original layout"
 }
