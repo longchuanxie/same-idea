@@ -45,6 +45,7 @@ describe('parseMarkdownDocument', () => {
       title: 'Cover',
     })
     expect(isSafeMarkdownImageSource('data:image/png;base64,AAAA')).toBe(true)
+    expect(isSafeMarkdownImageSource('data:image/svg+xml;base64,AAAA')).toBe(true)
     expect(isSafeMarkdownImageSource('data:text/html;base64,AAAA')).toBe(false)
   })
 

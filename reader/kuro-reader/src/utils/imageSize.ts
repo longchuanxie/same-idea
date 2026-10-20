@@ -75,9 +75,31 @@ export function readImageDimensions(bytes: Uint8Array): ImageDimensions | null {
 /** 便捷封装：读 Blob 头部并解析尺寸；任何失败返回 null */
 export async function readBlobImageDimensions(blob: Blob): Promise<ImageDimensions | null> {
   try {
-    const header = await blob.slice(0, HEADER_READ_BYTES).arrayBuffer();
-    return readImageDimensions(new Uint8Array(header));
+    const header = await blob.slice(0, HEADER_READ_BYTES).arrayBuffer()
+    return readImageDimensions(new Uint8Array(header))
   } catch {
-    return null;
+    return null
   }
+}
+
+/**
+ * 图片尺寸注册表：导入期（EPUB zip 预取 / MOBI 资源替换）按 object URL 登记，
+ * 渲染层据此给 <img> 预置 width/height——加载前即占正确高度，
+ * 分页测量不再依赖「等图 complete」（图晚到重排/超时占位失真的根治点）。
+ * 条目随 URL 唯一性自弃（object URL 不复用），revoke 后残留无害。
+ */
+const imageDimensionsByUrl = new Map<string, ImageDimensions>()
+
+export function registerImageDimensions(url: string, dimensions: ImageDimensions | null): void {
+  if (url && dimensions) imageDimensionsByUrl.set(url, dimensions)
+}
+
+export function lookupImageDimensions(url: string): ImageDimensions | null {
+  return imageDimensionsByUrl.get(url) ?? null
+}
+
+/** 读 Blob 头部解析尺寸并按 URL 登记（一步封装，失败静默跳过） */
+export async function registerBlobImageDimensions(url: string, blob: Blob | null): Promise<void> {
+  if (!url || !blob) return
+  registerImageDimensions(url, await readBlobImageDimensions(blob))
 }

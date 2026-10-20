@@ -157,6 +157,10 @@ const CAPACITY_RELEASE_MIN_SLACK_PX = 48;
 const SENTENCE_ISH_TAIL_PATTERN = /[。！？；….,!?;，、：:\u3000\s"'「」『』（）【】《》〈〉()[\]{}]/;
 /** 页容量收缩下限：低于此值不再收缩（正常阅读不可能触达） */
 const MIN_PAGE_CAPACITY_PX = 240;
+/** 图片高度上限相对页高的预留：图注一行 + 图片上下 margin，图+图注整体不超页 */
+const TEXT_MEDIA_CAPTION_RESERVE_PX = 48;
+/** 图片高度上限下限：小视口（页高预算极低）时保图有最低可读高度，不压成缝 */
+const TEXT_MEDIA_MIN_HEIGHT_PX = 160;
 /** 分页结果缓存上限（章）：签名命中直接复用，章节往返不再全章重排 */
 const PAGINATION_CACHE_LIMIT = 8;
 /** 整章一页自检阈值：单页文本量超过页面理论容量的倍数即判定测量不可信 */
@@ -2768,6 +2772,12 @@ export const TextReaderPage: React.FC = () => {
     );
   };
 
+  /** 图片高度上限（px 字符串）：渲染 article 与测量容器共用同公式，图高协商所见即所得 */
+  const getMediaMaxHeightPx = () => `${Math.max(
+    TEXT_MEDIA_MIN_HEIGHT_PX,
+    renderPageLayout.pageHeight - pageCapacityShrinkRef.current - TEXT_MEDIA_CAPTION_RESERVE_PX
+  )}px`;
+
   const renderPagedArticle = (pageIndex: number) => {
     const pageLayout = renderPageLayout;
     const articleStyle = {
@@ -2778,6 +2788,7 @@ export const TextReaderPage: React.FC = () => {
       WebkitUserSelect: 'text' as const,
       userSelect: 'text' as const,
       WebkitTouchCallout: 'none' as const,
+      '--reader-media-max-h': getMediaMaxHeightPx(),
     };
 
     const articleClassName = cn(
@@ -2873,6 +2884,7 @@ export const TextReaderPage: React.FC = () => {
           ref={markdownMeasureRef}
           className="fixed left-[-99999px] top-0 invisible pointer-events-none break-words"
           aria-hidden="true"
+          style={{ '--reader-media-max-h': getMediaMaxHeightPx() } as React.CSSProperties}
         >
           {hasMultipleChapters && (
             <h2 data-markdown-measure-title className="text-center font-bold mb-8 opacity-80">

@@ -12,6 +12,7 @@ import { MOBI, isMOBI } from 'foliate-js/mobi.js'
 
 import { convertXhtmlToMarkdown } from '@/services/epubContent'
 import type { TextChapter } from '@/services/textContent'
+import { registerBlobImageDimensions } from '@/utils/imageSize'
 import { parseMarkdownDocument } from '@/utils/markdownDocument'
 
 /** foliate 的字体解压回调：zlib 流用浏览器原生 DecompressionStream，
@@ -91,8 +92,13 @@ async function replaceMobiImages(doc: Document, book: MobiBook): Promise<void> {
     } catch {
       url = null;
     }
-    if (url) img.setAttribute('src', url);
-    else img.remove();
+    if (url) {
+      img.setAttribute('src', url);
+      // 尺寸预读注册（PNG/JPEG 头）：渲染层加载前占正确高度，分页不等图
+      registerBlobImageDimensions(url, await fetch(url).then((r) => r.blob()).catch(() => null));
+    } else {
+      img.remove();
+    }
   }
 }
 

@@ -3,6 +3,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 
 import { convertXhtmlToMarkdown, loadEpubChapters, resolveZipPath, revokeEpubObjectUrls } from '@/services/epubContent'
+import { lookupImageDimensions } from '@/utils/imageSize'
+import { parseMarkdownDocument } from '@/utils/markdownDocument'
 
 // 1x1 PNG
 const PNG_BYTES = Uint8Array.from([
@@ -97,6 +99,121 @@ describe('convertXhtmlToMarkdown', () => {
     expect(md).toContain('“引号” & 符号 <标签>')
     expect(md).not.toMatch(/ {2,}/)
   })
+
+  it('converts tables to GFM instead of concatenating cells', () => {
+    const html = `<body><table>
+      <thead><tr><th>武器</th><th>威力</th></tr></thead>
+      <tbody>
+        <tr><td>木剑</td><td>3</td></tr>
+        <tr><td>铁剑</td><td>8</td></tr>
+      </tbody>
+    </table></body>`
+    const md = convertXhtmlToMarkdown(html, resolver)
+
+    expect(md).toContain('| 武器 | 威力 |')
+    expect(md).toContain('| --- | --- |')
+    expect(md).toContain('| 木剑 | 3 |')
+    expect(md).toContain('| 铁剑 | 8 |')
+    // 旧实现把单元格拍平成「武器威力木剑3」——GFM 分隔符必须出现
+    expect(md).not.toContain('武器威力')
+  })
+
+  it('binds figcaption into image alt', () => {
+    const html = `<body><figure>
+      <img src="images/fig1.png"/>
+      <figcaption>图 1-3 京都街道示意图</figcaption>
+    </figure></body>`
+    const md = convertXhtmlToMarkdown(html, resolver)
+
+    expect(md).toContain('![图 1-3 京都街道示意图](blob:images/fig1.png)')
+  })
+
+  it('keeps images and emphasis inside blockquote and list items', () => {
+    const html = `<body>
+      <blockquote>他说<em>这里</em>，然后展示 <img src="images/q.png" alt="截图甲"/>。</blockquote>
+      <ul><li>条目一含 <img src="images/li.png" alt="截图乙"/> 与<strong>加粗</strong></li></ul>
+    </body>`
+    const md = convertXhtmlToMarkdown(html, resolver)
+
+    expect(md).toContain('> 他说*这里*，然后展示 ![截图甲](blob:images/q.png)。')
+    expect(md).toContain('- 条目一含 ![截图乙](blob:images/li.png) 与**加粗**')
+  })
+
+  it('orders ordered lists and nests sub-lists with indent', () => {
+    const html = `<body><ol start="3">
+      <li>第三章</li>
+      <li>第四章<ol><li>子节甲</li><li>子节乙</li></ol></li>
+    </ol></body>`
+    const md = convertXhtmlToMarkdown(html, resolver)
+
+    expect(md).toContain('3. 第三章')
+    expect(md).toContain('4. 第四章')
+    // 嵌套列表保持原序形态（有序仍是序号）并带层级缩进
+    expect(md).toContain('    1. 子节甲')
+    expect(md).toContain('    2. 子节乙')
+    // 解析层回归防线：转换产物的嵌套必须被 marked 认成子层级（listDepth=1），
+    // 缩进不足时会被并进父列表（序号延续+拍平）——字符串断言查不出这层
+    const doc = parseMarkdownDocument(md)
+    const items = doc.blocks.filter((block) => block.type === 'list-item')
+    expect(items.map((item) => item.listDepth)).toEqual([0, 0, 1, 1])
+    expect(doc.text).toContain('1. 子节甲')
+  })
+
+  it('converts anchors to markdown links and drops empty hrefs', () => {
+    const html = `<body><p>参见<a href="https://example.com/a(1)">这份资料</a>与<a href="#">占位</a>。</p></body>`
+    const md = convertXhtmlToMarkdown(html, resolver)
+
+    expect(md).toContain('[这份资料](https://example.com/a%281%29)')
+    expect(md).toContain('与占位。')
+    expect(md).not.toContain('](#)')
+  })
+
+  it('keeps pre blocks as fenced code with whitespace intact', () => {
+    const html = `<body><pre>function f() {
+    return 1;
+}</pre></body>`
+    const md = convertXhtmlToMarkdown(html, resolver)
+
+    expect(md).toContain('```\nfunction f() {\n    return 1;\n}\n```')
+  })
+
+  it('emits empty alt when img has no alt attribute', () => {
+    const html = `<body><p><img src="images/plain.png"/></p></body>`
+    const md = convertXhtmlToMarkdown(html, resolver)
+
+    expect(md).toContain('![](blob:images/plain.png)')
+  })
+
+  it('passes through inline semantic tags as HTML for span renderers', () => {
+    const html = `<body><p>H<sub>2</sub>O 与 x<sup>2</sup>，按<kbd>Ctrl</kbd>，<mark>重点</mark>，<u>下划线</u> 与 <del>旧文</del>。</p></body>`
+    const md = convertXhtmlToMarkdown(html, resolver)
+
+    expect(md).toContain('H<sub>2</sub>O')
+    expect(md).toContain('x<sup>2</sup>')
+    expect(md).toContain('<kbd>Ctrl</kbd>')
+    expect(md).toContain('<mark>重点</mark>')
+    expect(md).toContain('<u>下划线</u>')
+    expect(md).toContain('<del>旧文</del>')
+  })
+
+  it('converts inline svg via resolver with title as caption', () => {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><title>示意图甲</title><rect width="10" height="10"/></svg>`
+    const html = `<body><p>文字段。</p>${svg}</body>`
+    const md = convertXhtmlToMarkdown(html, resolver, {
+      resolveInlineSvg: () => 'data:image/svg+xml;base64,QUFB',
+    })
+
+    expect(md).toContain('![示意图甲](data:image/svg+xml;base64,QUFB)')
+  })
+
+  it('drops inline svg when no resolver provided', () => {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg"><rect width="1" height="1"/></svg>`
+    const html = `<body><p>正文段。</p>${svg}</body>`
+    const md = convertXhtmlToMarkdown(html, resolver)
+
+    expect(md).toContain('正文段。')
+    expect(md).not.toContain('svg')
+  })
 })
 
 describe('loadEpubChapters integration', () => {
@@ -149,6 +266,8 @@ describe('loadEpubChapters integration', () => {
     expect(ch.markdownDocument).toBeDefined()
     // 图片 span 已进入 markdown 文档
     expect(ch.markdownDocument?.spans.some((sp) => sp.type === 'image')).toBe(true)
+    // 导入期 PNG 头尺寸已注册：渲染层 <img> 预置宽高的数据通道
+    expect(lookupImageDimensions('blob:epub-1')).toEqual({ width: 1, height: 1 })
 
     revokeEpubObjectUrls()
   })
@@ -161,5 +280,30 @@ describe('loadEpubChapters integration', () => {
     const chapters = await loadEpubChapters(new Blob([arrayBuffer], { type: 'application/epub+zip' }))
     expect(chapters).toHaveLength(1)
     expect(chapters[0].content).toContain('无法解析 EPUB 包结构')
+  })
+
+  it('inlines svg with embedded zip image references as data url', async () => {
+    const zip = new JSZip()
+    zip.file('mimetype', 'application/epub+zip')
+    zip.file('META-INF/container.xml', `<?xml version="1.0"?><container><rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>`)
+    zip.file('OEBPS/content.opf', OPF)
+    zip.file('OEBPS/ch1.xhtml', `<html><body><p>矢量章正文。</p><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 4" width="64" height="64"><title>矢量示意图</title><image href="images/pic.png" width="4" height="4"/></svg></body></html>`)
+    zip.file('OEBPS/images/pic.png', PNG_BYTES)
+    const arrayBuffer = await zip.generateAsync({ type: 'arraybuffer' })
+
+    const chapters = await loadEpubChapters(new Blob([arrayBuffer], { type: 'application/epub+zip' }))
+    const content = chapters[0].content
+    expect(content).toContain('矢量章正文。')
+    expect(content).toContain('![矢量示意图](data:image/svg+xml;base64,')
+    // SVG data URL 解码后：内嵌 image 引用已被 zip 图片的 data URL 替换（SVG-as-img 禁外链）
+    const match = content.match(/!\[矢量示意图\]\((data:image\/svg\+xml;base64,[^)]+)\)/)
+    expect(match).toBeTruthy()
+    // atob 是 Latin1 视图，中文须经 UTF-8 字节解码
+    const base64 = match![1].replace('data:image/svg+xml;base64,', '')
+    const xml = new TextDecoder().decode(Uint8Array.from(atob(base64), (c) => c.charCodeAt(0)))
+    expect(xml).toContain('data:image/png;base64,')
+    expect(xml).toContain('矢量示意图')
+
+    revokeEpubObjectUrls()
   })
 })

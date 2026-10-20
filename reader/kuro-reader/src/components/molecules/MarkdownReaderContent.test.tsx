@@ -126,6 +126,40 @@ describe('MarkdownReaderContent', () => {
     expect(container.querySelector('[data-list-depth="1"]')).toHaveTextContent('子项')
   })
 
+  it('有 alt 的独图段落渲染图注并块级居中', () => {
+    const { container } = renderMarkdown('![风景画](blob:book-image-1)')
+
+    const img = container.querySelector('img')
+    expect(img).not.toBeNull()
+    // 独图块：块级形态 + 水平居中（旧实现是占一行的 inline-block 左对齐）
+    expect(img!.className).toContain('block')
+    expect(img!.className).toContain('mx-auto')
+    // alt 文本显示为图注
+    expect(screen.getByText('风景画')).not.toBeNull()
+  })
+
+  it('无 alt 的行内图不渲染图注文本', () => {
+    const { container } = renderMarkdown('文字与![](blob:book-image-2)混排。')
+
+    const img = container.querySelector('img')
+    expect(img).not.toBeNull()
+    // 图注 = alt 非空才显示：alt 缺省时不出现在页面文本里
+    expect(screen.queryByText('Markdown 图片')).not.toBeInTheDocument()
+  })
+
+  it('点击图片打开全屏查看器并可关闭', () => {
+    const { container } = renderMarkdown('![画](blob:book-image-3)')
+
+    const contentImage = container.querySelector('img')
+    expect(contentImage).not.toBeNull()
+    fireEvent.click(contentImage!)
+    // 查看器以同源打开：容器内出现第二张同 src 的图
+    expect(container.querySelectorAll('img[src="blob:book-image-3"]')).toHaveLength(2)
+    // Escape 关闭（查看器内置键盘处理）
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(container.querySelectorAll('img[src="blob:book-image-3"]')).toHaveLength(1)
+  })
+
   it('renders markdown tables with semantic table elements', () => {
     const { container } = renderMarkdown('| 名称 | 数量 |\n| :--- | ---: |\n| 苹果 | 2 |')
 

@@ -4,6 +4,7 @@ import { t } from '@/i18n';
 import type { Annotation } from '@/types'
 import { getAnnotationPresentation } from '@/utils/annotationHighlight'
 import { cn } from '@/utils/cn'
+import { lookupImageDimensions } from '@/utils/imageSize'
 import {
   isSafeMarkdownLink,
   isSafeMarkdownImageSource,
@@ -12,6 +13,7 @@ import {
   type MarkdownSpan,
 } from '@/utils/markdownDocument'
 
+import { FullscreenViewer } from './FullscreenViewer'
 import { MarkdownCodeBlock } from './MarkdownCodeBlock'
 import { MarkdownMath } from './MarkdownMath'
 
@@ -53,10 +55,23 @@ function findBlockSpans(spans: MarkdownSpan[], block: MarkdownBlock): MarkdownSp
   return matches
 }
 
-const MarkdownImage: FC<{ span: MarkdownSpan; measurementMode?: boolean; paginated?: boolean }> = ({ span, measurementMode, paginated }) => {
+interface MarkdownImageProps {
+  span: MarkdownSpan
+  measurementMode?: boolean
+  paginated?: boolean
+  /** 独图块（段落里只有这张图）：块级形态，水平居中 */
+  blockLevel?: boolean
+  onZoom?: (source: string, alt: string) => void
+}
+
+const MarkdownImage: FC<MarkdownImageProps> = ({ span, measurementMode, paginated, blockLevel, onZoom }) => {
   const [failed, setFailed] = useState(false)
   const source = span.href?.trim() ?? ''
   const alt = span.alt || t('Markdown 图片')
+  // 图注：alt 有值即显示（EPUB 的 figcaption 文本由转换层并入 alt）
+  const caption = span.alt?.trim() ?? ''
+  // 导入期预读的 PNG/JPEG 头尺寸：加载前占正确高度（分页测量不等图）
+  const dimensions = lookupImageDimensions(source)
 
   if (failed || !isSafeMarkdownImageSource(source)) {
     return (
@@ -66,11 +81,13 @@ const MarkdownImage: FC<{ span: MarkdownSpan; measurementMode?: boolean; paginat
     )
   }
 
-  return (
+  const image = (
     <img
       src={source}
       alt={alt}
       title={span.title ?? undefined}
+      width={dimensions?.width}
+      height={dimensions?.height}
       // 测量容器常驻屏幕外，lazy 图永远不会进入视口也就永远不会加载，
       // 分页测量只能拿到占位高度 → 渲染页被真实图高撑爆、底部正文被裁；
       // 分页阅读的渲染页同样 eager：翻页即出图，且图高在页容量自检前就绪，
@@ -78,11 +95,33 @@ const MarkdownImage: FC<{ span: MarkdownSpan; measurementMode?: boolean; paginat
       loading={measurementMode || paginated ? 'eager' : 'lazy'}
       decoding="async"
       referrerPolicy="no-referrer"
-      className="my-3 inline-block max-h-[70vh] max-w-full rounded-lg object-contain align-middle"
+      className={cn(
+        // 高度上限与页高协商：分页容器注入 --reader-media-max-h（页高-图注余量），
+        // 缺省（滚动模式等）回退 95vh——比视口小一档，给图注与页边留呼吸（Readium CSS 同款 95vh）
+        'max-h-[min(var(--reader-media-max-h,95vh),95vh)] max-w-full rounded-lg object-contain',
+        blockLevel ? 'mx-auto block' : caption ? 'block' : 'inline-block align-middle'
+      )}
       onLoad={() => window.dispatchEvent(new Event('markdown-media-load'))}
       onError={() => setFailed(true)}
-      onClick={(event) => event.stopPropagation()}
+      onClick={(event) => {
+        event.stopPropagation()
+        onZoom?.(source, alt)
+      }}
     />
+  )
+
+  if (!caption) return image
+  return (
+    <span
+      className={cn(
+        // 独图块用块级容器（列宽内居中）；行内带注图保持行内级随文字流
+        'my-3 max-w-full text-center',
+        blockLevel ? 'block' : 'inline-block align-middle'
+      )}
+    >
+      {image}
+      <span className="mt-1 block indent-0 text-[0.82em] leading-snug opacity-75">{caption}</span>
+    </span>
   )
 }
 
@@ -92,7 +131,8 @@ function wrapWithMarkdownSpan(
   key: string,
   onInternalLink?: (href: string) => void,
   measurementMode?: boolean,
-  paginated?: boolean
+  paginated?: boolean,
+  imageOptions?: { blockLevel?: boolean; onZoom?: (source: string, alt: string) => void }
 ): ReactNode {
   switch (span.type) {
     case 'strong':
@@ -124,7 +164,16 @@ function wrapWithMarkdownSpan(
         </a>
       ) : node
     case 'image':
-      return <MarkdownImage key={key} span={span} measurementMode={measurementMode} paginated={paginated} />
+      return (
+        <MarkdownImage
+          key={key}
+          span={span}
+          measurementMode={measurementMode}
+          paginated={paginated}
+          blockLevel={imageOptions?.blockLevel}
+          onZoom={imageOptions?.onZoom}
+        />
+      )
     case 'math':
       return (
         <MarkdownMath
@@ -187,6 +236,7 @@ export const MarkdownReaderContent: FC<MarkdownReaderContentProps> = ({
   const visibleBlocks = document.blocks.filter(
     (block) => block.start < endOffset && block.end > startOffset
   )
+  const [zoomedImage, setZoomedImage] = useState<{ source: string; alt: string } | null>(null)
 
   return (
     <div className="break-words">
@@ -200,6 +250,16 @@ export const MarkdownReaderContent: FC<MarkdownReaderContentProps> = ({
         const visibleStart = Math.max(block.start, startOffset)
         const visibleEnd = Math.min(block.end, endOffset)
         const spans = findBlockSpans(document.spans, block)
+        // 独图块：段落里除这张图外没有别的文本/span（EPUB 转换产物形态）→ 块级居中
+        const isImageOnlyBlock = block.type === 'paragraph'
+          && spans.length === 1
+          && spans[0].type === 'image'
+          && document.text.slice(block.start, spans[0].start).trim() === ''
+          && document.text.slice(spans[0].end, block.end).trim() === ''
+        const imageOptions = {
+          blockLevel: isImageOnlyBlock,
+          onZoom: (source: string, alt: string) => setZoomedImage({ source, alt }),
+        }
         const blockAnnotations = annotations.filter(
           (annotation) => annotation.startOffset < visibleEnd && annotation.endOffset > visibleStart
         )
@@ -247,7 +307,8 @@ export const MarkdownReaderContent: FC<MarkdownReaderContentProps> = ({
                     `${segmentStart}-${span.type}-${spanIndex}`,
                     onInternalLink,
                     measurementMode,
-                    paginated
+                    paginated,
+                    imageOptions
                   )
                 })
 
@@ -448,6 +509,14 @@ export const MarkdownReaderContent: FC<MarkdownReaderContentProps> = ({
           </div>
         )
       })}
+      {zoomedImage && (
+        <FullscreenViewer
+          imageUrl={zoomedImage.source}
+          pageIndex={0}
+          totalPages={1}
+          onClose={() => setZoomedImage(null)}
+        />
+      )}
     </div>
   )
 }

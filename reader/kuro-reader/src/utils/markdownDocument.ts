@@ -510,7 +510,7 @@ export function isSafeMarkdownImageSource(source: string): boolean {
   const value = source.trim()
   if (!value || hasControlCharacter(value)) return false
   if (/^(https?:|blob:)/i.test(value)) return true
-  if (/^data:image\/(?:avif|gif|jpeg|png|webp);base64,/i.test(value)) return true
+  if (/^data:image\/(?:svg\+xml|(?:avif|gif|jpeg|png|webp));base64,/i.test(value)) return true
   return !/^[a-z][a-z\d+.-]*:/i.test(value)
 }
 
