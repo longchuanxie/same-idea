@@ -45,6 +45,13 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
+        <!-- 听书前台保活（mediaPlayback）：息屏后进程不降级冻结、CPU 不休眠，
+             通知槽位 id=1 即常驻播报通知（书名/正在朗读·章节/暂停态） -->
+        <service
+            android:name=".TtsPlaybackService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+
         <!-- 桌面小组件：继续阅读 / 阅读统计（数据由 JS 侧 WidgetBridge 推送） -->
         <receiver
             android:name=".widget.ContinueReadingWidgetProvider"
@@ -82,9 +89,11 @@
     <!-- Keep screen on while reading -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
-    <!-- 知识库生成后台运行：前台服务（dataSync）保活进程 + 进度通知 -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+        <!-- 知识库生成后台运行：前台服务（dataSync）保活进程 + 进度通知 -->
+        <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+        <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+        <!-- 听书后台运行：前台服务（mediaPlayback）保活进程 + PARTIAL_WAKE_LOCK 保 CPU -->
+        <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+        <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
 </manifest>

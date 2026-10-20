@@ -22,6 +22,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(FilePickerPlugin.class);
         registerPlugin(TextFocusPlugin.class);
         registerPlugin(GenerationKeepAlivePlugin.class);
+        registerPlugin(TtsPlaybackKeepAlivePlugin.class);
         registerPlugin(WidgetBridgePlugin.class);
         super.onCreate(savedInstanceState);
         // 沉浸阅读：JS 侧（StatusBar.hide）隐藏状态栏后，顶部下滑只临时呼出（浮层展示、自动收回，不挤压布局）
